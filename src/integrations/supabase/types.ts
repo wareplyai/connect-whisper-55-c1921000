@@ -14,16 +14,279 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      message_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          message_type: string
+          payload: Json | null
+          session_id: string
+          status: string
+          to_number: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_type?: string
+          payload?: Json | null
+          session_id: string
+          status?: string
+          to_number?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_type?: string
+          payload?: Json | null
+          session_id?: string
+          status?: string
+          to_number?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          is_active: boolean
+          max_sessions: number
+          plan: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          is_active?: boolean
+          max_sessions?: number
+          plan?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          is_active?: boolean
+          max_sessions?: number
+          plan?: string
+        }
+        Relationships: []
+      }
+      sessions: {
+        Row: {
+          always_online: boolean
+          api_token: string
+          auto_reject_calls: boolean
+          created_at: string
+          enable_account_protection: boolean
+          enable_message_logging: boolean
+          enable_webhook: boolean
+          id: string
+          ignore_broadcasts: boolean
+          ignore_channels: boolean
+          ignore_groups: boolean
+          last_active: string | null
+          phone_number: string | null
+          proxy_url: string | null
+          read_incoming_messages: boolean
+          session_name: string
+          status: string
+          user_id: string
+          webhook_events: string[]
+          webhook_secret: string
+          webhook_url: string | null
+          whatsapp_name: string | null
+        }
+        Insert: {
+          always_online?: boolean
+          api_token?: string
+          auto_reject_calls?: boolean
+          created_at?: string
+          enable_account_protection?: boolean
+          enable_message_logging?: boolean
+          enable_webhook?: boolean
+          id?: string
+          ignore_broadcasts?: boolean
+          ignore_channels?: boolean
+          ignore_groups?: boolean
+          last_active?: string | null
+          phone_number?: string | null
+          proxy_url?: string | null
+          read_incoming_messages?: boolean
+          session_name: string
+          status?: string
+          user_id: string
+          webhook_events?: string[]
+          webhook_secret?: string
+          webhook_url?: string | null
+          whatsapp_name?: string | null
+        }
+        Update: {
+          always_online?: boolean
+          api_token?: string
+          auto_reject_calls?: boolean
+          created_at?: string
+          enable_account_protection?: boolean
+          enable_message_logging?: boolean
+          enable_webhook?: boolean
+          id?: string
+          ignore_broadcasts?: boolean
+          ignore_channels?: boolean
+          ignore_groups?: boolean
+          last_active?: string | null
+          phone_number?: string | null
+          proxy_url?: string | null
+          read_incoming_messages?: boolean
+          session_name?: string
+          status?: string
+          user_id?: string
+          webhook_events?: string[]
+          webhook_secret?: string
+          webhook_url?: string | null
+          whatsapp_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          id: string
+          max_sessions: number
+          plan: string
+          status: string
+          trial_ends_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_sessions: number
+          plan: string
+          status?: string
+          trial_ends_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_sessions?: number
+          plan?: string
+          status?: string
+          trial_ends_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      webhook_logs: {
+        Row: {
+          created_at: string
+          delivered: boolean
+          event_type: string | null
+          id: string
+          payload: Json | null
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivered?: boolean
+          event_type?: string | null
+          id?: string
+          payload?: Json | null
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          delivered?: boolean
+          event_type?: string | null
+          id?: string
+          payload?: Json | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +413,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
