@@ -1,0 +1,181 @@
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ArrowLeft, ChevronDown, QrCode } from "lucide-react";
+import { toast } from "sonner";
+
+const ALL_EVENTS = [
+  "messages.received","messages-group.received","messages-newsletter.received","messages-personal.received",
+  "call","message.sent","session.status","qrcode.updated","messages.upsert","messages.update",
+  "messages.delete","message-receipt.update","messages.reaction","chats.upsert","chats.update","chats.delete",
+  "groups.upsert","groups.update","group-participants.update","contacts.upsert","contacts.update","poll.results"
+];
+
+const CreateSession = () => {
+  const { profile } = useAuth();
+  const nav = useNavigate();
+  const [form, setForm] = useState({
+    session_name: "",
+    phone_number: "",
+    enable_account_protection: true,
+    enable_message_logging: true,
+    enable_webhook: false,
+    webhook_url: "",
+    webhook_events: ["messages.received"] as string[],
+    read_incoming_messages: false,
+    auto_reject_calls: false,
+    always_online: true,
+    ignore_groups: true,
+    ignore_broadcasts: true,
+    ignore_channels: true,
+    proxy_url: "",
+  });
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const toggleEvent = (e: string) => {
+    setForm((f) => ({
+      ...f,
+      webhook_events: f.webhook_events.includes(e) ? f.webhook_events.filter((x) => x !== e) : [...f.webhook_events, e],
+    }));
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile) return;
+    setLoading(true);
+    const { data, error } = await supabase.from("sessions").insert({
+      user_id: profile.id,
+      ...form,
+      proxy_url: form.proxy_url || null,
+      webhook_url: form.webhook_url || null,
+      status: "qr_pending",
+    }).select().single();
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("Session created!");
+    nav(`/dashboard/sessions/${data.id}/connect`);
+  };
+
+  return (
+    <div className="max-w-3xl space-y-6">
+      <Link to="/dashboard/sessions" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" /> Back to Sessions
+      </Link>
+      <h1 className="text-2xl font-bold">Create WhatsApp Session</h1>
+
+      <form onSubmit={submit} className="rounded-xl border border-border bg-card p-6 space-y-6">
+        <div>
+          <h2 className="font-semibold">Link Your WhatsApp Number</h2>
+          <p className="text-sm text-muted-foreground">Set up a new WhatsApp session. You'll scan a QR code to connect after creating.</p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <Label>Session Name</Label>
+            <Input required value={form.session_name} onChange={(e) => set("session_name", e.target.value)} placeholder="My WhatsApp Session" className="mt-1.5" />
+          </div>
+          <div>
+            <Label>Phone Number</Label>
+            <Input value={form.phone_number} onChange={(e) => set("phone_number", e.target.value)} placeholder="+1 234 567 8900" className="mt-1.5" />
+          </div>
+        </div>
+
+        {[
+          { k: "enable_account_protection", label: "Enable Account Protection", desc: "Helps prevent WhatsApp from restricting your account by controlling sending frequency." },
+          { k: "enable_message_logging", label: "Enable Message Logging", desc: "When disabled, only delivery statuses are recorded. When enabled, full content is stored." },
+          { k: "enable_webhook", label: "Enable Webhook Notifications (Optional)", desc: "When enabled, events will be sent to the webhook URL below." },
+        ].map((c) => (
+          <label key={c.k} className="flex items-start gap-3 cursor-pointer">
+            <Checkbox checked={(form as any)[c.k]} onCheckedChange={(v) => set(c.k, !!v)} className="mt-1" />
+            <div>
+              <p className="text-sm font-medium">{c.label}</p>
+              <p className="text-xs text-muted-foreground">{c.desc}</p>
+            </div>
+          </label>
+        ))}
+
+        {form.enable_webhook && (
+          <div className="space-y-4 rounded-lg border border-border bg-card-elevated p-4">
+            <div>
+              <Label>Webhook URL (POST)</Label>
+              <Input value={form.webhook_url} onChange={(e) => set("webhook_url", e.target.value)} placeholder="https://your-endpoint.com/webhook" className="mt-1.5" />
+            </div>
+            <div>
+              <Label className="mb-2 block">Webhook Events</Label>
+              <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2">
+                {ALL_EVENTS.map((e) => (
+                  <label key={e} className="flex items-center gap-2 text-xs cursor-pointer">
+                    <Checkbox checked={form.webhook_events.includes(e)} onCheckedChange={() => toggleEvent(e)} />
+                    <span className="font-mono">{e}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+              Note: Your webhook endpoint must be publicly accessible, accept POST requests, and respond with 200 within 60s.
+            </div>
+          </div>
+        )}
+
+        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+          <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:text-primary">
+            <ChevronDown className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`} /> Advanced Settings
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-4 space-y-4">
+            {[
+              { k: "read_incoming_messages", label: "Read Incoming Messages", desc: "Mark messages as read automatically." },
+              { k: "auto_reject_calls", label: "Auto Reject Calls", desc: "Incoming calls will be automatically rejected." },
+              { k: "always_online", label: "Always Online", desc: "Your session will always appear online." },
+            ].map((c) => (
+              <label key={c.k} className="flex items-start gap-3 cursor-pointer">
+                <Checkbox checked={(form as any)[c.k]} onCheckedChange={(v) => set(c.k, !!v)} className="mt-1" />
+                <div>
+                  <p className="text-sm font-medium">{c.label}</p>
+                  <p className="text-xs text-muted-foreground">{c.desc}</p>
+                </div>
+              </label>
+            ))}
+            <div className="border-t border-border pt-4">
+              <p className="text-sm font-medium mb-2">Message Filtering</p>
+              {[
+                { k: "ignore_groups", label: "Ignore Groups", desc: "Skip group messages." },
+                { k: "ignore_broadcasts", label: "Ignore Broadcasts", desc: "Skip broadcast lists." },
+                { k: "ignore_channels", label: "Ignore Channels", desc: "Skip channel updates." },
+              ].map((c) => (
+                <label key={c.k} className="flex items-start gap-3 cursor-pointer mt-2">
+                  <Checkbox checked={(form as any)[c.k]} onCheckedChange={(v) => set(c.k, !!v)} className="mt-1" />
+                  <div>
+                    <p className="text-sm font-medium">{c.label}</p>
+                    <p className="text-xs text-muted-foreground">{c.desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div>
+              <Label>Proxy URL (Optional)</Label>
+              <Input value={form.proxy_url} onChange={(e) => set("proxy_url", e.target.value)} placeholder="socks5://user:pass@proxy.example.com:1080" className="mt-1.5" />
+              <p className="text-xs text-muted-foreground mt-1">Allowed: http, https, socks5. Public domain only.</p>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
+        <div className="flex gap-3 pt-2">
+          <Button type="submit" disabled={loading} className="bg-primary text-primary-foreground hover:bg-primary-hover">
+            <QrCode className="h-4 w-4 mr-2" /> {loading ? "Creating..." : "Create & Connect Session"}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => nav("/dashboard/sessions")}>Cancel</Button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default CreateSession;

@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "system inserts webhook_logs" ON public.webhook_logs;
