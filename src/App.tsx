@@ -11,6 +11,7 @@ import { HeadAdminRoute } from "@/components/HeadAdminRoute";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import TrialStarted from "./pages/TrialStarted";
 import NotFound from "./pages/NotFound";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardHome from "./pages/dashboard/DashboardHome";
