@@ -65,8 +65,12 @@ const EditSession = () => {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
+    if (form.enable_webhook) {
+      if (!form.webhook_url.trim()) { toast.error("Please enter a webhook URL to receive notifications."); return; }
+      if (!/^https:\/\//i.test(form.webhook_url.trim())) { toast.error("Webhook URL must start with https://"); return; }
+    }
     setSaving(true);
-    const phone = num ? `${code}${num.replace(/^\+?/, "")}` : null;
+    const phone = num ? `${country.code}${num.replace(/^\+?/, "")}` : null;
     const { error } = await supabase.from("sessions").update({
       session_name: name,
       phone_number: phone,
