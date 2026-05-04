@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, MessageCircle } from "lucide-react";
+import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, MessageCircle, Receipt } from "lucide-react";
 import { TrialBanner } from "@/components/TrialBanner";
 import { N8nBanner } from "@/components/N8nBanner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,6 +9,7 @@ const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/dashboard/sessions", label: "Sessions", icon: Smartphone },
   { to: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
+  { to: "/dashboard/payments", label: "My Payments", icon: Receipt },
 ];
 
 const resources = [
