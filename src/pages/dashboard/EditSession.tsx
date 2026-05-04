@@ -35,8 +35,8 @@ const EditSession = () => {
       const { data, error } = await supabase.from("sessions").select("*").eq("id", id).maybeSingle();
       if (error || !data) { toast.error("Session not found"); nav("/dashboard/sessions"); return; }
       setName(data.session_name || "");
-      const { code: c, num: n } = splitPhone(data.phone_number);
-      setCode(c); setNum(n);
+      const sp = splitPhone(data.phone_number);
+      setCountry(sp.country); setNum(sp.number);
       setForm({
         enable_account_protection: data.enable_account_protection,
         enable_message_logging: data.enable_message_logging,
