@@ -41,18 +41,25 @@ const Subscription = () => {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const [{ data: s }, { count }, { data: t }] = await Promise.all([
+      const [{ data: s }, { data: prof }, { count }, { data: t }] = await Promise.all([
         supabase.from("subscriptions").select("plan,status,max_sessions,trial_ends_at")
-          .eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+          .eq("user_id", user.id).in("status", ["active", "trial_active"])
+          .order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("profiles").select("plan,max_sessions").eq("id", user.id).maybeSingle(),
         supabase.from("sessions").select("id", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("payment_transactions").select("id,created_at,plan,amount,payment_method,transaction_id,status")
           .eq("user_id", user.id).order("created_at", { ascending: false }),
       ]);
-      setSub(s as Sub | null);
+      const merged: Sub | null = s
+        ? (s as Sub)
+        : prof
+        ? { plan: (prof as any).plan, status: "active", max_sessions: (prof as any).max_sessions, trial_ends_at: null }
+        : null;
+      setSub(merged);
       setUsedSessions(count || 0);
       setTxs((t as Tx[]) || []);
-      if (s?.plan && s.plan !== "trial") {
-        const { data: p } = await supabase.from("plan_pricing").select("price_monthly").eq("plan_name", s.plan).maybeSingle();
+      if (merged?.plan && merged.plan !== "trial") {
+        const { data: p } = await supabase.from("plan_pricing").select("price_monthly").eq("plan_name", merged.plan).maybeSingle();
         setPlanPrice(Number(p?.price_monthly || 0));
       }
       setLoading(false);
