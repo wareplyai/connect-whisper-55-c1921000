@@ -417,8 +417,31 @@ const SessionDetail = () => {
               </div>
               <div><Label>Message</Label><Textarea value={text} onChange={(e) => setText(e.target.value)} className="mt-1.5" rows={4} /></div>
               <Button onClick={send} disabled={sending} className="w-full bg-primary text-primary-foreground hover:bg-primary-hover">
-                {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Send
+                {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Send Test Message
               </Button>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <Label className="text-xs">cURL Command</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cmd = `curl -X POST "https://alvi-waapi.duckdns.org/api/session/${s.id}/send" \\\n  -H "Authorization: Bearer ${s.api_token}" \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify({ to: to || "+1234567890", message: text || "Hello!" })}'`;
+                      navigator.clipboard.writeText(cmd);
+                      toast.success("Copied!");
+                    }}
+                    className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                  >
+                    <Copy className="h-3 w-3" /> Copy
+                  </button>
+                </div>
+                <pre className="rounded-lg bg-[#0d0d0d] text-foreground/90 p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">
+{`curl -X POST "https://alvi-waapi.duckdns.org/api/session/${s.id}/send" \\
+  -H "Authorization: Bearer ${s.api_token}" \\
+  -H "Content-Type: application/json" \\
+  -d '${JSON.stringify({ to: to || "+1234567890", message: text || "Hello!" })}'`}
+                </pre>
+              </div>
             </TabsContent>
 
             <TabsContent value="webhook" className="space-y-3 mt-4">
