@@ -40,16 +40,6 @@ const DashboardHome = () => {
 
   return (
     <div className="space-y-6">
-      {showBanner && (
-        <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
-          <div className="flex-1 text-sm">
-            <span className="font-medium">Automate WhatsApp in n8n —</span>{" "}
-            <span className="text-muted-foreground">Use our official n8n community node.</span>{" "}
-            <a href="#" className="text-primary hover:underline">view docs →</a>
-          </div>
-          <button onClick={() => setShowBanner(false)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
-        </div>
-      )}
 
       <div>
         <h1 className="text-2xl font-bold">Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}</h1>
