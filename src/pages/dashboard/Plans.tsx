@@ -114,11 +114,11 @@ const Plans = () => {
                 )}
                 <h3 className="font-semibold">{p.display_name}</h3>
                 <div className="mt-3 flex items-baseline gap-1">
-                  <span className="text-3xl font-bold">{price === 0 ? "Free" : `$${Number(price).toFixed(2)}`}</span>
+                  <span className="text-3xl font-bold">{fmt(price)}</span>
                   {price > 0 && <span className="text-sm text-muted-foreground">/{yearly ? "yr" : "mo"}</span>}
                 </div>
                 {perSession > 0 && (
-                  <p className="text-xs text-muted-foreground mt-0.5">${perSession.toFixed(2)}/session</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{fmt(perSession)}/session</p>
                 )}
                 <p className="text-sm text-muted-foreground mt-2">{p.max_sessions} session{p.max_sessions > 1 ? "s" : ""}</p>
                 <ul className="mt-4 space-y-1.5 text-xs flex-1">
