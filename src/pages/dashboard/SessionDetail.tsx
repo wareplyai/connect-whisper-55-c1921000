@@ -332,7 +332,7 @@ const SessionDetail = () => {
             </div>
             <div className="flex gap-1">
               <Button size="icon" variant="outline" onClick={() => { loadSession(); loadLogs(page); }}><RefreshCw className="h-4 w-4" /></Button>
-              <Button size="icon" variant="outline" onClick={openEdit}><Edit className="h-4 w-4" /></Button>
+              <Button size="icon" variant="outline" onClick={() => nav(`/dashboard/sessions/${s.id}/edit`)}><Edit className="h-4 w-4" /></Button>
               <Button size="icon" variant="outline"><Webhook className="h-4 w-4" /></Button>
               <Button size="icon" variant="outline" onClick={() => setConfirmDelete(true)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
             </div>
