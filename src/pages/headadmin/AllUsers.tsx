@@ -156,7 +156,24 @@ export default function AllUsers() {
                 </TableCell>
                 <TableCell className="font-medium">{u.full_name || "—"}</TableCell>
                 <TableCell className="text-muted-foreground text-sm">{u.email}</TableCell>
-                <TableCell><Badge variant="outline" className="capitalize">{u.plan}</Badge></TableCell>
+                <TableCell>
+                  <div className="flex flex-col gap-0.5">
+                    <Badge variant="outline" className="capitalize w-fit">{u.plan}</Badge>
+                    {u.plan === "trial" && u._trial_ends_at && (() => {
+                      const ms = new Date(u._trial_ends_at).getTime() - Date.now();
+                      const days = Math.ceil(ms / 86400000);
+                      const expired = ms <= 0;
+                      return (
+                        <span
+                          className={`text-[10px] ${expired ? "text-red-500" : "text-muted-foreground"}`}
+                          title={new Date(u._trial_ends_at).toLocaleString()}
+                        >
+                          {expired ? "Expired" : `${days} day${days === 1 ? "" : "s"} left`}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </TableCell>
                 <TableCell>{u._sessions}</TableCell>
                 <TableCell>{u._messages}</TableCell>
                 <TableCell>
