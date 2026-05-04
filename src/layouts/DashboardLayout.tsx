@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, MessageCircle } from "lucide-react";
 import { TrialBanner } from "@/components/TrialBanner";
+import { N8nBanner } from "@/components/N8nBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 
@@ -96,6 +97,7 @@ const DashboardLayout = () => {
           ))}
         </header>
         <div className="flex-1 p-6 space-y-6">
+          <N8nBanner />
           <TrialBanner />
           <Outlet />
         </div>
