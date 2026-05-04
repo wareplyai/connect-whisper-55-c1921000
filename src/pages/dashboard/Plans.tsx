@@ -30,6 +30,13 @@ const FAQS = [
 const Plans = () => {
   const { user } = useAuth();
   const [yearly, setYearly] = useState(false);
+  const [currency, setCurrency] = useState<"USD" | "BDT">("USD");
+  const USD_TO_BDT = 122;
+  const fmt = (usd: number) => {
+    if (usd === 0) return "Free";
+    if (currency === "BDT") return `৳${Math.round(usd * USD_TO_BDT).toLocaleString()}`;
+    return `$${Number(usd).toFixed(2)}`;
+  };
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
