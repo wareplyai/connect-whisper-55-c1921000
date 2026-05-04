@@ -450,9 +450,6 @@ const SessionDetail = () => {
             <span className="text-xs text-muted-foreground">{totalLogs} total · live</span>
           </div>
         </div>
-        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
-          This monitor shows outgoing messages sent through the API. Updates in real-time.
-        </div>
         {logs.length === 0 ? (
           <p className="text-sm text-muted-foreground py-6 text-center">No messages yet.</p>
         ) : (
