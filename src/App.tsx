@@ -17,6 +17,7 @@ import DashboardHome from "./pages/dashboard/DashboardHome";
 import Sessions from "./pages/dashboard/Sessions";
 import CreateSession from "./pages/dashboard/CreateSession";
 import SessionDetail from "./pages/dashboard/SessionDetail";
+import EditSession from "./pages/dashboard/EditSession";
 import ConnectSession from "./pages/dashboard/ConnectSession";
 import Subscription from "./pages/dashboard/Subscription";
 import AdminPanel from "./pages/admin/AdminPanel";
@@ -52,6 +53,7 @@ const App = () => (
                 <Route path="sessions" element={<Sessions />} />
                 <Route path="sessions/create" element={<CreateSession />} />
                 <Route path="sessions/:id" element={<SessionDetail />} />
+                <Route path="sessions/:id/edit" element={<EditSession />} />
                 <Route path="sessions/:id/connect" element={<ConnectSession />} />
                 <Route path="subscription" element={<Subscription />} />
               </Route>

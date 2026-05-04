@@ -141,6 +141,7 @@ const SessionDetail = () => {
   const [editForm, setEditForm] = useState({ session_name: "", phone_number: "" });
   const [savingEdit, setSavingEdit] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [confirmRegen, setConfirmRegen] = useState<null | "api_token" | "webhook_secret">(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const channelRef = useRef<any>(null);
@@ -290,7 +291,7 @@ const SessionDetail = () => {
     nav("/dashboard/sessions");
   };
 
-  const regenerate = async (field: "api_token" | "webhook_secret") => {
+  const doRegenerate = async (field: "api_token" | "webhook_secret") => {
     if (!s) return;
     const setLoad = field === "api_token" ? setRegenApi : setRegenWh;
     setLoad(true);
@@ -298,6 +299,7 @@ const SessionDetail = () => {
     const update: any = { [field]: newVal };
     const { error } = await supabase.from("sessions").update(update).eq("id", s.id);
     setLoad(false);
+    setConfirmRegen(null);
     if (error) return toast.error(error.message);
     toast.success(`${field === "api_token" ? "API token" : "Webhook secret"} regenerated`);
     loadSession();
@@ -332,7 +334,7 @@ const SessionDetail = () => {
             </div>
             <div className="flex gap-1">
               <Button size="icon" variant="outline" onClick={() => { loadSession(); loadLogs(page); }}><RefreshCw className="h-4 w-4" /></Button>
-              <Button size="icon" variant="outline" onClick={openEdit}><Edit className="h-4 w-4" /></Button>
+              <Button size="icon" variant="outline" onClick={() => nav(`/dashboard/sessions/${s.id}/edit`)}><Edit className="h-4 w-4" /></Button>
               <Button size="icon" variant="outline"><Webhook className="h-4 w-4" /></Button>
               <Button size="icon" variant="outline" onClick={() => setConfirmDelete(true)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
             </div>
@@ -379,7 +381,7 @@ const SessionDetail = () => {
                 <div className="mt-1.5">
                   <TokenField
                     value={s.api_token}
-                    onRegenerate={() => regenerate("api_token")}
+                    onRegenerate={() => setConfirmRegen("api_token")}
                     regenerating={regenApi}
                     label="Private API Key"
                     title="API Access Key"
@@ -392,7 +394,7 @@ const SessionDetail = () => {
                 <div className="mt-1.5">
                   <TokenField
                     value={s.webhook_secret}
-                    onRegenerate={() => regenerate("webhook_secret")}
+                    onRegenerate={() => setConfirmRegen("webhook_secret")}
                     regenerating={regenWh}
                     label="Webhook Secret"
                     title="Webhook Secret"
@@ -510,6 +512,20 @@ const SessionDetail = () => {
           </div>
         )}
       </div>
+
+      {/* Regenerate Confirm */}
+      <AlertDialog open={!!confirmRegen} onOpenChange={(o) => !o && setConfirmRegen(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Regenerate {confirmRegen === "api_token" ? "API Token" : "Webhook Secret"}?</AlertDialogTitle>
+            <AlertDialogDescription>Are you sure? This will invalidate your current {confirmRegen === "api_token" ? "token" : "secret"}.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmRegen && doRegenerate(confirmRegen)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Regenerate</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
