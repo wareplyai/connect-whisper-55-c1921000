@@ -6,6 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PaymentModal } from "@/components/PaymentModal";
+import { toast } from "sonner";
 
 type Plan = {
   id: string;
