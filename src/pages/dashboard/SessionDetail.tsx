@@ -45,12 +45,33 @@ const SessionDetail = () => {
 
   const send = async () => {
     if (!s || !to) return toast.error("Enter recipient");
-    const { error } = await supabase.from("message_logs").insert({
-      user_id: s.user_id, session_id: s.id, to_number: to, payload: { text }, status: "sent",
-    });
-    if (error) return toast.error(error.message);
-    toast.success("Test message logged");
-    setText(""); setTo(""); load();
+    if (!text) return toast.error("Enter a message");
+    try {
+      await backendApi.sendMessage(s.id, to, text);
+      await supabase.from("message_logs").insert({
+        user_id: s.user_id, session_id: s.id, to_number: to, payload: { text }, status: "sent",
+      });
+      toast.success("Message sent!");
+      setText(""); setTo(""); load();
+    } catch (err: any) {
+      await supabase.from("message_logs").insert({
+        user_id: s.user_id, session_id: s.id, to_number: to, payload: { text }, status: "failed", error_message: err.message,
+      });
+      toast.error(`Send failed: ${err.message}`);
+      load();
+    }
+  };
+
+  const disconnect = async () => {
+    if (!s) return;
+    try {
+      await backendApi.logout(s.id);
+      await supabase.from("sessions").update({ status: "disconnected" }).eq("id", s.id);
+      toast.success("Session disconnected");
+      load();
+    } catch (err: any) {
+      toast.error(`Disconnect failed: ${err.message}`);
+    }
   };
 
   const remove = async () => {
