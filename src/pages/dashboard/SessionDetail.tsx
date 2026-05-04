@@ -291,14 +291,14 @@ const SessionDetail = () => {
     nav("/dashboard/sessions");
   };
 
-  const regenerate = async (field: "api_token" | "webhook_secret") => {
+  const doRegenerate = async (field: "api_token" | "webhook_secret") => {
     if (!s) return;
     const setLoad = field === "api_token" ? setRegenApi : setRegenWh;
     setLoad(true);
     const newVal = genHexToken();
-    const update: any = { [field]: newVal };
-    const { error } = await supabase.from("sessions").update(update).eq("id", s.id);
+    const { error } = await supabase.from("sessions").update({ [field]: newVal }).eq("id", s.id);
     setLoad(false);
+    setConfirmRegen(null);
     if (error) return toast.error(error.message);
     toast.success(`${field === "api_token" ? "API token" : "Webhook secret"} regenerated`);
     loadSession();
