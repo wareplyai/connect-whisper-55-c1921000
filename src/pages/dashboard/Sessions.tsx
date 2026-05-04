@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, RefreshCw, Search, Smartphone, Trash2, Eye } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { backendApi } from "@/lib/backend";
 
 const statusBadge = (s: string) => {
   if (s === "connected") return "bg-primary/15 text-primary";
