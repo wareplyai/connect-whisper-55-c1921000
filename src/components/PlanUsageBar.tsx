@@ -14,23 +14,29 @@ export const PlanUsageBar = () => {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const [{ data: sub }, { count }] = await Promise.all([
+      const [{ data: sub }, { data: prof }, { count }] = await Promise.all([
         supabase
           .from("subscriptions")
-          .select("plan, max_sessions")
+          .select("plan, max_sessions, status")
           .eq("user_id", user.id)
+          .eq("status", "active")
           .order("created_at", { ascending: false })
           .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("plan, max_sessions")
+          .eq("id", user.id)
           .maybeSingle(),
         supabase
           .from("sessions")
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id),
       ]);
-      if (sub) {
-        setPlan((sub.plan || "trial").charAt(0).toUpperCase() + (sub.plan || "trial").slice(1));
-        setMax(sub.max_sessions || 1);
-      }
+      const planName = sub?.plan || prof?.plan || "trial";
+      const maxS = sub?.max_sessions ?? prof?.max_sessions ?? 1;
+      setPlan(planName.charAt(0).toUpperCase() + planName.slice(1));
+      setMax(maxS);
       setUsed(count || 0);
     })();
   }, [user]);
