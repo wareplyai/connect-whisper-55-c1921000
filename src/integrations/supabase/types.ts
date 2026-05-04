@@ -14,6 +14,116 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_type: string | null
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: string | null
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_type?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_type?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
+      admin_notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          message: string
+          target: string | null
+          target_user_id: string | null
+          title: string
+          type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          message: string
+          target?: string | null
+          target_user_id?: string | null
+          title: string
+          type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          message?: string
+          target?: string | null
+          target_user_id?: string | null
+          title?: string
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notifications_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      headadmin: {
+        Row: {
+          auth_user_id: string | null
+          created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          last_login: string | null
+          name: string
+          password_hash: string | null
+        }
+        Insert: {
+          auth_user_id?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          last_login?: string | null
+          name: string
+          password_hash?: string | null
+        }
+        Update: {
+          auth_user_id?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          last_login?: string | null
+          name?: string
+          password_hash?: string | null
+        }
+        Relationships: []
+      }
       message_logs: {
         Row: {
           created_at: string
@@ -65,6 +175,36 @@ export type Database = {
           },
         ]
       }
+      platform_stats: {
+        Row: {
+          active_sessions: number | null
+          id: number
+          total_messages: number | null
+          total_revenue: number | null
+          total_sessions: number | null
+          total_users: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          active_sessions?: number | null
+          id?: number
+          total_messages?: number | null
+          total_revenue?: number | null
+          total_sessions?: number | null
+          total_users?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          active_sessions?: number | null
+          id?: number
+          total_messages?: number | null
+          total_revenue?: number | null
+          total_sessions?: number | null
+          total_users?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -94,6 +234,47 @@ export type Database = {
           plan?: string
         }
         Relationships: []
+      }
+      sales: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string | null
+          id: string
+          payment_method: string | null
+          payment_status: string | null
+          plan: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          payment_method?: string | null
+          payment_status?: string | null
+          plan: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          payment_method?: string | null
+          payment_status?: string | null
+          plan?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sessions: {
         Row: {
