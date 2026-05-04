@@ -381,7 +381,7 @@ const SessionDetail = () => {
                 <div className="mt-1.5">
                   <TokenField
                     value={s.api_token}
-                    onRegenerate={() => regenerate("api_token")}
+                    onRegenerate={() => setConfirmRegen("api_token")}
                     regenerating={regenApi}
                     label="Private API Key"
                     title="API Access Key"
@@ -394,7 +394,7 @@ const SessionDetail = () => {
                 <div className="mt-1.5">
                   <TokenField
                     value={s.webhook_secret}
-                    onRegenerate={() => regenerate("webhook_secret")}
+                    onRegenerate={() => setConfirmRegen("webhook_secret")}
                     regenerating={regenWh}
                     label="Webhook Secret"
                     title="Webhook Secret"
