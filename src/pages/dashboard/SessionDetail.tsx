@@ -258,7 +258,7 @@ const SessionDetail = () => {
     try {
       await backendApi.logout(s.id);
       await supabase.from("sessions").update({ status: "disconnected" }).eq("id", s.id);
-      toast.success("Session disconnected");
+      toast.success("Session disconnected successfully");
       loadSession();
     } catch (err: any) {
       toast.error(`Disconnect failed: ${err.message}`);
