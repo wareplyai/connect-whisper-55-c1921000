@@ -42,13 +42,14 @@ const Plans = () => {
       const { data } = await supabase.from("plan_pricing").select("*").eq("is_active", true).order("price_monthly");
       setPlans((data as Plan[]) || []);
       if (user) {
-        const [{ data: sub }, { count }] = await Promise.all([
-          supabase.from("subscriptions").select("plan,max_sessions").eq("user_id", user.id)
-            .order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        const [{ data: sub }, { data: prof }, { count }] = await Promise.all([
+          supabase.from("subscriptions").select("plan,max_sessions,status").eq("user_id", user.id)
+            .eq("status", "active").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+          supabase.from("profiles").select("plan,max_sessions").eq("id", user.id).maybeSingle(),
           supabase.from("sessions").select("id", { count: "exact", head: true }).eq("user_id", user.id),
         ]);
-        setCurrentPlan(sub?.plan || null);
-        setMaxSessions(sub?.max_sessions || 1);
+        setCurrentPlan(sub?.plan || prof?.plan || null);
+        setMaxSessions(sub?.max_sessions ?? prof?.max_sessions ?? 1);
         setUsedSessions(count || 0);
       }
       setLoading(false);
