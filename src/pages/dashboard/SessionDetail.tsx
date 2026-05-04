@@ -258,7 +258,7 @@ const SessionDetail = () => {
     try {
       await backendApi.logout(s.id);
       await supabase.from("sessions").update({ status: "disconnected" }).eq("id", s.id);
-      toast.success("Session disconnected");
+      toast.success("Session disconnected successfully");
       loadSession();
     } catch (err: any) {
       toast.error(`Disconnect failed: ${err.message}`);
@@ -557,8 +557,8 @@ const SessionDetail = () => {
       <AlertDialog open={confirmDisconnect} onOpenChange={setConfirmDisconnect}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Disconnect this session?</AlertDialogTitle>
-            <AlertDialogDescription>You'll need to scan the QR again to reconnect.</AlertDialogDescription>
+            <AlertDialogTitle>Are you sure you want to disconnect this WhatsApp session?</AlertDialogTitle>
+            <AlertDialogDescription>You'll need to scan the QR again to reconnect. The phone number can then be reused in a new session.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS unique_active_phone ON public.sessions (phone_number) WHERE status <> 'disconnected';
