@@ -96,7 +96,8 @@ const DashboardLayout = () => {
             </span>
           ))}
         </header>
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-6 space-y-6">
+          <TrialBanner />
           <Outlet />
         </div>
       </main>
