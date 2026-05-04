@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, RefreshCw, Search, Smartphone, Trash2, Eye } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { backendApi } from "@/lib/backend";
 
 const statusBadge = (s: string) => {
   if (s === "connected") return "bg-primary/15 text-primary";
@@ -30,6 +31,33 @@ const Sessions = () => {
   };
 
   useEffect(() => { load(); }, [profile]);
+
+  // Poll backend status for each session every 10s
+  useEffect(() => {
+    if (sessions.length === 0) return;
+    let cancelled = false;
+
+    const pollAll = async () => {
+      await Promise.all(sessions.map(async (s) => {
+        try {
+          const data = await backendApi.getStatus(s.id);
+          if (cancelled || !data?.status || data.status === s.status) return;
+          await supabase.from("sessions").update({
+            status: data.status,
+            phone_number: data.phone || s.phone_number,
+            whatsapp_name: data.name || s.whatsapp_name,
+            last_active: new Date().toISOString(),
+          }).eq("id", s.id);
+          if (!cancelled) {
+            setSessions((prev) => prev.map((x) => x.id === s.id ? { ...x, status: data.status } : x));
+          }
+        } catch { /* ignore individual failures */ }
+      }));
+    };
+
+    const interval = setInterval(pollAll, 10000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [sessions.length]);
 
   const remove = async (id: string) => {
     if (!confirm("Delete this session?")) return;

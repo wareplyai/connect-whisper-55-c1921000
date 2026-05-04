@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Copy, Eye, EyeOff, RefreshCw, Trash2, Edit, Webhook } from "lucide-react";
 import { toast } from "sonner";
+import { backendApi } from "@/lib/backend";
 
 const Mask = ({ value }: { value: string }) => {
   const [show, setShow] = useState(false);
@@ -44,12 +45,33 @@ const SessionDetail = () => {
 
   const send = async () => {
     if (!s || !to) return toast.error("Enter recipient");
-    const { error } = await supabase.from("message_logs").insert({
-      user_id: s.user_id, session_id: s.id, to_number: to, payload: { text }, status: "sent",
-    });
-    if (error) return toast.error(error.message);
-    toast.success("Test message logged");
-    setText(""); setTo(""); load();
+    if (!text) return toast.error("Enter a message");
+    try {
+      await backendApi.sendMessage(s.id, to, text);
+      await supabase.from("message_logs").insert({
+        user_id: s.user_id, session_id: s.id, to_number: to, payload: { text }, status: "sent",
+      });
+      toast.success("Message sent!");
+      setText(""); setTo(""); load();
+    } catch (err: any) {
+      await supabase.from("message_logs").insert({
+        user_id: s.user_id, session_id: s.id, to_number: to, payload: { text }, status: "failed", error_message: err.message,
+      });
+      toast.error(`Send failed: ${err.message}`);
+      load();
+    }
+  };
+
+  const disconnect = async () => {
+    if (!s) return;
+    try {
+      await backendApi.logout(s.id);
+      await supabase.from("sessions").update({ status: "disconnected" }).eq("id", s.id);
+      toast.success("Session disconnected");
+      load();
+    } catch (err: any) {
+      toast.error(`Disconnect failed: ${err.message}`);
+    }
   };
 
   const remove = async () => {
@@ -94,7 +116,7 @@ const SessionDetail = () => {
           </dl>
 
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1">Disconnect</Button>
+            <Button variant="outline" className="flex-1" onClick={disconnect}>Disconnect</Button>
             <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary-hover">Restart</Button>
           </div>
 

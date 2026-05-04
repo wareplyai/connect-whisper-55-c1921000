@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ArrowLeft, ChevronDown, QrCode } from "lucide-react";
 import { toast } from "sonner";
+import { backendApi } from "@/lib/backend";
 
 const ALL_EVENTS = [
   "messages.received","messages-group.received","messages-newsletter.received","messages-personal.received",
@@ -58,10 +59,23 @@ const CreateSession = () => {
       webhook_url: form.webhook_url || null,
       status: "qr_pending",
     }).select().single();
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Session created!");
-    nav(`/dashboard/sessions/${data.id}/connect`);
+
+    if (error) {
+      setLoading(false);
+      return toast.error(error.message);
+    }
+
+    try {
+      await backendApi.createSession(data.id);
+      toast.success("Session created!");
+      nav(`/dashboard/sessions/${data.id}/connect`);
+    } catch (err: any) {
+      toast.error(`Backend error: ${err.message}`);
+      // Still redirect so user can retry from the QR page
+      nav(`/dashboard/sessions/${data.id}/connect`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
