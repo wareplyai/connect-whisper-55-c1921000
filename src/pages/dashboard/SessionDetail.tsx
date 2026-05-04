@@ -377,13 +377,27 @@ const SessionDetail = () => {
               <div>
                 <Label>API Access Token</Label>
                 <div className="mt-1.5">
-                  <TokenField value={s.api_token} onRegenerate={() => regenerate("api_token")} regenerating={regenApi} label="API token" />
+                  <TokenField
+                    value={s.api_token}
+                    onRegenerate={() => regenerate("api_token")}
+                    regenerating={regenApi}
+                    label="Private API Key"
+                    title="API Access Key"
+                    subtitle="Use this key to authenticate your requests"
+                  />
                 </div>
               </div>
               <div>
                 <Label>Webhook Secret</Label>
                 <div className="mt-1.5">
-                  <TokenField value={s.webhook_secret} onRegenerate={() => regenerate("webhook_secret")} regenerating={regenWh} label="Webhook secret" />
+                  <TokenField
+                    value={s.webhook_secret}
+                    onRegenerate={() => regenerate("webhook_secret")}
+                    regenerating={regenWh}
+                    label="Webhook Secret"
+                    title="Webhook Secret"
+                    subtitle="Use this secret to verify incoming webhook requests"
+                  />
                 </div>
               </div>
               <Button variant="outline" className="w-full">API Documentation →</Button>
