@@ -513,6 +513,20 @@ const SessionDetail = () => {
         )}
       </div>
 
+      {/* Regenerate Confirm */}
+      <AlertDialog open={!!confirmRegen} onOpenChange={(o) => !o && setConfirmRegen(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Regenerate {confirmRegen === "api_token" ? "API Token" : "Webhook Secret"}?</AlertDialogTitle>
+            <AlertDialogDescription>Are you sure? This will invalidate your current {confirmRegen === "api_token" ? "token" : "secret"}.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmRegen && doRegenerate(confirmRegen)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Regenerate</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
