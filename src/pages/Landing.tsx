@@ -50,12 +50,13 @@ const useCases = [
   { icon: LineChart, title: "Advanced Analytics", desc: "Pipe message events into your data warehouse." },
 ];
 
+const USD_TO_BDT = 122;
 const plans = [
-  { name: "Trial", price: "Free", period: "3 days", sessions: "1 session", limit: "50 msg/day", popular: false },
-  { name: "Basic", price: "$6", period: "/month", sessions: "1 session", limit: "Unlimited messages", popular: false },
-  { name: "Pro", price: "$15", period: "/month", sessions: "3 sessions", limit: "Unlimited messages", popular: true },
-  { name: "Plus", price: "$30", period: "/month", sessions: "6 sessions", limit: "Unlimited messages", popular: false },
-  { name: "Business", price: "$45", period: "/month", sessions: "10 sessions", limit: "Unlimited messages", popular: false },
+  { name: "Trial", priceUsd: 0, isFree: true, period: "3 days", sessions: "1 session", limit: "50 msg/day", popular: false },
+  { name: "Basic", priceUsd: 6, period: "/month", sessions: "1 session", limit: "Unlimited messages", popular: false },
+  { name: "Pro", priceUsd: 15, period: "/month", sessions: "3 sessions", limit: "Unlimited messages", popular: true },
+  { name: "Plus", priceUsd: 30, period: "/month", sessions: "6 sessions", limit: "Unlimited messages", popular: false },
+  { name: "Business", priceUsd: 45, period: "/month", sessions: "10 sessions", limit: "Unlimited messages", popular: false },
 ];
 
 const faqs = [
@@ -72,6 +73,9 @@ const faqs = [
 const Landing = () => {
   const [tab, setTab] = useState("JS");
   const [yearly, setYearly] = useState(false);
+  const [currency, setCurrency] = useState<"USD" | "BDT">("USD");
+  const fmtPrice = (usd: number) =>
+    currency === "USD" ? `$${usd}` : `৳${Math.round(usd * USD_TO_BDT)}`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -229,9 +233,15 @@ const Landing = () => {
         <div className="text-center mb-10">
           <h2 className="text-3xl md:text-5xl font-bold tracking-tight">Simple, transparent pricing</h2>
           <p className="mt-3 text-muted-foreground">No per-message fees. Cancel anytime.</p>
-          <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 text-sm">
-            <button onClick={() => setYearly(false)} className={`px-4 py-1.5 rounded-full transition ${!yearly ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Monthly</button>
-            <button onClick={() => setYearly(true)} className={`px-4 py-1.5 rounded-full transition ${yearly ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Yearly <span className="ml-1 text-xs opacity-80">Save 15%</span></button>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 text-sm">
+              <button onClick={() => setYearly(false)} className={`px-4 py-1.5 rounded-full transition ${!yearly ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Monthly</button>
+              <button onClick={() => setYearly(true)} className={`px-4 py-1.5 rounded-full transition ${yearly ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Yearly <span className="ml-1 text-xs opacity-80">Save 15%</span></button>
+            </div>
+            <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 text-sm">
+              <button onClick={() => setCurrency("USD")} className={`px-4 py-1.5 rounded-full transition ${currency === "USD" ? "bg-green-500 text-white" : "text-muted-foreground"}`}>USD</button>
+              <button onClick={() => setCurrency("BDT")} className={`px-4 py-1.5 rounded-full transition ${currency === "BDT" ? "bg-green-500 text-white" : "text-muted-foreground"}`}>BDT</button>
+            </div>
           </div>
         </div>
         <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -242,7 +252,7 @@ const Landing = () => {
               )}
               <h3 className="font-semibold text-lg">{p.name}</h3>
               <div className="mt-3 flex items-baseline gap-1">
-                <span className="text-3xl font-bold">{p.price}</span>
+                <span className="text-3xl font-bold">{p.isFree ? "Free" : fmtPrice(p.priceUsd)}</span>
                 <span className="text-sm text-muted-foreground">{p.period}</span>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">{p.sessions}</p>
