@@ -91,12 +91,15 @@ const DashboardLayout = () => {
 
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b border-border flex items-center px-6 text-sm text-muted-foreground">
-          {crumbs.map((c, i) => (
-            <span key={i} className="capitalize">
-              {i > 0 && <span className="mx-2">/</span>}
-              {c}
-            </span>
-          ))}
+          <div className="flex-1 flex items-center">
+            {crumbs.map((c, i) => (
+              <span key={i} className="capitalize">
+                {i > 0 && <span className="mx-2">/</span>}
+                {c}
+              </span>
+            ))}
+          </div>
+          <ThemeToggle />
         </header>
         <div className="flex-1 p-6 space-y-6">
           <N8nBanner />
