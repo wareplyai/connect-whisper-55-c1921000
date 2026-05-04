@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ArrowLeft, ChevronDown, QrCode } from "lucide-react";
 import { toast } from "sonner";
+import { backendApi } from "@/lib/backend";
 
 const ALL_EVENTS = [
   "messages.received","messages-group.received","messages-newsletter.received","messages-personal.received",
