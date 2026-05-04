@@ -54,7 +54,7 @@ const DashboardHome = () => {
   }, [profile]);
 
   const currentPlan = planInfo?.plan || profile?.plan || "free";
-  const hasActivePlan = planInfo?.status === "active" && currentPlan !== "free";
+  const hasActivePlan = (planInfo?.status === "active" || planInfo?.status === "trial_active") && currentPlan !== "free";
 
   return (
     <div className="space-y-6">
