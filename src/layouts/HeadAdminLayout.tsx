@@ -7,6 +7,7 @@ import {
 import { useHeadAdmin } from "@/contexts/HeadAdminContext";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useQuickStats } from "@/hooks/useHeadAdminStats";
 
 const navGroups = [
   {
@@ -37,18 +38,24 @@ const navGroups = [
   },
 ];
 
-const quickStats = [
-  { label: "Total Users", value: "12,540", delta: "+8.4%", up: true },
-  { label: "Active Accounts", value: "8,920", delta: "+5.6%", up: true },
-  { label: "Transactions", value: "24,680", delta: "+12.3%", up: true },
-  { label: "Pending", value: "320", delta: "-2.1%", up: false },
+const allItems = [
+  { to: "/headadmin", label: "Dashboard", end: true },
+  { to: "/headadmin/users", label: "Users" },
+  { to: "/headadmin/sessions", label: "Sessions" },
+  { to: "/headadmin/messages", label: "Messages" },
+  { to: "/headadmin/revenue", label: "Revenue" },
+  { to: "/headadmin/payments", label: "Payments" },
+  { to: "/headadmin/payment-methods", label: "Methods" },
+  { to: "/headadmin/plan-pricing", label: "Plan Pricing" },
+  { to: "/headadmin/notifications", label: "Notifications" },
+  { to: "/headadmin/logs", label: "Activity Logs" },
+  { to: "/headadmin/settings", label: "Settings" },
 ];
-
-const allItems = navGroups.flatMap((g) => g.items);
 
 export default function HeadAdminLayout() {
   const { headAdmin, signOut } = useHeadAdmin();
   const location = useLocation();
+  const quickStats = useQuickStats();
   const current = allItems.find((n) =>
     n.end ? location.pathname === n.to : location.pathname.startsWith(n.to)
   );
