@@ -296,7 +296,8 @@ const SessionDetail = () => {
     const setLoad = field === "api_token" ? setRegenApi : setRegenWh;
     setLoad(true);
     const newVal = genHexToken();
-    const { error } = await supabase.from("sessions").update({ [field]: newVal }).eq("id", s.id);
+    const update: any = { [field]: newVal };
+    const { error } = await supabase.from("sessions").update(update).eq("id", s.id);
     setLoad(false);
     setConfirmRegen(null);
     if (error) return toast.error(error.message);
