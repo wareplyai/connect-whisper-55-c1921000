@@ -11,6 +11,7 @@ type Sub = {
   status: string;
   max_sessions: number | null;
   trial_ends_at: string | null;
+  display_name?: string;
 };
 
 type Tx = {
