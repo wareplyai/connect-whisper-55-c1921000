@@ -29,48 +29,97 @@ const genHexToken = () => {
 };
 
 const TokenField = ({
-  value, onRegenerate, regenerating, label,
+  value, onRegenerate, regenerating, label, title, subtitle,
 }: {
   value: string;
   onRegenerate?: () => void;
   regenerating?: boolean;
-  label?: string;
+  label: string;
+  title: string;
+  subtitle: string;
 }) => {
-  const [show, setShow] = useState(false);
+  const [open, setOpen] = useState(false);
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-border bg-card-elevated px-3 py-2 font-mono text-xs">
-      <span className="flex-1 break-all">
-        {show ? value : "•".repeat(Math.min(value.length, 64))}
-      </span>
-      <button
-        type="button"
-        onClick={() => setShow((s) => !s)}
-        className="text-muted-foreground hover:text-foreground shrink-0"
-        aria-label={show ? "Hide" : "Show"}
-      >
-        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-      </button>
-      <button
-        type="button"
-        onClick={() => { navigator.clipboard.writeText(value); toast.success("Copied!"); }}
-        className="text-muted-foreground hover:text-foreground shrink-0"
-        aria-label="Copy"
-      >
-        <Copy className="h-4 w-4" />
-      </button>
-      {onRegenerate && (
+    <>
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-card-elevated px-3 py-2 font-mono text-xs">
+        <span className="flex-1 break-all">
+          {"•".repeat(Math.min(value.length, 64))}
+        </span>
         <button
           type="button"
-          onClick={onRegenerate}
-          disabled={regenerating}
+          onClick={() => setOpen(true)}
           className="text-muted-foreground hover:text-foreground shrink-0"
-          aria-label={`Regenerate ${label || "token"}`}
-          title="Regenerate"
+          aria-label="View"
+          title="View"
         >
-          <RefreshCw className={`h-4 w-4 ${regenerating ? "animate-spin" : ""}`} />
+          <Eye className="h-4 w-4" />
         </button>
-      )}
-    </div>
+        <button
+          type="button"
+          onClick={() => { navigator.clipboard.writeText(value); toast.success("Copied!"); }}
+          className="text-muted-foreground hover:text-foreground shrink-0"
+          aria-label="Copy"
+          title="Copy"
+        >
+          <Copy className="h-4 w-4" />
+        </button>
+      </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{subtitle}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs">{label}</Label>
+              <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-border bg-card-elevated px-3 py-2">
+                <input
+                  readOnly
+                  value={value}
+                  className="flex-1 bg-transparent text-xs font-mono outline-none break-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => { navigator.clipboard.writeText(value); toast.success("Copied!"); }}
+                  className="text-muted-foreground hover:text-foreground shrink-0"
+                  aria-label="Copy"
+                  title="Copy"
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs">Header Example</Label>
+              <pre className="mt-1.5 rounded-lg bg-[#0d0d0d] text-foreground/90 p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">
+{`Authorization: Bearer ${value}`}
+              </pre>
+            </div>
+
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+              ⚠ Never share this key with client-side code.
+            </div>
+          </div>
+
+          <DialogFooter>
+            {onRegenerate && (
+              <Button
+                onClick={onRegenerate}
+                disabled={regenerating}
+                className="bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${regenerating ? "animate-spin" : ""}`} />
+                Regenerate Key
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
@@ -137,9 +186,9 @@ const SessionDetail = () => {
       } catch { /* ignore */ }
     };
     tick();
-    const i = setInterval(tick, 30000);
+    const i = setInterval(tick, s?.status === "connected" ? 10000 : 30000);
     return () => clearInterval(i);
-  }, [id]);
+  }, [id, s?.status]);
 
   // Realtime message_logs
   useEffect(() => {
@@ -292,7 +341,7 @@ const SessionDetail = () => {
           <dl className="grid grid-cols-2 gap-3 text-sm">
             <div><dt className="text-muted-foreground">Status</dt><dd className="capitalize">{s.status}</dd></div>
             <div><dt className="text-muted-foreground">Last Active</dt><dd>{s.last_active ? new Date(s.last_active).toLocaleString() : "Never"}</dd></div>
-            <div><dt className="text-muted-foreground">WhatsApp Account</dt><dd>{s.whatsapp_name || "—"}</dd></div>
+            <div><dt className="text-muted-foreground">WhatsApp Account</dt><dd>{s.whatsapp_name || s.phone_number || "—"}</dd></div>
             <div><dt className="text-muted-foreground">Connected Phone</dt><dd>{s.phone_number || "—"}</dd></div>
             <div><dt className="text-muted-foreground">Created</dt><dd>{new Date(s.created_at).toLocaleDateString()}</dd></div>
           </dl>
@@ -328,13 +377,27 @@ const SessionDetail = () => {
               <div>
                 <Label>API Access Token</Label>
                 <div className="mt-1.5">
-                  <TokenField value={s.api_token} onRegenerate={() => regenerate("api_token")} regenerating={regenApi} label="API token" />
+                  <TokenField
+                    value={s.api_token}
+                    onRegenerate={() => regenerate("api_token")}
+                    regenerating={regenApi}
+                    label="Private API Key"
+                    title="API Access Key"
+                    subtitle="Use this key to authenticate your requests"
+                  />
                 </div>
               </div>
               <div>
                 <Label>Webhook Secret</Label>
                 <div className="mt-1.5">
-                  <TokenField value={s.webhook_secret} onRegenerate={() => regenerate("webhook_secret")} regenerating={regenWh} label="Webhook secret" />
+                  <TokenField
+                    value={s.webhook_secret}
+                    onRegenerate={() => regenerate("webhook_secret")}
+                    regenerating={regenWh}
+                    label="Webhook Secret"
+                    title="Webhook Secret"
+                    subtitle="Use this secret to verify incoming webhook requests"
+                  />
                 </div>
               </div>
               <Button variant="outline" className="w-full">API Documentation →</Button>
@@ -386,9 +449,6 @@ const SessionDetail = () => {
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">{totalLogs} total · live</span>
           </div>
-        </div>
-        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
-          This monitor shows outgoing messages sent through the API. Updates in real-time.
         </div>
         {logs.length === 0 ? (
           <p className="text-sm text-muted-foreground py-6 text-center">No messages yet.</p>
