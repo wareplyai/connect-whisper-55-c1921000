@@ -53,6 +53,7 @@ const App = () => (
                 <Route path="sessions" element={<Sessions />} />
                 <Route path="sessions/create" element={<CreateSession />} />
                 <Route path="sessions/:id" element={<SessionDetail />} />
+                <Route path="sessions/:id/edit" element={<EditSession />} />
                 <Route path="sessions/:id/connect" element={<ConnectSession />} />
                 <Route path="subscription" element={<Subscription />} />
               </Route>
