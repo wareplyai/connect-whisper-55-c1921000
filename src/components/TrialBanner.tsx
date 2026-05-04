@@ -1,39 +1,31 @@
 import { Link } from "react-router-dom";
-import { Clock, AlertTriangle, ArrowRight } from "lucide-react";
+import { Clock, AlertTriangle } from "lucide-react";
 import { useTrial } from "@/hooks/useTrial";
 
 export const TrialBanner = () => {
-  const { loading, isTrial, trialEndsAt, daysRemaining, expired } = useTrial();
+  const { loading, isTrial, trialEndsAt, expired } = useTrial();
   if (loading || !isTrial) return null;
 
   const dateStr = trialEndsAt
-    ? trialEndsAt.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+    ? trialEndsAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
     : "—";
 
-  if (expired) {
-    return (
-      <div className="flex items-center gap-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm">
-        <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
-        <div className="flex-1">
-          <span className="font-medium text-destructive">Trial Expired</span>{" "}
-          <span className="text-muted-foreground">— Upgrade to continue with full features.</span>
-        </div>
-        <Link to="/dashboard/subscription" className="inline-flex items-center gap-1 rounded-lg bg-destructive text-destructive-foreground px-3 py-1.5 text-xs font-medium hover:opacity-90">
-          Upgrade Now <ArrowRight className="h-3 w-3" />
-        </Link>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm">
-      <Clock className="h-4 w-4 text-warning shrink-0" />
-      <div className="flex-1">
-        <span className="font-medium">⏰ Trial Period Active</span>{" "}
-        <span className="text-muted-foreground">— Your trial ends on {dateStr} — {daysRemaining} day{daysRemaining === 1 ? "" : "s"} remaining</span>
+    <div className="rounded-xl border border-border bg-card p-4 flex flex-wrap items-center gap-3">
+      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+        {expired ? <AlertTriangle className="h-5 w-5 text-destructive" /> : <Clock className="h-5 w-5" />}
       </div>
-      <Link to="/dashboard/subscription" className="inline-flex items-center gap-1 rounded-lg bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:bg-primary-hover">
-        Upgrade Now <ArrowRight className="h-3 w-3" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold">{expired ? "Trial Expired" : "Trial Period Active"}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {expired ? "Upgrade to continue with full features." : `Your trial ends on ${dateStr}`}
+        </p>
+      </div>
+      <Link
+        to="/dashboard/subscription"
+        className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-card-elevated"
+      >
+        Upgrade Now
       </Link>
     </div>
   );
