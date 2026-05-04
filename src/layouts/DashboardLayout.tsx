@@ -4,6 +4,7 @@ import { TrialBanner } from "@/components/TrialBanner";
 import { N8nBanner } from "@/components/N8nBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/Logo";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
