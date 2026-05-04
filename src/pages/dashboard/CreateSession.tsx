@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown, QrCode } from "lucide-react";
+import { ArrowLeft, ChevronDown, QrCode, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { backendApi } from "@/lib/backend";
+import { CountryCodeSelect } from "@/components/CountryCodeSelect";
+import { DEFAULT_COUNTRY, Country } from "@/lib/countries";
 
 const ALL_EVENTS = [
   "messages.received","messages-group.received","messages-newsletter.received","messages-personal.received",
@@ -21,9 +23,10 @@ const ALL_EVENTS = [
 const CreateSession = () => {
   const { profile, user } = useAuth();
   const nav = useNavigate();
+  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
+  const [phoneNum, setPhoneNum] = useState("");
   const [form, setForm] = useState({
     session_name: "",
-    phone_number: "",
     enable_account_protection: true,
     enable_message_logging: true,
     enable_webhook: false,
@@ -51,23 +54,62 @@ const CreateSession = () => {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const userId = profile?.id || user?.id;
-    if (!userId) {
-      toast.error("You must be signed in to create a session.");
+    if (!userId) { toast.error("You must be signed in to create a session."); return; }
+
+    // Phone validation
+    const cleaned = phoneNum.trim().replace(/\s|-/g, "");
+    if (cleaned.startsWith("+") && !cleaned.startsWith(country.code)) {
+      toast.error("Please include your country code (e.g., +880 for Bangladesh, +1 for US)");
       return;
     }
+    const digits = cleaned.replace(/^\+/, "").replace(country.code.replace("+",""), "");
+    if (!/^\d{6,15}$/.test(cleaned.replace(/^\+/, ""))) {
+      toast.error("Please enter a valid phone number with country code.");
+      return;
+    }
+    const fullPhone = `${country.code}${digits}`;
+
+    // Webhook validation
+    if (form.enable_webhook) {
+      if (!form.webhook_url.trim()) { toast.error("Please enter a webhook URL to receive notifications."); return; }
+      if (!/^https:\/\//i.test(form.webhook_url.trim())) { toast.error("Webhook URL must start with https://"); return; }
+    }
+
     setLoading(true);
+
+    // Duplicate phone check — block only if active
+    const { data: existing } = await supabase
+      .from("sessions")
+      .select("id, status")
+      .eq("user_id", userId)
+      .eq("phone_number", fullPhone);
+    const active = (existing || []).find((s) => s.status !== "disconnected");
+    if (active) {
+      setLoading(false);
+      toast.error("This number is already connected in another session. Please disconnect it first.");
+      return;
+    }
+
     const { data, error } = await supabase.from("sessions").insert({
       user_id: userId,
-      ...form,
-      proxy_url: form.proxy_url || null,
+      session_name: form.session_name,
+      phone_number: fullPhone,
+      enable_account_protection: form.enable_account_protection,
+      enable_message_logging: form.enable_message_logging,
+      enable_webhook: form.enable_webhook,
       webhook_url: form.webhook_url || null,
+      webhook_events: form.webhook_events,
+      read_incoming_messages: form.read_incoming_messages,
+      auto_reject_calls: form.auto_reject_calls,
+      always_online: form.always_online,
+      ignore_groups: form.ignore_groups,
+      ignore_broadcasts: form.ignore_broadcasts,
+      ignore_channels: form.ignore_channels,
+      proxy_url: form.proxy_url || null,
       status: "qr_pending",
     }).select().single();
 
-    if (error) {
-      setLoading(false);
-      return toast.error(error.message);
-    }
+    if (error) { setLoading(false); return toast.error(error.message); }
 
     try {
       await backendApi.createSession(data.id);
@@ -75,12 +117,13 @@ const CreateSession = () => {
       nav(`/dashboard/sessions/${data.id}/connect`);
     } catch (err: any) {
       toast.error(`Backend error: ${err.message}`);
-      // Still redirect so user can retry from the QR page
       nav(`/dashboard/sessions/${data.id}/connect`);
     } finally {
       setLoading(false);
     }
   };
+
+  const showCcWarning = phoneNum.trim().length > 0 && !phoneNum.trim().startsWith("+");
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -102,7 +145,22 @@ const CreateSession = () => {
           </div>
           <div>
             <Label>Phone Number</Label>
-            <Input value={form.phone_number} onChange={(e) => set("phone_number", e.target.value)} placeholder="+1 234 567 8900" className="mt-1.5" />
+            <div className="flex gap-2 mt-1.5">
+              <CountryCodeSelect value={country} onChange={setCountry} />
+              <Input
+                required
+                value={phoneNum}
+                onChange={(e) => setPhoneNum(e.target.value)}
+                placeholder="1712345678"
+                className="flex-1"
+              />
+            </div>
+            {showCcWarning && (
+              <p className="mt-1.5 text-xs text-warning flex items-start gap-1.5">
+                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                Please include your country code (e.g., +880 for Bangladesh, +1 for US)
+              </p>
+            )}
           </div>
         </div>
 
@@ -123,8 +181,14 @@ const CreateSession = () => {
         {form.enable_webhook && (
           <div className="space-y-4 rounded-lg border border-border bg-card-elevated p-4">
             <div>
-              <Label>Webhook URL (POST)</Label>
-              <Input value={form.webhook_url} onChange={(e) => set("webhook_url", e.target.value)} placeholder="https://your-endpoint.com/webhook" className="mt-1.5" />
+              <Label>Webhook URL (POST) <span className="text-destructive">*</span></Label>
+              <Input
+                value={form.webhook_url}
+                onChange={(e) => set("webhook_url", e.target.value)}
+                placeholder="https://your-endpoint.com/webhook"
+                className="mt-1.5"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">URL must start with https://</p>
             </div>
             <div>
               <Label className="mb-2 block">Webhook Events</Label>

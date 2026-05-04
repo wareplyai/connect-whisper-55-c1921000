@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 
 const plans = [
-  { name: "Trial", price: 0, sessions: "1", limit: "50 msg/day · 3 days" },
+  { name: "Trial", price: 0, sessions: "Unlimited", limit: "Unlimited · 3 days full access" },
   { name: "Basic", price: 6, sessions: "1", limit: "Unlimited" },
   { name: "Pro", price: 15, sessions: "3", limit: "Unlimited", popular: true },
   { name: "Plus", price: 30, sessions: "6", limit: "Unlimited" },

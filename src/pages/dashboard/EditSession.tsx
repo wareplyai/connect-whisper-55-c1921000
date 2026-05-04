@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, ChevronDown, Edit, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { CountryCodeSelect } from "@/components/CountryCodeSelect";
+import { splitPhone, DEFAULT_COUNTRY, Country } from "@/lib/countries";
 
 const ALL_EVENTS = [
   "messages.received","messages-group.received","messages-newsletter.received","messages-personal.received",
@@ -17,15 +18,6 @@ const ALL_EVENTS = [
   "groups.upsert","groups.update","group-participants.update","contacts.upsert","contacts.update","poll.results",
 ];
 
-const COUNTRY_CODES = ["+1","+44","+91","+880","+92","+62","+63","+60","+61","+49","+33","+34","+39","+55","+52","+27","+971","+966","+86","+81","+82"];
-
-const splitPhone = (full: string | null): { code: string; num: string } => {
-  if (!full) return { code: "+1", num: "" };
-  const match = COUNTRY_CODES.find((c) => full.startsWith(c));
-  if (match) return { code: match, num: full.slice(match.length).trim() };
-  return { code: "+1", num: full.replace(/^\+/, "") };
-};
-
 const EditSession = () => {
   const { id } = useParams();
   const nav = useNavigate();
@@ -33,7 +25,7 @@ const EditSession = () => {
   const [saving, setSaving] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [name, setName] = useState("");
-  const [code, setCode] = useState("+1");
+  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [num, setNum] = useState("");
   const [form, setForm] = useState<any>(null);
 
@@ -43,8 +35,8 @@ const EditSession = () => {
       const { data, error } = await supabase.from("sessions").select("*").eq("id", id).maybeSingle();
       if (error || !data) { toast.error("Session not found"); nav("/dashboard/sessions"); return; }
       setName(data.session_name || "");
-      const { code: c, num: n } = splitPhone(data.phone_number);
-      setCode(c); setNum(n);
+      const sp = splitPhone(data.phone_number);
+      setCountry(sp.country); setNum(sp.number);
       setForm({
         enable_account_protection: data.enable_account_protection,
         enable_message_logging: data.enable_message_logging,
@@ -73,8 +65,12 @@ const EditSession = () => {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
+    if (form.enable_webhook) {
+      if (!form.webhook_url.trim()) { toast.error("Please enter a webhook URL to receive notifications."); return; }
+      if (!/^https:\/\//i.test(form.webhook_url.trim())) { toast.error("Webhook URL must start with https://"); return; }
+    }
     setSaving(true);
-    const phone = num ? `${code}${num.replace(/^\+?/, "")}` : null;
+    const phone = num ? `${country.code}${num.replace(/^\+?/, "")}` : null;
     const { error } = await supabase.from("sessions").update({
       session_name: name,
       phone_number: phone,
@@ -114,12 +110,7 @@ const EditSession = () => {
           <div>
             <Label>Phone Number</Label>
             <div className="flex gap-2 mt-1.5">
-              <Select value={code} onValueChange={setCode}>
-                <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {COUNTRY_CODES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <CountryCodeSelect value={country} onChange={setCountry} />
               <Input value={num} onChange={(e) => setNum(e.target.value)} placeholder="234567890" className="flex-1" />
             </div>
           </div>
