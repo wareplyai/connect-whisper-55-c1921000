@@ -55,7 +55,7 @@ export function useHeadAdminStats(refreshMs = 30000) {
 
     // realtime: refresh when relevant tables change
     const ch = supabase
-      .channel("ha-stats")
+      .channel(`ha-stats-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "sessions" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, load)
