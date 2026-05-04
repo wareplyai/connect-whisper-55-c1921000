@@ -31,17 +31,20 @@ export default function AllUsers() {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: profiles }, { data: sessions }, { data: msgs }] = await Promise.all([
+    const [{ data: profiles }, { data: sessions }, { data: msgs }, { data: subs }] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("sessions").select("user_id"),
       supabase.from("message_logs").select("user_id"),
+      supabase.from("subscriptions").select("user_id, plan, trial_ends_at, status").in("status", ["active", "trial_active"]),
     ]);
     const sessCount: Record<string, number> = {};
     const msgCount: Record<string, number> = {};
+    const trialEnds: Record<string, string> = {};
     sessions?.forEach((s: any) => { sessCount[s.user_id] = (sessCount[s.user_id] || 0) + 1; });
     msgs?.forEach((m: any) => { msgCount[m.user_id] = (msgCount[m.user_id] || 0) + 1; });
+    subs?.forEach((s: any) => { if (s.plan === "trial" && s.trial_ends_at) trialEnds[s.user_id] = s.trial_ends_at; });
     setUsers((profiles || []).map((u: any) => ({
-      ...u, _sessions: sessCount[u.id] || 0, _messages: msgCount[u.id] || 0,
+      ...u, _sessions: sessCount[u.id] || 0, _messages: msgCount[u.id] || 0, _trial_ends_at: trialEnds[u.id] || null,
     })));
     setLoading(false);
   };
@@ -153,7 +156,24 @@ export default function AllUsers() {
                 </TableCell>
                 <TableCell className="font-medium">{u.full_name || "—"}</TableCell>
                 <TableCell className="text-muted-foreground text-sm">{u.email}</TableCell>
-                <TableCell><Badge variant="outline" className="capitalize">{u.plan}</Badge></TableCell>
+                <TableCell>
+                  <div className="flex flex-col gap-0.5">
+                    <Badge variant="outline" className="capitalize w-fit">{u.plan}</Badge>
+                    {u.plan === "trial" && u._trial_ends_at && (() => {
+                      const ms = new Date(u._trial_ends_at).getTime() - Date.now();
+                      const days = Math.ceil(ms / 86400000);
+                      const expired = ms <= 0;
+                      return (
+                        <span
+                          className={`text-[10px] ${expired ? "text-red-500" : "text-muted-foreground"}`}
+                          title={new Date(u._trial_ends_at).toLocaleString()}
+                        >
+                          {expired ? "Expired" : `${days} day${days === 1 ? "" : "s"} left`}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </TableCell>
                 <TableCell>{u._sessions}</TableCell>
                 <TableCell>{u._messages}</TableCell>
                 <TableCell>
