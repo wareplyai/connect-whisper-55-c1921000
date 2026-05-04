@@ -129,8 +129,24 @@ const Plans = () => {
                   ))}
                 </ul>
                 <Button
-                  onClick={() => !isCurrent && p.plan_name !== "trial" && setSelected(p)}
-                  disabled={isCurrent || p.plan_name === "trial"}
+                  onClick={async () => {
+                    if (isCurrent) return;
+                    if (p.plan_name === "trial") {
+                      if (!user) return;
+                      const now = new Date();
+                      const ends = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+                      await supabase.from("subscriptions").insert({
+                        user_id: user.id, plan: "trial", max_sessions: p.max_sessions,
+                        status: "trial_active",
+                        trial_started_at: now.toISOString(), trial_ends_at: ends.toISOString(),
+                      });
+                      await supabase.from("profiles").update({ plan: "trial", max_sessions: p.max_sessions }).eq("id", user.id);
+                      window.location.href = "/trial-started";
+                      return;
+                    }
+                    setSelected(p);
+                  }}
+                  disabled={isCurrent}
                   className={`mt-5 w-full ${isCurrent ? "bg-muted text-foreground hover:bg-muted" : ""}`}
                 >
                   {isCurrent ? "Manage Plan" : p.plan_name === "trial" ? "Start Trial" : "Choose Plan"}
