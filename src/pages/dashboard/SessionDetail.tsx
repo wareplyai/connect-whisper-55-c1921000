@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Copy, Eye, EyeOff, RefreshCw, Trash2, Edit, Webhook } from "lucide-react";
 import { toast } from "sonner";
+import { backendApi } from "@/lib/backend";
 
 const Mask = ({ value }: { value: string }) => {
   const [show, setShow] = useState(false);
