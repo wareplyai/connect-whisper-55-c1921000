@@ -77,37 +77,6 @@ const Subscription = () => {
 
   return (
     <div className="space-y-6">
-      {/* Trial status banner */}
-      {isTrial && !trialExpired && (
-        <div className="rounded-xl border border-border bg-[#1a1a1a] p-4 flex flex-wrap items-center gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-            <Clock className="h-5 w-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-white">Trial Period Active</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Your trial ends on {dateStr}</p>
-          </div>
-          <Link to="/dashboard/subscription/plans" className="inline-flex items-center rounded-lg bg-white text-black px-4 py-1.5 text-sm font-semibold hover:bg-white/90">
-            Upgrade Now
-          </Link>
-        </div>
-      )}
-
-      {trialExpired && (
-        <div className="rounded-xl border border-red-500/40 bg-[#2a0a0a] p-4 flex flex-wrap items-center gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-red-500/10 text-red-500">
-            <XCircle className="h-5 w-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-red-500">Trial Period Expired</p>
-            <p className="text-xs text-red-400/70 mt-0.5">Your trial has ended. Subscribe now to continue using our services.</p>
-          </div>
-          <Link to="/dashboard/subscription/plans" className="inline-flex items-center rounded-lg bg-red-500 text-white px-4 py-1.5 text-sm font-semibold hover:bg-red-600">
-            Subscribe Now
-          </Link>
-        </div>
-      )}
-
       <div className="grid lg:grid-cols-10 gap-6">
         {/* Current Plan card */}
         <div className="lg:col-span-7 rounded-xl border border-border bg-card p-6 space-y-4">
