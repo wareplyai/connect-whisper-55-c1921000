@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Check, ChevronRight, Loader2, X, Upload } from "lucide-react";
+import { Check, ChevronRight, Loader2, X } from "lucide-react";
 
 type Method = {
   id: string;
@@ -45,13 +45,12 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
   const [selected, setSelected] = useState<Method | null>(null);
   const [trxId, setTrxId] = useState("");
   const [senderNumber, setSenderNumber] = useState("");
-  const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const amount = plan ? (yearly ? plan.price_yearly : plan.price_monthly) : 0;
 
   useEffect(() => {
     if (!open) return;
-    setStep(1); setSelected(null); setTrxId(""); setSenderNumber(""); setFile(null);
+    setStep(1); setSelected(null); setTrxId(""); setSenderNumber("");
     supabase.from("payment_methods").select("*").eq("is_active", true).then(({ data }) => {
       setMethods((data as Method[]) || []);
     });
@@ -67,14 +66,6 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
     }
     setSubmitting(true);
     try {
-      let screenshot_url: string | null = null;
-      if (file) {
-        const ext = file.name.split(".").pop();
-        const path = `${user.id}/${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("payment-screenshots").upload(path, file);
-        if (upErr) throw upErr;
-        screenshot_url = path;
-      }
       const { error } = await supabase.from("payment_transactions").insert({
         user_id: user.id,
         plan: plan.plan_name,
@@ -82,7 +73,6 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
         payment_method: selected.method_name,
         transaction_id: trxId.trim(),
         sender_number: senderNumber.trim(),
-        screenshot_url,
         status: "pending",
       });
       if (error) throw error;
