@@ -18,7 +18,7 @@ const Register = () => {
     e.preventDefault();
     if (password !== confirm) return toast.error("Passwords do not match");
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -26,10 +26,25 @@ const Register = () => {
         data: { full_name: fullName },
       },
     });
+    if (error) { setLoading(false); return toast.error(error.message); }
+
+    // Auto-create 3-day free trial subscription with full access
+    const userId = data.user?.id;
+    if (userId) {
+      const now = new Date();
+      const ends = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      await supabase.from("subscriptions").insert({
+        user_id: userId,
+        plan: "trial",
+        max_sessions: 999,
+        status: "trial_active",
+        trial_started_at: now.toISOString(),
+        trial_ends_at: ends.toISOString(),
+      });
+    }
     setLoading(false);
-    if (error) return toast.error(error.message);
     toast.success("Account created!");
-    nav("/dashboard");
+    nav("/trial-started");
   };
 
   return (
