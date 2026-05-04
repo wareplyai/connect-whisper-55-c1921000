@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/marketing/Navbar";
+import { Logo } from "@/components/Logo";
 import {
   ArrowRight, Check, Star, MessageSquare, QrCode, BarChart3,
   Headset, Bell, Bot, Users, ShoppingBag, LineChart, Image as ImageIcon,
@@ -284,10 +285,7 @@ const Landing = () => {
       <footer className="border-t border-border mt-10">
         <div className="container py-12 grid md:grid-cols-5 gap-8">
           <div className="md:col-span-2">
-            <div className="flex items-center gap-1.5">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground font-bold">Wa</span>
-              <span className="text-lg font-semibold">API</span>
-            </div>
+            <Logo size={32} textClassName="text-base" />
             <p className="mt-3 text-sm text-muted-foreground max-w-xs">The developer-friendly WhatsApp API. Unlimited messages, no per-message fees.</p>
           </div>
           {[
