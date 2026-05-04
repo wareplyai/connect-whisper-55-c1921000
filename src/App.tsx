@@ -17,6 +17,7 @@ import DashboardHome from "./pages/dashboard/DashboardHome";
 import Sessions from "./pages/dashboard/Sessions";
 import CreateSession from "./pages/dashboard/CreateSession";
 import SessionDetail from "./pages/dashboard/SessionDetail";
+import EditSession from "./pages/dashboard/EditSession";
 import ConnectSession from "./pages/dashboard/ConnectSession";
 import Subscription from "./pages/dashboard/Subscription";
 import AdminPanel from "./pages/admin/AdminPanel";
