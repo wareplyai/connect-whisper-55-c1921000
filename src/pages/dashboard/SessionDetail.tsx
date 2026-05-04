@@ -141,6 +141,7 @@ const SessionDetail = () => {
   const [editForm, setEditForm] = useState({ session_name: "", phone_number: "" });
   const [savingEdit, setSavingEdit] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [confirmRegen, setConfirmRegen] = useState<null | "api_token" | "webhook_secret">(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const channelRef = useRef<any>(null);
