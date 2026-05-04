@@ -8,6 +8,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 
 const DashboardHome = () => {
   const { profile } = useAuth();
+  const [planInfo, setPlanInfo] = useState<{ plan: string; status: string } | null>(null);
   const [sessionCount, setSessionCount] = useState(0);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [failed, setFailed] = useState<any[]>([]);
@@ -17,8 +18,22 @@ const DashboardHome = () => {
   useEffect(() => {
     if (!profile) return;
     (async () => {
-      const { count } = await supabase.from("sessions").select("*", { count: "exact", head: true }).eq("user_id", profile.id);
+      const [{ count }, { data: activeSub }, { data: latestProfile }] = await Promise.all([
+        supabase.from("sessions").select("*", { count: "exact", head: true }).eq("user_id", profile.id),
+        supabase
+          .from("subscriptions")
+          .select("plan,status")
+          .eq("user_id", profile.id)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase.from("profiles").select("plan").eq("id", profile.id).maybeSingle(),
+      ]);
       setSessionCount(count || 0);
+      const savedPlan = activeSub?.plan || latestProfile?.plan || profile.plan || "free";
+      const activeByProfile = savedPlan !== "free" && savedPlan !== "trial";
+      setPlanInfo({ plan: savedPlan, status: activeSub?.status || (activeByProfile ? "active" : "inactive") });
 
       const { data: logs } = await supabase
         .from("message_logs").select("*").eq("user_id", profile.id)
@@ -38,6 +53,9 @@ const DashboardHome = () => {
     })();
   }, [profile]);
 
+  const currentPlan = planInfo?.plan || profile?.plan || "free";
+  const hasActivePlan = planInfo?.status === "active" && currentPlan !== "free";
+
   return (
     <div className="space-y-6">
 
@@ -52,8 +70,10 @@ const DashboardHome = () => {
             <span className="text-sm text-muted-foreground">Subscription</span>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </div>
-          <p className="text-2xl font-bold capitalize">{profile?.plan || "Free"}</p>
-          <span className="mt-1 inline-block text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning">No active plan</span>
+          <p className="text-2xl font-bold capitalize">{currentPlan}</p>
+          <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full ${hasActivePlan ? "bg-primary/10 text-primary" : "bg-warning/10 text-warning"}`}>
+            {hasActivePlan ? "Active plan" : "No active plan"}
+          </span>
           <Button asChild size="sm" variant="outline" className="mt-4 w-full">
             <Link to="/dashboard/subscription">View Plans <ArrowRight className="ml-2 h-3 w-3" /></Link>
           </Button>
