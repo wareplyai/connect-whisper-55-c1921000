@@ -110,12 +110,7 @@ const EditSession = () => {
           <div>
             <Label>Phone Number</Label>
             <div className="flex gap-2 mt-1.5">
-              <Select value={code} onValueChange={setCode}>
-                <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {COUNTRY_CODES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <CountryCodeSelect value={country} onChange={setCountry} />
               <Input value={num} onChange={(e) => setNum(e.target.value)} placeholder="234567890" className="flex-1" />
             </div>
           </div>
