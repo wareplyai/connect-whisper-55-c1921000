@@ -215,6 +215,7 @@ export type Database = {
           plan: string
           reviewed_at: string | null
           reviewed_by: string | null
+          screenshot_url: string | null
           sender_number: string | null
           status: string | null
           transaction_id: string | null
@@ -229,6 +230,7 @@ export type Database = {
           plan: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          screenshot_url?: string | null
           sender_number?: string | null
           status?: string | null
           transaction_id?: string | null
@@ -243,6 +245,7 @@ export type Database = {
           plan?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          screenshot_url?: string | null
           sender_number?: string | null
           status?: string | null
           transaction_id?: string | null

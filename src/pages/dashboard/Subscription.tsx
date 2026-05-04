@@ -1,20 +1,42 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { PaymentModal } from "@/components/PaymentModal";
 
-const plans = [
-  { name: "Trial", price: 0, sessions: "Unlimited", limit: "Unlimited · 3 days full access" },
-  { name: "Basic", price: 6, sessions: "1", limit: "Unlimited" },
-  { name: "Pro", price: 15, sessions: "3", limit: "Unlimited", popular: true },
-  { name: "Plus", price: 30, sessions: "6", limit: "Unlimited" },
-  { name: "Business", price: 45, sessions: "10", limit: "Unlimited" },
-];
-
-const features = ["Unlimited Contacts", "No Daily Cap", "MCP Server", "Full API", "Webhooks", "Priority Support"];
+type Plan = {
+  id: string;
+  plan_name: string;
+  display_name: string;
+  price_monthly: number;
+  price_yearly: number;
+  max_sessions: number;
+  features: string[] | null;
+  is_active: boolean;
+};
 
 const Subscription = () => {
+  const { user } = useAuth();
   const [yearly, setYearly] = useState(false);
-  const mult = yearly ? 0.85 : 1;
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Plan | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("plan_pricing").select("*").eq("is_active", true).order("price_monthly");
+      setPlans(((data as any[]) || []).filter((p) => p.plan_name !== "trial") as Plan[]);
+      if (user) {
+        const { data: sub } = await supabase
+          .from("subscriptions").select("plan,status").eq("user_id", user.id)
+          .order("created_at", { ascending: false }).limit(1).maybeSingle();
+        setCurrentPlan(sub?.plan || null);
+      }
+      setLoading(false);
+    })();
+  }, [user]);
 
   return (
     <div className="space-y-8">
@@ -27,26 +49,47 @@ const Subscription = () => {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {plans.map((p) => (
-          <div key={p.name} className={`relative rounded-xl border bg-card p-6 ${p.popular ? "border-primary glow-primary" : "border-border"}`}>
-            {p.popular && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">Most Popular</span>
-            )}
-            <h3 className="font-semibold">{p.name}</h3>
-            <div className="mt-3 flex items-baseline gap-1">
-              <span className="text-3xl font-bold">${p.price === 0 ? "0" : (p.price * mult).toFixed(0)}</span>
-              <span className="text-sm text-muted-foreground">/{yearly ? "mo" : "mo"}</span>
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">{p.sessions} session{p.sessions !== "1" ? "s" : ""}</p>
-            <p className="text-sm text-muted-foreground">{p.limit}</p>
-            <ul className="mt-4 space-y-1.5 text-xs">
-              {features.map((f) => <li key={f} className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-primary" /> {f}</li>)}
-            </ul>
-            <Button className="mt-5 w-full bg-primary text-primary-foreground hover:bg-primary-hover">{p.name === "Trial" ? "Start Trial" : "Subscribe"}</Button>
-          </div>
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {plans.map((p) => {
+            const popular = p.plan_name === "pro";
+            const isCurrent = currentPlan === p.plan_name;
+            const price = yearly ? p.price_yearly : p.price_monthly;
+            return (
+              <div key={p.id} className={`relative rounded-xl border-2 bg-card p-6 flex flex-col ${isCurrent ? "border-green-500" : popular ? "border-primary glow-primary" : "border-border"}`}>
+                {popular && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">Most Popular</span>
+                )}
+                {isCurrent && (
+                  <span className="absolute -top-3 right-3 rounded-full bg-green-500 px-3 py-0.5 text-xs font-semibold text-white">Active</span>
+                )}
+                <h3 className="font-semibold">{p.display_name}</h3>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <span className="text-3xl font-bold">${price}</span>
+                  <span className="text-sm text-muted-foreground">/{yearly ? "yr" : "mo"}</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">{p.max_sessions} session{p.max_sessions > 1 ? "s" : ""}</p>
+                <ul className="mt-4 space-y-1.5 text-xs flex-1">
+                  {(p.features || []).map((f) => (
+                    <li key={f} className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-primary" /> {f}</li>
+                  ))}
+                </ul>
+                <Button
+                  onClick={() => setSelected(p)}
+                  disabled={isCurrent}
+                  className="mt-5 w-full bg-primary text-primary-foreground hover:bg-primary-hover"
+                >
+                  {isCurrent ? "Current Plan" : popular ? "Get Started" : "Choose Plan"}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <PaymentModal open={!!selected} onOpenChange={(v) => !v && setSelected(null)} plan={selected} yearly={yearly} />
     </div>
   );
 };
