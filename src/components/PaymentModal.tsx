@@ -172,14 +172,6 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
                 <Label>Your Payment Number *</Label>
                 <Input value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} placeholder="Number you paid from (01XXXXXXXXX)" />
               </div>
-              <div className="space-y-2">
-                <Label>Screenshot (optional)</Label>
-                <label className="flex items-center gap-2 rounded-lg border border-dashed border-border p-3 cursor-pointer hover:bg-muted text-sm">
-                  <Upload className="h-4 w-4" />
-                  <span className="flex-1 truncate">{file?.name || "Upload payment screenshot for faster approval"}</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-                </label>
-              </div>
               <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/30 p-3 text-xs">
                 ⏳ Your payment will be verified within 1–24 hours. You'll receive a notification once approved.
               </div>
