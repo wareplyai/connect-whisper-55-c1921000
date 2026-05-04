@@ -34,6 +34,9 @@ export const backendApi = {
 
   logout: (sessionId: string) =>
     request(`/api/session/${sessionId}/logout`, { method: "POST" }),
+
+  restart: (sessionId: string) =>
+    request("/api/session/create", { method: "POST", body: JSON.stringify({ sessionId }) }),
 };
 
 export const BACKEND_URL = BASE_URL;
