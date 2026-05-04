@@ -5,7 +5,7 @@ import {
   Zap, Send, ArrowUpRight, ArrowDownRight, MoreHorizontal, Activity,
 } from "lucide-react";
 import {
-  AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
