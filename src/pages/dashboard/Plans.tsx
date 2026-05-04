@@ -51,7 +51,7 @@ const Plans = () => {
       if (user) {
         const [{ data: sub }, { data: prof }, { count }] = await Promise.all([
           supabase.from("subscriptions").select("plan,max_sessions,status").eq("user_id", user.id)
-            .eq("status", "active").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+            .in("status", ["active", "trial_active"]).order("created_at", { ascending: false }).limit(1).maybeSingle(),
           supabase.from("profiles").select("plan,max_sessions").eq("id", user.id).maybeSingle(),
           supabase.from("sessions").select("id", { count: "exact", head: true }).eq("user_id", user.id),
         ]);
