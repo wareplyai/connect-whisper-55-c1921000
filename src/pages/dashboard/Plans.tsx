@@ -6,6 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PaymentModal } from "@/components/PaymentModal";
+import { toast } from "sonner";
 
 type Plan = {
   id: string;
@@ -141,6 +142,7 @@ const Plans = () => {
                         trial_started_at: now.toISOString(), trial_ends_at: ends.toISOString(),
                       });
                       await supabase.from("profiles").update({ plan: "trial", max_sessions: p.max_sessions }).eq("id", user.id);
+                      toast.success(`Trial started! Ends on ${ends.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`);
                       window.location.href = "/trial-started";
                       return;
                     }

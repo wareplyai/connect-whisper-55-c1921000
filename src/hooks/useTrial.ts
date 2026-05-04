@@ -19,19 +19,23 @@ export const useTrial = (): TrialInfo => {
   useEffect(() => {
     if (!user) { setInfo((i) => ({ ...i, loading: false })); return; }
     (async () => {
-      const { data } = await supabase
-        .from("subscriptions")
-        .select("plan, status, trial_ends_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const [{ data }, { data: prof }] = await Promise.all([
+        supabase
+          .from("subscriptions")
+          .select("plan, status, trial_ends_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle(),
+      ]);
 
-      if (!data || data.plan !== "trial") {
+      const planIsTrial = data?.plan === "trial" || (prof as any)?.plan === "trial";
+      if (!planIsTrial) {
         setInfo({ loading: false, isTrial: false, trialEndsAt: null, daysRemaining: 0, expired: false });
         return;
       }
-      const ends = data.trial_ends_at ? new Date(data.trial_ends_at) : null;
+      const ends = data?.trial_ends_at ? new Date(data.trial_ends_at) : null;
       const ms = ends ? ends.getTime() - Date.now() : 0;
       const days = Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
       setInfo({
