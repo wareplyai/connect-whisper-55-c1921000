@@ -77,16 +77,28 @@ const CreateSession = () => {
 
     setLoading(true);
 
-    // Duplicate phone check — block only if active
-    const { data: existing } = await supabase
+    // Duplicate phone check — own sessions
+    const { data: ownExisting } = await supabase
       .from("sessions")
-      .select("id, status")
+      .select("id, status, session_name")
       .eq("user_id", userId)
       .eq("phone_number", fullPhone);
-    const active = (existing || []).find((s) => s.status !== "disconnected");
-    if (active) {
+    const ownActive = (ownExisting || []).find((s) => s.status !== "disconnected");
+    if (ownActive) {
       setLoading(false);
-      toast.error("This number is already connected in another session. Please disconnect it first.");
+      toast.error(`This phone number is already connected in session: ${ownActive.session_name}. Please disconnect it first before adding again.`);
+      return;
+    }
+
+    // Platform-wide check across all users
+    const { data: anyExisting } = await supabase
+      .from("sessions")
+      .select("id, status")
+      .eq("phone_number", fullPhone);
+    const anyActive = (anyExisting || []).find((s) => s.status !== "disconnected");
+    if (anyActive) {
+      setLoading(false);
+      toast.error("This number is already active in another session. Disconnect it first to reconnect.");
       return;
     }
 
