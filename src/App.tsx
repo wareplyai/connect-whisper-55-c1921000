@@ -21,7 +21,11 @@ import SessionDetail from "./pages/dashboard/SessionDetail";
 import EditSession from "./pages/dashboard/EditSession";
 import ConnectSession from "./pages/dashboard/ConnectSession";
 import Subscription from "./pages/dashboard/Subscription";
+import Payments from "./pages/dashboard/Payments";
 import AdminPanel from "./pages/admin/AdminPanel";
+import HAPayments from "./pages/headadmin/Payments";
+import HAPaymentMethods from "./pages/headadmin/PaymentMethods";
+import HAPlanPricing from "./pages/headadmin/PlanPricing";
 
 import HeadAdminLayout from "./layouts/HeadAdminLayout";
 import HeadAdminLogin from "./pages/headadmin/HeadAdminLogin";
@@ -58,6 +62,7 @@ const App = () => (
                 <Route path="sessions/:id/edit" element={<EditSession />} />
                 <Route path="sessions/:id/connect" element={<ConnectSession />} />
                 <Route path="subscription" element={<Subscription />} />
+                <Route path="payments" element={<Payments />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>
@@ -73,6 +78,9 @@ const App = () => (
                 <Route path="messages" element={<AllMessages />} />
                 <Route path="notifications" element={<HANotifications />} />
                 <Route path="logs" element={<ActivityLogs />} />
+                <Route path="payments" element={<HAPayments />} />
+                <Route path="payment-methods" element={<HAPaymentMethods />} />
+                <Route path="plan-pricing" element={<HAPlanPricing />} />
                 <Route path="settings" element={<HASettings />} />
               </Route>
 

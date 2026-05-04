@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   Crown, LayoutDashboard, Users, Smartphone, DollarSign, MessageSquare,
-  Bell, ScrollText, Settings, LogOut,
+  Bell, ScrollText, Settings, LogOut, CreditCard, Receipt, Tags,
 } from "lucide-react";
 import { useHeadAdmin } from "@/contexts/HeadAdminContext";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,9 @@ const nav = [
   { to: "/headadmin/users", label: "All Users", icon: Users },
   { to: "/headadmin/sessions", label: "All Sessions", icon: Smartphone },
   { to: "/headadmin/revenue", label: "Revenue & Sales", icon: DollarSign },
+  { to: "/headadmin/payments", label: "Payments", icon: Receipt },
+  { to: "/headadmin/payment-methods", label: "Payment Methods", icon: CreditCard },
+  { to: "/headadmin/plan-pricing", label: "Plan Pricing", icon: Tags },
   { to: "/headadmin/messages", label: "Messages", icon: MessageSquare },
   { to: "/headadmin/notifications", label: "Notifications", icon: Bell },
   { to: "/headadmin/logs", label: "Activity Logs", icon: ScrollText },
