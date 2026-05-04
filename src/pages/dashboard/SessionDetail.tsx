@@ -186,9 +186,9 @@ const SessionDetail = () => {
       } catch { /* ignore */ }
     };
     tick();
-    const i = setInterval(tick, 30000);
+    const i = setInterval(tick, s?.status === "connected" ? 10000 : 30000);
     return () => clearInterval(i);
-  }, [id]);
+  }, [id, s?.status]);
 
   // Realtime message_logs
   useEffect(() => {
