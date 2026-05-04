@@ -121,7 +121,13 @@ const CreateSession = () => {
       status: "qr_pending",
     }).select().single();
 
-    if (error) { setLoading(false); return toast.error(error.message); }
+    if (error) {
+      setLoading(false);
+      if ((error as any).code === "23505" || /unique/i.test(error.message)) {
+        return toast.error("The phone number has already been taken. Disconnect the existing session first.");
+      }
+      return toast.error(error.message);
+    }
 
     try {
       await backendApi.createSession(data.id);
