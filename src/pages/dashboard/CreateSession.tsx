@@ -19,7 +19,7 @@ const ALL_EVENTS = [
 ];
 
 const CreateSession = () => {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const nav = useNavigate();
   const [form, setForm] = useState({
     session_name: "",
@@ -50,10 +50,14 @@ const CreateSession = () => {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile) return;
+    const userId = profile?.id || user?.id;
+    if (!userId) {
+      toast.error("You must be signed in to create a session.");
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase.from("sessions").insert({
-      user_id: profile.id,
+      user_id: userId,
       ...form,
       proxy_url: form.proxy_url || null,
       webhook_url: form.webhook_url || null,
