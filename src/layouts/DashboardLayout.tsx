@@ -4,6 +4,7 @@ import { TrialBanner } from "@/components/TrialBanner";
 import { N8nBanner } from "@/components/N8nBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/Logo";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -26,9 +27,8 @@ const DashboardLayout = () => {
   return (
     <div className="min-h-screen flex bg-background">
       <aside className="hidden md:flex w-64 flex-col border-r border-border bg-card">
-        <Link to="/dashboard" className="h-16 flex items-center gap-1.5 px-5 border-b border-border">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground font-bold">Wa</span>
-          <span className="text-lg font-semibold">API</span>
+        <Link to="/dashboard" className="h-16 flex items-center px-5 border-b border-border">
+          <Logo size={32} textClassName="text-base" />
         </Link>
         <div className="flex-1 px-3 py-4 flex flex-col">
           <p className="px-3 mb-2 text-xs uppercase tracking-wider text-muted-foreground">Platform</p>
