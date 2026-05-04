@@ -19,7 +19,7 @@ export const PlanUsageBar = () => {
           .from("subscriptions")
           .select("plan, max_sessions, status")
           .eq("user_id", user.id)
-          .eq("status", "active")
+          .in("status", ["active", "trial_active"])
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle(),

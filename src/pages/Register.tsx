@@ -33,23 +33,9 @@ const Register = () => {
       },
     });
     if (error) { setLoading(false); return toast.error(error.message); }
-
-    const userId = data.user?.id;
-    if (userId) {
-      const now = new Date();
-      const ends = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-      await supabase.from("subscriptions").insert({
-        user_id: userId,
-        plan: "trial",
-        max_sessions: 1,
-        status: "trial_active",
-        trial_started_at: now.toISOString(),
-        trial_ends_at: ends.toISOString(),
-      });
-    }
     setLoading(false);
     toast.success("Account created!");
-    nav("/trial-started");
+    nav("/dashboard");
   };
 
   const oauth = async (provider: "google" | "github") => {
