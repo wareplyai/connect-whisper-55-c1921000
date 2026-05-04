@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ChevronDown, Edit, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { CountryCodeSelect } from "@/components/CountryCodeSelect";
+import { splitPhone, DEFAULT_COUNTRY, Country } from "@/lib/countries";
 
 const ALL_EVENTS = [
   "messages.received","messages-group.received","messages-newsletter.received","messages-personal.received",
@@ -17,15 +18,6 @@ const ALL_EVENTS = [
   "groups.upsert","groups.update","group-participants.update","contacts.upsert","contacts.update","poll.results",
 ];
 
-const COUNTRY_CODES = ["+1","+44","+91","+880","+92","+62","+63","+60","+61","+49","+33","+34","+39","+55","+52","+27","+971","+966","+86","+81","+82"];
-
-const splitPhone = (full: string | null): { code: string; num: string } => {
-  if (!full) return { code: "+1", num: "" };
-  const match = COUNTRY_CODES.find((c) => full.startsWith(c));
-  if (match) return { code: match, num: full.slice(match.length).trim() };
-  return { code: "+1", num: full.replace(/^\+/, "") };
-};
-
 const EditSession = () => {
   const { id } = useParams();
   const nav = useNavigate();
@@ -33,7 +25,7 @@ const EditSession = () => {
   const [saving, setSaving] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [name, setName] = useState("");
-  const [code, setCode] = useState("+1");
+  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [num, setNum] = useState("");
   const [form, setForm] = useState<any>(null);
 
