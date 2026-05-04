@@ -175,6 +175,132 @@ export type Database = {
           },
         ]
       }
+      payment_methods: {
+        Row: {
+          account_name: string
+          account_number: string
+          created_at: string | null
+          id: string
+          instructions: string | null
+          is_active: boolean | null
+          method_name: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          created_at?: string | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          method_name: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          created_at?: string | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          method_name?: string
+        }
+        Relationships: []
+      }
+      payment_transactions: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          created_at: string | null
+          id: string
+          payment_method: string
+          plan: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sender_number: string | null
+          status: string | null
+          transaction_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          admin_note?: string | null
+          amount: number
+          created_at?: string | null
+          id?: string
+          payment_method: string
+          plan: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_number?: string | null
+          status?: string | null
+          transaction_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          created_at?: string | null
+          id?: string
+          payment_method?: string
+          plan?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_number?: string | null
+          status?: string | null
+          transaction_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "headadmin"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_pricing: {
+        Row: {
+          display_name: string
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          max_sessions: number
+          plan_name: string
+          price_monthly: number
+          price_yearly: number
+          updated_at: string | null
+        }
+        Insert: {
+          display_name: string
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          max_sessions: number
+          plan_name: string
+          price_monthly: number
+          price_yearly: number
+          updated_at?: string | null
+        }
+        Update: {
+          display_name?: string
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          max_sessions?: number
+          plan_name?: string
+          price_monthly?: number
+          price_yearly?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       platform_stats: {
         Row: {
           active_sessions: number | null
