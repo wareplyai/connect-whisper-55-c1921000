@@ -21,6 +21,7 @@ import SessionDetail from "./pages/dashboard/SessionDetail";
 import EditSession from "./pages/dashboard/EditSession";
 import ConnectSession from "./pages/dashboard/ConnectSession";
 import Subscription from "./pages/dashboard/Subscription";
+import Plans from "./pages/dashboard/Plans";
 import Payments from "./pages/dashboard/Payments";
 import AdminPanel from "./pages/admin/AdminPanel";
 import HAPayments from "./pages/headadmin/Payments";
@@ -62,6 +63,7 @@ const App = () => (
                 <Route path="sessions/:id/edit" element={<EditSession />} />
                 <Route path="sessions/:id/connect" element={<ConnectSession />} />
                 <Route path="subscription" element={<Subscription />} />
+                <Route path="subscription/plans" element={<Plans />} />
                 <Route path="payments" element={<Payments />} />
               </Route>
 
