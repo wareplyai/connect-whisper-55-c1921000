@@ -2,18 +2,19 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Smartphone, DollarSign, MessageSquare,
   Bell, ScrollText, Settings, LogOut, CreditCard, Receipt, Tags, Search,
+  ChevronDown,
 } from "lucide-react";
 import { useHeadAdmin } from "@/contexts/HeadAdminContext";
-import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const navGroups = [
   {
     label: "Overview",
     items: [
       { to: "/headadmin", label: "Dashboard", icon: LayoutDashboard, end: true },
-      { to: "/headadmin/users", label: "All Users", icon: Users },
-      { to: "/headadmin/sessions", label: "All Sessions", icon: Smartphone },
+      { to: "/headadmin/users", label: "Users", icon: Users },
+      { to: "/headadmin/sessions", label: "Sessions", icon: Smartphone },
       { to: "/headadmin/messages", label: "Messages", icon: MessageSquare },
     ],
   },
@@ -22,7 +23,7 @@ const navGroups = [
     items: [
       { to: "/headadmin/revenue", label: "Revenue", icon: DollarSign },
       { to: "/headadmin/payments", label: "Payments", icon: Receipt },
-      { to: "/headadmin/payment-methods", label: "Payment Methods", icon: CreditCard },
+      { to: "/headadmin/payment-methods", label: "Methods", icon: CreditCard },
       { to: "/headadmin/plan-pricing", label: "Plan Pricing", icon: Tags },
     ],
   },
@@ -34,6 +35,13 @@ const navGroups = [
       { to: "/headadmin/settings", label: "Settings", icon: Settings },
     ],
   },
+];
+
+const quickStats = [
+  { label: "Total Users", value: "12,540", delta: "+8.4%", up: true },
+  { label: "Active Accounts", value: "8,920", delta: "+5.6%", up: true },
+  { label: "Transactions", value: "24,680", delta: "+12.3%", up: true },
+  { label: "Pending", value: "320", delta: "-2.1%", up: false },
 ];
 
 const allItems = navGroups.flatMap((g) => g.items);
@@ -48,15 +56,12 @@ export default function HeadAdminLayout() {
   return (
     <div className="min-h-screen flex bg-background text-foreground">
       {/* Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col border-r border-border/60 bg-[#0b0b0b]">
-        <Link to="/headadmin" className="h-16 flex items-center px-5 border-b border-border/60">
-          <Logo size={28} textClassName="text-[15px]" />
-          <span className="ml-2 rounded-md bg-primary/15 text-primary text-[10px] font-semibold px-1.5 py-0.5 uppercase tracking-wider">
-            Admin
-          </span>
+      <aside className="hidden md:flex w-[220px] flex-col border-r border-sidebar-border bg-sidebar">
+        <Link to="/headadmin" className="h-14 flex items-center px-5 border-b border-sidebar-border">
+          <Logo size={26} textClassName="text-[14px] font-semibold" />
         </Link>
 
-        <div className="flex-1 px-3 py-5 flex flex-col gap-5 overflow-y-auto">
+        <div className="flex-1 px-2.5 py-4 flex flex-col gap-5 overflow-y-auto">
           {navGroups.map((group) => (
             <div key={group.label}>
               <p className="px-3 mb-2 text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 font-semibold">
@@ -69,24 +74,50 @@ export default function HeadAdminLayout() {
                     to={n.to}
                     end={n.end}
                     className={({ isActive }) =>
-                      `group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
+                      `flex items-center gap-3 h-10 px-3 rounded-md text-sm transition-all border-l-[3px] ${
                         isActive
-                          ? "bg-primary text-primary-foreground shadow-[0_0_20px_-8px_hsl(var(--primary))]"
-                          : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                          ? "bg-card-elevated text-foreground border-primary"
+                          : "border-transparent text-muted-foreground hover:text-foreground hover:bg-card"
                       }`
                     }
                   >
-                    <n.icon className="h-[17px] w-[17px] shrink-0" />
+                    <n.icon className="h-[18px] w-[18px] shrink-0" />
                     <span className="font-medium">{n.label}</span>
                   </NavLink>
                 ))}
               </nav>
             </div>
           ))}
+
+          {/* Quick Stats */}
+          <div className="mt-2 mx-1 rounded-xl border border-border bg-card/50 p-3">
+            <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 font-semibold mb-2.5">
+              Quick Stats
+            </p>
+            <div className="space-y-2.5">
+              {quickStats.map((s) => (
+                <div key={s.label} className="flex items-center justify-between text-xs">
+                  <div className="min-w-0">
+                    <p className="text-muted-foreground truncate">{s.label}</p>
+                    <p className="text-foreground font-semibold">{s.value}</p>
+                  </div>
+                  <span
+                    className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${
+                      s.up
+                        ? "text-success bg-success/10 border-success/30"
+                        : "text-destructive bg-destructive/10 border-destructive/30"
+                    }`}
+                  >
+                    {s.delta}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <div className="px-3 py-3 border-t border-border/60">
-          <div className="flex items-center gap-3 rounded-xl bg-white/5 px-2.5 py-2">
+        <div className="px-3 py-3 border-t border-sidebar-border">
+          <div className="flex items-center gap-2.5 rounded-xl bg-card px-2.5 py-2">
             <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/15 text-primary text-sm font-semibold ring-1 ring-primary/20">
               {(headAdmin?.name || "A").slice(0, 1).toUpperCase()}
             </div>
@@ -94,41 +125,39 @@ export default function HeadAdminLayout() {
               <p className="text-sm font-medium truncate">{headAdmin?.name}</p>
               <p className="text-[11px] text-muted-foreground truncate">Super Admin</p>
             </div>
-            <Button size="icon" variant="ghost" onClick={signOut} aria-label="Sign out" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+            <button onClick={signOut} aria-label="Sign out" className="h-8 w-8 grid place-items-center rounded-md text-muted-foreground hover:text-foreground hover:bg-card-elevated">
               <LogOut className="h-4 w-4" />
-            </Button>
+            </button>
           </div>
         </div>
       </aside>
 
       {/* Main */}
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 border-b border-border/60 flex items-center gap-4 px-6 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-          <div className="text-sm flex items-center gap-2 min-w-0">
-            <span className="text-muted-foreground">Admin</span>
-            <span className="text-muted-foreground/50">/</span>
-            <span className="font-medium truncate">{current?.label || "Dashboard"}</span>
-          </div>
-
-          <div className="flex-1 max-w-md mx-auto hidden lg:block">
+        <header className="h-14 border-b border-border flex items-center gap-4 px-5 bg-sidebar/80 backdrop-blur-sm sticky top-0 z-10">
+          <div className="flex-1 max-w-md">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 placeholder="Search anything..."
-                className="w-full h-9 pl-9 pr-12 rounded-lg bg-card border border-border/60 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition"
+                className="w-full h-9 pl-9 pr-12 rounded-full bg-card border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition"
               />
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground border border-border/60 rounded px-1.5 py-0.5">
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
                 ⌘K
               </kbd>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 ml-auto">
-            <button className="relative p-2 rounded-lg hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors">
+          <div className="flex items-center gap-1.5 ml-auto">
+            <ThemeToggle />
+            <button className="relative p-2 rounded-lg hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors">
               <Bell className="h-[18px] w-[18px]" />
-              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
+              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-warning" />
             </button>
-            <div className="flex items-center gap-2.5 pl-2 ml-1 border-l border-border/60">
+            <button className="p-2 rounded-lg hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors">
+              <Settings className="h-[18px] w-[18px]" />
+            </button>
+            <div className="flex items-center gap-2.5 pl-3 ml-1 border-l border-border">
               <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/15 text-primary text-sm font-semibold ring-1 ring-primary/20">
                 {(headAdmin?.name || "A").slice(0, 1).toUpperCase()}
               </div>
@@ -136,13 +165,28 @@ export default function HeadAdminLayout() {
                 <p className="text-sm font-medium truncate max-w-[140px]">{headAdmin?.name}</p>
                 <p className="text-[11px] text-muted-foreground">Super Admin</p>
               </div>
+              <ChevronDown className="h-4 w-4 text-muted-foreground hidden xl:block" />
             </div>
           </div>
         </header>
 
         <div className="flex-1 p-6 overflow-auto">
+          <div className="mb-1 text-xs text-muted-foreground">
+            Admin <span className="mx-1.5 opacity-50">/</span>
+            <span className="text-foreground font-medium">{current?.label || "Dashboard"}</span>
+          </div>
           <Outlet />
         </div>
+
+        <footer className="border-t border-border px-6 py-3 flex items-center justify-between text-xs text-muted-foreground">
+          <span>© {new Date().getFullYear()} WareplyAI Admin. All rights reserved.</span>
+          <div className="flex items-center gap-4">
+            <a href="#" className="hover:text-foreground">Help</a>
+            <a href="#" className="hover:text-foreground">Terms</a>
+            <a href="#" className="hover:text-foreground">Privacy</a>
+            <a href="#" className="hover:text-foreground">Security</a>
+          </div>
+        </footer>
       </main>
     </div>
   );
