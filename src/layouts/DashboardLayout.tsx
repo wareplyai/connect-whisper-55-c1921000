@@ -27,7 +27,6 @@ const DashboardLayout = () => {
   return (
     <div className="min-h-screen flex bg-background">
       <aside className="hidden md:flex w-64 flex-col border-r border-border bg-card">
-        <Link to="/dashboard" className="h-16 flex items-center gap-1.5 px-5 border-b border-border">
         <Link to="/dashboard" className="h-16 flex items-center px-5 border-b border-border">
           <Logo size={32} textClassName="text-base" />
         </Link>
