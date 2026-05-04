@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { Logo } from "@/components/Logo";
 import { Loader2 } from "lucide-react";
 
 const Login = () => {
@@ -39,7 +40,7 @@ const Login = () => {
     <div className="min-h-screen grid place-items-center bg-background p-4">
       <div className="w-full max-w-md">
         <Link to="/" className="flex items-center justify-center mb-6">
-          <span className="text-4xl font-black tracking-tight">Ws</span>
+          <Logo size={56} showText={false} />
         </Link>
         <h1 className="text-2xl font-bold text-center text-foreground">Log in to your account</h1>
         <p className="text-center text-sm text-muted-foreground mt-1.5">
