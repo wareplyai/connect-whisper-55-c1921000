@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -7,80 +7,256 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Copy, Eye, EyeOff, RefreshCw, Trash2, Edit, Webhook } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  ArrowLeft, Copy, Eye, EyeOff, RefreshCw, Trash2, Edit, Webhook, Loader2, ChevronLeft, ChevronRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import { backendApi } from "@/lib/backend";
 
-const Mask = ({ value }: { value: string }) => {
+const PAGE_SIZE = 25;
+
+const genHexToken = () => {
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map((b) => b.toString(16).padStart(2, "0")).join("");
+};
+
+const TokenField = ({
+  value, onRegenerate, regenerating, label,
+}: {
+  value: string;
+  onRegenerate?: () => void;
+  regenerating?: boolean;
+  label?: string;
+}) => {
   const [show, setShow] = useState(false);
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-border bg-card-elevated px-3 py-2 font-mono text-sm">
-      <span className="flex-1 truncate">{show ? value : `${value.slice(0, 6)}…${value.slice(-4)}`}</span>
-      <button onClick={() => setShow((s) => !s)} className="text-muted-foreground hover:text-foreground">
+    <div className="flex items-center gap-2 rounded-lg border border-border bg-card-elevated px-3 py-2 font-mono text-xs">
+      <span className="flex-1 break-all">
+        {show ? value : "•".repeat(Math.min(value.length, 64))}
+      </span>
+      <button
+        type="button"
+        onClick={() => setShow((s) => !s)}
+        className="text-muted-foreground hover:text-foreground shrink-0"
+        aria-label={show ? "Hide" : "Show"}
+      >
         {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>
-      <button onClick={() => { navigator.clipboard.writeText(value); toast.success("Copied"); }} className="text-muted-foreground hover:text-foreground">
+      <button
+        type="button"
+        onClick={() => { navigator.clipboard.writeText(value); toast.success("Copied!"); }}
+        className="text-muted-foreground hover:text-foreground shrink-0"
+        aria-label="Copy"
+      >
         <Copy className="h-4 w-4" />
       </button>
+      {onRegenerate && (
+        <button
+          type="button"
+          onClick={onRegenerate}
+          disabled={regenerating}
+          className="text-muted-foreground hover:text-foreground shrink-0"
+          aria-label={`Regenerate ${label || "token"}`}
+          title="Regenerate"
+        >
+          <RefreshCw className={`h-4 w-4 ${regenerating ? "animate-spin" : ""}`} />
+        </button>
+      )}
     </div>
   );
 };
 
 const SessionDetail = () => {
   const { id } = useParams();
+  const nav = useNavigate();
   const [s, setS] = useState<any>(null);
   const [logs, setLogs] = useState<any[]>([]);
+  const [page, setPage] = useState(0);
+  const [totalLogs, setTotalLogs] = useState(0);
   const [to, setTo] = useState("");
   const [text, setText] = useState("");
+  const [msgType, setMsgType] = useState("text");
+  const [sending, setSending] = useState(false);
+  const [restarting, setRestarting] = useState(false);
+  const [regenApi, setRegenApi] = useState(false);
+  const [regenWh, setRegenWh] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ session_name: "", phone_number: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const channelRef = useRef<any>(null);
 
-  const load = async () => {
+  const loadSession = async () => {
     if (!id) return;
     const { data } = await supabase.from("sessions").select("*").eq("id", id).maybeSingle();
     setS(data);
-    const { data: l } = await supabase.from("message_logs").select("*").eq("session_id", id).order("created_at", { ascending: false }).limit(25);
-    setLogs(l || []);
   };
 
-  useEffect(() => { load(); }, [id]);
+  const loadLogs = async (p = page) => {
+    if (!id) return;
+    const from = p * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const { data, count } = await supabase
+      .from("message_logs")
+      .select("*", { count: "exact" })
+      .eq("session_id", id)
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    setLogs(data || []);
+    setTotalLogs(count || 0);
+  };
+
+  useEffect(() => { loadSession(); loadLogs(0); setPage(0); /* eslint-disable-next-line */ }, [id]);
+  useEffect(() => { loadLogs(page); /* eslint-disable-next-line */ }, [page]);
+
+  // Poll backend status + auto-update last_active every 30s
+  useEffect(() => {
+    if (!id) return;
+    const tick = async () => {
+      try {
+        const st = await backendApi.getStatus(id);
+        const update: any = {};
+        if (st?.status) update.status = st.status;
+        if (st?.phone) update.phone_number = st.phone;
+        if (st?.name) update.whatsapp_name = st.name;
+        if (st?.status === "connected") update.last_active = new Date().toISOString();
+        if (Object.keys(update).length) {
+          await supabase.from("sessions").update(update).eq("id", id);
+          loadSession();
+        }
+      } catch { /* ignore */ }
+    };
+    tick();
+    const i = setInterval(tick, 30000);
+    return () => clearInterval(i);
+  }, [id]);
+
+  // Realtime message_logs
+  useEffect(() => {
+    if (!id) return;
+    const ch = supabase
+      .channel(`logs:${id}`)
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "message_logs", filter: `session_id=eq.${id}` },
+        () => { if (page === 0) loadLogs(0); else loadLogs(page); }
+      )
+      .subscribe();
+    channelRef.current = ch;
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line
+  }, [id, page]);
+
+  const openEdit = () => {
+    if (!s) return;
+    setEditForm({ session_name: s.session_name || "", phone_number: s.phone_number || "" });
+    setEditOpen(true);
+  };
+
+  const saveEdit = async () => {
+    if (!s) return;
+    setSavingEdit(true);
+    const { error } = await supabase.from("sessions").update({
+      session_name: editForm.session_name,
+      phone_number: editForm.phone_number || null,
+    }).eq("id", s.id);
+    setSavingEdit(false);
+    if (error) return toast.error(error.message);
+    toast.success("Session updated!");
+    setEditOpen(false);
+    loadSession();
+  };
 
   const send = async () => {
-    if (!s || !to) return toast.error("Enter recipient");
+    if (!s) return;
+    if (!to) return toast.error("Enter recipient");
     if (!text) return toast.error("Enter a message");
+    setSending(true);
     try {
       await backendApi.sendMessage(s.id, to, text);
       await supabase.from("message_logs").insert({
-        user_id: s.user_id, session_id: s.id, to_number: to, payload: { text }, status: "sent",
+        user_id: s.user_id, session_id: s.id, to_number: to,
+        message_type: msgType, payload: { text }, status: "sent",
       });
       toast.success("Message sent!");
-      setText(""); setTo(""); load();
+      setText(""); setTo("");
+      setPage(0); loadLogs(0);
     } catch (err: any) {
       await supabase.from("message_logs").insert({
-        user_id: s.user_id, session_id: s.id, to_number: to, payload: { text }, status: "failed", error_message: err.message,
+        user_id: s.user_id, session_id: s.id, to_number: to,
+        message_type: msgType, payload: { text }, status: "failed", error_message: err.message,
       });
       toast.error(`Send failed: ${err.message}`);
-      load();
+      loadLogs(page);
+    } finally {
+      setSending(false);
     }
   };
 
   const disconnect = async () => {
     if (!s) return;
+    setDisconnecting(true);
     try {
       await backendApi.logout(s.id);
       await supabase.from("sessions").update({ status: "disconnected" }).eq("id", s.id);
       toast.success("Session disconnected");
-      load();
+      loadSession();
     } catch (err: any) {
       toast.error(`Disconnect failed: ${err.message}`);
+    } finally {
+      setDisconnecting(false);
+      setConfirmDisconnect(false);
+    }
+  };
+
+  const restart = async () => {
+    if (!s) return;
+    setRestarting(true);
+    try {
+      await backendApi.restart(s.id);
+      await supabase.from("sessions").update({ status: "qr_pending" }).eq("id", s.id);
+      toast.success("Session restarting...");
+      nav(`/dashboard/sessions/${s.id}/connect`);
+    } catch (err: any) {
+      toast.error(`Restart failed: ${err.message}`);
+    } finally {
+      setRestarting(false);
     }
   };
 
   const remove = async () => {
-    if (!confirm("Delete session?")) return;
+    if (!s) return;
+    await backendApi.logout(s.id).catch(() => {});
     await supabase.from("sessions").delete().eq("id", s.id);
-    window.location.href = "/dashboard/sessions";
+    toast.success("Session deleted");
+    nav("/dashboard/sessions");
+  };
+
+  const regenerate = async (field: "api_token" | "webhook_secret") => {
+    if (!s) return;
+    const setLoad = field === "api_token" ? setRegenApi : setRegenWh;
+    setLoad(true);
+    const newVal = genHexToken();
+    const { error } = await supabase.from("sessions").update({ [field]: newVal }).eq("id", s.id);
+    setLoad(false);
+    if (error) return toast.error(error.message);
+    toast.success(`${field === "api_token" ? "API token" : "Webhook secret"} regenerated`);
+    loadSession();
   };
 
   if (!s) return <div className="text-muted-foreground">Loading...</div>;
+
+  const connected = s.status === "connected";
+  const totalPages = Math.max(1, Math.ceil(totalLogs / PAGE_SIZE));
 
   return (
     <div className="space-y-6">
@@ -92,19 +268,23 @@ const SessionDetail = () => {
         <div className="rounded-xl border border-border bg-card p-6 space-y-4">
           <div className="flex items-start justify-between">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-semibold text-lg">{s.session_name}</h2>
-                <span className={`px-2 py-0.5 rounded-full text-xs ${s.status === "connected" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
-                  ● {s.status}
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                  connected
+                    ? "bg-green-500/15 text-green-500"
+                    : "bg-red-500/15 text-red-500"
+                }`}>
+                  ● {connected ? "Connected" : "Disconnected"}
                 </span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">{s.phone_number || "No number"}</p>
             </div>
             <div className="flex gap-1">
-              <Button size="icon" variant="outline" onClick={load}><RefreshCw className="h-4 w-4" /></Button>
-              <Button size="icon" variant="outline"><Edit className="h-4 w-4" /></Button>
+              <Button size="icon" variant="outline" onClick={() => { loadSession(); loadLogs(page); }}><RefreshCw className="h-4 w-4" /></Button>
+              <Button size="icon" variant="outline" onClick={openEdit}><Edit className="h-4 w-4" /></Button>
               <Button size="icon" variant="outline"><Webhook className="h-4 w-4" /></Button>
-              <Button size="icon" variant="outline" onClick={remove} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+              <Button size="icon" variant="outline" onClick={() => setConfirmDelete(true)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
             </div>
           </div>
 
@@ -112,12 +292,17 @@ const SessionDetail = () => {
             <div><dt className="text-muted-foreground">Status</dt><dd className="capitalize">{s.status}</dd></div>
             <div><dt className="text-muted-foreground">Last Active</dt><dd>{s.last_active ? new Date(s.last_active).toLocaleString() : "Never"}</dd></div>
             <div><dt className="text-muted-foreground">WhatsApp Account</dt><dd>{s.whatsapp_name || "—"}</dd></div>
+            <div><dt className="text-muted-foreground">Connected Phone</dt><dd>{s.phone_number || "—"}</dd></div>
             <div><dt className="text-muted-foreground">Created</dt><dd>{new Date(s.created_at).toLocaleDateString()}</dd></div>
           </dl>
 
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={disconnect}>Disconnect</Button>
-            <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary-hover">Restart</Button>
+            <Button variant="outline" className="flex-1" onClick={() => setConfirmDisconnect(true)} disabled={disconnecting}>
+              {disconnecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Disconnect
+            </Button>
+            <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary-hover" onClick={restart} disabled={restarting}>
+              {restarting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Restart
+            </Button>
           </div>
 
           <div className="rounded-lg border border-border bg-card-elevated p-4">
@@ -141,30 +326,35 @@ const SessionDetail = () => {
             <TabsContent value="creds" className="space-y-4 mt-4">
               <div>
                 <Label>API Access Token</Label>
-                <div className="mt-1.5"><Mask value={s.api_token} /></div>
+                <div className="mt-1.5">
+                  <TokenField value={s.api_token} onRegenerate={() => regenerate("api_token")} regenerating={regenApi} label="API token" />
+                </div>
               </div>
               <div>
                 <Label>Webhook Secret</Label>
-                <div className="mt-1.5"><Mask value={s.webhook_secret} /></div>
+                <div className="mt-1.5">
+                  <TokenField value={s.webhook_secret} onRegenerate={() => regenerate("webhook_secret")} regenerating={regenWh} label="Webhook secret" />
+                </div>
               </div>
               <Button variant="outline" className="w-full">API Documentation →</Button>
             </TabsContent>
 
             <TabsContent value="test" className="space-y-3 mt-4">
-              <div><Label>To</Label><Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="+1234567890" className="mt-1.5" /></div>
+              <div><Label>To (with country code)</Label><Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="+1234567890" className="mt-1.5" /></div>
               <div>
                 <Label>Type</Label>
-                <Select defaultValue="text"><SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <Select value={msgType} onValueChange={setMsgType}><SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="text">Text</SelectItem>
                     <SelectItem value="image">Image</SelectItem>
                     <SelectItem value="document">Document</SelectItem>
-                    <SelectItem value="audio">Audio</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div><Label>Message</Label><Textarea value={text} onChange={(e) => setText(e.target.value)} className="mt-1.5" rows={4} /></div>
-              <Button onClick={send} className="w-full bg-primary text-primary-foreground hover:bg-primary-hover">Send</Button>
+              <Button onClick={send} disabled={sending} className="w-full bg-primary text-primary-foreground hover:bg-primary-hover">
+                {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Send
+              </Button>
             </TabsContent>
 
             <TabsContent value="webhook" className="space-y-3 mt-4">
@@ -192,33 +382,104 @@ const SessionDetail = () => {
       <div className="rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold">Outgoing Message Activity</h3>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">Clear All</Button>
-            <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary-hover">Go Live</Button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{totalLogs} total · live</span>
           </div>
         </div>
         <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground mb-3">
-          This monitor only shows outgoing messages sent through our API.
+          This monitor shows outgoing messages sent through the API. Updates in real-time.
         </div>
         {logs.length === 0 ? (
           <p className="text-sm text-muted-foreground py-6 text-center">No messages yet.</p>
         ) : (
           <div className="space-y-2">
-            {logs.map((l) => (
-              <div key={l.id} className="rounded-lg border border-border bg-card-elevated p-3 text-sm">
-                <div className="flex justify-between items-start gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium">TO {l.to_number}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(l.created_at).toLocaleString()}</p>
-                    <pre className="mt-1 text-xs font-mono text-muted-foreground truncate">{JSON.stringify(l.payload)}</pre>
+            {logs.map((l) => {
+              const preview = typeof l.payload === "object"
+                ? (l.payload?.text || JSON.stringify(l.payload))
+                : String(l.payload || "");
+              return (
+                <div key={l.id} className="rounded-lg border border-border bg-card-elevated p-3 text-sm">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">TO {l.to_number || "—"}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(l.created_at).toLocaleString()}</p>
+                      <p className="mt-1 text-xs text-muted-foreground truncate">{preview}</p>
+                      {l.error_message && <p className="text-xs text-destructive mt-1">{l.error_message}</p>}
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${l.status === "sent" ? "bg-green-500/15 text-green-500" : "bg-destructive/15 text-destructive"}`}>{l.status}</span>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${l.status === "sent" ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"}`}>{l.status}</span>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4">
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
+              <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+            </Button>
+            <span className="text-xs text-muted-foreground">Page {page + 1} of {totalPages}</span>
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
+              Next <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
           </div>
         )}
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Session</DialogTitle>
+            <DialogDescription>Update the session details below.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Session Name</Label>
+              <Input value={editForm.session_name} onChange={(e) => setEditForm((f) => ({ ...f, session_name: e.target.value }))} className="mt-1.5" />
+            </div>
+            <div>
+              <Label>Phone Number</Label>
+              <Input value={editForm.phone_number} onChange={(e) => setEditForm((f) => ({ ...f, phone_number: e.target.value }))} placeholder="+1234567890" className="mt-1.5" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={saveEdit} disabled={savingEdit} className="bg-primary text-primary-foreground hover:bg-primary-hover">
+              {savingEdit ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Disconnect Confirm */}
+      <AlertDialog open={confirmDisconnect} onOpenChange={setConfirmDisconnect}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect this session?</AlertDialogTitle>
+            <AlertDialogDescription>You'll need to scan the QR again to reconnect.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={disconnect}>Disconnect</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirm */}
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this session?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={remove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </Dialog>
     </div>
   );
 };
