@@ -80,12 +80,18 @@ const Plans = () => {
       <div className="text-center">
         <h1 className="text-3xl font-bold">Choose Your Plan</h1>
         <p className="text-sm text-muted-foreground mt-1">Pick a plan that fits your business needs.</p>
-        <div className="mt-5 inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 text-sm">
-          <button onClick={() => setYearly(false)} className={`px-4 py-1.5 rounded-full transition ${!yearly ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Monthly</button>
-          <button onClick={() => setYearly(true)} className={`px-4 py-1.5 rounded-full transition flex items-center gap-2 ${yearly ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-            Yearly
-            <span className="rounded-full bg-green-500/20 text-green-500 text-[10px] font-semibold px-1.5 py-0.5">Save 15%</span>
-          </button>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 text-sm">
+            <button onClick={() => setYearly(false)} className={`px-4 py-1.5 rounded-full transition ${!yearly ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Monthly</button>
+            <button onClick={() => setYearly(true)} className={`px-4 py-1.5 rounded-full transition flex items-center gap-2 ${yearly ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              Yearly
+              <span className="rounded-full bg-green-500/20 text-green-500 text-[10px] font-semibold px-1.5 py-0.5">Save 15%</span>
+            </button>
+          </div>
+          <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 text-sm">
+            <button onClick={() => setCurrency("USD")} className={`px-4 py-1.5 rounded-full transition ${currency === "USD" ? "bg-green-500 text-white" : "text-muted-foreground"}`}>USD ($)</button>
+            <button onClick={() => setCurrency("BDT")} className={`px-4 py-1.5 rounded-full transition ${currency === "BDT" ? "bg-green-500 text-white" : "text-muted-foreground"}`}>BDT (৳)</button>
+          </div>
         </div>
       </div>
 
