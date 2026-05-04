@@ -24,7 +24,7 @@ const DashboardHome = () => {
           .from("subscriptions")
           .select("plan,status")
           .eq("user_id", profile.id)
-          .eq("status", "active")
+          .in("status", ["active", "trial_active"])
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle(),
@@ -32,7 +32,7 @@ const DashboardHome = () => {
       ]);
       setSessionCount(count || 0);
       const savedPlan = activeSub?.plan || latestProfile?.plan || profile.plan || "free";
-      const activeByProfile = savedPlan !== "free" && savedPlan !== "trial";
+      const activeByProfile = savedPlan !== "free";
       setPlanInfo({ plan: savedPlan, status: activeSub?.status || (activeByProfile ? "active" : "inactive") });
 
       const { data: logs } = await supabase
