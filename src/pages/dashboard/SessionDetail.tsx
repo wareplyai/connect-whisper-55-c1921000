@@ -116,7 +116,7 @@ const SessionDetail = () => {
           </dl>
 
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1">Disconnect</Button>
+            <Button variant="outline" className="flex-1" onClick={disconnect}>Disconnect</Button>
             <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary-hover">Restart</Button>
           </div>
 
