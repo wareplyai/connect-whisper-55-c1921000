@@ -8,6 +8,7 @@ import { Plus, RefreshCw, Search, Smartphone, Trash2, Eye } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { backendApi } from "@/lib/backend";
+import { PlanUsageBar } from "@/components/PlanUsageBar";
 
 const statusBadge = (s: string) => {
   if (s === "connected") return "bg-primary/15 text-primary";
@@ -75,8 +76,8 @@ const Sessions = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">WhatsApp Sessions</h1>
-          <p className="text-sm text-muted-foreground">Manage your connected WhatsApp accounts.</p>
+          <h1 className="text-3xl font-bold">WhatsApp Sessions</h1>
+          <p className="text-sm text-muted-foreground">Manage your WhatsApp sessions and connections</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm">Help Center</Button>
@@ -86,6 +87,8 @@ const Sessions = () => {
           </Button>
         </div>
       </div>
+
+      <PlanUsageBar />
 
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[220px]">
