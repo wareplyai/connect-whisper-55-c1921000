@@ -341,7 +341,7 @@ const SessionDetail = () => {
           <dl className="grid grid-cols-2 gap-3 text-sm">
             <div><dt className="text-muted-foreground">Status</dt><dd className="capitalize">{s.status}</dd></div>
             <div><dt className="text-muted-foreground">Last Active</dt><dd>{s.last_active ? new Date(s.last_active).toLocaleString() : "Never"}</dd></div>
-            <div><dt className="text-muted-foreground">WhatsApp Account</dt><dd>{s.whatsapp_name || "—"}</dd></div>
+            <div><dt className="text-muted-foreground">WhatsApp Account</dt><dd>{s.whatsapp_name || s.phone_number || "—"}</dd></div>
             <div><dt className="text-muted-foreground">Connected Phone</dt><dd>{s.phone_number || "—"}</dd></div>
             <div><dt className="text-muted-foreground">Created</dt><dd>{new Date(s.created_at).toLocaleDateString()}</dd></div>
           </dl>
