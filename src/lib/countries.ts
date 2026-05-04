@@ -1,0 +1,82 @@
+export interface Country {
+  code: string; // dial code with +
+  iso: string;
+  name: string;
+  flag: string;
+}
+
+// Popular countries first
+export const POPULAR: Country[] = [
+  { code: "+880", iso: "BD", name: "Bangladesh", flag: "🇧🇩" },
+  { code: "+91", iso: "IN", name: "India", flag: "🇮🇳" },
+  { code: "+92", iso: "PK", name: "Pakistan", flag: "🇵🇰" },
+  { code: "+1", iso: "US", name: "United States", flag: "🇺🇸" },
+  { code: "+44", iso: "GB", name: "United Kingdom", flag: "🇬🇧" },
+  { code: "+966", iso: "SA", name: "Saudi Arabia", flag: "🇸🇦" },
+  { code: "+971", iso: "AE", name: "United Arab Emirates", flag: "🇦🇪" },
+  { code: "+60", iso: "MY", name: "Malaysia", flag: "🇲🇾" },
+  { code: "+65", iso: "SG", name: "Singapore", flag: "🇸🇬" },
+];
+
+export const OTHERS: Country[] = [
+  { code: "+93", iso: "AF", name: "Afghanistan", flag: "🇦🇫" },
+  { code: "+61", iso: "AU", name: "Australia", flag: "🇦🇺" },
+  { code: "+43", iso: "AT", name: "Austria", flag: "🇦🇹" },
+  { code: "+32", iso: "BE", name: "Belgium", flag: "🇧🇪" },
+  { code: "+55", iso: "BR", name: "Brazil", flag: "🇧🇷" },
+  { code: "+1", iso: "CA", name: "Canada", flag: "🇨🇦" },
+  { code: "+86", iso: "CN", name: "China", flag: "🇨🇳" },
+  { code: "+20", iso: "EG", name: "Egypt", flag: "🇪🇬" },
+  { code: "+33", iso: "FR", name: "France", flag: "🇫🇷" },
+  { code: "+49", iso: "DE", name: "Germany", flag: "🇩🇪" },
+  { code: "+852", iso: "HK", name: "Hong Kong", flag: "🇭🇰" },
+  { code: "+62", iso: "ID", name: "Indonesia", flag: "🇮🇩" },
+  { code: "+98", iso: "IR", name: "Iran", flag: "🇮🇷" },
+  { code: "+964", iso: "IQ", name: "Iraq", flag: "🇮🇶" },
+  { code: "+972", iso: "IL", name: "Israel", flag: "🇮🇱" },
+  { code: "+39", iso: "IT", name: "Italy", flag: "🇮🇹" },
+  { code: "+81", iso: "JP", name: "Japan", flag: "🇯🇵" },
+  { code: "+962", iso: "JO", name: "Jordan", flag: "🇯🇴" },
+  { code: "+254", iso: "KE", name: "Kenya", flag: "🇰🇪" },
+  { code: "+965", iso: "KW", name: "Kuwait", flag: "🇰🇼" },
+  { code: "+961", iso: "LB", name: "Lebanon", flag: "🇱🇧" },
+  { code: "+52", iso: "MX", name: "Mexico", flag: "🇲🇽" },
+  { code: "+212", iso: "MA", name: "Morocco", flag: "🇲🇦" },
+  { code: "+31", iso: "NL", name: "Netherlands", flag: "🇳🇱" },
+  { code: "+64", iso: "NZ", name: "New Zealand", flag: "🇳🇿" },
+  { code: "+234", iso: "NG", name: "Nigeria", flag: "🇳🇬" },
+  { code: "+47", iso: "NO", name: "Norway", flag: "🇳🇴" },
+  { code: "+968", iso: "OM", name: "Oman", flag: "🇴🇲" },
+  { code: "+63", iso: "PH", name: "Philippines", flag: "🇵🇭" },
+  { code: "+48", iso: "PL", name: "Poland", flag: "🇵🇱" },
+  { code: "+351", iso: "PT", name: "Portugal", flag: "🇵🇹" },
+  { code: "+974", iso: "QA", name: "Qatar", flag: "🇶🇦" },
+  { code: "+7", iso: "RU", name: "Russia", flag: "🇷🇺" },
+  { code: "+27", iso: "ZA", name: "South Africa", flag: "🇿🇦" },
+  { code: "+82", iso: "KR", name: "South Korea", flag: "🇰🇷" },
+  { code: "+34", iso: "ES", name: "Spain", flag: "🇪🇸" },
+  { code: "+94", iso: "LK", name: "Sri Lanka", flag: "🇱🇰" },
+  { code: "+46", iso: "SE", name: "Sweden", flag: "🇸🇪" },
+  { code: "+41", iso: "CH", name: "Switzerland", flag: "🇨🇭" },
+  { code: "+886", iso: "TW", name: "Taiwan", flag: "🇹🇼" },
+  { code: "+66", iso: "TH", name: "Thailand", flag: "🇹🇭" },
+  { code: "+90", iso: "TR", name: "Turkey", flag: "🇹🇷" },
+  { code: "+380", iso: "UA", name: "Ukraine", flag: "🇺🇦" },
+  { code: "+84", iso: "VN", name: "Vietnam", flag: "🇻🇳" },
+  { code: "+967", iso: "YE", name: "Yemen", flag: "🇾🇪" },
+];
+
+export const ALL_COUNTRIES: Country[] = [...POPULAR, ...OTHERS];
+
+export const DEFAULT_COUNTRY = POPULAR[0]; // Bangladesh
+
+export const findCountryByCode = (code: string): Country | undefined =>
+  ALL_COUNTRIES.find((c) => c.code === code);
+
+export const splitPhone = (full: string | null | undefined): { country: Country; number: string } => {
+  if (!full) return { country: DEFAULT_COUNTRY, number: "" };
+  const sorted = [...ALL_COUNTRIES].sort((a, b) => b.code.length - a.code.length);
+  const match = sorted.find((c) => full.startsWith(c.code));
+  if (match) return { country: match, number: full.slice(match.code.length).trim() };
+  return { country: DEFAULT_COUNTRY, number: full.replace(/^\+/, "") };
+};
