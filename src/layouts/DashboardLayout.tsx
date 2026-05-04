@@ -61,16 +61,15 @@ const DashboardLayout = () => {
             )}
           </nav>
 
-          <p className="px-3 mt-6 mb-2 text-xs uppercase tracking-wider text-muted-foreground">Resources</p>
-          <nav className="space-y-1">
+          <div className="mt-auto pt-4 space-y-1">
             {resources.map((r) => (
               <a key={r.label} href={r.to} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-card-elevated">
                 <r.icon className="h-4 w-4" /> {r.label}
               </a>
             ))}
-          </nav>
+          </div>
 
-          <div className="mt-auto pt-4 border-t border-border">
+          <div className="pt-4 mt-4 border-t border-border">
             <div className="flex items-center gap-3 px-2">
               <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary text-sm font-semibold">
                 {(profile?.full_name || profile?.email || "U").slice(0, 1).toUpperCase()}
