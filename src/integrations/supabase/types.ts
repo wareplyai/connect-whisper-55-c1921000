@@ -175,6 +175,57 @@ export type Database = {
           },
         ]
       }
+      orders: {
+        Row: {
+          amount: number
+          buyer_email: string | null
+          buyer_phone: string | null
+          confirmed_at: string | null
+          created_at: string
+          download_url: string | null
+          id: string
+          order_id: string
+          payment_method: string | null
+          product_id: string | null
+          product_name: string | null
+          status: string
+          transaction_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          buyer_email?: string | null
+          buyer_phone?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          download_url?: string | null
+          id?: string
+          order_id: string
+          payment_method?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          status?: string
+          transaction_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          buyer_email?: string | null
+          buyer_phone?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          download_url?: string | null
+          id?: string
+          order_id?: string
+          payment_method?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          status?: string
+          transaction_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       payment_methods: {
         Row: {
           account_name: string
@@ -499,6 +550,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sms_transactions: {
+        Row: {
+          amount: number | null
+          id: string
+          is_used: boolean
+          message: string
+          payment_method: string | null
+          received_at: string
+          sender: string | null
+          transaction_id: string
+        }
+        Insert: {
+          amount?: number | null
+          id?: string
+          is_used?: boolean
+          message: string
+          payment_method?: string | null
+          received_at?: string
+          sender?: string | null
+          transaction_id: string
+        }
+        Update: {
+          amount?: number | null
+          id?: string
+          is_used?: boolean
+          message?: string
+          payment_method?: string | null
+          received_at?: string
+          sender?: string | null
+          transaction_id?: string
+        }
+        Relationships: []
       }
       subscriptions: {
         Row: {
