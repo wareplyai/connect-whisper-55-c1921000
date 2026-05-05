@@ -216,7 +216,7 @@ const Landing = () => {
             </TabsList>
             {Object.entries(codeSamples).map(([k, v]) => (
               <TabsContent key={k} value={k} className="m-0">
-                <pre className="p-6 text-sm overflow-x-auto bg-[#0d0d0d] text-foreground/90"><code>{v}</code></pre>
+                <pre className="p-6 text-sm overflow-x-auto bg-[#0d0d0d] text-zinc-100"><code>{v}</code></pre>
               </TabsContent>
             ))}
           </Tabs>
