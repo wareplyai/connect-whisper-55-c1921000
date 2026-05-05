@@ -72,10 +72,14 @@ type DbPlan = {
 const faqKeys = ["1", "2", "3", "4", "5", "6", "7", "8"] as const;
 
 const Landing = () => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [tab, setTab] = useState("JS");
   const [yearly, setYearly] = useState(false);
-  const [currency, setCurrency] = useState<"USD" | "BDT">("USD");
+  const [currency, setCurrency] = useState<"USD" | "BDT">(lang === "bn" ? "BDT" : "USD");
+
+  useEffect(() => {
+    setCurrency(lang === "bn" ? "BDT" : "USD");
+  }, [lang]);
   const [plans, setPlans] = useState<DbPlan[]>([]);
   const fmtPrice = (usd: number) =>
     currency === "USD" ? `$${usd.toFixed(usd % 1 === 0 ? 0 : 2)}` : `৳${Math.round(usd * USD_TO_BDT)}`;
