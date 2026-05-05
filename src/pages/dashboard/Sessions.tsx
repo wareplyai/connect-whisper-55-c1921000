@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, RefreshCw, Search, Smartphone, Trash2, Eye } from "lucide-react";
+import { Plus, RefreshCw, Search, Smartphone, Trash2, Eye, Edit, Link as LinkIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { backendApi } from "@/lib/backend";
@@ -170,22 +170,44 @@ const Sessions = () => {
         </div>
       ) : (
         <div className="grid gap-3">
-          {visible.map((s) => (
-            <div key={s.id} className="rounded-xl border border-border bg-card p-5 flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <div className="flex items-center gap-3">
-                  <h3 className="font-semibold truncate">{s.session_name}</h3>
-                  <span className={`px-2 py-0.5 rounded-full text-xs ${statusBadge(s.status)}`}>● {s.status.replace("_", " ")}</span>
+          {visible.map((s) => {
+            const isConnected = s.status === "connected";
+            const needsQr = s.status === "qr_pending" || s.status === "pending";
+            return (
+              <div key={s.id} className="rounded-xl border border-border bg-card p-5 flex flex-wrap items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h3 className="font-semibold truncate">{s.session_name}</h3>
+                    {isConnected ? (
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/15 text-green-500 font-medium">● Connected</span>
+                    ) : needsQr ? (
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/15 text-blue-500 font-medium">● Needs QR Scan</span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/15 text-red-500 font-medium">● Disconnected</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">{s.phone_number || "No phone linked"}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Last active: {s.last_active ? new Date(s.last_active).toLocaleString() : "Never"}</p>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">{s.phone_number || "No phone linked"}</p>
-                <p className="text-xs text-muted-foreground mt-1">Last active: {s.last_active ? new Date(s.last_active).toLocaleString() : "Never"}</p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {isConnected ? (
+                    <>
+                      <Button asChild variant="outline" size="sm"><Link to={`/dashboard/sessions/${s.id}`}><Eye className="h-4 w-4 mr-1" /> View</Link></Button>
+                      <Button variant="outline" size="sm" onClick={() => remove(s.id)} className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button asChild variant="outline" size="sm"><Link to={`/dashboard/sessions/${s.id}/edit`}><Edit className="h-4 w-4 mr-1" /> Edit</Link></Button>
+                      <Button variant="outline" size="sm" onClick={() => remove(s.id)} className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
+                      <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary-hover">
+                        <Link to={`/dashboard/sessions/${s.id}/connect`}><LinkIcon className="h-4 w-4 mr-1" /> Connect</Link>
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Button asChild variant="outline" size="sm"><Link to={`/dashboard/sessions/${s.id}`}><Eye className="h-4 w-4 mr-1" /> View</Link></Button>
-                <Button variant="outline" size="sm" onClick={() => remove(s.id)} className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
