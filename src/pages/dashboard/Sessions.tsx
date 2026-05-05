@@ -93,11 +93,31 @@ const Sessions = () => {
         <div className="flex gap-2">
           <Button variant="outline" size="sm">Help Center</Button>
           <Button variant="outline" size="sm" onClick={load}><RefreshCw className="h-4 w-4 mr-1.5" /> Refresh</Button>
-          <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary-hover">
-            <Link to="/dashboard/sessions/create"><Plus className="h-4 w-4 mr-1.5" /> New Session</Link>
-          </Button>
+          {hasActive === false ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0}>
+                    <Button size="sm" disabled className="bg-primary text-primary-foreground opacity-60 cursor-not-allowed">
+                      <Plus className="h-4 w-4 mr-1.5" /> New Session
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">You need an active subscription to create WhatsApp sessions.</p>
+                  <Link to="/dashboard/subscription/plans" className="text-xs text-primary underline">View Subscription</Link>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary-hover">
+              <Link to="/dashboard/sessions/create"><Plus className="h-4 w-4 mr-1.5" /> New Session</Link>
+            </Button>
+          )}
         </div>
       </div>
+
+      {hasActive === false && <NoActiveSubscriptionBanner />}
 
       <PlanUsageBar />
 
