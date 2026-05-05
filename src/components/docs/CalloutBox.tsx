@@ -5,10 +5,10 @@ import type { ReactNode } from "react";
 type CalloutType = "note" | "important" | "warning" | "tip";
 
 const config: Record<CalloutType, { icon: typeof Info; cls: string; title: string }> = {
-  note: { icon: Info, cls: "border-l-[#58a6ff] bg-[#58a6ff]/[0.08]", title: "Note" },
-  important: { icon: AlertTriangle, cls: "border-l-[#d29922] bg-[#d29922]/[0.08]", title: "Important" },
-  warning: { icon: AlertOctagon, cls: "border-l-[#f85149] bg-[#f85149]/[0.08]", title: "Warning" },
-  tip: { icon: Lightbulb, cls: "border-l-[#25d366] bg-[#25d366]/[0.08]", title: "Tip" },
+  note: { icon: Info, cls: "border-l-info bg-info/10 text-info", title: "Note" },
+  important: { icon: AlertTriangle, cls: "border-l-warning bg-warning/10 text-warning", title: "Important" },
+  warning: { icon: AlertOctagon, cls: "border-l-destructive bg-destructive/10 text-destructive", title: "Warning" },
+  tip: { icon: Lightbulb, cls: "border-l-success bg-success/10 text-success", title: "Tip" },
 };
 
 function renderInline(text: string, key: string): ReactNode {
@@ -24,7 +24,7 @@ function renderInline(text: string, key: string): ReactNode {
     if (token.startsWith("**")) {
       parts.push(<strong key={`${key}-b-${i++}`} className="font-semibold text-foreground">{token.slice(2, -2)}</strong>);
     } else {
-      parts.push(<code key={`${key}-c-${i++}`} className="rounded bg-[#6e7681]/20 px-1 py-0.5 font-mono text-[12px] text-[#79c0ff]">{token.slice(1, -1)}</code>);
+      parts.push(<code key={`${key}-c-${i++}`} className="rounded bg-muted px-1 py-0.5 font-mono text-[12px] text-info">{token.slice(1, -1)}</code>);
     }
     last = m.index + token.length;
   }
@@ -45,11 +45,11 @@ export function CalloutBox({
   const Icon = c.icon;
   const heading = title ?? c.title;
   return (
-    <div className={cn("my-5 flex gap-3 rounded-md border-l-[3px] p-4 text-sm", c.cls)}>
+    <div className={cn("my-5 flex gap-3 rounded-md border border-l-[3px] p-4 text-sm", c.cls)}>
       <Icon className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
       <div className="space-y-1">
         <div className="font-semibold text-foreground">{heading}</div>
-        <div className="text-muted-foreground">
+        <div className="text-foreground/85">
           {typeof children === "string" ? renderInline(children, "callout") : children}
         </div>
       </div>

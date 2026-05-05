@@ -24,8 +24,11 @@
     --destructive: 0 84% 70%;        /* #f87171 */
     --destructive-foreground: 0 0% 100%;
     --warning: 25 95% 53%;           /* #f97316 */
+    --info: 209 100% 68%;
     --success: 142 70% 60%;          /* #4ade80 */
+    --code-background: 215 25% 12%;
     --code-foreground: 210 25% 96%;
+    --code-muted: 211 19% 72%;
     --border: 210 23% 16%;           /* #1e2a35 */
     --input: 213 21% 14%;
     --ring: 142 70% 49%;
@@ -64,8 +67,11 @@
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
     --warning: 25 95% 48%;
+    --info: 211 100% 35%;
     --success: 142 70% 38%;
+    --code-background: 215 28% 12%;
     --code-foreground: 210 25% 96%;
+    --code-muted: 210 18% 76%;
     --border: 215 16% 90%;
     --input: 210 30% 96%;
     --ring: 142 70% 38%;

@@ -9,12 +9,12 @@ export function PrevNextNav({ slug }: { slug: string }) {
       {prev ? (
         <Link
           to={`/docs/${prev.slug}`}
-          className="group flex flex-col rounded-lg border bg-card p-4 transition-colors hover:border-[#25d366]/60 hover:bg-card-elevated"
+          className="group flex flex-col rounded-lg border bg-card p-4 transition-colors hover:border-primary/60 hover:bg-card-elevated"
         >
           <span className="mb-1 flex items-center gap-1 text-xs text-muted-foreground">
             <ArrowLeft className="h-3 w-3" /> Previous
           </span>
-          <span className="text-sm font-medium text-foreground group-hover:text-[#25d366]">{prev.title}</span>
+          <span className="text-sm font-medium text-foreground group-hover:text-primary">{prev.title}</span>
         </Link>
       ) : (
         <div />
@@ -22,12 +22,12 @@ export function PrevNextNav({ slug }: { slug: string }) {
       {next ? (
         <Link
           to={`/docs/${next.slug}`}
-          className="group flex flex-col rounded-lg border bg-card p-4 text-right transition-colors hover:border-[#25d366]/60 hover:bg-card-elevated sm:items-end"
+          className="group flex flex-col rounded-lg border bg-card p-4 text-right transition-colors hover:border-primary/60 hover:bg-card-elevated sm:items-end"
         >
           <span className="mb-1 flex items-center justify-end gap-1 text-xs text-muted-foreground">
             Next <ArrowRight className="h-3 w-3" />
           </span>
-          <span className="text-sm font-medium text-foreground group-hover:text-[#25d366]">{next.title}</span>
+          <span className="text-sm font-medium text-foreground group-hover:text-primary">{next.title}</span>
         </Link>
       ) : (
         <div />

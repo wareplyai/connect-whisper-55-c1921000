@@ -16,11 +16,11 @@ export function ParamsTable({ params }: { params: Param[] }) {
         <tbody>
           {params.map((p, i) => (
             <tr key={p.name} className={i % 2 === 0 ? "bg-transparent" : "bg-card-elevated/30"}>
-              <td className="border-b px-4 py-2.5 align-top font-mono text-[#79c0ff]">{p.name}</td>
-              <td className="border-b px-4 py-2.5 align-top font-mono text-xs text-[#a5d6ff]">{p.type}</td>
+              <td className="border-b px-4 py-2.5 align-top font-mono text-info">{p.name}</td>
+              <td className="border-b px-4 py-2.5 align-top font-mono text-xs text-info">{p.type}</td>
               <td className="border-b px-4 py-2.5 align-top">
                 {p.required ? (
-                  <span className="font-semibold text-[#25d366]">Yes</span>
+                  <span className="font-semibold text-success">Yes</span>
                 ) : (
                   <span className="text-muted-foreground">No</span>
                 )}

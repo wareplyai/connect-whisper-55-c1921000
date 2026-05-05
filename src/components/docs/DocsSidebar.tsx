@@ -39,7 +39,7 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
-          className="flex w-full items-center gap-2 rounded-md border bg-card px-2.5 py-2 text-left text-sm text-muted-foreground hover:border-[#25d366]/50 hover:text-foreground"
+          className="flex w-full items-center gap-2 rounded-md border bg-card px-2.5 py-2 text-left text-sm text-muted-foreground hover:border-primary/50 hover:text-foreground"
         >
           <Search className="h-3.5 w-3.5" />
           <span className="flex-1 truncate">Search...</span>
@@ -63,13 +63,13 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
                     className={({ isActive }) =>
                       cn(
                         "flex items-center justify-between gap-2 rounded-md border-l-2 border-transparent px-3 py-1.5 text-[13px] text-foreground/80 transition-colors hover:bg-foreground/5 hover:text-foreground",
-                        isActive && "border-[#25d366] bg-[#25d366] font-semibold text-black hover:bg-[#25d366] hover:text-black shadow-[0_0_0_1px_rgba(37,211,102,0.4)]",
+                        isActive && "border-primary bg-primary font-semibold text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-[0_0_0_1px_hsl(var(--primary)_/_0.4)]",
                       )
                     }
                   >
                     <span className="truncate">{item.title}</span>
                     {item.isNew && (
-                      <span className="rounded bg-[#25d366] px-1.5 py-px text-[10px] font-semibold text-black">
+                      <span className="rounded bg-primary px-1.5 py-px text-[10px] font-semibold text-primary-foreground">
                         New
                       </span>
                     )}

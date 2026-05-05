@@ -8,8 +8,8 @@ export function CodeTabs({ snippets, defaultLang = "Bash" }: { snippets: Snippet
   const [active, setActive] = useState(defaultLang);
   const current = snippets.find((s) => s.lang === active) ?? snippets[0];
   return (
-    <div className="my-5 overflow-hidden rounded-lg border bg-[#1c2128]">
-      <div className="flex items-center justify-between border-b bg-card-elevated/40">
+    <div className="my-5 overflow-hidden rounded-lg border bg-code">
+      <div className="flex items-center justify-between border-b border-code-muted/20 bg-code">
         <div className="flex w-full overflow-x-auto">
           {snippets.map((s) => (
             <button
@@ -18,17 +18,17 @@ export function CodeTabs({ snippets, defaultLang = "Bash" }: { snippets: Snippet
               className={cn(
                 "shrink-0 px-3 py-2 text-xs font-medium transition-colors",
                 s.lang === active
-                  ? "border-b-2 border-[#25d366] text-foreground"
-                  : "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
+                  ? "border-b-2 border-primary text-code-foreground"
+                  : "border-b-2 border-transparent text-code-muted hover:text-code-foreground",
               )}
             >
               {s.lang}
             </button>
           ))}
         </div>
-        <CopyButton text={current.code} className="mr-2 shrink-0" />
+        <CopyButton text={current.code} className="mr-2 shrink-0 text-code-muted hover:text-code-foreground" />
       </div>
-      <pre className="overflow-x-auto p-4 font-mono text-[13px] leading-relaxed text-[#e6edf3]">
+      <pre className="overflow-x-auto p-4 font-mono text-[13px] leading-relaxed text-code-foreground">
         <code>{current.code}</code>
       </pre>
     </div>

@@ -21,7 +21,7 @@ export function CopyButton({ text, className, label = "Copy" }: { text: string; 
       onClick={onClick}
       className={cn("h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground", className)}
     >
-      {copied ? <Check className="h-3.5 w-3.5 text-[#25d366]" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
       <span>{copied ? "Copied" : label}</span>
     </Button>
   );

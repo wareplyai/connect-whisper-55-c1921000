@@ -7,10 +7,10 @@ type Guide = { category: string; title: string; intro: string; content: ReactNod
 const H2 = ({ children }: { children: ReactNode }) => <h2 className="mt-8 mb-3 text-xl font-semibold">{children}</h2>;
 const P = ({ children }: { children: ReactNode }) => <p className="mb-3 text-[15px] leading-7 text-foreground/90">{children}</p>;
 const Code = ({ children }: { children: ReactNode }) => (
-  <code className="rounded bg-[#6e7681]/20 px-1 py-0.5 font-mono text-[12px] text-[#79c0ff]">{children}</code>
+  <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px] text-info">{children}</code>
 );
 const Pre = ({ children }: { children: string }) => (
-  <pre className="my-4 overflow-x-auto rounded-lg border bg-[#1c2128] p-4 font-mono text-[13px] leading-relaxed text-[#e6edf3]">
+  <pre className="my-4 overflow-x-auto rounded-lg border bg-code p-4 font-mono text-[13px] leading-relaxed text-code-foreground">
     <code>{children}</code>
   </pre>
 );

@@ -2,10 +2,10 @@ import { cn } from "@/lib/utils";
 import type { HttpMethod } from "@/docs/endpoints";
 
 const styles: Record<HttpMethod, string> = {
-  POST: "bg-[#1a4731] text-[#25d366] border-[#25d366]",
-  GET: "bg-[#0d3249] text-[#58a6ff] border-[#58a6ff]",
-  PUT: "bg-[#3d2b00] text-[#d29922] border-[#d29922]",
-  DELETE: "bg-[#3d1212] text-[#f85149] border-[#f85149]",
+  POST: "bg-primary/10 text-primary border-primary/70",
+  GET: "bg-info/10 text-info border-info/70",
+  PUT: "bg-warning/10 text-warning border-warning/70",
+  DELETE: "bg-destructive/10 text-destructive border-destructive/70",
 };
 
 export function EndpointBadge({ method, className }: { method: HttpMethod; className?: string }) {
