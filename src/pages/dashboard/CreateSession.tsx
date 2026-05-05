@@ -11,7 +11,7 @@ import { ArrowLeft, ChevronDown, QrCode, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { backendApi } from "@/lib/backend";
 import { CountryCodeSelect } from "@/components/CountryCodeSelect";
-import { DEFAULT_COUNTRY, Country } from "@/lib/countries";
+import { DEFAULT_COUNTRY, Country, validatePhoneForCountry } from "@/lib/countries";
 
 const ALL_EVENTS = [
   "messages.received","messages-group.received","messages-newsletter.received","messages-personal.received",
