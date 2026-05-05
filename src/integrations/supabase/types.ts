@@ -590,12 +590,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      expire_own_trial: { Args: never; Returns: boolean }
+      has_active_service: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      start_user_trial: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          max_sessions: number
+          plan: string
+          status: string
+          trial_ends_at: string | null
+          trial_started_at: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {

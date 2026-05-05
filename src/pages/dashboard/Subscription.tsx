@@ -73,7 +73,7 @@ const Subscription = () => {
   const trialExpired = isTrial && trialEnds ? trialEnds.getTime() < Date.now() : false;
   const max = sub?.max_sessions || 1;
   const usagePct = Math.min(100, Math.round((usedSessions / max) * 100));
-  const dateStr = trialEnds?.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) || "—";
+  const dateStr = trialEnds?.toLocaleString() || "—";
 
   return (
     <div className="space-y-6">
