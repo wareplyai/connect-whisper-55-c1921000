@@ -4,11 +4,14 @@ import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { ArrowLeft } from "lucide-react";
 
 export const Navbar = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, profile } = useAuth();
 
   const goToSection = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -22,6 +25,8 @@ export const Navbar = () => {
       history.replaceState(null, "", `/#${id}`);
     }
   };
+
+  const displayName = profile?.full_name || profile?.email?.split("@")[0] || "Account";
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl">
@@ -39,12 +44,23 @@ export const Navbar = () => {
         <div className="flex items-center gap-2">
           <LanguageToggle />
           <ThemeToggle />
-          <Button asChild variant="outline" size="sm">
-            <Link to="/login">{t("nav.login")}</Link>
-          </Button>
-          <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary-hover">
-            <Link to="/register">{t("nav.getStarted")}</Link>
-          </Button>
+          {user ? (
+            <Button asChild size="sm" variant="outline" className="gap-1.5">
+              <Link to="/dashboard">
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span className="max-w-[140px] truncate">{displayName}</span>
+              </Link>
+            </Button>
+          ) : (
+            <>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/login">{t("nav.login")}</Link>
+              </Button>
+              <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary-hover">
+                <Link to="/register">{t("nav.getStarted")}</Link>
+              </Button>
+            </>
+          )}
         </div>
       </nav>
     </header>

@@ -65,11 +65,18 @@ const DashboardLayout = () => {
           </nav>
 
           <div className="mt-auto pt-4 space-y-1">
-            {resources.map((r) => (
-              <a key={r.label} href={r.to} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-card-elevated">
-                <r.icon className="h-4 w-4" /> {r.label}
-              </a>
-            ))}
+            {resources.map((r) => {
+              const isInternal = r.to.startsWith("/");
+              return isInternal ? (
+                <Link key={r.label} to={r.to} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-card-elevated">
+                  <r.icon className="h-4 w-4" /> {r.label}
+                </Link>
+              ) : (
+                <a key={r.label} href={r.to} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-card-elevated">
+                  <r.icon className="h-4 w-4" /> {r.label}
+                </a>
+              );
+            })}
           </div>
 
           <div className="pt-4 mt-4 border-t border-border">
