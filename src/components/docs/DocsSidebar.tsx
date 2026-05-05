@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { Search } from "lucide-react";
 import { navigation } from "@/docs/navigation";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,14 @@ import { DocsSearchDialog } from "./DocsSearchDialog";
 
 export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const [searchOpen, setSearchOpen] = useState(false);
+  const location = useLocation();
+  const navRef = useRef<HTMLElement>(null);
+  const filtered = navigation;
+
+  useEffect(() => {
+    const el = navRef.current?.querySelector<HTMLElement>("a[aria-current='page']");
+    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [location.pathname]);
   const filtered = navigation;
 
   return (
