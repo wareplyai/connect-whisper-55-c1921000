@@ -53,13 +53,20 @@ const useCases = [
 ];
 
 const USD_TO_BDT = 122;
-const plans = [
-  { name: "Trial", priceUsd: 0, isFree: true, period: "3 days", sessions: "1 session", limit: "50 msg/day", popular: false },
-  { name: "Basic", priceUsd: 6, period: "/month", sessions: "1 session", limit: "Unlimited messages", popular: false },
-  { name: "Pro", priceUsd: 15, period: "/month", sessions: "3 sessions", limit: "Unlimited messages", popular: true },
-  { name: "Plus", priceUsd: 30, period: "/month", sessions: "6 sessions", limit: "Unlimited messages", popular: false },
-  { name: "Business", priceUsd: 45, period: "/month", sessions: "10 sessions", limit: "Unlimited messages", popular: false },
-];
+
+type DbPlan = {
+  plan_name: string;
+  display_name: string;
+  price_monthly: number;
+  price_yearly: number;
+  max_sessions: number;
+  features: string[] | null;
+  is_active: boolean;
+  description: string | null;
+  is_popular: boolean;
+  sort_order: number;
+  cta_label: string | null;
+};
 
 const faqs = [
   { q: "Do you charge per message?", a: "No. All paid plans include unlimited messages with no per-message fees." },
