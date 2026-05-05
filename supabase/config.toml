@@ -1,1 +1,13 @@
 project_id = "mjbxpjaxczoycrcjajio"
+
+[functions.sms-receive]
+verify_jwt = false
+
+[functions.create-order]
+verify_jwt = false
+
+[functions.verify-payment]
+verify_jwt = false
+
+[functions.order-status]
+verify_jwt = false
