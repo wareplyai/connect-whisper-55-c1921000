@@ -210,6 +210,15 @@ const Landing = () => {
               </div>
             ))}
           </div>
+
+          <div className="mt-14 flex justify-center">
+            <Button asChild size="lg" className="group relative h-14 px-8 rounded-full bg-primary text-primary-foreground hover:bg-primary-hover font-semibold text-base shadow-[0_20px_50px_-15px_hsl(var(--primary)/0.6)] hover:shadow-[0_25px_60px_-15px_hsl(var(--primary)/0.8)] hover:-translate-y-0.5 transition-all duration-300">
+              <Link to="/register">
+                Start Your Free Trial
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 
