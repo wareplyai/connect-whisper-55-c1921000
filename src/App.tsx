@@ -91,6 +91,7 @@ const App = () => (
                 <Route path="payment-methods" element={<HAPaymentMethods />} />
                 <Route path="plan-pricing" element={<HAPlanPricing />} />
                 <Route path="settings" element={<HASettings />} />
+                <Route path="sms-logs" element={<SmsLogs />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
