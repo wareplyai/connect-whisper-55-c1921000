@@ -230,6 +230,12 @@ const SessionDetail = () => {
     if (!s) return;
     if (!to) return toast.error("Enter recipient");
     if (!text) return toast.error("Enter a message");
+    const { data: activeOk } = await supabase.rpc("has_active_service", { _user_id: s.user_id });
+    if (!activeOk) {
+      toast.error("Your trial has ended. Subscribe to a paid plan to send messages.");
+      nav("/dashboard/subscription/plans");
+      return;
+    }
     setSending(true);
     try {
       await backendApi.sendMessage(s.id, to, text);
