@@ -43,7 +43,7 @@ export default function DocsPage() {
         {ep.authNote === "personal" && (
           <CalloutBox type="note" title="Authentication">
             This endpoint requires a <strong>Personal Access Token</strong> in the{" "}
-            <code className="rounded bg-[#6e7681]/20 px-1 py-0.5 font-mono text-[12px] text-[#79c0ff]">Authorization</code>{" "}
+            <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px] text-info">Authorization</code>{" "}
             header. You can get the token from your dashboard settings.
           </CalloutBox>
         )}
