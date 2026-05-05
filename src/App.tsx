@@ -42,6 +42,9 @@ import HANotifications from "./pages/headadmin/Notifications";
 import ActivityLogs from "./pages/headadmin/ActivityLogs";
 import HASettings from "./pages/headadmin/Settings";
 import SmsLogs from "./pages/headadmin/SmsLogs";
+import DocsLayout from "./layouts/DocsLayout";
+import DocsIndex from "./pages/docs/DocsIndex";
+import DocsPage from "./pages/docs/DocsPage";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +64,11 @@ const App = () => (
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/trial-started" element={<TrialStarted />} />
+
+              <Route path="/docs" element={<DocsLayout />}>
+                <Route index element={<DocsIndex />} />
+                <Route path="*" element={<DocsPage />} />
+              </Route>
 
               <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
                 <Route index element={<DashboardHome />} />
