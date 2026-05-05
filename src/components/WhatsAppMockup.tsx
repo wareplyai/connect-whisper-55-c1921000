@@ -22,9 +22,11 @@ const script: Msg[] = [
   { id: 6, side: "out", type: "ai-text", content: "Nice pick! ✨ That's our **Pro Wireless Headphones** — $79. Free shipping & 2-year warranty included.", time: "10:22" },
   { id: 7, side: "in", type: "voice", time: "10:23" },
   { id: 8, side: "out", type: "typing" },
-  { id: 9, side: "out", type: "ai-voice", content: "Sure! Delivery takes 2–3 business days to your area.", time: "10:23" },
-  { id: 10, side: "in", type: "video", caption: "Unboxing 🎁", time: "10:24" },
-  { id: 11, side: "out", type: "ai-text", content: "Looks great! 🚀 Want me to send the order link?", time: "10:24" },
+  { id: 9, side: "out", type: "ai-text", content: "Sure! 🚚 Delivery takes 2–3 business days to your area, and payment is cash on delivery.", time: "10:23" },
+  { id: 10, side: "in", type: "text", content: "Can you send a product video please? 🎥", time: "10:24" },
+  { id: 11, side: "out", type: "typing" },
+  { id: 12, side: "out", type: "video", caption: "Here's a quick demo 🎁✨", time: "10:24" },
+  { id: 13, side: "out", type: "ai-text", content: "Want me to send the order link? 🚀", time: "10:24" },
 ];
 
 export const WhatsAppMockup = () => {
