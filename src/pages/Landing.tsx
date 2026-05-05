@@ -6,9 +6,10 @@ import { Logo } from "@/components/Logo";
 import {
   ArrowRight, Check, Star, MessageSquare, QrCode, BarChart3,
   Headset, Bell, Bot, Users, ShoppingBag, LineChart, Image as ImageIcon,
-  FileText, Mic, MapPin, Contact, Zap
+  FileText, Mic, MapPin, Contact, Zap, Sparkles
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 

@@ -270,36 +270,48 @@ export type Database = {
       }
       plan_pricing: {
         Row: {
+          cta_label: string | null
+          description: string | null
           display_name: string
           features: Json | null
           id: string
           is_active: boolean | null
+          is_popular: boolean
           max_sessions: number
           plan_name: string
           price_monthly: number
           price_yearly: number
+          sort_order: number
           updated_at: string | null
         }
         Insert: {
+          cta_label?: string | null
+          description?: string | null
           display_name: string
           features?: Json | null
           id?: string
           is_active?: boolean | null
+          is_popular?: boolean
           max_sessions: number
           plan_name: string
           price_monthly: number
           price_yearly: number
+          sort_order?: number
           updated_at?: string | null
         }
         Update: {
+          cta_label?: string | null
+          description?: string | null
           display_name?: string
           features?: Json | null
           id?: string
           is_active?: boolean | null
+          is_popular?: boolean
           max_sessions?: number
           plan_name?: string
           price_monthly?: number
           price_yearly?: number
+          sort_order?: number
           updated_at?: string | null
         }
         Relationships: []
