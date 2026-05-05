@@ -47,11 +47,11 @@ export function DocsSearchDialog({
                 key={item.slug}
                 value={`${cat.label} ${item.title} ${item.slug}`}
                 onSelect={() => go(item.slug)}
-                className="flex flex-col items-start gap-0.5 py-2.5"
+                className="flex flex-col items-start gap-0.5 py-2.5 data-[selected=true]:bg-[#25d366] data-[selected=true]:text-black"
               >
                 <span className="text-sm font-medium">{item.title}</span>
-                <span className="text-xs text-muted-foreground">
-                  Category: <span className="text-foreground/80">{cat.label}</span>
+                <span className="text-xs opacity-70">
+                  Category: <span className="font-medium opacity-90">{cat.label}</span>
                 </span>
               </CommandItem>
             ))}

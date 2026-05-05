@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { Search } from "lucide-react";
 import { navigation } from "@/docs/navigation";
 import { cn } from "@/lib/utils";
@@ -7,7 +7,15 @@ import { DocsSearchDialog } from "./DocsSearchDialog";
 
 export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const [searchOpen, setSearchOpen] = useState(false);
+  const location = useLocation();
+  const navRef = useRef<HTMLElement>(null);
   const filtered = navigation;
+
+  useEffect(() => {
+    const el = navRef.current?.querySelector<HTMLElement>("a[aria-current='page']");
+    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [location.pathname]);
+
 
   return (
     <aside className="flex h-full w-full flex-col border-r bg-[#161b22]">
@@ -34,7 +42,7 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
           </kbd>
         </button>
       </div>
-      <nav className="flex-1 overflow-y-auto p-3">
+      <nav ref={navRef} className="flex-1 overflow-y-auto p-3">
         {filtered.map((cat) => (
           <div key={cat.label} className="mb-5">
             <div className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
