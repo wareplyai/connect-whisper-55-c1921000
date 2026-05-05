@@ -5,6 +5,37 @@ export interface Country {
   flag: string;
 }
 
+// National (subscriber) number length range per ISO. Defaults to 6-15 if unknown.
+const PHONE_LENGTHS: Record<string, [number, number]> = {
+  BD: [10, 10], IN: [10, 10], PK: [10, 10], US: [10, 10], CA: [10, 10],
+  GB: [10, 10], SA: [9, 9], AE: [9, 9], MY: [9, 10], SG: [8, 8],
+  AF: [9, 9], AU: [9, 9], AT: [10, 11], BE: [9, 9], BR: [10, 11],
+  CN: [11, 11], EG: [10, 10], FR: [9, 9], DE: [10, 11], HK: [8, 8],
+  ID: [9, 12], IR: [10, 10], IQ: [10, 10], IL: [9, 9], IT: [9, 11],
+  JP: [10, 10], JO: [9, 9], KE: [9, 9], KW: [8, 8], LB: [7, 8],
+  MX: [10, 10], MA: [9, 9], NL: [9, 9], NZ: [8, 10], NG: [10, 10],
+  NO: [8, 8], OM: [8, 8], PH: [10, 10], PL: [9, 9], PT: [9, 9],
+  QA: [8, 8], RU: [10, 10], ZA: [9, 9], KR: [9, 10], ES: [9, 9],
+  LK: [9, 9], SE: [9, 9], CH: [9, 9], TW: [9, 9], TH: [9, 9],
+  TR: [10, 10], UA: [9, 9], VN: [9, 10], YE: [9, 9],
+};
+
+export const getPhoneLength = (iso: string): [number, number] =>
+  PHONE_LENGTHS[iso] || [6, 15];
+
+export const validatePhoneForCountry = (
+  raw: string,
+  country: Country
+): { ok: boolean; digits: string; message?: string } => {
+  const digits = (raw || "").replace(/\D/g, "");
+  if (!digits) return { ok: false, digits, message: "The phone number field must be a valid number." };
+  const [min, max] = getPhoneLength(country.iso);
+  if (digits.length < min || digits.length > max) {
+    return { ok: false, digits, message: "The phone number field must be a valid number." };
+  }
+  return { ok: true, digits };
+};
+
 // Popular countries first
 export const POPULAR: Country[] = [
   { code: "+880", iso: "BD", name: "Bangladesh", flag: "🇧🇩" },
