@@ -15,7 +15,7 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
     const el = navRef.current?.querySelector<HTMLElement>("a[aria-current='page']");
     if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [location.pathname]);
-  const filtered = navigation;
+
 
   return (
     <aside className="flex h-full w-full flex-col border-r bg-[#161b22]">
