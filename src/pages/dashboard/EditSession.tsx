@@ -117,8 +117,19 @@ const EditSession = () => {
             <Label>Phone Number</Label>
             <div className="flex gap-2 mt-1.5">
               <CountryCodeSelect value={country} onChange={setCountry} />
-              <Input value={num} onChange={(e) => setNum(e.target.value)} placeholder="234567890" className="flex-1" />
+              <Input
+                value={num}
+                onChange={(e) => setNum(e.target.value)}
+                placeholder="234567890"
+                className={`flex-1 ${num.trim() && !validatePhoneForCountry(num, country).ok ? "border-destructive focus-visible:ring-destructive" : ""}`}
+              />
             </div>
+            {num.trim() && !validatePhoneForCountry(num, country).ok && (
+              <p className="mt-1.5 text-xs text-destructive flex items-start gap-1.5">
+                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                The phone number field must be a valid number.
+              </p>
+            )}
           </div>
         </div>
 
