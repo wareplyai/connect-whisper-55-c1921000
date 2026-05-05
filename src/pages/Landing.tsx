@@ -131,9 +131,10 @@ const Landing = () => {
           </div>
 
           {/* Headline */}
-          <h1 className="mt-8 font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] text-foreground">
+          <h1 className="mt-8 font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.15] text-foreground text-center">
             {t("hero.title.1")} <br className="hidden md:block" />
-            {t("hero.title.2")} <span className="text-gradient">{t("hero.title.3")}</span> {t("hero.title.4")}
+            {t("hero.title.2")} <span className="text-gradient">{t("hero.title.3")}</span> <br className="hidden md:block" />
+            {t("hero.title.4")}
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-sm md:text-base text-muted-foreground leading-relaxed">
