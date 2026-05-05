@@ -6,7 +6,7 @@ import { Logo } from "@/components/Logo";
 import {
   ArrowRight, Check, Star, MessageSquare, QrCode, BarChart3,
   Headset, Bell, Bot, Users, ShoppingBag, LineChart, Image as ImageIcon,
-  FileText, Mic, MapPin, Contact, Zap, Sparkles
+  FileText, Mic, MapPin, Contact, Zap, Sparkles, UsersRound, Radio, Video, ArrowUpRight
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -287,48 +287,105 @@ const Landing = () => {
       </section>
 
       {/* MESSAGE TYPES + WHATSAPP CHAT MOCKUP */}
-      <section className="container py-24 grid md:grid-cols-2 gap-16 items-center">
+      <section className="relative container py-24 grid md:grid-cols-2 gap-16 items-center">
+        <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+          <div className="absolute -top-10 left-1/3 h-72 w-72 rounded-full bg-primary/10 blur-[120px]" />
+        </div>
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground mb-4">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs text-primary mb-4">
+            <Sparkles className="h-3 w-3" />
             Real-time AI conversations
           </div>
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
-            Every message type, <br />
+          <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight mb-4">
+            Every message type,<br />
             <span className="text-gradient">handled by AI</span>
           </h2>
-          <p className="text-muted-foreground mb-8 leading-relaxed">
-            WaReply AI auto-replies to your customers across text, image, voice, video and more — in seconds, in their language.
+          <p className="text-muted-foreground mb-10 leading-relaxed max-w-md">
+            WaReply AI auto-replies across text, image, voice, video and more — in seconds, in your customer's language.
           </p>
 
-          <h3 className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Supported Message Types</h3>
-          <div className="grid grid-cols-2 gap-2 mb-6">
-            {[
-              { i: MessageSquare, l: "Text" },
-              { i: ImageIcon, l: "Image & Video" },
-              { i: FileText, l: "Document" },
-              { i: Mic, l: "Voice" },
-              { i: Contact, l: "Contact" },
-              { i: MapPin, l: "Location" },
-            ].map((it, idx) => (
-              <div
-                key={it.l}
-                className="wa-feature group flex items-center gap-2.5 rounded-xl border border-border bg-card/60 backdrop-blur px-3 py-2.5 hover:border-primary/50 hover:bg-card transition-all duration-300 hover:-translate-y-0.5"
-                style={{ animationDelay: `${idx * 0.08}s` }}
-              >
-                <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 text-primary group-hover:scale-110 transition-transform">
-                  <it.i className="h-4 w-4" />
+          {/* Bento grid */}
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Message Types</span>
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+            </div>
+
+            <div className="grid grid-cols-6 gap-2.5">
+              {/* Featured */}
+              <div className="col-span-6 sm:col-span-6 md:col-span-3 md:row-span-2 group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-5 hover:border-primary/40 transition-all duration-500 hover:-translate-y-1">
+                <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/15 blur-2xl group-hover:bg-primary/25 transition-all" />
+                <div className="relative">
+                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-lg shadow-primary/30 mb-4">
+                    <MessageSquare className="h-5 w-5" />
+                  </div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <h4 className="font-semibold text-base">Text & Rich Replies</h4>
+                    <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">AI</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">Smart formatted text with buttons, lists & multilingual auto-reply.</p>
+                  <div className="mt-4 flex items-center gap-1 text-[11px] text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span>Most used</span><ArrowUpRight className="h-3 w-3" />
+                  </div>
                 </div>
-                <span className="text-sm font-medium">{it.l}</span>
+              </div>
+
+              {[
+                { i: ImageIcon, l: "Image", d: "Photos & captions", c: "from-sky-500/80 to-blue-600/60" },
+                { i: Video, l: "Video", d: "MP4 & shorts", c: "from-rose-500/80 to-pink-600/60" },
+                { i: FileText, l: "Document", d: "PDF, DOCX, XLS", c: "from-amber-500/80 to-orange-600/60" },
+                { i: Mic, l: "Voice", d: "Audio notes", c: "from-violet-500/80 to-purple-600/60" },
+                { i: MapPin, l: "Location", d: "Live & static pins", c: "from-emerald-500/80 to-teal-600/60" },
+                { i: Contact, l: "Contact", d: "vCards", c: "from-cyan-500/80 to-sky-600/60" },
+              ].map((it, idx) => (
+                <div
+                  key={it.l}
+                  className="wa-feature col-span-3 group relative overflow-hidden rounded-xl border border-border bg-card/60 backdrop-blur p-3 hover:border-primary/40 hover:bg-card transition-all duration-300 hover:-translate-y-0.5"
+                  style={{ animationDelay: `${idx * 0.06}s` }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br ${it.c} text-white shadow-sm group-hover:scale-110 transition-transform`}>
+                      <it.i className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold leading-tight truncate">{it.l}</div>
+                      <div className="text-[10px] text-muted-foreground truncate">{it.d}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Senders */}
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Send To</span>
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+          </div>
+          <div className="grid grid-cols-3 gap-2.5 mb-8">
+            {[
+              { i: Users, l: "Users", d: "1-on-1 chats" },
+              { i: UsersRound, l: "Groups", d: "Multi-member" },
+              { i: Radio, l: "Channels", d: "Broadcast" },
+            ].map((s) => (
+              <div key={s.l} className="group relative overflow-hidden rounded-xl border border-border bg-card/60 backdrop-blur p-3 text-center hover:border-primary/40 hover:bg-card transition-all hover:-translate-y-0.5">
+                <div className="mx-auto mb-2 grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
+                  <s.i className="h-4 w-4" />
+                </div>
+                <div className="text-sm font-semibold">{s.l}</div>
+                <div className="text-[10px] text-muted-foreground">{s.d}</div>
               </div>
             ))}
           </div>
-          <h3 className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Supported Senders</h3>
-          <div className="flex gap-2">
-            {["Users", "Groups", "Channels"].map((s) => (
-              <span key={s} className="rounded-full border border-border bg-card px-4 py-1.5 text-sm hover:border-primary/50 transition-colors">{s}</span>
-            ))}
-          </div>
+
+          <Button asChild size="lg" className="group bg-gradient-to-r from-primary to-primary/80 hover:from-primary-hover hover:to-primary shadow-lg shadow-primary/20">
+            <Link to="/register">
+              Start Integrating Now
+              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </Button>
         </div>
 
         {/* iPhone mockup with animated WhatsApp chat */}
