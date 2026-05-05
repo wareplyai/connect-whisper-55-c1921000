@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/marketing/Navbar";
+import { WhatsAppMockup } from "@/components/WhatsAppMockup";
 import { Logo } from "@/components/Logo";
 import {
   ArrowRight, Check, Star, MessageSquare, QrCode, BarChart3,
