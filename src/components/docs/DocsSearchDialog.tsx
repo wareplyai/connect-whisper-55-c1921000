@@ -47,7 +47,7 @@ export function DocsSearchDialog({
                 key={item.slug}
                 value={`${cat.label} ${item.title} ${item.slug}`}
                 onSelect={() => go(item.slug)}
-                className="flex flex-col items-start gap-0.5 py-2.5 data-[selected=true]:bg-[#25d366] data-[selected=true]:text-black"
+                className="flex flex-col items-start gap-0.5 py-2.5 data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground"
               >
                 <span className="text-sm font-medium">{item.title}</span>
                 <span className="text-xs opacity-70">
