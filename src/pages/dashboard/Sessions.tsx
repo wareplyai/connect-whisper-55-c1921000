@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { backendApi } from "@/lib/backend";
 import { PlanUsageBar } from "@/components/PlanUsageBar";
+import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const statusBadge = (s: string) => {
   if (s === "connected") return "bg-primary/15 text-primary";
@@ -22,6 +24,15 @@ const Sessions = () => {
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
+  const [hasActive, setHasActive] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!profile) return;
+    (async () => {
+      const { data } = await supabase.rpc("has_active_service", { _user_id: profile.id });
+      setHasActive(!!data);
+    })();
+  }, [profile]);
 
   const load = async () => {
     if (!profile) return;
@@ -82,11 +93,31 @@ const Sessions = () => {
         <div className="flex gap-2">
           <Button variant="outline" size="sm">Help Center</Button>
           <Button variant="outline" size="sm" onClick={load}><RefreshCw className="h-4 w-4 mr-1.5" /> Refresh</Button>
-          <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary-hover">
-            <Link to="/dashboard/sessions/create"><Plus className="h-4 w-4 mr-1.5" /> New Session</Link>
-          </Button>
+          {hasActive === false ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0}>
+                    <Button size="sm" disabled className="bg-primary text-primary-foreground opacity-60 cursor-not-allowed">
+                      <Plus className="h-4 w-4 mr-1.5" /> New Session
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">You need an active subscription to create WhatsApp sessions.</p>
+                  <Link to="/dashboard/subscription/plans" className="text-xs text-primary underline">View Subscription</Link>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary-hover">
+              <Link to="/dashboard/sessions/create"><Plus className="h-4 w-4 mr-1.5" /> New Session</Link>
+            </Button>
+          )}
         </div>
       </div>
+
+      {hasActive === false && <NoActiveSubscriptionBanner />}
 
       <PlanUsageBar />
 

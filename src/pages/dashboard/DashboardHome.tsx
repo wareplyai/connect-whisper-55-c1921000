@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Smartphone, CreditCard, Activity, X } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
 
 const DashboardHome = () => {
   const { profile } = useAuth();
@@ -63,6 +64,8 @@ const DashboardHome = () => {
         <h1 className="text-2xl font-bold">Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}</h1>
         <p className="text-muted-foreground text-sm">Here's what's happening with your sessions today.</p>
       </div>
+
+      {!hasActivePlan && <NoActiveSubscriptionBanner />}
 
       <div className="grid md:grid-cols-3 gap-4">
         <div className="rounded-xl border border-border bg-card p-5">
