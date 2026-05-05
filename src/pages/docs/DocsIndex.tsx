@@ -24,11 +24,11 @@ export default function DocsIndex() {
                   <Link
                     key={item.slug}
                     to={`/docs/${item.slug}`}
-                    className="group rounded-lg border bg-card p-4 transition-colors hover:border-[#25d366]/60 hover:bg-card-elevated"
+                    className="group rounded-lg border bg-card p-4 transition-colors hover:border-primary/60 hover:bg-card-elevated"
                   >
                     <div className="mb-1.5 flex items-center gap-2">
                       {ep && <EndpointBadge method={ep.method} />}
-                      <span className="text-sm font-medium text-foreground group-hover:text-[#25d366]">
+                      <span className="text-sm font-medium text-foreground group-hover:text-primary">
                         {item.title}
                       </span>
                     </div>
