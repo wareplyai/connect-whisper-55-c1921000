@@ -12,14 +12,14 @@ export const Logo = ({ size = 32, showText = true, textClassName, className }: L
   <span className={cn("inline-flex items-center gap-2", className)}>
     <img
       src={logo}
-      alt="WareplyAI"
+      alt="WaReply AI"
       width={size}
       height={size}
       className="rounded-lg object-cover shrink-0"
       style={{ width: size, height: size }}
     />
     {showText && (
-      <span className={cn("font-semibold tracking-tight", textClassName)}>WareplyAI</span>
+      <span className={cn("font-semibold tracking-tight", textClassName)}>WaReply AI</span>
     )}
   </span>
 );
