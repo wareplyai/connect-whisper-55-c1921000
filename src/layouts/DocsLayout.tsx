@@ -9,7 +9,7 @@ import { Navbar } from "@/components/marketing/Navbar";
 export default function DocsLayout() {
   const [open, setOpen] = useState(false);
   return (
-    <div className="min-h-screen bg-[#0d1117] text-[#e6edf3]">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <div className="flex lg:hidden items-center gap-2 border-b border-border/60 bg-background/70 px-4 py-2 backdrop-blur sticky top-16 z-40">
         <Sheet open={open} onOpenChange={setOpen}>
