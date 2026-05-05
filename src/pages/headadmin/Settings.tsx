@@ -16,7 +16,7 @@ export default function HeadAdminSettings() {
   const [platform, setPlatform] = useState(() => {
     const saved = localStorage.getItem("platform_settings");
     return saved ? JSON.parse(saved) : {
-      name: "WaAPI", supportEmail: "support@wasendapi.com",
+      name: "WaAPI", supportEmail: "support@wareplyai.com",
       backendUrl: import.meta.env.VITE_BACKEND_URL || "",
       trialDays: 7, trialSessions: 1,
     };

@@ -155,8 +155,8 @@ export const translations: Dict = {
   "cta.title.1": { en: "Fast, Easy, Affordable", bn: "দ্রুত, সহজ, সাশ্রয়ী" },
   "cta.title.2": { en: "WhatsApp API", bn: "হোয়াটসঅ্যাপ API" },
   "cta.subtitle": {
-    en: "WaSendAPI is a fast, affordable WhatsApp API for developers. Manage multiple sessions and scale without per-message fees. Try it free today!",
-    bn: "WaSendAPI হলো ডেভেলপারদের জন্য দ্রুত, সাশ্রয়ী হোয়াটসঅ্যাপ API। একাধিক সেশন ম্যানেজ করুন এবং পার-মেসেজ ফি ছাড়াই স্কেল করুন। আজই ফ্রি ট্রাই করুন!",
+    en: "WaReply AI is a fast, affordable WhatsApp API for developers. Manage multiple sessions and scale without per-message fees. Try it free today!",
+    bn: "WaReply AI হলো ডেভেলপারদের জন্য দ্রুত, সাশ্রয়ী হোয়াটসঅ্যাপ API। একাধিক সেশন ম্যানেজ করুন এবং পার-মেসেজ ফি ছাড়াই স্কেল করুন। আজই ফ্রি ট্রাই করুন!",
   },
   "cta.l1": { en: "No credit card required to start", bn: "শুরু করতে ক্রেডিট কার্ড লাগবে না" },
   "cta.l2": { en: "3-day free trial with full access", bn: "ফুল অ্যাক্সেস সহ ৩ দিনের ফ্রি ট্রায়াল" },

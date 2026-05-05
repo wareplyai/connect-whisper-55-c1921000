@@ -20,13 +20,13 @@ const OL = ({ children }: { children: ReactNode }) => <ol className="mb-3 list-d
 export const guides: Record<string, Guide> = {
   "getting-started/intro": {
     category: "Getting Started",
-    title: "Getting Started with WasenderAPI",
+    title: "Getting Started with WaReply AI",
     intro:
       "This guide walks you through creating your account, connecting your first WhatsApp session, and sending your first message in just a few minutes.",
     content: (
       <>
         <H2>1. Create an account</H2>
-        <P>Sign up for a WaSenderAPI account and start your free trial. No credit card required.</P>
+        <P>Sign up for a WaReply AI account and start your free trial. No credit card required.</P>
 
         <H2>2. Get your Personal Access Token</H2>
         <P>
@@ -43,7 +43,7 @@ export const guides: Record<string, Guide> = {
           Sessions represent a connected WhatsApp number. Create one with the <Code>POST /api/whatsapp-sessions</Code>{" "}
           endpoint:
         </P>
-        <Pre>{`curl -X POST "https://www.wasenderapi.com/api/whatsapp-sessions" \\
+        <Pre>{`curl -X POST "https://www.wareplyai.com/api/whatsapp-sessions" \\
   -H "Authorization: Bearer YOUR_PERSONAL_ACCESS_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{ "name": "My Bot", "phone_number": "+1234567890" }'`}</Pre>
@@ -66,13 +66,13 @@ export const guides: Record<string, Guide> = {
   "getting-started/postman": {
     category: "Getting Started",
     title: "Using Our API with Postman",
-    intro: "Import the WaSenderAPI Postman collection to explore every endpoint interactively.",
+    intro: "Import the WaReply AI Postman collection to explore every endpoint interactively.",
     content: (
       <>
         <H2>Import the collection</H2>
         <OL>
           <li>Open Postman and click <strong>Import</strong>.</li>
-          <li>Paste the WaSenderAPI collection URL or upload the JSON file.</li>
+          <li>Paste the WaReply AI collection URL or upload the JSON file.</li>
           <li>Set your environment variables: <Code>BASE_URL</Code>, <Code>API_KEY</Code>, <Code>ACCESS_TOKEN</Code>.</li>
         </OL>
         <H2>Authorization</H2>
@@ -115,23 +115,23 @@ export const guides: Record<string, Guide> = {
   "getting-started/mcp": {
     category: "Getting Started",
     title: "Model Context Protocol (MCP) Integration",
-    intro: "Expose WaSenderAPI as an MCP server so AI agents like Claude can send WhatsApp messages on your behalf.",
+    intro: "Expose WaReply AI as an MCP server so AI agents like Claude can send WhatsApp messages on your behalf.",
     content: (
       <>
         <H2>What is MCP?</H2>
         <P>
-          The Model Context Protocol is an open standard that lets LLMs securely call external tools. The WaSenderAPI MCP
+          The Model Context Protocol is an open standard that lets LLMs securely call external tools. The WaReply AI MCP
           server exposes our endpoints as MCP tools.
         </P>
         <H2>Install</H2>
-        <Pre>{`npx @wasenderapi/mcp-server --api-key YOUR_API_KEY`}</Pre>
+        <Pre>{`npx @wareplyai/mcp-server --api-key YOUR_API_KEY`}</Pre>
         <H2>Configure Claude Desktop</H2>
         <Pre>{`{
   "mcpServers": {
-    "wasenderapi": {
+    "wareplyai": {
       "command": "npx",
-      "args": ["@wasenderapi/mcp-server"],
-      "env": { "WASENDER_API_KEY": "YOUR_API_KEY" }
+      "args": ["@wareplyai/mcp-server"],
+      "env": { "WAREPLY_API_KEY": "YOUR_API_KEY" }
     }
   }
 }`}</Pre>
@@ -163,40 +163,40 @@ export const guides: Record<string, Guide> = {
   "getting-started/n8n": {
     category: "Getting Started",
     title: "n8n Integration (Community Node)",
-    intro: "Automate WhatsApp workflows in n8n with the official WaSenderAPI community node.",
+    intro: "Automate WhatsApp workflows in n8n with the official WaReply AI community node.",
     content: (
       <>
         <H2>Install</H2>
         <OL>
           <li>Open n8n → <strong>Settings → Community Nodes</strong>.</li>
-          <li>Install <Code>n8n-nodes-wasenderapi</Code>.</li>
+          <li>Install <Code>n8n-nodes-wareplyai</Code>.</li>
           <li>Restart n8n.</li>
         </OL>
         <H2>Configure credentials</H2>
-        <P>Create a new <strong>WaSenderAPI</strong> credential and paste your session API key.</P>
+        <P>Create a new <strong>WaReply AI</strong> credential and paste your session API key.</P>
       </>
     ),
   },
   "sdks/official": {
     category: "Developer SDKs",
     title: "Official SDKs – Node.js, Python & Laravel",
-    intro: "Use our official SDKs to integrate WaSenderAPI in idiomatic code.",
+    intro: "Use our official SDKs to integrate WaReply AI in idiomatic code.",
     content: (
       <>
         <H2>Node.js</H2>
-        <Pre>{`npm install @wasenderapi/node`}</Pre>
-        <Pre>{`import { WaSender } from "@wasenderapi/node";
-const client = new WaSender({ apiKey: "YOUR_API_KEY" });
+        <Pre>{`npm install @wareplyai/node`}</Pre>
+        <Pre>{`import { WaReply } from "@wareplyai/node";
+const client = new WaReply({ apiKey: "YOUR_API_KEY" });
 await client.messages.sendText({ to: "+1234567890", text: "Hello!" });`}</Pre>
 
         <H2>Python</H2>
-        <Pre>{`pip install wasenderapi`}</Pre>
-        <Pre>{`from wasenderapi import WaSender
-client = WaSender(api_key="YOUR_API_KEY")
+        <Pre>{`pip install wareplyai`}</Pre>
+        <Pre>{`from wareplyai import WaReply
+client = WaReply(api_key="YOUR_API_KEY")
 client.messages.send_text(to="+1234567890", text="Hello!")`}</Pre>
 
         <H2>Laravel</H2>
-        <Pre>{`composer require wasenderapi/laravel`}</Pre>
+        <Pre>{`composer require wareplyai/laravel`}</Pre>
       </>
     ),
   },
@@ -257,7 +257,7 @@ client.messages.send_text(to="+1234567890", text="Hello!")`}</Pre>
   "responses/headers": {
     category: "Responses & Errors",
     title: "Response Headers",
-    intro: "Standard headers returned by every WaSenderAPI endpoint.",
+    intro: "Standard headers returned by every WaReply AI endpoint.",
     content: (
       <>
         <H2>Rate limit headers</H2>
@@ -299,7 +299,7 @@ client.messages.send_text(to="+1234567890", text="Hello!")`}</Pre>
   "rate-limits/overview": {
     category: "Rate Limits",
     title: "Understanding Rate Limits",
-    intro: "WaSenderAPI applies per-plan rate limits and an additional safeguard when account protection is enabled.",
+    intro: "WaReply AI applies per-plan rate limits and an additional safeguard when account protection is enabled.",
     content: (
       <>
         <H2>Default limits</H2>
