@@ -303,7 +303,7 @@ const Landing = () => {
         </div>
 
         {/* Language logos */}
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-5 md:gap-7">
+        <div className="mx-auto mt-10 flex max-w-xl flex-wrap items-center justify-center gap-3 md:gap-4">
           {[
             { name: "JavaScript", icon: "javascript/javascript-original.svg" },
             { name: "C++", icon: "cplusplus/cplusplus-original.svg" },
