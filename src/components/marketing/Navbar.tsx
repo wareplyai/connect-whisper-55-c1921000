@@ -17,7 +17,7 @@ export const Navbar = () => {
           <a href="#features" className="hover:text-foreground transition-colors">{t("nav.features")}</a>
           <a href="#how" className="hover:text-foreground transition-colors">{t("nav.how")}</a>
           <a href="#pricing" className="hover:text-foreground transition-colors">{t("nav.pricing")}</a>
-          <a href="#faq" className="hover:text-foreground transition-colors">{t("nav.docs")}</a>
+          <Link to="/docs" className="hover:text-foreground transition-colors">{t("nav.docs")}</Link>
           <a href="#faq" className="hover:text-foreground transition-colors">{t("nav.help")}</a>
         </div>
         <div className="flex items-center gap-2">

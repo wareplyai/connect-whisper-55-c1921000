@@ -713,14 +713,14 @@ const Landing = () => {
             <p className="mt-3 text-sm text-muted-foreground max-w-xs">{t("foot.tagline")}</p>
           </div>
           {[
-            { title: t("foot.product"), links: [t("foot.features"), t("foot.pricing"), t("foot.docs")] },
-            { title: t("foot.company"), links: [t("foot.about"), t("foot.blog"), t("foot.partner")] },
-            { title: t("foot.resources"), links: [t("foot.help"), t("foot.status"), t("foot.changelog")] },
+            { title: t("foot.product"), links: [{ label: t("foot.features"), href: "#features" }, { label: t("foot.pricing"), href: "#pricing" }, { label: t("foot.docs"), href: "/docs" }] },
+            { title: t("foot.company"), links: [{ label: t("foot.about"), href: "#" }, { label: t("foot.blog"), href: "#" }, { label: t("foot.partner"), href: "#" }] },
+            { title: t("foot.resources"), links: [{ label: t("foot.help"), href: "#faq" }, { label: t("foot.status"), href: "#" }, { label: t("foot.changelog"), href: "#" }] },
           ].map((c) => (
             <div key={c.title}>
               <h4 className="font-semibold mb-3 text-sm">{c.title}</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                {c.links.map((l) => <li key={l}><a href="#" className="hover:text-foreground">{l}</a></li>)}
+                {c.links.map((l) => <li key={l.label}>{l.href.startsWith("/") ? <Link to={l.href} className="hover:text-foreground">{l.label}</Link> : <a href={l.href} className="hover:text-foreground">{l.label}</a>}</li>)}
               </ul>
             </div>
           ))}
