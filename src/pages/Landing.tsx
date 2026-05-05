@@ -461,16 +461,55 @@ const Landing = () => {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="container py-20 max-w-3xl">
-        <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-center mb-10">Frequently Asked Questions</h2>
-        <Accordion type="single" collapsible className="space-y-2">
-          {faqs.map((f, i) => (
-            <AccordionItem key={i} value={`f${i}`} className="rounded-xl border border-border bg-card px-4">
-              <AccordionTrigger className="text-left hover:no-underline">{f.q}</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">{f.a}</AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+      <section id="faq" className="relative py-24">
+        <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/3 left-0 h-72 w-72 rounded-full bg-primary/10 blur-[120px]" />
+          <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-primary/5 blur-[120px]" />
+        </div>
+
+        <div className="container max-w-4xl">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 backdrop-blur px-3 py-1 text-xs text-muted-foreground mb-4">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+              FAQ
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
+              Frequently Asked <span className="text-gradient">Questions</span>
+            </h2>
+            <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
+              Everything you need to know. Can't find an answer? Reach out to our team.
+            </p>
+          </div>
+
+          <Accordion type="single" collapsible className="space-y-3">
+            {faqs.map((f, i) => (
+              <AccordionItem
+                key={i}
+                value={`f${i}`}
+                className="group rounded-2xl border border-border bg-card/60 backdrop-blur-sm px-5 transition-all duration-300 hover:border-primary/40 hover:bg-card data-[state=open]:border-primary/50 data-[state=open]:bg-card data-[state=open]:shadow-[0_10px_40px_-20px_hsl(var(--primary)/0.4)]"
+              >
+                <AccordionTrigger className="text-left hover:no-underline py-5 [&[data-state=open]>svg]:text-primary">
+                  <div className="flex items-center gap-4 flex-1">
+                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs font-bold shrink-0 transition-transform group-hover:scale-110 group-data-[state=open]:bg-primary group-data-[state=open]:text-primary-foreground">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="font-semibold text-base">{f.q}</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground leading-relaxed pl-12 pb-5">
+                  {f.a}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+
+          <div className="mt-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              Still have questions?{" "}
+              <a href="#" className="text-primary font-medium hover:underline">Contact our support team</a>
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* FINAL CTA */}
