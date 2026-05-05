@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Smartphone, CreditCard, Activity, X } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
 
 const DashboardHome = () => {
   const { profile } = useAuth();
