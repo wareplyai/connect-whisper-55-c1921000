@@ -137,17 +137,17 @@ const Landing = () => {
           </div>
 
           {/* Headline */}
-          <h1 className="mt-8 text-5xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tight leading-[1.05]">
-            Build Smarter With The <br className="hidden md:block" />
+          <h1 className="mt-8 text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]">
+            The All-in-One <br className="hidden md:block" />
             <span className="relative inline-block">
-              <span className="text-gradient">WhatsApp API</span>
+              <span className="text-gradient">WhatsApp API + AI Automation</span>
               <span className="absolute -bottom-2 left-0 h-[3px] w-full rounded-full bg-gradient-to-r from-transparent via-primary to-transparent opacity-70" />
             </span>{" "}
-            <span className="text-foreground">Developers Love</span>
+            <span className="text-foreground">Platform</span>
           </h1>
 
-          <p className="mx-auto mt-7 max-w-2xl text-base md:text-lg text-muted-foreground leading-relaxed">
-            Send unlimited messages, manage multiple sessions, and ship powerful automations — without per-message fees or complicated setup.
+          <p className="mx-auto mt-6 max-w-2xl text-sm md:text-base text-muted-foreground leading-relaxed">
+            Send unlimited messages, manage multiple sessions, and power smart AI-driven conversations — all without per-message fees or complicated setup.
           </p>
 
           {/* CTAs */}
