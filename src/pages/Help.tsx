@@ -6,6 +6,7 @@ import {
   Search, Rocket, Smartphone, MessageSquare, CreditCard,
   Handshake, Zap, ArrowRight, ChevronDown, Facebook, Instagram, Linkedin, Star,
 } from "lucide-react";
+import wareplyLogo from "@/assets/wareply-logo.png";
 
 type Category = {
   icon: React.ComponentType<{ className?: string }>;
@@ -222,9 +223,11 @@ export default function Help() {
         <div className="container mx-auto grid grid-cols-1 gap-10 px-5 py-14 md:grid-cols-4">
           <div>
             <Link to="/" className="inline-flex items-center gap-2">
-              <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground font-display font-bold shadow-[0_0_20px_hsl(var(--primary)/0.5)]">
-                Wr
-              </span>
+              <img
+                src={wareplyLogo}
+                alt="WaReply AI"
+                className="h-9 w-9 rounded-lg object-cover shadow-[0_0_20px_hsl(var(--primary)/0.5)]"
+              />
               <span className="font-display text-lg font-semibold">WaReply AI</span>
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
