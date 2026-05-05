@@ -102,30 +102,30 @@ const Landing = () => {
 
       {/* HERO */}
       <section className="relative overflow-hidden">
-        {/* Background layers */}
-        <div className="absolute inset-0 bg-hero" />
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,hsl(var(--primary)/0.18),transparent_60%)]" />
-        {/* Grid pattern */}
+        {/* Deep green gradient background (Conyest-inspired) */}
+        <div className="absolute inset-0 -z-20 bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,hsl(142_70%_18%)_0%,hsl(160_45%_8%)_45%,hsl(215_28%_5%)_100%)]" />
+        {/* Soft top light streak */}
+        <div className="absolute top-0 right-1/4 -z-10 h-[400px] w-[600px] rotate-[20deg] bg-gradient-to-b from-primary/15 via-primary/5 to-transparent blur-3xl" />
+        {/* Faint grid in bottom-left corner */}
         <div
-          className="absolute inset-0 -z-10 opacity-[0.18]"
+          className="absolute bottom-0 left-0 -z-10 h-[340px] w-[340px] opacity-30"
           style={{
             backgroundImage:
-              "linear-gradient(hsl(var(--border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)",
-            backgroundSize: "56px 56px",
+              "linear-gradient(hsl(var(--primary)/0.18) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)/0.18) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
             maskImage:
-              "radial-gradient(ellipse at center, black 40%, transparent 75%)",
+              "radial-gradient(ellipse at bottom left, black 0%, transparent 70%)",
             WebkitMaskImage:
-              "radial-gradient(ellipse at center, black 40%, transparent 75%)",
+              "radial-gradient(ellipse at bottom left, black 0%, transparent 70%)",
           }}
         />
-        {/* Floating glows */}
-        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-[480px] w-[820px] rounded-full bg-primary/20 blur-[140px]" />
-        <div className="pointer-events-none absolute top-1/3 -left-32 h-[320px] w-[320px] rounded-full bg-primary/10 blur-[120px]" />
-        <div className="pointer-events-none absolute top-1/2 -right-32 h-[320px] w-[320px] rounded-full bg-primary/10 blur-[120px]" />
+        {/* Glow orbs */}
+        <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-[500px] w-[900px] rounded-full bg-primary/15 blur-[160px]" />
+        <div className="pointer-events-none absolute top-1/2 -right-40 h-[360px] w-[360px] rounded-full bg-primary/10 blur-[140px]" />
 
         <div className="container relative py-28 md:py-36 text-center">
           {/* Premium top badge */}
-          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary/20 bg-card/70 backdrop-blur-md px-4 py-1.5 text-xs font-medium shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)]">
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary/20 bg-card/40 backdrop-blur-md px-4 py-1.5 text-xs font-medium shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)]">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
@@ -137,13 +137,9 @@ const Landing = () => {
           </div>
 
           {/* Headline */}
-          <h1 className="mt-8 text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]">
+          <h1 className="mt-8 font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] text-foreground">
             The All-in-One <br className="hidden md:block" />
-            <span className="relative inline-block">
-              <span className="text-gradient">WhatsApp API + AI Automation</span>
-              <span className="absolute -bottom-2 left-0 h-[3px] w-full rounded-full bg-gradient-to-r from-transparent via-primary to-transparent opacity-70" />
-            </span>{" "}
-            <span className="text-foreground">Platform</span>
+            WhatsApp API + <span className="text-gradient">AI Automation</span> Platform
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-sm md:text-base text-muted-foreground leading-relaxed">
