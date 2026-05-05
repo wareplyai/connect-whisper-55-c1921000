@@ -497,6 +497,7 @@ const SessionDetail = () => {
             </div>
           </div>
         )}
+      </div>
 
       <div className="rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between mb-4">
