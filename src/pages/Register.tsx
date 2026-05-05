@@ -17,7 +17,6 @@ const Register = () => {
   const [confirm, setConfirm] = useState("");
   const [agree, setAgree] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<string | null>(null);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,15 +35,6 @@ const Register = () => {
     setLoading(false);
     toast.success("Account created!");
     nav("/dashboard");
-  };
-
-  const oauth = async (provider: "google" | "github") => {
-    setOauthLoading(provider);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${window.location.origin}/dashboard` },
-    });
-    if (error) { setOauthLoading(null); toast.error(error.message); }
   };
 
   return (
