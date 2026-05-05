@@ -102,8 +102,9 @@ const Landing = () => {
 
       {/* HERO */}
       <section className="relative overflow-hidden">
-        {/* Deep green gradient background (Conyest-inspired) */}
-        <div className="absolute inset-0 -z-20 bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,hsl(142_70%_18%)_0%,hsl(160_45%_8%)_45%,hsl(215_28%_5%)_100%)]" />
+        {/* Adaptive gradient background (works for both themes) */}
+        <div className="absolute inset-0 -z-20 bg-background" />
+        <div className="absolute inset-0 -z-20 dark:bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,hsl(142_70%_18%)_0%,hsl(160_45%_8%)_45%,hsl(215_28%_5%)_100%)] bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,hsl(142_70%_92%)_0%,hsl(160_50%_97%)_45%,hsl(210_30%_99%)_100%)]" />
         {/* Soft top light streak */}
         <div className="absolute top-0 right-1/4 -z-10 h-[400px] w-[600px] rotate-[20deg] bg-gradient-to-b from-primary/15 via-primary/5 to-transparent blur-3xl" />
         {/* Faint grid in bottom-left corner */}
