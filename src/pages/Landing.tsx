@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const codeSamples: Record<string, string> = {
   JS: `import axios from 'axios';
@@ -43,14 +44,14 @@ requests.post(
   -d '{"to":"+1234567890","text":"Hello!"}'`,
 };
 
-const useCases = [
-  { icon: Headset, title: "Customer Support Automation", desc: "Auto-reply, route tickets, and escalate to humans seamlessly." },
-  { icon: Bell, title: "Real-time Business Alerts", desc: "Send order updates, stock alerts and reminders instantly." },
-  { icon: Bot, title: "AI-Powered Virtual Assistants", desc: "Pair with LLMs to handle conversations 24/7." },
-  { icon: Users, title: "Dynamic Lead Nurturing", desc: "Drip-feed leads through personalized sequences." },
-  { icon: ShoppingBag, title: "E-commerce Engagement", desc: "Cart recovery, order confirmations, post-purchase flows." },
-  { icon: LineChart, title: "Advanced Analytics", desc: "Pipe message events into your data warehouse." },
-];
+const useCaseDefs = [
+  { icon: Headset, key: "1" },
+  { icon: Bell, key: "2" },
+  { icon: Bot, key: "3" },
+  { icon: Users, key: "4" },
+  { icon: ShoppingBag, key: "5" },
+  { icon: LineChart, key: "6" },
+] as const;
 
 const USD_TO_BDT = 122;
 
@@ -68,18 +69,10 @@ type DbPlan = {
   cta_label: string | null;
 };
 
-const faqs = [
-  { q: "Do you charge per message?", a: "No. All paid plans include unlimited messages with no per-message fees." },
-  { q: "How many WhatsApp numbers can I connect?", a: "It depends on your plan: Basic 1, Pro 3, Plus 6, Business 10. Need more? Contact us." },
-  { q: "Is a credit card required for the trial?", a: "No, you can start your 3-day trial without entering any payment details." },
-  { q: "Will my WhatsApp account get banned?", a: "Account Protection enforces safe sending limits. As with any unofficial API, follow WhatsApp's policies." },
-  { q: "Do you provide an n8n integration?", a: "Yes, we maintain an official n8n community node. See our docs for installation." },
-  { q: "Can I send media (images, video, documents)?", a: "Yes — text, image, video, audio, document, location, contact, sticker and poll messages." },
-  { q: "Are webhooks supported?", a: "Absolutely. Subscribe to 20+ event types per session and receive JSON POSTs to your URL." },
-  { q: "Can I cancel any time?", a: "Yes, cancel from your dashboard at any point. No long-term contracts." },
-];
+const faqKeys = ["1", "2", "3", "4", "5", "6", "7", "8"] as const;
 
 const Landing = () => {
+  const { t } = useLanguage();
   const [tab, setTab] = useState("JS");
   const [yearly, setYearly] = useState(false);
   const [currency, setCurrency] = useState<"USD" | "BDT">("USD");
@@ -131,20 +124,20 @@ const Landing = () => {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
             </span>
-            <span className="text-foreground/90">New</span>
+            <span className="text-foreground/90">{t("hero.badge.new")}</span>
             <span className="h-3 w-px bg-border" />
-            <span className="text-muted-foreground">Trusted by 10,000+ developers worldwide</span>
+            <span className="text-muted-foreground">{t("hero.badge.trust")}</span>
             <ArrowRight className="h-3 w-3 text-primary" />
           </div>
 
           {/* Headline */}
           <h1 className="mt-8 font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] text-foreground">
-            The All-in-One <br className="hidden md:block" />
-            WhatsApp API + <span className="text-gradient">AI Automation</span> Platform
+            {t("hero.title.1")} <br className="hidden md:block" />
+            {t("hero.title.2")} <span className="text-gradient">{t("hero.title.3")}</span> {t("hero.title.4")}
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-sm md:text-base text-muted-foreground leading-relaxed">
-            Send unlimited messages, manage multiple sessions, and power smart AI-driven conversations — all without per-message fees or complicated setup.
+            {t("hero.subtitle")}
           </p>
 
           {/* CTAs */}
@@ -155,7 +148,7 @@ const Landing = () => {
               className="group h-14 px-8 rounded-full bg-primary text-primary-foreground hover:bg-primary-hover shadow-[0_20px_50px_-15px_hsl(var(--primary)/0.7)] hover:shadow-[0_25px_60px_-15px_hsl(var(--primary)/0.9)] hover:-translate-y-0.5 transition-all duration-300 text-base font-semibold"
             >
               <Link to="/register">
-                Start Your Free Trial
+                {t("hero.cta.trial")}
                 <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </Button>
@@ -165,24 +158,24 @@ const Landing = () => {
               variant="outline"
               className="h-14 px-8 rounded-full border-border/80 bg-card/50 backdrop-blur hover:bg-card hover:border-primary/40 text-base font-medium transition-all"
             >
-              <a href="#features">View API Docs <ArrowRight className="ml-1 h-4 w-4" /></a>
+              <a href="#features">{t("hero.cta.docs")} <ArrowRight className="ml-1 h-4 w-4" /></a>
             </Button>
           </div>
 
           {/* Trust row */}
           <div className="mt-8 flex flex-wrap justify-center items-center gap-x-7 gap-y-3 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> No credit card required</span>
-            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> 3-day free trial</span>
-            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> Cancel anytime</span>
+            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> {t("hero.trust.noCard")}</span>
+            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> {t("hero.trust.trial")}</span>
+            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> {t("hero.trust.cancel")}</span>
           </div>
 
           {/* Stats strip */}
           <div className="mt-14 mx-auto max-w-3xl grid grid-cols-2 md:grid-cols-4 gap-px overflow-hidden rounded-2xl border border-border bg-border/60 backdrop-blur">
             {[
-              { v: "10K+", l: "Active Developers" },
-              { v: "50M+", l: "Messages Sent" },
-              { v: "99.9%", l: "Uptime SLA" },
-              { v: "4.9★", l: "Customer Rating" },
+              { v: "10K+", l: t("hero.stat.devs") },
+              { v: "50M+", l: t("hero.stat.msgs") },
+              { v: "99.9%", l: t("hero.stat.uptime") },
+              { v: "4.9★", l: t("hero.stat.rating") },
             ].map((s) => (
               <div key={s.l} className="bg-card/80 backdrop-blur px-4 py-5 text-center">
                 <div className="text-2xl md:text-3xl font-bold text-gradient">{s.v}</div>
@@ -197,9 +190,9 @@ const Landing = () => {
       <section id="features" className="container py-20">
         <div className="text-center mb-10">
           <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
-            WhatsApp Integration Made <span className="text-gradient">Effortless</span>
+            {t("code.title.1")} <span className="text-gradient">{t("code.title.2")}</span>
           </h2>
-          <p className="mt-4 text-muted-foreground">Drop a few lines of code. Start sending in minutes.</p>
+          <p className="mt-4 text-muted-foreground">{t("code.subtitle")}</p>
         </div>
         <div className="mx-auto max-w-3xl rounded-xl border border-border bg-card overflow-hidden">
           <Tabs value={tab} onValueChange={setTab}>
@@ -228,20 +221,20 @@ const Landing = () => {
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground mb-4">
             <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-            Simple 3-step process
+            {t("how.badge")}
           </div>
           <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
-            How It <span className="text-gradient">Works</span>
+            {t("how.title.1")} <span className="text-gradient">{t("how.title.2")}</span>
           </h2>
-          <p className="mt-4 text-muted-foreground max-w-xl mx-auto">From zero to sending messages in under 2 minutes.</p>
+          <p className="mt-4 text-muted-foreground max-w-xl mx-auto">{t("how.subtitle")}</p>
         </div>
 
         <div className="relative mx-auto max-w-5xl">
           <div className="grid md:grid-cols-3 gap-6 md:gap-8">
             {[
-              { icon: QrCode, title: "Connect Your WhatsApp", desc: "Scan a QR code from your phone to link a session in seconds." },
-              { icon: MessageSquare, title: "Create Your Message", desc: "Build text, media, polls, locations or contacts via the API." },
-              { icon: BarChart3, title: "Send & Analyze", desc: "Track delivery, receipts and webhooks in real time." },
+              { icon: QrCode, title: t("how.s1.t"), desc: t("how.s1.d") },
+              { icon: MessageSquare, title: t("how.s2.t"), desc: t("how.s2.d") },
+              { icon: BarChart3, title: t("how.s3.t"), desc: t("how.s3.d") },
             ].map((s, i) => (
               <div
                 key={i}
@@ -278,7 +271,7 @@ const Landing = () => {
           <div className="mt-14 flex justify-center">
             <Button asChild size="lg" className="group relative h-14 px-8 rounded-full bg-primary text-primary-foreground hover:bg-primary-hover font-semibold text-base shadow-[0_20px_50px_-15px_hsl(var(--primary)/0.6)] hover:shadow-[0_25px_60px_-15px_hsl(var(--primary)/0.8)] hover:-translate-y-0.5 transition-all duration-300">
               <Link to="/register">
-                Start Your Free Trial
+                {t("hero.cta.trial")}
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </Button>
@@ -294,21 +287,21 @@ const Landing = () => {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs text-primary mb-4">
             <Sparkles className="h-3 w-3" />
-            Real-time AI conversations
+            {t("mt.badge")}
           </div>
           <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight mb-4">
-            Every message type,<br />
-            <span className="text-gradient">handled by AI</span>
+            {t("mt.title.1")}<br />
+            <span className="text-gradient">{t("mt.title.2")}</span>
           </h2>
           <p className="text-muted-foreground mb-10 leading-relaxed max-w-md">
-            WaReply AI auto-replies across text, image, voice, video and more — in seconds, in your customer's language.
+            {t("mt.subtitle")}
           </p>
 
           {/* Bento grid */}
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Message Types</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t("mt.section.types")}</span>
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
             </div>
 
@@ -321,23 +314,23 @@ const Landing = () => {
                     <MessageSquare className="h-5 w-5" />
                   </div>
                   <div className="flex items-center gap-2 mb-1.5">
-                    <h4 className="font-semibold text-base">Text & Rich Replies</h4>
+                    <h4 className="font-semibold text-base">{t("mt.featured.t")}</h4>
                     <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">AI</span>
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">Smart formatted text with buttons, lists & multilingual auto-reply.</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{t("mt.featured.d")}</p>
                   <div className="mt-4 flex items-center gap-1 text-[11px] text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span>Most used</span><ArrowUpRight className="h-3 w-3" />
+                    <span>{t("mt.featured.tag")}</span><ArrowUpRight className="h-3 w-3" />
                   </div>
                 </div>
               </div>
 
               {[
-                { i: ImageIcon, l: "Image", d: "Photos & captions", c: "from-sky-500/80 to-blue-600/60" },
-                { i: Video, l: "Video", d: "MP4 & shorts", c: "from-rose-500/80 to-pink-600/60" },
-                { i: FileText, l: "Document", d: "PDF, DOCX, XLS", c: "from-amber-500/80 to-orange-600/60" },
-                { i: Mic, l: "Voice", d: "Audio notes", c: "from-violet-500/80 to-purple-600/60" },
-                { i: MapPin, l: "Location", d: "Live & static pins", c: "from-emerald-500/80 to-teal-600/60" },
-                { i: Contact, l: "Contact", d: "vCards", c: "from-cyan-500/80 to-sky-600/60" },
+                { i: ImageIcon, l: t("mt.image.l"), d: t("mt.image.d"), c: "from-sky-500/80 to-blue-600/60" },
+                { i: Video, l: t("mt.video.l"), d: t("mt.video.d"), c: "from-rose-500/80 to-pink-600/60" },
+                { i: FileText, l: t("mt.doc.l"), d: t("mt.doc.d"), c: "from-amber-500/80 to-orange-600/60" },
+                { i: Mic, l: t("mt.voice.l"), d: t("mt.voice.d"), c: "from-violet-500/80 to-purple-600/60" },
+                { i: MapPin, l: t("mt.location.l"), d: t("mt.location.d"), c: "from-emerald-500/80 to-teal-600/60" },
+                { i: Contact, l: t("mt.contact.l"), d: t("mt.contact.d"), c: "from-cyan-500/80 to-sky-600/60" },
               ].map((it, idx) => (
                 <div
                   key={it.l}
@@ -361,14 +354,14 @@ const Landing = () => {
           {/* Senders */}
           <div className="flex items-center gap-2 mb-4">
             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Send To</span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t("mt.section.sendTo")}</span>
             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
           </div>
           <div className="grid grid-cols-3 gap-2.5 mb-8">
             {[
-              { i: Users, l: "Users", d: "1-on-1 chats" },
-              { i: UsersRound, l: "Groups", d: "Multi-member" },
-              { i: Radio, l: "Channels", d: "Broadcast" },
+              { i: Users, l: t("mt.users.l"), d: t("mt.users.d") },
+              { i: UsersRound, l: t("mt.groups.l"), d: t("mt.groups.d") },
+              { i: Radio, l: t("mt.channels.l"), d: t("mt.channels.d") },
             ].map((s) => (
               <div key={s.l} className="group relative overflow-hidden rounded-xl border border-border bg-card/60 backdrop-blur p-3 text-center hover:border-primary/40 hover:bg-card transition-all hover:-translate-y-0.5">
                 <div className="mx-auto mb-2 grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
@@ -382,7 +375,7 @@ const Landing = () => {
 
           <Button asChild size="lg" className="group bg-gradient-to-r from-primary to-primary/80 hover:from-primary-hover hover:to-primary shadow-lg shadow-primary/20">
             <Link to="/register">
-              Start Integrating Now
+              {t("mt.cta")}
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </Button>
@@ -404,20 +397,20 @@ const Landing = () => {
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground mb-4">
             <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-            Use cases
+            {t("uc.badge")}
           </div>
           <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
-            Built for <span className="text-gradient">every use case</span>
+            {t("uc.title.1")} <span className="text-gradient">{t("uc.title.2")}</span>
           </h2>
           <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-            From customer support to advanced analytics — power any workflow with one API.
+            {t("uc.subtitle")}
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {useCases.map((u, i) => (
+          {useCaseDefs.map((u, i) => (
             <div
-              key={u.title}
+              key={u.key}
               className="group relative rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-7 overflow-hidden transition-all duration-500 hover:border-primary/50 hover:-translate-y-1 hover:shadow-[0_20px_60px_-20px_hsl(var(--primary)/0.4)]"
             >
               {/* gradient border glow on hover */}
@@ -437,11 +430,11 @@ const Landing = () => {
                 </div>
               </div>
 
-              <h3 className="mt-6 font-semibold text-lg tracking-tight">{u.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{u.desc}</p>
+              <h3 className="mt-6 font-semibold text-lg tracking-tight">{t(`uc.${u.key}.t`)}</h3>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{t(`uc.${u.key}.d`)}</p>
 
               <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-medium text-primary opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500">
-                Learn more <ArrowRight className="h-3.5 w-3.5" />
+                {t("uc.learnMore")} <ArrowRight className="h-3.5 w-3.5" />
               </div>
 
               <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
@@ -461,19 +454,19 @@ const Landing = () => {
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 backdrop-blur px-3 py-1 text-xs text-muted-foreground mb-4">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
-              Pricing plans
+              {t("price.badge")}
             </div>
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
-              Simple, transparent <span className="text-gradient">pricing</span>
+              {t("price.title.1")} <span className="text-gradient">{t("price.title.2")}</span>
             </h2>
             <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-              No per-message fees. No hidden charges. Cancel anytime.
+              {t("price.subtitle")}
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card/70 backdrop-blur p-1 text-sm shadow-sm">
-                <button onClick={() => setYearly(false)} className={`px-5 py-1.5 rounded-full transition-all ${!yearly ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>Monthly</button>
+                <button onClick={() => setYearly(false)} className={`px-5 py-1.5 rounded-full transition-all ${!yearly ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>{t("price.monthly")}</button>
                 <button onClick={() => setYearly(true)} className={`px-5 py-1.5 rounded-full transition-all ${yearly ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>
-                  Yearly <span className="ml-1 text-[10px] font-semibold rounded-full bg-primary/20 px-1.5 py-0.5">-15%</span>
+                  {t("price.yearly")} <span className="ml-1 text-[10px] font-semibold rounded-full bg-primary/20 px-1.5 py-0.5">-15%</span>
                 </button>
               </div>
               <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card/70 backdrop-blur p-1 text-sm shadow-sm">
@@ -501,7 +494,7 @@ const Landing = () => {
                       <>
                         <div className="absolute -top-px left-1/2 -translate-x-1/2 h-px w-2/3 bg-gradient-to-r from-transparent via-primary to-transparent" />
                         <span className="absolute top-4 right-4 inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
-                          <Star className="h-3 w-3 fill-current" /> Popular
+                          <Star className="h-3 w-3 fill-current" /> {t("price.popular")}
                         </span>
                       </>
                     )}
@@ -516,12 +509,12 @@ const Landing = () => {
                     <div className="mt-6 pb-6 border-b border-border/60">
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-5xl font-bold tracking-tight">
-                          {isFree ? "Free" : fmtPrice(price)}
+                          {isFree ? t("price.free") : fmtPrice(price)}
                         </span>
-                        {!isFree && <span className="text-sm text-muted-foreground">/mo</span>}
+                        {!isFree && <span className="text-sm text-muted-foreground">{t("price.perMo")}</span>}
                       </div>
                       {yearly && !isFree && (
-                        <p className="mt-1 text-xs text-primary">Billed {fmtPrice(p.price_yearly)} yearly</p>
+                        <p className="mt-1 text-xs text-primary">{t("price.billed")} {fmtPrice(p.price_yearly)} {t("price.yearlySuffix")}</p>
                       )}
                     </div>
 
@@ -530,7 +523,7 @@ const Landing = () => {
                         <span className="grid place-items-center h-5 w-5 rounded-full bg-primary/15 text-primary mt-0.5 shrink-0">
                           <Check className="h-3 w-3" />
                         </span>
-                        <span className="font-medium">{p.max_sessions} Connected WhatsApp {p.max_sessions === 1 ? "Number" : "Numbers"}</span>
+                        <span className="font-medium">{p.max_sessions} {p.max_sessions === 1 ? t("price.numbers.one") : t("price.numbers.many")}</span>
                       </li>
                       {(p.features && p.features.length > 0 ? p.features : [
                         "Unlimited Contacts",
@@ -560,7 +553,7 @@ const Landing = () => {
                           : "bg-card-elevated text-foreground border border-border hover:border-primary/50 hover:bg-primary/5"
                       }`}
                     >
-                      <Link to="/register">{p.cta_label || "Choose Plan"}</Link>
+                      <Link to="/register">{p.cta_label || t("price.cta.default")}</Link>
                     </Button>
                   </div>
                 </div>
@@ -573,10 +566,10 @@ const Landing = () => {
               <Zap className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold">Need higher volume or custom infrastructure?</h3>
-              <p className="text-sm text-muted-foreground mt-0.5">Join our partner program for custom plans and dedicated infrastructure.</p>
+              <h3 className="font-semibold">{t("price.partner.t")}</h3>
+              <p className="text-sm text-muted-foreground mt-0.5">{t("price.partner.d")}</p>
             </div>
-            <Button variant="outline" className="shrink-0">Partner Program <ArrowRight className="ml-2 h-4 w-4" /></Button>
+            <Button variant="outline" className="shrink-0">{t("price.partner.cta")} <ArrowRight className="ml-2 h-4 w-4" /></Button>
           </div>
         </div>
       </section>
@@ -592,20 +585,20 @@ const Landing = () => {
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 backdrop-blur px-3 py-1 text-xs text-muted-foreground mb-4">
               <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-              FAQ
+              {t("faq.badge")}
             </div>
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
-              Frequently Asked <span className="text-gradient">Questions</span>
+              {t("faq.title.1")} <span className="text-gradient">{t("faq.title.2")}</span>
             </h2>
             <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-              Everything you need to know. Can't find an answer? Reach out to our team.
+              {t("faq.subtitle")}
             </p>
           </div>
 
           <Accordion type="single" collapsible className="space-y-3">
-            {faqs.map((f, i) => (
+            {faqKeys.map((k, i) => (
               <AccordionItem
-                key={i}
+                key={k}
                 value={`f${i}`}
                 className="group rounded-2xl border border-border bg-card/60 backdrop-blur-sm px-5 transition-all duration-300 hover:border-primary/40 hover:bg-card data-[state=open]:border-primary/50 data-[state=open]:bg-card data-[state=open]:shadow-[0_10px_40px_-20px_hsl(var(--primary)/0.4)]"
               >
@@ -614,11 +607,11 @@ const Landing = () => {
                     <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs font-bold shrink-0 transition-transform group-hover:scale-110 group-data-[state=open]:bg-primary group-data-[state=open]:text-primary-foreground">
                       {String(i + 1).padStart(2, "0")}
                     </span>
-                    <span className="font-semibold text-base">{f.q}</span>
+                    <span className="font-semibold text-base">{t(`faq.q${k}.q`)}</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground leading-relaxed pl-12 pb-5">
-                  {f.a}
+                  {t(`faq.q${k}.a`)}
                 </AccordionContent>
               </AccordionItem>
             ))}
@@ -626,8 +619,8 @@ const Landing = () => {
 
           <div className="mt-12 text-center">
             <p className="text-sm text-muted-foreground">
-              Still have questions?{" "}
-              <a href="#" className="text-primary font-medium hover:underline">Contact our support team</a>
+              {t("faq.contact.1")}{" "}
+              <a href="#" className="text-primary font-medium hover:underline">{t("faq.contact.2")}</a>
             </p>
           </div>
         </div>
@@ -644,27 +637,27 @@ const Landing = () => {
             <div>
               <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 border border-primary/30 px-3 py-1 text-xs font-semibold text-primary mb-6">
                 <Zap className="h-3.5 w-3.5 fill-primary" />
-                Premium Access
+                {t("cta.badge")}
               </div>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-[1.1]">
-                Fast, Easy, Affordable <br />
-                <span className="text-gradient">WhatsApp API</span>
+                {t("cta.title.1")} <br />
+                <span className="text-gradient">{t("cta.title.2")}</span>
               </h2>
               <p className="mt-5 text-muted-foreground max-w-md leading-relaxed">
-                WaSendAPI is a fast, affordable WhatsApp API for developers. Manage multiple sessions and scale without per-message fees. Try it free today!
+                {t("cta.subtitle")}
               </p>
 
               <ul className="mt-8 space-y-4">
                 {[
-                  { i: Check, t: "No credit card required to start" },
-                  { i: Zap, t: "3-day free trial with full access" },
-                  { i: MessageSquare, t: "Cancel anytime, no commitments" },
+                  { i: Check, label: t("cta.l1") },
+                  { i: Zap, label: t("cta.l2") },
+                  { i: MessageSquare, label: t("cta.l3") },
                 ].map((it) => (
-                  <li key={it.t} className="flex items-center gap-3">
+                  <li key={it.label} className="flex items-center gap-3">
                     <span className="grid h-9 w-9 place-items-center rounded-full bg-primary/15 border border-primary/30 text-primary shrink-0">
                       <it.i className="h-4 w-4" />
                     </span>
-                    <span className="font-medium">{it.t}</span>
+                    <span className="font-medium">{it.label}</span>
                   </li>
                 ))}
               </ul>
@@ -676,11 +669,11 @@ const Landing = () => {
                   className="group h-14 w-full sm:w-auto px-10 rounded-xl bg-gradient-to-r from-primary to-primary-hover text-primary-foreground font-semibold text-base shadow-[0_20px_50px_-15px_hsl(var(--primary)/0.7)] hover:shadow-[0_25px_60px_-15px_hsl(var(--primary)/0.9)] hover:-translate-y-0.5 transition-all duration-300"
                 >
                   <Link to="/register">
-                    Start Your Free Trial
+                    {t("hero.cta.trial")}
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </Button>
-                <p className="mt-3 text-xs text-muted-foreground">No credit card required to get started</p>
+                <p className="mt-3 text-xs text-muted-foreground">{t("cta.btn.note")}</p>
               </div>
             </div>
 
@@ -717,12 +710,12 @@ const Landing = () => {
         <div className="container py-12 grid md:grid-cols-5 gap-8">
           <div className="md:col-span-2">
             <Logo size={32} textClassName="text-base" />
-            <p className="mt-3 text-sm text-muted-foreground max-w-xs">The developer-friendly WhatsApp API. Unlimited messages, no per-message fees.</p>
+            <p className="mt-3 text-sm text-muted-foreground max-w-xs">{t("foot.tagline")}</p>
           </div>
           {[
-            { title: "Product", links: ["Features", "Pricing", "Documentation"] },
-            { title: "Company", links: ["About", "Blog", "Partner Program"] },
-            { title: "Resources", links: ["Help Center", "Status", "Changelog"] },
+            { title: t("foot.product"), links: [t("foot.features"), t("foot.pricing"), t("foot.docs")] },
+            { title: t("foot.company"), links: [t("foot.about"), t("foot.blog"), t("foot.partner")] },
+            { title: t("foot.resources"), links: [t("foot.help"), t("foot.status"), t("foot.changelog")] },
           ].map((c) => (
             <div key={c.title}>
               <h4 className="font-semibold mb-3 text-sm">{c.title}</h4>
@@ -733,7 +726,7 @@ const Landing = () => {
           ))}
         </div>
         <div className="border-t border-border py-6 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} WaSendAPI. All rights reserved.
+          © {new Date().getFullYear()} WaSendAPI. {t("foot.rights")}
         </div>
       </footer>
     </div>
