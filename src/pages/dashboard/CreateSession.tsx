@@ -144,7 +144,8 @@ const CreateSession = () => {
     }
   };
 
-  const showCcWarning = phoneNum.trim().length > 0 && !phoneNum.trim().startsWith("+");
+  const phoneCheck = phoneNum.trim() ? validatePhoneForCountry(phoneNum, country) : null;
+  const showPhoneError = !!phoneCheck && !phoneCheck.ok;
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -173,13 +174,13 @@ const CreateSession = () => {
                 value={phoneNum}
                 onChange={(e) => setPhoneNum(e.target.value)}
                 placeholder="1712345678"
-                className="flex-1"
+                className={`flex-1 ${showPhoneError ? "border-destructive focus-visible:ring-destructive" : ""}`}
               />
             </div>
-            {showCcWarning && (
-              <p className="mt-1.5 text-xs text-warning flex items-start gap-1.5">
+            {showPhoneError && (
+              <p className="mt-1.5 text-xs text-destructive flex items-start gap-1.5">
                 <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                Please include your country code (e.g., +880 for Bangladesh, +1 for US)
+                The phone number field must be a valid number.
               </p>
             )}
           </div>
