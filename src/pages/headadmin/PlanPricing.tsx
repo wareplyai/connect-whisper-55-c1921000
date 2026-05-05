@@ -4,19 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Edit, X, Plus, Loader2 } from "lucide-react";
+import { Edit, X, Plus, Loader2, Star } from "lucide-react";
 
 type Plan = {
   id: string;
   plan_name: string;
   display_name: string;
+  description: string | null;
   price_monthly: number;
   price_yearly: number;
   max_sessions: number;
   features: string[] | null;
   is_active: boolean;
+  is_popular: boolean;
+  sort_order: number;
+  cta_label: string | null;
 };
 
 export default function HAPlanPricing() {
@@ -27,7 +32,7 @@ export default function HAPlanPricing() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from("plan_pricing").select("*").order("price_monthly");
+    const { data } = await supabase.from("plan_pricing").select("*").order("sort_order");
     setRows((data as Plan[]) || []);
     setLoading(false);
   };
@@ -35,13 +40,21 @@ export default function HAPlanPricing() {
 
   const save = async () => {
     if (!editing) return;
+    // If marking this plan popular, unset others
+    if (editing.is_popular) {
+      await supabase.from("plan_pricing").update({ is_popular: false }).neq("id", editing.id);
+    }
     const { error } = await supabase.from("plan_pricing").update({
       display_name: editing.display_name,
+      description: editing.description,
       price_monthly: editing.price_monthly,
       price_yearly: editing.price_yearly,
       max_sessions: editing.max_sessions,
       features: editing.features,
       is_active: editing.is_active,
+      is_popular: editing.is_popular,
+      sort_order: editing.sort_order,
+      cta_label: editing.cta_label,
     }).eq("id", editing.id);
     if (error) return toast.error(error.message);
     toast.success("Plan updated");
@@ -52,25 +65,33 @@ export default function HAPlanPricing() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Plan Pricing</h1>
-        <p className="text-sm text-muted-foreground">Edit subscription plans shown on the user subscription page</p>
+        <p className="text-sm text-muted-foreground">Edit plans shown on the landing page & subscription page</p>
       </div>
 
       <div className="rounded-xl border border-border bg-card overflow-x-auto">
         {loading ? <div className="py-12 grid place-items-center"><Loader2 className="h-5 w-5 animate-spin" /></div> :
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground"><tr>
-              <th className="text-left px-4 py-3">Plan</th><th className="text-left px-4 py-3">Display Name</th>
-              <th className="text-left px-4 py-3">Monthly</th><th className="text-left px-4 py-3">Yearly</th>
-              <th className="text-left px-4 py-3">Sessions</th><th className="text-left px-4 py-3">Active</th><th></th>
+              <th className="text-left px-4 py-3">Order</th>
+              <th className="text-left px-4 py-3">Plan</th>
+              <th className="text-left px-4 py-3">Display Name</th>
+              <th className="text-left px-4 py-3">Monthly</th>
+              <th className="text-left px-4 py-3">Yearly</th>
+              <th className="text-left px-4 py-3">Sessions</th>
+              <th className="text-left px-4 py-3">Popular</th>
+              <th className="text-left px-4 py-3">Active</th>
+              <th></th>
             </tr></thead>
             <tbody>
               {rows.map((p) => (
                 <tr key={p.id} className="border-t border-border">
+                  <td className="px-4 py-3">{p.sort_order}</td>
                   <td className="px-4 py-3 capitalize font-medium">{p.plan_name}</td>
                   <td className="px-4 py-3">{p.display_name}</td>
                   <td className="px-4 py-3">${p.price_monthly}</td>
                   <td className="px-4 py-3">${p.price_yearly}</td>
                   <td className="px-4 py-3">{p.max_sessions}</td>
+                  <td className="px-4 py-3">{p.is_popular ? <Star className="h-4 w-4 text-primary fill-primary" /> : "—"}</td>
                   <td className="px-4 py-3">{p.is_active ? "Yes" : "No"}</td>
                   <td className="px-4 py-3"><Button size="sm" variant="outline" onClick={() => setEditing({ ...p, features: p.features || [] })}><Edit className="h-3 w-3" /></Button></td>
                 </tr>
@@ -84,13 +105,21 @@ export default function HAPlanPricing() {
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Edit Plan: {editing?.plan_name}</DialogTitle></DialogHeader>
           {editing && (
-            <div className="space-y-3 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
               <div><Label>Display Name</Label><Input value={editing.display_name} onChange={(e) => setEditing({ ...editing, display_name: e.target.value })} /></div>
+              <div>
+                <Label>Description (shown under plan name)</Label>
+                <Textarea rows={3} value={editing.description || ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} placeholder="Short marketing tagline for this plan" />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Monthly Price ($)</Label><Input type="number" step="0.01" value={editing.price_monthly} onChange={(e) => setEditing({ ...editing, price_monthly: +e.target.value })} /></div>
                 <div><Label>Yearly Price ($)</Label><Input type="number" step="0.01" value={editing.price_yearly} onChange={(e) => setEditing({ ...editing, price_yearly: +e.target.value })} /></div>
               </div>
-              <div><Label>Max Sessions</Label><Input type="number" value={editing.max_sessions} onChange={(e) => setEditing({ ...editing, max_sessions: +e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Max Sessions</Label><Input type="number" value={editing.max_sessions} onChange={(e) => setEditing({ ...editing, max_sessions: +e.target.value })} /></div>
+                <div><Label>Sort Order</Label><Input type="number" value={editing.sort_order} onChange={(e) => setEditing({ ...editing, sort_order: +e.target.value })} /></div>
+              </div>
+              <div><Label>Button Label (CTA)</Label><Input value={editing.cta_label || ""} onChange={(e) => setEditing({ ...editing, cta_label: e.target.value })} placeholder="Choose Plan" /></div>
               <div>
                 <Label>Features</Label>
                 <div className="space-y-1 mt-1">
@@ -106,7 +135,10 @@ export default function HAPlanPricing() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2"><Switch checked={editing.is_active} onCheckedChange={(v) => setEditing({ ...editing, is_active: v })} /> <Label>Active</Label></div>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2"><Switch checked={editing.is_active} onCheckedChange={(v) => setEditing({ ...editing, is_active: v })} /> <Label>Active</Label></div>
+                <div className="flex items-center gap-2"><Switch checked={editing.is_popular} onCheckedChange={(v) => setEditing({ ...editing, is_popular: v })} /> <Label>Mark as Popular</Label></div>
+              </div>
               <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button><Button onClick={save}>Save</Button></div>
             </div>
           )}

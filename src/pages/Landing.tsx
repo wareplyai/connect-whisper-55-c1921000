@@ -6,9 +6,10 @@ import { Logo } from "@/components/Logo";
 import {
   ArrowRight, Check, Star, MessageSquare, QrCode, BarChart3,
   Headset, Bell, Bot, Users, ShoppingBag, LineChart, Image as ImageIcon,
-  FileText, Mic, MapPin, Contact, Zap
+  FileText, Mic, MapPin, Contact, Zap, Sparkles
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -52,13 +53,20 @@ const useCases = [
 ];
 
 const USD_TO_BDT = 122;
-const plans = [
-  { name: "Trial", priceUsd: 0, isFree: true, period: "3 days", sessions: "1 session", limit: "50 msg/day", popular: false },
-  { name: "Basic", priceUsd: 6, period: "/month", sessions: "1 session", limit: "Unlimited messages", popular: false },
-  { name: "Pro", priceUsd: 15, period: "/month", sessions: "3 sessions", limit: "Unlimited messages", popular: true },
-  { name: "Plus", priceUsd: 30, period: "/month", sessions: "6 sessions", limit: "Unlimited messages", popular: false },
-  { name: "Business", priceUsd: 45, period: "/month", sessions: "10 sessions", limit: "Unlimited messages", popular: false },
-];
+
+type DbPlan = {
+  plan_name: string;
+  display_name: string;
+  price_monthly: number;
+  price_yearly: number;
+  max_sessions: number;
+  features: string[] | null;
+  is_active: boolean;
+  description: string | null;
+  is_popular: boolean;
+  sort_order: number;
+  cta_label: string | null;
+};
 
 const faqs = [
   { q: "Do you charge per message?", a: "No. All paid plans include unlimited messages with no per-message fees." },
@@ -75,8 +83,18 @@ const Landing = () => {
   const [tab, setTab] = useState("JS");
   const [yearly, setYearly] = useState(false);
   const [currency, setCurrency] = useState<"USD" | "BDT">("USD");
+  const [plans, setPlans] = useState<DbPlan[]>([]);
   const fmtPrice = (usd: number) =>
-    currency === "USD" ? `$${usd}` : `৳${Math.round(usd * USD_TO_BDT)}`;
+    currency === "USD" ? `$${usd.toFixed(usd % 1 === 0 ? 0 : 2)}` : `৳${Math.round(usd * USD_TO_BDT)}`;
+
+  useEffect(() => {
+    supabase
+      .from("plan_pricing")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order")
+      .then(({ data }) => setPlans((data as DbPlan[]) || []));
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -303,52 +321,133 @@ const Landing = () => {
       </section>
 
       {/* PRICING */}
-      <section id="pricing" className="container py-20">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight">Simple, transparent pricing</h2>
-          <p className="mt-3 text-muted-foreground">No per-message fees. Cancel anytime.</p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 text-sm">
-              <button onClick={() => setYearly(false)} className={`px-4 py-1.5 rounded-full transition ${!yearly ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Monthly</button>
-              <button onClick={() => setYearly(true)} className={`px-4 py-1.5 rounded-full transition ${yearly ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Yearly <span className="ml-1 text-xs opacity-80">Save 15%</span></button>
+      <section id="pricing" className="relative py-28">
+        <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[480px] w-[900px] rounded-full bg-primary/10 blur-[140px]" />
+          <div className="absolute bottom-10 right-1/4 h-72 w-72 rounded-full bg-primary/5 blur-[120px]" />
+        </div>
+
+        <div className="container">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 backdrop-blur px-3 py-1 text-xs text-muted-foreground mb-4">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              Pricing plans
             </div>
-            <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 text-sm">
-              <button onClick={() => setCurrency("USD")} className={`px-4 py-1.5 rounded-full transition ${currency === "USD" ? "bg-green-500 text-white" : "text-muted-foreground"}`}>USD</button>
-              <button onClick={() => setCurrency("BDT")} className={`px-4 py-1.5 rounded-full transition ${currency === "BDT" ? "bg-green-500 text-white" : "text-muted-foreground"}`}>BDT</button>
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
+              Simple, transparent <span className="text-gradient">pricing</span>
+            </h2>
+            <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
+              No per-message fees. No hidden charges. Cancel anytime.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card/70 backdrop-blur p-1 text-sm shadow-sm">
+                <button onClick={() => setYearly(false)} className={`px-5 py-1.5 rounded-full transition-all ${!yearly ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>Monthly</button>
+                <button onClick={() => setYearly(true)} className={`px-5 py-1.5 rounded-full transition-all ${yearly ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>
+                  Yearly <span className="ml-1 text-[10px] font-semibold rounded-full bg-primary/20 px-1.5 py-0.5">-15%</span>
+                </button>
+              </div>
+              <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card/70 backdrop-blur p-1 text-sm shadow-sm">
+                <button onClick={() => setCurrency("USD")} className={`px-5 py-1.5 rounded-full transition-all ${currency === "USD" ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>USD</button>
+                <button onClick={() => setCurrency("BDT")} className={`px-5 py-1.5 rounded-full transition-all ${currency === "BDT" ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>BDT</button>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {plans.map((p) => (
-            <div key={p.name} className={`relative rounded-xl border bg-card p-6 ${p.popular ? "border-primary glow-primary" : "border-border"}`}>
-              {p.popular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">Most Popular</span>
-              )}
-              <h3 className="font-semibold text-lg">{p.name}</h3>
-              <div className="mt-3 flex items-baseline gap-1">
-                <span className="text-3xl font-bold">{p.isFree ? "Free" : fmtPrice(p.priceUsd)}</span>
-                <span className="text-sm text-muted-foreground">{p.period}</span>
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">{p.sessions}</p>
-              <p className="text-sm text-muted-foreground">{p.limit}</p>
-              <ul className="mt-5 space-y-2 text-sm">
-                {["Webhooks", "Full REST API", "MCP Server", "Priority Support"].map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-primary" /> {f}
-                  </li>
-                ))}
-              </ul>
-              <Button asChild className="mt-6 w-full bg-primary text-primary-foreground hover:bg-primary-hover">
-                <Link to="/register">{p.name === "Trial" ? "Start Trial" : "Get Started"}</Link>
-              </Button>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            {plans.filter(p => p.plan_name !== "trial").map((p) => {
+              const price = yearly ? p.price_yearly / 12 : p.price_monthly;
+              const isFree = price === 0;
+              return (
+                <div
+                  key={p.plan_name}
+                  className={`group relative rounded-3xl p-[1px] transition-all duration-500 hover:-translate-y-2 ${
+                    p.is_popular
+                      ? "bg-gradient-to-b from-primary via-primary/40 to-transparent shadow-[0_30px_80px_-20px_hsl(var(--primary)/0.45)]"
+                      : "bg-gradient-to-b from-border to-transparent hover:from-primary/40"
+                  }`}
+                >
+                  <div className="relative h-full rounded-3xl bg-card/95 backdrop-blur-sm p-8 flex flex-col overflow-hidden">
+                    {p.is_popular && (
+                      <>
+                        <div className="absolute -top-px left-1/2 -translate-x-1/2 h-px w-2/3 bg-gradient-to-r from-transparent via-primary to-transparent" />
+                        <span className="absolute top-4 right-4 inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+                          <Star className="h-3 w-3 fill-current" /> Popular
+                        </span>
+                      </>
+                    )}
+
+                    <div>
+                      <h3 className="font-bold text-xl tracking-tight">{p.display_name}</h3>
+                      <p className="mt-2 text-sm text-muted-foreground leading-relaxed min-h-[60px]">
+                        {p.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-6 pb-6 border-b border-border/60">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-5xl font-bold tracking-tight">
+                          {isFree ? "Free" : fmtPrice(price)}
+                        </span>
+                        {!isFree && <span className="text-sm text-muted-foreground">/mo</span>}
+                      </div>
+                      {yearly && !isFree && (
+                        <p className="mt-1 text-xs text-primary">Billed {fmtPrice(p.price_yearly)} yearly</p>
+                      )}
+                    </div>
+
+                    <ul className="mt-6 space-y-3 text-sm flex-1">
+                      <li className="flex items-start gap-2.5">
+                        <span className="grid place-items-center h-5 w-5 rounded-full bg-primary/15 text-primary mt-0.5 shrink-0">
+                          <Check className="h-3 w-3" />
+                        </span>
+                        <span className="font-medium">{p.max_sessions} Connected WhatsApp {p.max_sessions === 1 ? "Number" : "Numbers"}</span>
+                      </li>
+                      {(p.features && p.features.length > 0 ? p.features : [
+                        "Unlimited Contacts",
+                        "No Daily Message Cap",
+                        "MCP Server Integration",
+                        "Send to Users, Groups & Channels",
+                        "Send Text, Images, Videos & Audio",
+                        "Send Documents, Contacts & Locations",
+                        "Full API Access",
+                        "Real-time Webhooks",
+                        "Priority Support",
+                      ]).map((f) => (
+                        <li key={f} className="flex items-start gap-2.5">
+                          <span className="grid place-items-center h-5 w-5 rounded-full bg-primary/15 text-primary mt-0.5 shrink-0">
+                            <Check className="h-3 w-3" />
+                          </span>
+                          <span className="text-muted-foreground">{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <Button
+                      asChild
+                      className={`mt-8 w-full h-11 rounded-xl font-semibold transition-all ${
+                        p.is_popular
+                          ? "bg-primary text-primary-foreground hover:bg-primary-hover shadow-lg shadow-primary/30"
+                          : "bg-card-elevated text-foreground border border-border hover:border-primary/50 hover:bg-primary/5"
+                      }`}
+                    >
+                      <Link to="/register">{p.cta_label || "Choose Plan"}</Link>
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-12 max-w-3xl mx-auto rounded-2xl border border-border bg-card/60 backdrop-blur p-7 flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+            <div className="grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-primary/30 to-primary/5 border border-primary/30 shrink-0">
+              <Zap className="h-5 w-5 text-primary" />
             </div>
-          ))}
-        </div>
-        <div className="mt-10 rounded-xl border border-border bg-card p-6 text-center">
-          <Zap className="mx-auto h-6 w-6 text-primary mb-2" />
-          <h3 className="font-semibold">Need higher volume?</h3>
-          <p className="text-sm text-muted-foreground mt-1">Join our partner program for custom plans and dedicated infrastructure.</p>
-          <Button variant="outline" className="mt-4">Partner Program <ArrowRight className="ml-2 h-4 w-4" /></Button>
+            <div className="flex-1">
+              <h3 className="font-semibold">Need higher volume or custom infrastructure?</h3>
+              <p className="text-sm text-muted-foreground mt-0.5">Join our partner program for custom plans and dedicated infrastructure.</p>
+            </div>
+            <Button variant="outline" className="shrink-0">Partner Program <ArrowRight className="ml-2 h-4 w-4" /></Button>
+          </div>
         </div>
       </section>
 
