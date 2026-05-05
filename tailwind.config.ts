@@ -35,8 +35,13 @@ export default {
           foreground: "hsl(var(--destructive-foreground))",
         },
         warning: "hsl(var(--warning))",
+        info: "hsl(var(--info))",
         success: "hsl(var(--success))",
-        "code-foreground": "hsl(var(--code-foreground))",
+        code: {
+          DEFAULT: "hsl(var(--code-background))",
+          foreground: "hsl(var(--code-foreground))",
+          muted: "hsl(var(--code-muted))",
+        },
         "primary-hover": "hsl(var(--primary-hover))",
         "card-elevated": "hsl(var(--card-elevated))",
         muted: {
