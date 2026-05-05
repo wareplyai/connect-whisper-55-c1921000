@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { backendApi } from "@/lib/backend";
 import { PlanUsageBar } from "@/components/PlanUsageBar";
+import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const statusBadge = (s: string) => {
   if (s === "connected") return "bg-primary/15 text-primary";
