@@ -101,30 +101,97 @@ const Landing = () => {
       <Navbar />
 
       {/* HERO */}
-      <section className="relative overflow-hidden bg-hero">
-        <div className="container py-24 md:py-32 text-center">
-          <div className="mx-auto inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
-            <Star className="h-3 w-3 fill-primary text-primary" /> 4.5/5.0 from developers
+      <section className="relative overflow-hidden">
+        {/* Background layers */}
+        <div className="absolute inset-0 bg-hero" />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,hsl(var(--primary)/0.18),transparent_60%)]" />
+        {/* Grid pattern */}
+        <div
+          className="absolute inset-0 -z-10 opacity-[0.18]"
+          style={{
+            backgroundImage:
+              "linear-gradient(hsl(var(--border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)",
+            backgroundSize: "56px 56px",
+            maskImage:
+              "radial-gradient(ellipse at center, black 40%, transparent 75%)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse at center, black 40%, transparent 75%)",
+          }}
+        />
+        {/* Floating glows */}
+        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-[480px] w-[820px] rounded-full bg-primary/20 blur-[140px]" />
+        <div className="pointer-events-none absolute top-1/3 -left-32 h-[320px] w-[320px] rounded-full bg-primary/10 blur-[120px]" />
+        <div className="pointer-events-none absolute top-1/2 -right-32 h-[320px] w-[320px] rounded-full bg-primary/10 blur-[120px]" />
+
+        <div className="container relative py-28 md:py-36 text-center">
+          {/* Premium top badge */}
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary/20 bg-card/70 backdrop-blur-md px-4 py-1.5 text-xs font-medium shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)]">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+            </span>
+            <span className="text-foreground/90">New</span>
+            <span className="h-3 w-px bg-border" />
+            <span className="text-muted-foreground">Trusted by 10,000+ developers worldwide</span>
+            <ArrowRight className="h-3 w-3 text-primary" />
           </div>
-          <h1 className="mt-6 text-5xl md:text-7xl font-bold tracking-tight">
-            Low-Cost WhatsApp API <br />
-            <span className="text-gradient">For Developers</span>
+
+          {/* Headline */}
+          <h1 className="mt-8 text-5xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tight leading-[1.05]">
+            Build Smarter With The <br className="hidden md:block" />
+            <span className="relative inline-block">
+              <span className="text-gradient">WhatsApp API</span>
+              <span className="absolute -bottom-2 left-0 h-[3px] w-full rounded-full bg-gradient-to-r from-transparent via-primary to-transparent opacity-70" />
+            </span>{" "}
+            <span className="text-foreground">Developers Love</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-            Unlimited messages, multiple WhatsApp sessions, webhook support and a developer-friendly API with no per-message fees.
+
+          <p className="mx-auto mt-7 max-w-2xl text-base md:text-lg text-muted-foreground leading-relaxed">
+            Send unlimited messages, manage multiple sessions, and ship powerful automations — without per-message fees or complicated setup.
           </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary-hover glow-primary">
-              <Link to="/register">Start Your Free Trial <ArrowRight className="ml-2 h-4 w-4" /></Link>
+
+          {/* CTAs */}
+          <div className="mt-10 flex flex-wrap justify-center gap-3">
+            <Button
+              asChild
+              size="lg"
+              className="group h-14 px-8 rounded-full bg-primary text-primary-foreground hover:bg-primary-hover shadow-[0_20px_50px_-15px_hsl(var(--primary)/0.7)] hover:shadow-[0_25px_60px_-15px_hsl(var(--primary)/0.9)] hover:-translate-y-0.5 transition-all duration-300 text-base font-semibold"
+            >
+              <Link to="/register">
+                Start Your Free Trial
+                <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
             </Button>
-            <Button asChild size="lg" variant="outline">
-              <a href="#features">View API Docs <ArrowRight className="ml-2 h-4 w-4" /></a>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="h-14 px-8 rounded-full border-border/80 bg-card/50 backdrop-blur hover:bg-card hover:border-primary/40 text-base font-medium transition-all"
+            >
+              <a href="#features">View API Docs <ArrowRight className="ml-1 h-4 w-4" /></a>
             </Button>
           </div>
-          <div className="mt-6 flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
+
+          {/* Trust row */}
+          <div className="mt-8 flex flex-wrap justify-center items-center gap-x-7 gap-y-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> No credit card required</span>
             <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> 3-day free trial</span>
             <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> Cancel anytime</span>
+          </div>
+
+          {/* Stats strip */}
+          <div className="mt-14 mx-auto max-w-3xl grid grid-cols-2 md:grid-cols-4 gap-px overflow-hidden rounded-2xl border border-border bg-border/60 backdrop-blur">
+            {[
+              { v: "10K+", l: "Active Developers" },
+              { v: "50M+", l: "Messages Sent" },
+              { v: "99.9%", l: "Uptime SLA" },
+              { v: "4.9★", l: "Customer Rating" },
+            ].map((s) => (
+              <div key={s.l} className="bg-card/80 backdrop-blur px-4 py-5 text-center">
+                <div className="text-2xl md:text-3xl font-bold text-gradient">{s.v}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{s.l}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
