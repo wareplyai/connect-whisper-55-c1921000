@@ -154,4 +154,44 @@
     background-size: 200% 100%;
     animation: hiw-shimmer 3s linear infinite;
   }
+
+  /* WhatsApp Chat Animation */
+  @keyframes wa-msg-in {
+    0% { opacity: 0; transform: translateY(10px) scale(0.92); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes wa-typing-dot {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+  @keyframes wa-cycle {
+    0%, 100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes wa-feature-pop {
+    0% { opacity: 0; transform: translateX(-12px); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes wa-voice-bar {
+    0%, 100% { transform: scaleY(0.3); }
+    50% { transform: scaleY(1); }
+  }
+  @keyframes wa-bg-float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(20px, -20px); }
+  }
+
+  .wa-msg { animation: wa-msg-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; opacity: 0; }
+  .wa-typing-dot { animation: wa-typing-dot 1.4s infinite ease-in-out; }
+  .wa-feature { animation: wa-feature-pop 0.6s ease-out both; opacity: 0; }
+  .wa-voice-bar { animation: wa-voice-bar 1s ease-in-out infinite; transform-origin: center; }
+  .wa-bg-float { animation: wa-bg-float 8s ease-in-out infinite; }
+
+  .wa-bg {
+    background-color: #0b141a;
+    background-image:
+      radial-gradient(hsl(142 70% 49% / 0.06) 1px, transparent 1px),
+      radial-gradient(hsl(142 70% 49% / 0.04) 1px, transparent 1px);
+    background-size: 24px 24px, 40px 40px;
+    background-position: 0 0, 12px 12px;
+  }
 }
