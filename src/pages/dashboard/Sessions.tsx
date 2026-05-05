@@ -24,6 +24,15 @@ const Sessions = () => {
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
+  const [hasActive, setHasActive] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!profile) return;
+    (async () => {
+      const { data } = await supabase.rpc("has_active_service", { _user_id: profile.id });
+      setHasActive(!!data);
+    })();
+  }, [profile]);
 
   const load = async () => {
     if (!profile) return;
