@@ -24,6 +24,7 @@ const navGroups = [
     items: [
       { to: "/headadmin/revenue", label: "Revenue", icon: DollarSign },
       { to: "/headadmin/payments", label: "Payments", icon: Receipt },
+      { to: "/headadmin/sms-logs", label: "SMS Auto-Verify", icon: Zap },
       { to: "/headadmin/payment-methods", label: "Methods", icon: CreditCard },
       { to: "/headadmin/plan-pricing", label: "Plan Pricing", icon: Tags },
     ],
