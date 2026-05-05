@@ -473,6 +473,85 @@ const Landing = () => {
         </Accordion>
       </section>
 
+      {/* FINAL CTA */}
+      <section className="container py-20">
+        <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-card via-card to-card-elevated p-8 md:p-14">
+          <div className="pointer-events-none absolute -top-32 -left-32 h-80 w-80 rounded-full bg-primary/20 blur-[120px]" />
+          <div className="pointer-events-none absolute -bottom-32 -right-32 h-80 w-80 rounded-full bg-primary/10 blur-[120px]" />
+          <div className="pointer-events-none absolute inset-0 opacity-[0.04] [background-image:linear-gradient(hsl(var(--foreground))_1px,transparent_1px),linear-gradient(90deg,hsl(var(--foreground))_1px,transparent_1px)] [background-size:40px_40px]" />
+
+          <div className="relative grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 border border-primary/30 px-3 py-1 text-xs font-semibold text-primary mb-6">
+                <Zap className="h-3.5 w-3.5 fill-primary" />
+                Premium Access
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-[1.1]">
+                Fast, Easy, Affordable <br />
+                <span className="text-gradient">WhatsApp API</span>
+              </h2>
+              <p className="mt-5 text-muted-foreground max-w-md leading-relaxed">
+                WaSendAPI is a fast, affordable WhatsApp API for developers. Manage multiple sessions and scale without per-message fees. Try it free today!
+              </p>
+
+              <ul className="mt-8 space-y-4">
+                {[
+                  { i: Check, t: "No credit card required to start" },
+                  { i: Zap, t: "3-day free trial with full access" },
+                  { i: MessageSquare, t: "Cancel anytime, no commitments" },
+                ].map((it) => (
+                  <li key={it.t} className="flex items-center gap-3">
+                    <span className="grid h-9 w-9 place-items-center rounded-full bg-primary/15 border border-primary/30 text-primary shrink-0">
+                      <it.i className="h-4 w-4" />
+                    </span>
+                    <span className="font-medium">{it.t}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-8">
+                <Button
+                  asChild
+                  size="lg"
+                  className="group h-14 w-full sm:w-auto px-10 rounded-xl bg-gradient-to-r from-primary to-primary-hover text-primary-foreground font-semibold text-base shadow-[0_20px_50px_-15px_hsl(var(--primary)/0.7)] hover:shadow-[0_25px_60px_-15px_hsl(var(--primary)/0.9)] hover:-translate-y-0.5 transition-all duration-300"
+                >
+                  <Link to="/register">
+                    Start Your Free Trial
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+                <p className="mt-3 text-xs text-muted-foreground">No credit card required to get started</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-5 gap-4">
+              <div className="col-span-3 rounded-2xl border border-border bg-[#0d0d0d] overflow-hidden shadow-2xl">
+                <div className="flex items-center gap-2 border-b border-border/50 px-4 py-2.5 text-xs font-mono text-primary">
+                  <span className="text-primary/70">›_</span>
+                  <span className="font-semibold">API Request</span>
+                </div>
+                <pre className="p-5 text-[12px] leading-relaxed font-mono overflow-x-auto"><code><span className="text-purple-400">import</span> <span className="text-foreground/90">{"{ createWasender }"}</span> <span className="text-purple-400">from</span> <span className="text-emerald-400">'wasenderapi'</span>;{"\n\n"}<span className="text-purple-400">const</span> <span className="text-sky-300">apiKey</span> = <span className="text-foreground/90">process.env</span>.<span className="text-amber-300">WASENDER_API_KEY</span>;{"\n"}<span className="text-purple-400">const</span> <span className="text-sky-300">wasender</span> = <span className="text-foreground/90">createWasender</span>({"{ apiKey }"});{"\n\n"}<span className="text-purple-400">const</span> <span className="text-sky-300">response</span> = <span className="text-purple-400">await</span> <span className="text-foreground/90">wasender</span>.<span className="text-sky-300">send</span>({"{"}{"\n  "}<span className="text-foreground/90">to</span>: <span className="text-emerald-400">'1234567890'</span>,{"\n  "}<span className="text-foreground/90">text</span>: <span className="text-emerald-400">'Works like a charm!'</span>{"\n"}{"}"});{"\n\n"}<span className="text-emerald-400">✓ Message Sent</span></code></pre>
+              </div>
+
+              <div className="col-span-2 rounded-2xl border border-border bg-card-elevated p-4 shadow-2xl flex flex-col">
+                <div className="flex items-center gap-2 pb-3 border-b border-border/50">
+                  <span className="h-7 w-7 rounded-full bg-primary grid place-items-center text-primary-foreground text-xs font-bold">W</span>
+                  <span className="h-2 flex-1 rounded bg-muted" />
+                </div>
+                <div className="flex-1 flex flex-col justify-end gap-2 mt-4 min-h-[200px]">
+                  <div className="self-end max-w-[85%] rounded-2xl rounded-tr-sm bg-primary px-3 py-2 text-xs text-primary-foreground font-medium animate-fade-in">
+                    Works like a charm!
+                  </div>
+                  <div className="self-start max-w-[85%] rounded-2xl rounded-tl-sm bg-card border border-border px-3 py-2 text-xs animate-fade-in">
+                    Got it, thanks!
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FOOTER */}
       <footer className="border-t border-border mt-10">
         <div className="container py-12 grid md:grid-cols-5 gap-8">
