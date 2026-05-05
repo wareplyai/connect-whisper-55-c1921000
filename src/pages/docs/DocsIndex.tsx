@@ -7,9 +7,9 @@ export default function DocsIndex() {
   return (
     <div>
       <div className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">API Documentation</div>
-      <h1 className="mb-3 text-3xl font-semibold tracking-tight">WaSenderAPI Documentation</h1>
+      <h1 className="mb-3 text-3xl font-semibold tracking-tight">WaReply AI Documentation</h1>
       <p className="text-base leading-relaxed text-muted-foreground">
-        Build powerful WhatsApp integrations with WaSenderAPI. Browse the categories below to learn how to
+        Build powerful WhatsApp integrations with WaReply AI. Browse the categories below to learn how to
         manage sessions, send messages, work with contacts and groups, and react to webhooks in real time.
       </p>
 

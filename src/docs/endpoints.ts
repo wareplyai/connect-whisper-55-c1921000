@@ -277,7 +277,7 @@ export const endpoints: EndpointDoc[] = [
     description: "Sends a plain text WhatsApp message. The text content is provided in the `text` field. Required when no media, contact or location is sent.",
     ...sendStandard("/api/send-message", [
       { name: "text", type: "string", required: true, description: "The text content of the message. Required if no media/contact/location is sent." },
-    ], { text: "Hello from WaSenderAPI!" }),
+    ], { text: "Hello from WaReply AI!" }),
   },
   {
     slug: "messages/send-image", category: "Messages", title: "Send Image Message",

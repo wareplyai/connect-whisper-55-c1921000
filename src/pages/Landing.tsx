@@ -18,12 +18,12 @@ const codeSamples: Record<string, string> = {
   JS: `import axios from 'axios';
 
 await axios.post(
-  'https://api.wasendapi.com/send-message',
-  { to: '+1234567890', text: 'Hello from WaSendAPI 👋' },
+  'https://api.wareplyai.com/send-message',
+  { to: '+1234567890', text: 'Hello from WaReply AI 👋' },
   { headers: { Authorization: 'Bearer YOUR_API_KEY' } }
 );`,
   PHP: `<?php
-$ch = curl_init('https://api.wasendapi.com/send-message');
+$ch = curl_init('https://api.wareplyai.com/send-message');
 curl_setopt_array($ch, [
   CURLOPT_POST => true,
   CURLOPT_HTTPHEADER => ['Authorization: Bearer YOUR_API_KEY', 'Content-Type: application/json'],
@@ -34,11 +34,11 @@ echo curl_exec($ch);`,
   Python: `import requests
 
 requests.post(
-    "https://api.wasendapi.com/send-message",
-    json={"to": "+1234567890", "text": "Hello from WaSendAPI 👋"},
+    "https://api.wareplyai.com/send-message",
+    json={"to": "+1234567890", "text": "Hello from WaReply AI 👋"},
     headers={"Authorization": "Bearer YOUR_API_KEY"},
 )`,
-  cURL: `curl -X POST https://api.wasendapi.com/send-message \\
+  cURL: `curl -X POST https://api.wareplyai.com/send-message \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"to":"+1234567890","text":"Hello!"}'`,
@@ -684,7 +684,7 @@ const Landing = () => {
                   <span className="text-primary/70">›_</span>
                   <span className="font-semibold">API Request</span>
                 </div>
-                <pre className="p-5 text-[12px] leading-relaxed font-mono overflow-x-auto"><code><span className="text-purple-400">import</span> <span className="text-code-foreground/90">{"{ createWasender }"}</span> <span className="text-purple-400">from</span> <span className="text-emerald-400">'wasenderapi'</span>;{"\n\n"}<span className="text-purple-400">const</span> <span className="text-sky-300">apiKey</span> = <span className="text-code-foreground/90">process.env</span>.<span className="text-amber-300">WASENDER_API_KEY</span>;{"\n"}<span className="text-purple-400">const</span> <span className="text-sky-300">wasender</span> = <span className="text-code-foreground/90">createWasender</span>({"{ apiKey }"});{"\n\n"}<span className="text-purple-400">const</span> <span className="text-sky-300">response</span> = <span className="text-purple-400">await</span> <span className="text-code-foreground/90">wasender</span>.<span className="text-sky-300">send</span>({"{"}{"\n  "}<span className="text-code-foreground/90">to</span>: <span className="text-emerald-400">'1234567890'</span>,{"\n  "}<span className="text-code-foreground/90">text</span>: <span className="text-emerald-400">'Works like a charm!'</span>{"\n"}{"}"});{"\n\n"}<span className="text-emerald-400">✓ Message Sent</span></code></pre>
+                <pre className="p-5 text-[12px] leading-relaxed font-mono overflow-x-auto"><code><span className="text-purple-400">import</span> <span className="text-code-foreground/90">{"{ createWareply }"}</span> <span className="text-purple-400">from</span> <span className="text-emerald-400">'wareplyapi'</span>;{"\n\n"}<span className="text-purple-400">const</span> <span className="text-sky-300">apiKey</span> = <span className="text-code-foreground/90">process.env</span>.<span className="text-amber-300">WAREPLY_API_KEY</span>;{"\n"}<span className="text-purple-400">const</span> <span className="text-sky-300">wareply</span> = <span className="text-code-foreground/90">createWareply</span>({"{ apiKey }"});{"\n\n"}<span className="text-purple-400">const</span> <span className="text-sky-300">response</span> = <span className="text-purple-400">await</span> <span className="text-code-foreground/90">wareply</span>.<span className="text-sky-300">send</span>({"{"}{"\n  "}<span className="text-code-foreground/90">to</span>: <span className="text-emerald-400">'1234567890'</span>,{"\n  "}<span className="text-code-foreground/90">text</span>: <span className="text-emerald-400">'Works like a charm!'</span>{"\n"}{"}"});{"\n\n"}<span className="text-emerald-400">✓ Message Sent</span></code></pre>
               </div>
 
               <div className="col-span-2 rounded-2xl border border-border bg-card-elevated p-4 shadow-2xl flex flex-col">
@@ -727,7 +727,7 @@ const Landing = () => {
           ))}
         </div>
         <div className="border-t border-border py-6 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} WaSendAPI. {t("foot.rights")}
+          © {new Date().getFullYear()} WaReply AI. {t("foot.rights")}
         </div>
       </footer>
     </div>
