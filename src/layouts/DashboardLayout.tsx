@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, MessageCircle, Receipt } from "lucide-react";
 import { TrialBanner } from "@/components/TrialBanner";
 import { N8nBanner } from "@/components/N8nBanner";
@@ -23,6 +23,11 @@ const resources = [
 const DashboardLayout = () => {
   const { profile, isAdmin, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/", { replace: true });
+  };
   const crumbs = location.pathname.split("/").filter(Boolean);
 
   return (
@@ -88,7 +93,7 @@ const DashboardLayout = () => {
                 <p className="text-sm font-medium truncate">{profile?.full_name || "User"}</p>
                 <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
               </div>
-              <Button size="icon" variant="ghost" onClick={signOut} aria-label="Sign out">
+              <Button size="icon" variant="ghost" onClick={handleSignOut} aria-label="Sign out">
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
