@@ -39,7 +39,7 @@ export const Navbar = () => {
           <a href="/#how" onClick={(e) => goToSection(e, "how")} className="hover:text-foreground transition-colors">{t("nav.how")}</a>
           <a href="/#pricing" onClick={(e) => goToSection(e, "pricing")} className="hover:text-foreground transition-colors">{t("nav.pricing")}</a>
           <Link to="/docs" className="hover:text-foreground transition-colors">{t("nav.docs")}</Link>
-          <a href="/#faq" onClick={(e) => goToSection(e, "faq")} className="hover:text-foreground transition-colors">{t("nav.help")}</a>
+          <Link to="/help" className="hover:text-foreground transition-colors">{t("nav.help")}</Link>
         </div>
         <div className="flex items-center gap-2">
           <LanguageToggle />
