@@ -142,18 +142,7 @@ export default function HeadAdminLayout() {
       {/* Main */}
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b border-border flex items-center gap-4 px-5 bg-sidebar/80 backdrop-blur-sm sticky top-0 z-10">
-          <div className="flex-1 max-w-md">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                placeholder="Search anything..."
-                className="w-full h-9 pl-9 pr-12 rounded-full bg-card border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition"
-              />
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
-                ⌘K
-              </kbd>
-            </div>
-          </div>
+          <div className="flex-1" />
 
           <div className="flex items-center gap-1.5 ml-auto">
             <ThemeToggle />
