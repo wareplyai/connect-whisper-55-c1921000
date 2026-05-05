@@ -146,9 +146,27 @@ const Sessions = () => {
           <Smartphone className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
           <h3 className="font-semibold">No WhatsApp Sessions</h3>
           <p className="text-sm text-muted-foreground mt-1">You haven't created any sessions yet. Create your first one to get started.</p>
-          <Button asChild className="mt-4 bg-primary text-primary-foreground hover:bg-primary-hover">
-            <Link to="/dashboard/sessions/create"><Plus className="h-4 w-4 mr-1.5" /> New Session</Link>
-          </Button>
+          {hasActive === false ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0} className="inline-block mt-4">
+                    <Button disabled className="bg-primary text-primary-foreground opacity-60 cursor-not-allowed">
+                      <Plus className="h-4 w-4 mr-1.5" /> New Session
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">You need an active subscription to create WhatsApp sessions.</p>
+                  <Link to="/dashboard/subscription/plans" className="text-xs text-primary underline">View Subscription</Link>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <Button asChild className="mt-4 bg-primary text-primary-foreground hover:bg-primary-hover">
+              <Link to="/dashboard/sessions/create"><Plus className="h-4 w-4 mr-1.5" /> New Session</Link>
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid gap-3">
