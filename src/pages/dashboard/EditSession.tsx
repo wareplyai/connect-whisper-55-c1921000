@@ -9,7 +9,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ArrowLeft, ChevronDown, Edit, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { CountryCodeSelect } from "@/components/CountryCodeSelect";
-import { splitPhone, DEFAULT_COUNTRY, Country } from "@/lib/countries";
+import { splitPhone, DEFAULT_COUNTRY, Country, validatePhoneForCountry } from "@/lib/countries";
+import { AlertCircle } from "lucide-react";
 
 const ALL_EVENTS = [
   "messages.received","messages-group.received","messages-newsletter.received","messages-personal.received",
