@@ -12,29 +12,36 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
     if (!query.trim()) return navigation;
     const q = query.toLowerCase();
     return navigation
-      .map((c) => ({ ...c, items: c.items.filter((i) => i.title.toLowerCase().includes(q)) }))
+      .map((c) => ({
+        ...c,
+        items: c.items.filter(
+          (i) => i.title.toLowerCase().includes(q) || i.slug.toLowerCase().includes(q) || c.label.toLowerCase().includes(q),
+        ),
+      }))
       .filter((c) => c.items.length > 0);
   }, [query]);
 
   return (
     <aside className="flex h-full w-full flex-col border-r bg-[#161b22]">
       <div className="border-b p-3">
-        <Link to="/docs" className="mb-3 flex items-center gap-2" onClick={onNavigate}>
-          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#25d366] text-xs font-bold text-black">W</span>
-          <span className="font-semibold">WaSenderAPI</span>
-        </Link>
+        <div className="mb-2 flex items-center justify-between">
+          <Link to="/docs" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground hover:text-foreground" onClick={onNavigate}>
+            Docs
+          </Link>
+        </div>
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
+            type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search..."
-            className="h-9 pl-8 pr-12 text-sm"
+            placeholder="Search docs..."
+            className="h-9 pl-8 pr-3 text-sm"
           />
-          <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border bg-card px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:inline-block">
-            ⌘K
-          </kbd>
         </div>
+        {query.trim() && filtered.length === 0 && (
+          <p className="mt-2 px-1 text-xs text-muted-foreground">No results found</p>
+        )}
       </div>
       <nav className="flex-1 overflow-y-auto p-3">
         {filtered.map((cat) => (
