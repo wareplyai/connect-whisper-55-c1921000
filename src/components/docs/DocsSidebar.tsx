@@ -42,7 +42,7 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
           </kbd>
         </button>
       </div>
-      <nav className="flex-1 overflow-y-auto p-3">
+      <nav ref={navRef} className="flex-1 overflow-y-auto p-3">
         {filtered.map((cat) => (
           <div key={cat.label} className="mb-5">
             <div className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
