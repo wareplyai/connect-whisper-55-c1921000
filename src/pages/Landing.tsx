@@ -17,32 +17,114 @@ import { useLanguage } from "@/contexts/LanguageContext";
 const codeSamples: Record<string, string> = {
   JS: `import axios from 'axios';
 
-await axios.post(
-  'https://api.wareplyai.com/send-message',
-  { to: '+1234567890', text: 'Hello from WaReply AI 👋' },
-  { headers: { Authorization: 'Bearer YOUR_API_KEY' } }
+// Your API key for authentication
+const apiKey = 'your_api_key_here';
+
+// Example of sending a text message with an image
+const response = await axios.post(
+  'https://wareplyai.com/api/send-message',
+  {
+    // Message details including recipient and content
+    to: '1234567890',
+    text: 'Hello from WaReply AI!',
+    imageUrl: 'https://example.com/images/image.png'
+  },
+  {
+    headers: {
+      // Authorization header with Bearer token
+      Authorization: \`Bearer \${apiKey}\`
+    }
+  }
 );`,
   PHP: `<?php
-$ch = curl_init('https://api.wareplyai.com/send-message');
-curl_setopt_array($ch, [
-  CURLOPT_POST => true,
-  CURLOPT_HTTPHEADER => ['Authorization: Bearer YOUR_API_KEY', 'Content-Type: application/json'],
-  CURLOPT_POSTFIELDS => json_encode(['to' => '+1234567890', 'text' => 'Hello!']),
-  CURLOPT_RETURNTRANSFER => true,
-]);
-echo curl_exec($ch);`,
-  Python: `import requests
+use GuzzleHttp\\Client;
 
-requests.post(
-    "https://api.wareplyai.com/send-message",
-    json={"to": "+1234567890", "text": "Hello from WaReply AI 👋"},
-    headers={"Authorization": "Bearer YOUR_API_KEY"},
+// Your API key for authentication
+$apiKey = 'your_api_key_here';
+
+// Example of sending a text message
+$response = (new Client())->post('https://wareplyai.com/api/send-message', [
+    'headers' => [
+        // Authorization header with Bearer token
+        'Authorization' => 'Bearer ' . $apiKey
+    ],
+    'json' => [
+        // Recipient and message content
+        'to' => '1234567890',
+        'text' => 'Hello from WaReply AI!'
+    ]
+]);`,
+  Python: `import httpx
+
+# Your API key for authentication
+api_key = 'your_api_key_here'
+
+# Example of sending a location message
+response = httpx.post(
+    'https://wareplyai.com/api/send-message',
+    json={
+        # Recipient and location data
+        'to': '1234567890',
+        'location': {
+            'latitude': 37.7749,
+            'longitude': -122.4194
+        }
+    },
+    headers={
+        # Authorization header with Bearer token
+        'Authorization': f'Bearer {api_key}'
+    }
 )`,
-  cURL: `curl -X POST https://api.wareplyai.com/send-message \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
+  "C#": `using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+
+// Your API key for authentication
+string apiKey = "your_api_key_here";
+
+var client = new HttpClient();
+client.DefaultRequestHeaders.Authorization =
+    // Authorization header with Bearer token
+    new AuthenticationHeaderValue("Bearer", apiKey);
+
+// Example of sending a text message
+var payload = new StringContent(
+    "{\\"to\\":\\"1234567890\\",\\"text\\":\\"Hello from WaReply AI!\\"}",
+    Encoding.UTF8,
+    "application/json"
+);
+
+var response = await client.PostAsync(
+    "https://wareplyai.com/api/send-message",
+    payload
+);`,
+  Java: `import kong.unirest.Unirest;
+import org.json.JSONObject;
+
+// Your API key for authentication
+String apiKey = "your_api_key_here";
+
+// Example of sending a video message
+var response = Unirest.post("https://wareplyai.com/api/send-message")
+    .header("Authorization", "Bearer " + apiKey)
+    .body(new JSONObject()
+        // Recipient and video URL
+        .put("to", "1234567890")
+        .put("videoUrl", "https://example.com/videos/video.mp4"))
+    .asJson();`,
+  cURL: `# Your API key for authentication
+API_KEY="your_api_key_here"
+
+# Example of sending a text message
+curl -X POST https://wareplyai.com/api/send-message \\
+  -H "Authorization: Bearer $API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"to":"+1234567890","text":"Hello!"}'`,
+  -d '{
+    "to": "1234567890",
+    "text": "Hello from WaReply AI!"
+  }'`,
 };
+
 
 const useCaseDefs = [
   { icon: Headset, key: "1" },
