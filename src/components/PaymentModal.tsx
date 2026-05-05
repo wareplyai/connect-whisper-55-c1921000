@@ -46,17 +46,38 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
   const [trxId, setTrxId] = useState("");
   const [senderNumber, setSenderNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [verifyState, setVerifyState] = useState<"idle" | "checking" | "approved" | "pending">("idle");
+  const [verifyMessage, setVerifyMessage] = useState("");
   const amount = plan ? (yearly ? plan.price_yearly : plan.price_monthly) : 0;
 
   useEffect(() => {
     if (!open) return;
     setStep(1); setSelected(null); setTrxId(""); setSenderNumber("");
+    setVerifyState("idle"); setVerifyMessage("");
     supabase.from("payment_methods").select("*").eq("is_active", true).then(({ data }) => {
       setMethods((data as Method[]) || []);
     });
   }, [open]);
 
   if (!plan) return null;
+
+  const tryAutoVerify = async (paymentTxId: string) => {
+    setVerifyState("checking");
+    for (let i = 0; i < 6; i++) {
+      const { data, error } = await supabase.functions.invoke("verify-plan-payment", {
+        body: { payment_tx_id: paymentTxId },
+      });
+      if (!error && data?.matched) {
+        setVerifyState("approved");
+        setVerifyMessage(data.message || "Payment auto-verified! Your plan is active.");
+        toast.success("Plan activated!");
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    setVerifyState("pending");
+    setVerifyMessage("SMS not received yet. Your plan will activate automatically as soon as our system receives the bank SMS (usually within a few minutes).");
+  };
 
   const submit = async () => {
     if (!user || !selected) return;
@@ -66,17 +87,18 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
     }
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("payment_transactions").insert({
+      const { data, error } = await supabase.from("payment_transactions").insert({
         user_id: user.id,
         plan: plan.plan_name,
         amount,
         payment_method: selected.method_name,
-        transaction_id: trxId.trim(),
+        transaction_id: trxId.trim().toUpperCase(),
         sender_number: senderNumber.trim(),
         status: "pending",
-      });
+      }).select().single();
       if (error) throw error;
       setStep(4);
+      tryAutoVerify(data.id);
     } catch (e: any) {
       toast.error(e.message || "Failed to submit payment");
     } finally {
