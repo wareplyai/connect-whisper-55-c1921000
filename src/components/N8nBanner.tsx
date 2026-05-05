@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Sparkles, X } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const KEY = "n8n_banner_dismissed_v1";
 
