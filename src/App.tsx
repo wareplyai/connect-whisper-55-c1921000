@@ -41,6 +41,7 @@ import AllMessages from "./pages/headadmin/AllMessages";
 import HANotifications from "./pages/headadmin/Notifications";
 import ActivityLogs from "./pages/headadmin/ActivityLogs";
 import HASettings from "./pages/headadmin/Settings";
+import SmsLogs from "./pages/headadmin/SmsLogs";
 
 const queryClient = new QueryClient();
 
