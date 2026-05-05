@@ -18,34 +18,53 @@ export const useTrial = (): TrialInfo => {
 
   useEffect(() => {
     if (!user) { setInfo((i) => ({ ...i, loading: false })); return; }
-    (async () => {
-      const [{ data }, { data: prof }] = await Promise.all([
-        supabase
-          .from("subscriptions")
-          .select("plan, status, trial_ends_at")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle(),
-      ]);
+    let cancelled = false;
+    const load = async () => {
+      // Look at the latest trial subscription specifically (any status)
+      const { data: trialSub } = await supabase
+        .from("subscriptions")
+        .select("plan, status, trial_ends_at")
+        .eq("user_id", user.id)
+        .eq("plan", "trial")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      const planIsTrial = data?.plan === "trial" || (prof as any)?.plan === "trial";
-      if (!planIsTrial) {
+      // If the user already has a non-trial active paid plan, don't show the trial banner
+      const { data: paidSub } = await supabase
+        .from("subscriptions")
+        .select("plan, status")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .neq("plan", "trial")
+        .limit(1)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (paidSub || !trialSub) {
         setInfo({ loading: false, isTrial: false, trialEndsAt: null, daysRemaining: 0, expired: false });
         return;
       }
-      const ends = data?.trial_ends_at ? new Date(data.trial_ends_at) : null;
-      const ms = ends ? ends.getTime() - Date.now() : 0;
+
+      const ends = trialSub.trial_ends_at ? new Date(trialSub.trial_ends_at) : null;
+      // No trial_ends_at yet → don't flash "expired" – treat as not-loaded
+      if (!ends) {
+        setInfo({ loading: false, isTrial: false, trialEndsAt: null, daysRemaining: 0, expired: false });
+        return;
+      }
+      const ms = ends.getTime() - Date.now();
+      const expired = ms <= 0;
       const days = Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
-      setInfo({
-        loading: false,
-        isTrial: true,
-        trialEndsAt: ends,
-        daysRemaining: days,
-        expired: !!ends && ms <= 0,
-      });
-    })();
+      setInfo({ loading: false, isTrial: true, trialEndsAt: ends, daysRemaining: days, expired });
+
+      // If expired but DB still says trial_active, ask backend to flip status & disconnect sessions
+      if (expired && trialSub.status === "trial_active") {
+        await supabase.rpc("expire_own_trial");
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, [user]);
 
   return info;
