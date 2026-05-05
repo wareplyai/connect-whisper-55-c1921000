@@ -47,6 +47,7 @@ const allItems = [
   { to: "/headadmin/revenue", label: "Revenue" },
   { to: "/headadmin/payments", label: "Payments" },
   { to: "/headadmin/payment-methods", label: "Methods" },
+  { to: "/headadmin/sms-logs", label: "SMS Auto-Verify" },
   { to: "/headadmin/plan-pricing", label: "Plan Pricing" },
   { to: "/headadmin/notifications", label: "Notifications" },
   { to: "/headadmin/logs", label: "Activity Logs" },
