@@ -15,7 +15,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft, Copy, Eye, EyeOff, RefreshCw, Trash2, Edit, Webhook, Loader2, ChevronLeft, ChevronRight,
+  ArrowLeft, Copy, Eye, EyeOff, RefreshCw, Trash2, Edit, Webhook, Loader2, ChevronLeft, ChevronRight, Link2 as LinkIcon2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { backendApi } from "@/lib/backend";
