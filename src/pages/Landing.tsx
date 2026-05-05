@@ -364,7 +364,7 @@ const Landing = () => {
         </div>
 
         {/* Language logos */}
-        <div className="mx-auto mt-10 flex max-w-3xl flex-nowrap items-center justify-center gap-2 md:gap-3 overflow-x-auto">
+        <div className="mx-auto mt-10 flex max-w-3xl flex-nowrap items-center justify-center gap-2 overflow-x-auto py-[6px] my-0 px-0 md:gap-[14px]">
           {[
             { name: "JavaScript", icon: "javascript/javascript-original.svg" },
             { name: "C++", icon: "cplusplus/cplusplus-original.svg" },
