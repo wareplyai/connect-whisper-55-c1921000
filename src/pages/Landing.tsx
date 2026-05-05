@@ -321,12 +321,12 @@ const Landing = () => {
             <div
               key={l.name}
               title={l.name}
-              className="grid h-11 w-11 place-items-center rounded-xl bg-card-elevated/60 border border-border transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-card-elevated/60 border border-border transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]"
             >
               <img
                 src={`https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${l.icon}`}
                 alt={l.name}
-                className="h-7 w-7"
+                className="h-5 w-5"
                 loading="lazy"
               />
             </div>
