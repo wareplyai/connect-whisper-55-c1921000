@@ -27,11 +27,11 @@ const DashboardLayout = () => {
 
   return (
     <div className="min-h-screen flex bg-background">
-      <aside className="hidden md:flex w-64 flex-col border-r border-border bg-card">
-        <Link to="/dashboard" className="h-16 flex items-center px-5 border-b border-border">
+      <aside className="hidden md:flex w-64 flex-col border-r border-border bg-card sticky top-0 h-screen self-start">
+        <Link to="/dashboard" className="h-16 flex items-center px-5 border-b border-border shrink-0">
           <Logo size={32} textClassName="text-base" />
         </Link>
-        <div className="flex-1 px-3 py-4 flex flex-col">
+        <div className="flex-1 min-h-0 px-3 py-4 flex flex-col overflow-y-auto">
           <p className="px-3 mb-2 text-xs uppercase tracking-wider text-muted-foreground">Platform</p>
           <nav className="space-y-1">
             {nav.map((n) => (
