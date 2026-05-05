@@ -15,7 +15,6 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<string | null>(null);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,15 +24,6 @@ const Login = () => {
     if (error) return toast.error(error.message);
     toast.success("Welcome back!");
     nav("/dashboard");
-  };
-
-  const oauth = async (provider: "google" | "github") => {
-    setOauthLoading(provider);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${window.location.origin}/dashboard` },
-    });
-    if (error) { setOauthLoading(null); toast.error(error.message); }
   };
 
   return (
