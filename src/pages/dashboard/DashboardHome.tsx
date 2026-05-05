@@ -65,6 +65,8 @@ const DashboardHome = () => {
         <p className="text-muted-foreground text-sm">Here's what's happening with your sessions today.</p>
       </div>
 
+      {!hasActivePlan && <NoActiveSubscriptionBanner />}
+
       <div className="grid md:grid-cols-3 gap-4">
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between mb-3">
