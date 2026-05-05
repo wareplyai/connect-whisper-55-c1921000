@@ -161,9 +161,9 @@ export default function HeadAdminLayout() {
               <Bell className="h-[18px] w-[18px]" />
               <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-warning" />
             </button>
-            <button className="p-2 rounded-lg hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/headadmin/settings" className="p-2 rounded-lg hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors">
               <Settings className="h-[18px] w-[18px]" />
-            </button>
+            </Link>
             <div className="flex items-center gap-2.5 pl-3 ml-1 border-l border-border">
               <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/15 text-primary text-sm font-semibold ring-1 ring-primary/20">
                 {(headAdmin?.name || "A").slice(0, 1).toUpperCase()}
