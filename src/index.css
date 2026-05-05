@@ -186,6 +186,9 @@
   .wa-voice-bar { animation: wa-voice-bar 1s ease-in-out infinite; transform-origin: center; }
   .wa-bg-float { animation: wa-bg-float 8s ease-in-out infinite; }
 
+  .wa-scroll::-webkit-scrollbar { width: 0; display: none; }
+  .wa-scroll { scrollbar-width: none; }
+
   .wa-bg {
     background-color: #0b141a;
     background-image:
