@@ -64,8 +64,9 @@ export default function HeadAdminLayout() {
     <div className="min-h-screen flex bg-background text-foreground">
       {/* Sidebar */}
       <aside className="hidden md:flex w-[220px] flex-col border-r border-sidebar-border bg-sidebar sticky top-0 h-screen self-start">
-        <Link to="/headadmin" className="h-14 flex items-center px-5 border-b border-sidebar-border">
+        <Link to="/headadmin" className="flex flex-col items-start px-5 py-2.5 border-b border-sidebar-border gap-0.5">
           <Logo size={26} textClassName="text-[14px] font-semibold" />
+          <span className="text-[11px] font-semibold tracking-wide text-green-400">HeadAdmin</span>
         </Link>
 
         <div className="flex-1 px-2.5 py-4 flex flex-col gap-5 overflow-y-auto">
