@@ -14,11 +14,11 @@ export const Navbar = () => {
           <Logo size={32} textClassName="text-base" />
         </Link>
         <div className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
-          <a href="#features" className="hover:text-foreground transition-colors">{t("nav.features")}</a>
-          <a href="#how" className="hover:text-foreground transition-colors">{t("nav.how")}</a>
-          <a href="#pricing" className="hover:text-foreground transition-colors">{t("nav.pricing")}</a>
+          <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
+          <Link to="/#how" className="hover:text-foreground transition-colors">{t("nav.how")}</Link>
+          <Link to="/#pricing" className="hover:text-foreground transition-colors">{t("nav.pricing")}</Link>
           <Link to="/docs" className="hover:text-foreground transition-colors">{t("nav.docs")}</Link>
-          <a href="#faq" className="hover:text-foreground transition-colors">{t("nav.help")}</a>
+          <Link to="/#faq" className="hover:text-foreground transition-colors">{t("nav.help")}</Link>
         </div>
         <div className="flex items-center gap-2">
           <LanguageToggle />
