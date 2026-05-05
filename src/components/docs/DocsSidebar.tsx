@@ -14,10 +14,12 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
   useEffect(() => {
     const nav = navRef.current;
     const el = nav?.querySelector<HTMLElement>("a[aria-current='page']");
-    if (nav && el) {
-      const top = el.offsetTop - 12;
-      nav.scrollTo({ top, behavior: "smooth" });
-    }
+    if (!nav || !el) return;
+    const navRect = nav.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const offset = Math.max(80, navRect.height * 0.25);
+    const top = nav.scrollTop + (elRect.top - navRect.top) - offset;
+    nav.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
   }, [location.pathname]);
 
 
