@@ -56,6 +56,14 @@ const CreateSession = () => {
     const userId = profile?.id || user?.id;
     if (!userId) { toast.error("You must be signed in to create a session."); return; }
 
+    // Block if user has no active service (expired trial / no paid plan)
+    const { data: activeOk } = await supabase.rpc("has_active_service", { _user_id: userId });
+    if (!activeOk) {
+      toast.error("Your trial has ended. Subscribe to a paid plan to create sessions.");
+      nav("/dashboard/subscription/plans");
+      return;
+    }
+
     // Phone validation
     const cleaned = phoneNum.trim().replace(/\s|-/g, "");
     if (cleaned.startsWith("+") && !cleaned.startsWith(country.code)) {
