@@ -61,7 +61,7 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
                     className={({ isActive }) =>
                       cn(
                         "flex items-center justify-between gap-2 rounded-md border-l-2 border-transparent px-3 py-1.5 text-[13px] text-foreground/80 transition-colors hover:bg-white/5 hover:text-foreground",
-                        isActive && "border-[#25d366] bg-[#1a4731] text-[#25d366]",
+                        isActive && "border-[#25d366] bg-[#25d366] font-semibold text-black hover:bg-[#25d366] hover:text-black shadow-[0_0_0_1px_rgba(37,211,102,0.4)]",
                       )
                     }
                   >
