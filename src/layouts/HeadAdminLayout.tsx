@@ -87,7 +87,7 @@ export default function HeadAdminLayout() {
                     className={({ isActive }) =>
                       `flex items-center gap-3 h-10 px-3 rounded-md text-sm transition-all border-l-[3px] ${
                         isActive
-                          ? "bg-green-500/15 text-green-400 border-green-500"
+                          ? "bg-green-500 text-black border-green-600 font-semibold shadow-sm"
                           : "border-transparent text-muted-foreground hover:text-foreground hover:bg-card"
                       }`
                     }
