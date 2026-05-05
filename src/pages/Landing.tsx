@@ -201,7 +201,68 @@ const Landing = () => {
         />
         {/* Glow orbs */}
         <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-[500px] w-[900px] rounded-full bg-primary/15 blur-[160px]" />
-        <div className="pointer-events-none absolute top-1/2 -right-40 h-[360px] w-[360px] rounded-full bg-primary/10 blur-[140px]" />
+
+        {/* Left side green light pillar (Orbix-style) */}
+        <div
+          className="pointer-events-none absolute left-0 top-0 -z-10 h-full w-[28%] md:w-[24%]"
+          style={{
+            background:
+              "linear-gradient(90deg, hsl(var(--primary) / 0.55) 0%, hsl(var(--primary) / 0.28) 35%, hsl(var(--primary) / 0.08) 70%, transparent 100%)",
+            maskImage:
+              "linear-gradient(90deg, black 0%, black 55%, transparent 100%), linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%)",
+            WebkitMaskImage:
+              "linear-gradient(90deg, black 0%, black 55%, transparent 100%), linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%)",
+            maskComposite: "intersect",
+            WebkitMaskComposite: "source-in",
+            filter: "blur(40px)",
+          }}
+        />
+        {/* Vertical streak lines on left */}
+        <div
+          className="pointer-events-none absolute left-0 top-0 -z-10 h-full w-[26%] md:w-[22%] opacity-60 mix-blend-screen"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(90deg, transparent 0px, transparent 18px, hsl(var(--primary) / 0.18) 19px, transparent 22px, transparent 60px, hsl(var(--primary) / 0.10) 61px, transparent 64px)",
+            maskImage:
+              "linear-gradient(90deg, black 0%, black 60%, transparent 100%), linear-gradient(180deg, transparent 0%, black 15%, black 85%, transparent 100%)",
+            WebkitMaskImage:
+              "linear-gradient(90deg, black 0%, black 60%, transparent 100%), linear-gradient(180deg, transparent 0%, black 15%, black 85%, transparent 100%)",
+            maskComposite: "intersect",
+            WebkitMaskComposite: "source-in",
+            filter: "blur(2px)",
+          }}
+        />
+
+        {/* Right side green light pillar */}
+        <div
+          className="pointer-events-none absolute right-0 top-0 -z-10 h-full w-[28%] md:w-[24%]"
+          style={{
+            background:
+              "linear-gradient(270deg, hsl(var(--primary) / 0.55) 0%, hsl(var(--primary) / 0.28) 35%, hsl(var(--primary) / 0.08) 70%, transparent 100%)",
+            maskImage:
+              "linear-gradient(270deg, black 0%, black 55%, transparent 100%), linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%)",
+            WebkitMaskImage:
+              "linear-gradient(270deg, black 0%, black 55%, transparent 100%), linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%)",
+            maskComposite: "intersect",
+            WebkitMaskComposite: "source-in",
+            filter: "blur(40px)",
+          }}
+        />
+        {/* Vertical streak lines on right */}
+        <div
+          className="pointer-events-none absolute right-0 top-0 -z-10 h-full w-[26%] md:w-[22%] opacity-60 mix-blend-screen"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(90deg, transparent 0px, transparent 18px, hsl(var(--primary) / 0.18) 19px, transparent 22px, transparent 60px, hsl(var(--primary) / 0.10) 61px, transparent 64px)",
+            maskImage:
+              "linear-gradient(270deg, black 0%, black 60%, transparent 100%), linear-gradient(180deg, transparent 0%, black 15%, black 85%, transparent 100%)",
+            WebkitMaskImage:
+              "linear-gradient(270deg, black 0%, black 60%, transparent 100%), linear-gradient(180deg, transparent 0%, black 15%, black 85%, transparent 100%)",
+            maskComposite: "intersect",
+            WebkitMaskComposite: "source-in",
+            filter: "blur(2px)",
+          }}
+        />
 
         <div className="container relative py-28 md:py-36 text-center">
           {/* Premium top badge */}
