@@ -36,6 +36,7 @@ export default {
         },
         warning: "hsl(var(--warning))",
         success: "hsl(var(--success))",
+        "code-foreground": "hsl(var(--code-foreground))",
         "primary-hover": "hsl(var(--primary-hover))",
         "card-elevated": "hsl(var(--card-elevated))",
         muted: {
