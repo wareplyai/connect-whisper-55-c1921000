@@ -301,6 +301,50 @@ const Landing = () => {
             ))}
           </Tabs>
         </div>
+
+        {/* Language logos */}
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-5 md:gap-7">
+          {[
+            { name: "JavaScript", icon: "javascript/javascript-original.svg" },
+            { name: "C++", icon: "cplusplus/cplusplus-original.svg" },
+            { name: "TypeScript", icon: "typescript/typescript-original.svg" },
+            { name: "Python", icon: "python/python-original.svg" },
+            { name: "Kotlin", icon: "kotlin/kotlin-original.svg" },
+            { name: "Java", icon: "java/java-original.svg" },
+            { name: "PHP", icon: "php/php-original.svg" },
+            { name: "C#", icon: "csharp/csharp-original.svg" },
+            { name: "Ruby", icon: "ruby/ruby-original.svg" },
+            { name: "Go", icon: "go/go-original-wordmark.svg" },
+            { name: "Lua", icon: "lua/lua-original.svg" },
+            { name: "Swift", icon: "swift/swift-original.svg" },
+          ].map((l) => (
+            <div
+              key={l.name}
+              title={l.name}
+              className="grid h-11 w-11 place-items-center rounded-xl bg-card-elevated/60 border border-border transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]"
+            >
+              <img
+                src={`https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${l.icon}`}
+                alt={l.name}
+                className="h-7 w-7"
+                loading="lazy"
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div className="mt-10 flex justify-center">
+          <Button
+            asChild
+            size="lg"
+            className="h-12 px-8 bg-gradient-to-r from-primary to-[hsl(142_70%_42%)] text-primary-foreground font-semibold shadow-[0_0_25px_hsl(var(--primary)/0.45)] hover:opacity-95"
+          >
+            <Link to="/register">
+              {t("nav.getStarted")} <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </section>
 
       {/* HOW IT WORKS */}
