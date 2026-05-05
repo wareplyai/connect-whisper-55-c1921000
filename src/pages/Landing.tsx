@@ -181,27 +181,62 @@ const Landing = () => {
 
       {/* HERO */}
       <section className="relative overflow-hidden">
-        {/* Adaptive gradient background (works for both themes) */}
-        <div className="absolute inset-0 -z-20 bg-background" />
-        <div className="absolute inset-0 -z-20 dark:bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,hsl(142_70%_18%)_0%,hsl(160_45%_8%)_45%,hsl(215_28%_5%)_100%)] bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,hsl(142_70%_92%)_0%,hsl(160_50%_97%)_45%,hsl(210_30%_99%)_100%)]" />
-        {/* Soft top light streak */}
-        <div className="absolute top-0 right-1/4 -z-10 h-[400px] w-[600px] rotate-[20deg] bg-gradient-to-b from-primary/15 via-primary/5 to-transparent blur-3xl" />
-        {/* Faint grid in bottom-left corner */}
+        {/* Base background */}
+        <div className="absolute inset-0 -z-30 bg-background" />
+        {/* Deep ambient gradient */}
+        <div className="absolute inset-0 -z-30 dark:bg-[radial-gradient(ellipse_100%_70%_at_50%_0%,hsl(142_60%_10%)_0%,hsl(160_40%_6%)_45%,hsl(215_30%_4%)_100%)] bg-[radial-gradient(ellipse_100%_70%_at_50%_0%,hsl(142_70%_94%)_0%,hsl(160_50%_98%)_45%,hsl(210_30%_99%)_100%)]" />
+
+        {/* Abstract flowing ribbons (dark theme) — silky curves like the reference */}
+        <svg
+          className="pointer-events-none absolute inset-0 -z-20 h-full w-full hidden dark:block"
+          viewBox="0 0 1440 900"
+          preserveAspectRatio="xMidYMid slice"
+          aria-hidden
+        >
+          <defs>
+            <linearGradient id="ribbonA" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="hsl(142 70% 25%)" stopOpacity="0.55" />
+              <stop offset="100%" stopColor="hsl(160 60% 6%)" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="ribbonB" x1="1" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="hsl(142 80% 35%)" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="hsl(215 40% 4%)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path d="M -100 250 C 250 100, 500 500, 800 200 S 1300 600, 1600 300 L 1600 0 L -100 0 Z" fill="url(#ribbonA)" />
+          <path d="M -100 700 C 200 500, 600 850, 900 600 S 1400 400, 1600 700 L 1600 950 L -100 950 Z" fill="url(#ribbonB)" />
+          <path d="M -50 480 C 300 380, 700 620, 1100 460 S 1500 380, 1550 500" fill="none" stroke="hsl(142 70% 45% / 0.18)" strokeWidth="1" />
+          <path d="M -50 540 C 350 440, 750 680, 1150 520 S 1500 440, 1550 560" fill="none" stroke="hsl(142 70% 45% / 0.12)" strokeWidth="1" />
+        </svg>
+
+        {/* Central vertical light pillar (the signature beam) */}
+        <div className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[820px] w-[520px] -translate-x-1/2">
+          <div className="absolute inset-x-0 top-0 mx-auto h-full w-[420px] bg-[radial-gradient(ellipse_55%_70%_at_50%_30%,hsl(142_85%_55%/0.45)_0%,hsl(142_70%_45%/0.18)_35%,transparent_70%)] blur-2xl" />
+          <div className="absolute inset-x-0 top-0 mx-auto h-full w-[180px] bg-gradient-to-b from-primary/40 via-primary/10 to-transparent blur-3xl" />
+          <div className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 bg-gradient-to-b from-primary/70 via-primary/20 to-transparent" />
+        </div>
+
+        {/* Faint dot grid background */}
         <div
-          className="absolute bottom-0 left-0 -z-10 h-[340px] w-[340px] opacity-30"
+          className="absolute inset-0 -z-10 opacity-[0.18] dark:opacity-25"
           style={{
             backgroundImage:
-              "linear-gradient(hsl(var(--primary)/0.18) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)/0.18) 1px, transparent 1px)",
-            backgroundSize: "32px 32px",
+              "radial-gradient(hsl(var(--primary)/0.35) 1px, transparent 1px)",
+            backgroundSize: "26px 26px",
             maskImage:
-              "radial-gradient(ellipse at bottom left, black 0%, transparent 70%)",
+              "radial-gradient(ellipse 70% 60% at 50% 30%, black 0%, transparent 80%)",
             WebkitMaskImage:
-              "radial-gradient(ellipse at bottom left, black 0%, transparent 70%)",
+              "radial-gradient(ellipse 70% 60% at 50% 30%, black 0%, transparent 80%)",
           }}
         />
-        {/* Glow orbs */}
-        <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-[500px] w-[900px] rounded-full bg-primary/15 blur-[160px]" />
-        <div className="pointer-events-none absolute top-1/2 -right-40 h-[360px] w-[360px] rounded-full bg-primary/10 blur-[140px]" />
+
+        {/* Side glow orbs */}
+        <div className="pointer-events-none absolute -top-24 -left-32 -z-10 h-[420px] w-[420px] rounded-full bg-primary/15 blur-[140px]" />
+        <div className="pointer-events-none absolute top-40 -right-40 -z-10 h-[420px] w-[420px] rounded-full bg-primary/15 blur-[140px]" />
+        <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 -z-10 h-[500px] w-[900px] rounded-full bg-primary/10 blur-[160px]" />
+
+        {/* Bottom fade into next section */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-32 bg-gradient-to-b from-transparent to-background" />
 
         <div className="container relative py-28 md:py-36 text-center">
           {/* Premium top badge */}
