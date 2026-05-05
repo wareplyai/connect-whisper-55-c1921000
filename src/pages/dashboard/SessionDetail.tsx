@@ -373,106 +373,130 @@ const SessionDetail = () => {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6">
-          <Tabs defaultValue="creds">
-            <TabsList className="bg-card-elevated">
-              <TabsTrigger value="creds">Credentials</TabsTrigger>
-              <TabsTrigger value="test">Test Sending</TabsTrigger>
-              <TabsTrigger value="webhook">Webhook Simulator</TabsTrigger>
-            </TabsList>
+        {connected ? (
+          <div className="rounded-xl border border-border bg-card p-6">
+            <Tabs defaultValue="creds">
+              <TabsList className="bg-card-elevated">
+                <TabsTrigger value="creds">Credentials</TabsTrigger>
+                <TabsTrigger value="test">Test Sending</TabsTrigger>
+                <TabsTrigger value="webhook">Webhook Simulator</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="creds" className="space-y-4 mt-4">
-              <div>
-                <Label>API Access Token</Label>
-                <div className="mt-1.5">
-                  <TokenField
-                    value={s.api_token}
-                    onRegenerate={() => setConfirmRegen("api_token")}
-                    regenerating={regenApi}
-                    label="Private API Key"
-                    title="API Access Key"
-                    subtitle="Use this key to authenticate your requests"
-                  />
+              <TabsContent value="creds" className="space-y-4 mt-4">
+                <div>
+                  <Label>API Access Token</Label>
+                  <div className="mt-1.5">
+                    <TokenField
+                      value={s.api_token}
+                      onRegenerate={() => setConfirmRegen("api_token")}
+                      regenerating={regenApi}
+                      label="Private API Key"
+                      title="API Access Key"
+                      subtitle="Use this key to authenticate your requests"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <Label>Webhook Secret</Label>
-                <div className="mt-1.5">
-                  <TokenField
-                    value={s.webhook_secret}
-                    onRegenerate={() => setConfirmRegen("webhook_secret")}
-                    regenerating={regenWh}
-                    label="Webhook Secret"
-                    title="Webhook Secret"
-                    subtitle="Use this secret to verify incoming webhook requests"
-                  />
+                <div>
+                  <Label>Webhook Secret</Label>
+                  <div className="mt-1.5">
+                    <TokenField
+                      value={s.webhook_secret}
+                      onRegenerate={() => setConfirmRegen("webhook_secret")}
+                      regenerating={regenWh}
+                      label="Webhook Secret"
+                      title="Webhook Secret"
+                      subtitle="Use this secret to verify incoming webhook requests"
+                    />
+                  </div>
                 </div>
-              </div>
-              <Button variant="outline" className="w-full">API Documentation →</Button>
-            </TabsContent>
+                <Button variant="outline" className="w-full">API Documentation →</Button>
+              </TabsContent>
 
-            <TabsContent value="test" className="space-y-3 mt-4">
-              <div><Label>To (with country code)</Label><Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="+1234567890" className="mt-1.5" /></div>
-              <div>
-                <Label>Type</Label>
-                <Select value={msgType} onValueChange={setMsgType}><SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text">Text</SelectItem>
-                    <SelectItem value="image">Image</SelectItem>
-                    <SelectItem value="document">Document</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div><Label>Message</Label><Textarea value={text} onChange={(e) => setText(e.target.value)} className="mt-1.5" rows={4} /></div>
-              <Button onClick={send} disabled={sending} className="w-full bg-primary text-primary-foreground hover:bg-primary-hover">
-                {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Send Test Message
-              </Button>
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <Label className="text-xs">cURL Command</Label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const cmd = `curl -X POST "https://alvi-waapi.duckdns.org/api/session/${s.id}/send" \\\n  -H "Authorization: Bearer ${s.api_token}" \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify({ to: to || "+1234567890", message: text || "Hello!" })}'`;
-                      navigator.clipboard.writeText(cmd);
-                      toast.success("Copied!");
-                    }}
-                    className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                  >
-                    <Copy className="h-3 w-3" /> Copy
-                  </button>
+              <TabsContent value="test" className="space-y-3 mt-4">
+                <div><Label>To (with country code)</Label><Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="+1234567890" className="mt-1.5" /></div>
+                <div>
+                  <Label>Type</Label>
+                  <Select value={msgType} onValueChange={setMsgType}><SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="text">Text</SelectItem>
+                      <SelectItem value="image">Image</SelectItem>
+                      <SelectItem value="document">Document</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <pre className="rounded-lg bg-[#0d0d0d] text-foreground/90 p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">
+                <div><Label>Message</Label><Textarea value={text} onChange={(e) => setText(e.target.value)} className="mt-1.5" rows={4} /></div>
+                <Button onClick={send} disabled={sending} className="w-full bg-primary text-primary-foreground hover:bg-primary-hover">
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Send Test Message
+                </Button>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <Label className="text-xs">cURL Command</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cmd = `curl -X POST "https://alvi-waapi.duckdns.org/api/session/${s.id}/send" \\\n  -H "Authorization: Bearer ${s.api_token}" \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify({ to: to || "+1234567890", message: text || "Hello!" })}'`;
+                        navigator.clipboard.writeText(cmd);
+                        toast.success("Copied!");
+                      }}
+                      className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                    >
+                      <Copy className="h-3 w-3" /> Copy
+                    </button>
+                  </div>
+                  <pre className="rounded-lg bg-[#0d0d0d] text-foreground/90 p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">
 {`curl -X POST "https://alvi-waapi.duckdns.org/api/session/${s.id}/send" \\
   -H "Authorization: Bearer ${s.api_token}" \\
   -H "Content-Type: application/json" \\
   -d '${JSON.stringify({ to: to || "+1234567890", message: text || "Hello!" })}'`}
-                </pre>
-              </div>
-            </TabsContent>
+                  </pre>
+                </div>
+              </TabsContent>
 
-            <TabsContent value="webhook" className="space-y-3 mt-4">
-              <div>
-                <Label>Event Type</Label>
-                <Select defaultValue="messages.received"><SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="messages.received">messages.received</SelectItem>
-                    <SelectItem value="message.sent">message.sent</SelectItem>
-                    <SelectItem value="session.status">session.status</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <pre className="rounded-lg bg-[#0d0d0d] p-3 text-xs font-mono overflow-x-auto">{`{
+              <TabsContent value="webhook" className="space-y-3 mt-4">
+                <div>
+                  <Label>Event Type</Label>
+                  <Select defaultValue="messages.received"><SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="messages.received">messages.received</SelectItem>
+                      <SelectItem value="message.sent">message.sent</SelectItem>
+                      <SelectItem value="session.status">session.status</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <pre className="rounded-lg bg-[#0d0d0d] p-3 text-xs font-mono overflow-x-auto">{`{
   "event": "messages.received",
   "session": "${s.session_name}",
   "data": { "from": "+1234567890", "text": "Hi!" }
 }`}</pre>
-              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary-hover">Send Test Event</Button>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
+                <Button className="w-full bg-primary text-primary-foreground hover:bg-primary-hover">Send Test Event</Button>
+              </TabsContent>
+            </Tabs>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border bg-card p-8 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <LinkIcon2 className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">WhatsApp Not Connected</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                API credentials and test sending will be available once your WhatsApp account is connected. Scan the QR code to activate this session.
+              </p>
+            </div>
+            <div className="flex gap-2 flex-wrap justify-center">
+              <Button asChild className="bg-primary text-primary-foreground hover:bg-primary-hover">
+                <Link to={`/dashboard/sessions/${s.id}/connect`}><LinkIcon2 className="h-4 w-4 mr-2" /> Connect Now</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to={`/dashboard/sessions/${s.id}/edit`}><Edit className="h-4 w-4 mr-2" /> Edit Session</Link>
+              </Button>
+              <Button variant="outline" onClick={() => setConfirmDelete(true)} className="text-destructive">
+                <Trash2 className="h-4 w-4 mr-2" /> Delete
+              </Button>
+            </div>
+          </div>
+        )}
 
       <div className="rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between mb-4">
