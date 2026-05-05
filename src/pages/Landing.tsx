@@ -141,29 +141,56 @@ const Landing = () => {
       </section>
 
       {/* HOW IT WORKS */}
-      <section id="how" className="container py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight">How It Works</h2>
+      <section id="how" className="container py-24">
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground mb-4">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            Simple 3-step process
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
+            How It <span className="text-gradient">Works</span>
+          </h2>
+          <p className="mt-4 text-muted-foreground max-w-xl mx-auto">From zero to sending messages in under 2 minutes.</p>
         </div>
-        <div className="relative mx-auto max-w-3xl space-y-8">
-          {[
-            { icon: QrCode, title: "Connect Your WhatsApp", desc: "Scan a QR code from your phone to link a session in seconds." },
-            { icon: MessageSquare, title: "Create Your Message", desc: "Build text, media, polls, locations or contacts via the API." },
-            { icon: BarChart3, title: "Send & Analyze", desc: "Track delivery, receipts and webhooks in real time." },
-          ].map((s, i) => (
-            <div key={i} className="flex gap-5 rounded-xl border border-border bg-card p-6">
-              <div className="flex flex-col items-center">
-                <div className="grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary font-bold">{i + 1}</div>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <s.icon className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-lg">{s.title}</h3>
+
+        <div className="relative mx-auto max-w-5xl">
+          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+            {[
+              { icon: QrCode, title: "Connect Your WhatsApp", desc: "Scan a QR code from your phone to link a session in seconds." },
+              { icon: MessageSquare, title: "Create Your Message", desc: "Build text, media, polls, locations or contacts via the API." },
+              { icon: BarChart3, title: "Send & Analyze", desc: "Track delivery, receipts and webhooks in real time." },
+            ].map((s, i) => (
+              <div
+                key={i}
+                className="hiw-card group relative rounded-2xl border border-border bg-card/60 backdrop-blur p-7 overflow-hidden transition-all duration-500 hover:border-primary/50 hover:-translate-y-1 hover:shadow-[0_20px_60px_-20px_hsl(var(--primary)/0.4)]"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              >
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 hiw-shimmer pointer-events-none" />
+                <div className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+
+                <div className="absolute top-5 right-5 text-5xl font-bold text-primary/10 group-hover:text-primary/20 transition-colors leading-none select-none">
+                  0{i + 1}
                 </div>
-                <p className="text-muted-foreground">{s.desc}</p>
+
+                <div className="relative inline-flex">
+                  <div className="hiw-ring relative grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30">
+                    <s.icon className="h-6 w-6 text-primary hiw-icon-float" />
+                  </div>
+                </div>
+
+                <h3 className="mt-6 font-semibold text-xl tracking-tight">{s.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+
+                {i < 2 && (
+                  <div className="hidden md:flex absolute top-1/2 -right-5 -translate-y-1/2 z-10 h-10 w-10 items-center justify-center rounded-full bg-background border border-border text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
+                )}
+
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
