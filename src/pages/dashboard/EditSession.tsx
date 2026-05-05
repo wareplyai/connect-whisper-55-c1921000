@@ -70,8 +70,13 @@ const EditSession = () => {
       if (!form.webhook_url.trim()) { toast.error("Please enter a webhook URL to receive notifications."); return; }
       if (!/^https:\/\//i.test(form.webhook_url.trim())) { toast.error("Webhook URL must start with https://"); return; }
     }
+    let phone: string | null = null;
+    if (num.trim()) {
+      const v = validatePhoneForCountry(num, country);
+      if (!v.ok) { toast.error(v.message || "The phone number field must be a valid number."); return; }
+      phone = `${country.code}${v.digits}`;
+    }
     setSaving(true);
-    const phone = num ? `${country.code}${num.replace(/^\+?/, "")}` : null;
     const { error } = await supabase.from("sessions").update({
       session_name: name,
       phone_number: phone,
