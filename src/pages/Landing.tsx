@@ -194,11 +194,22 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* MESSAGE TYPES */}
-      <section className="container py-20 grid md:grid-cols-2 gap-12 items-center">
+      {/* MESSAGE TYPES + WHATSAPP CHAT MOCKUP */}
+      <section className="container py-24 grid md:grid-cols-2 gap-16 items-center">
         <div>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-6">Every message type, every recipient</h2>
-          <h3 className="text-sm text-muted-foreground uppercase tracking-wider mb-3">Supported Message Types</h3>
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground mb-4">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            Real-time AI conversations
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
+            Every message type, <br />
+            <span className="text-gradient">handled by AI</span>
+          </h2>
+          <p className="text-muted-foreground mb-8 leading-relaxed">
+            WaReply AI auto-replies to your customers across text, image, voice, video and more — in seconds, in their language.
+          </p>
+
+          <h3 className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Supported Message Types</h3>
           <div className="grid grid-cols-2 gap-2 mb-6">
             {[
               { i: MessageSquare, l: "Text" },
@@ -207,33 +218,30 @@ const Landing = () => {
               { i: Mic, l: "Voice" },
               { i: Contact, l: "Contact" },
               { i: MapPin, l: "Location" },
-            ].map((it) => (
-              <div key={it.l} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
-                <it.i className="h-4 w-4 text-primary" />
-                <span className="text-sm">{it.l}</span>
+            ].map((it, idx) => (
+              <div
+                key={it.l}
+                className="wa-feature group flex items-center gap-2.5 rounded-xl border border-border bg-card/60 backdrop-blur px-3 py-2.5 hover:border-primary/50 hover:bg-card transition-all duration-300 hover:-translate-y-0.5"
+                style={{ animationDelay: `${idx * 0.08}s` }}
+              >
+                <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 text-primary group-hover:scale-110 transition-transform">
+                  <it.i className="h-4 w-4" />
+                </div>
+                <span className="text-sm font-medium">{it.l}</span>
               </div>
             ))}
           </div>
-          <h3 className="text-sm text-muted-foreground uppercase tracking-wider mb-3">Supported Senders</h3>
+          <h3 className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Supported Senders</h3>
           <div className="flex gap-2">
             {["Users", "Groups", "Channels"].map((s) => (
-              <span key={s} className="rounded-full border border-border bg-card px-3 py-1 text-sm">{s}</span>
+              <span key={s} className="rounded-full border border-border bg-card px-4 py-1.5 text-sm hover:border-primary/50 transition-colors">{s}</span>
             ))}
           </div>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-6 space-y-3">
-          <div className="flex justify-end">
-            <div className="max-w-[75%] rounded-2xl rounded-tr-sm bg-primary px-4 py-2 text-primary-foreground text-sm">Your order #1289 has shipped 📦</div>
-          </div>
-          <div className="flex justify-start">
-            <div className="max-w-[75%] rounded-2xl rounded-tl-sm bg-card-elevated px-4 py-2 text-sm">Awesome — when will it arrive?</div>
-          </div>
-          <div className="flex justify-end">
-            <div className="max-w-[75%] rounded-2xl rounded-tr-sm bg-primary px-4 py-2 text-primary-foreground text-sm">📍 Tracking: arrives Tuesday by 5pm</div>
-          </div>
-          <div className="flex justify-start">
-            <div className="max-w-[75%] rounded-2xl rounded-tl-sm bg-card-elevated px-4 py-2 text-sm">Perfect, thanks! 🙌</div>
-          </div>
+
+        {/* iPhone mockup with animated WhatsApp chat */}
+        <div className="flex justify-center">
+          <WhatsAppMockup />
         </div>
       </section>
 
