@@ -46,17 +46,38 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
   const [trxId, setTrxId] = useState("");
   const [senderNumber, setSenderNumber] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [verifyState, setVerifyState] = useState<"idle" | "checking" | "approved" | "pending">("idle");
+  const [verifyMessage, setVerifyMessage] = useState("");
   const amount = plan ? (yearly ? plan.price_yearly : plan.price_monthly) : 0;
 
   useEffect(() => {
     if (!open) return;
     setStep(1); setSelected(null); setTrxId(""); setSenderNumber("");
+    setVerifyState("idle"); setVerifyMessage("");
     supabase.from("payment_methods").select("*").eq("is_active", true).then(({ data }) => {
       setMethods((data as Method[]) || []);
     });
   }, [open]);
 
   if (!plan) return null;
+
+  const tryAutoVerify = async (paymentTxId: string) => {
+    setVerifyState("checking");
+    for (let i = 0; i < 6; i++) {
+      const { data, error } = await supabase.functions.invoke("verify-plan-payment", {
+        body: { payment_tx_id: paymentTxId },
+      });
+      if (!error && data?.matched) {
+        setVerifyState("approved");
+        setVerifyMessage(data.message || "Payment auto-verified! Your plan is active.");
+        toast.success("Plan activated!");
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    setVerifyState("pending");
+    setVerifyMessage("SMS not received yet. Your plan will activate automatically as soon as our system receives the bank SMS (usually within a few minutes).");
+  };
 
   const submit = async () => {
     if (!user || !selected) return;
@@ -66,17 +87,18 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
     }
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("payment_transactions").insert({
+      const { data, error } = await supabase.from("payment_transactions").insert({
         user_id: user.id,
         plan: plan.plan_name,
         amount,
         payment_method: selected.method_name,
-        transaction_id: trxId.trim(),
+        transaction_id: trxId.trim().toUpperCase(),
         sender_number: senderNumber.trim(),
         status: "pending",
-      });
+      }).select().single();
       if (error) throw error;
       setStep(4);
+      tryAutoVerify(data.id);
     } catch (e: any) {
       toast.error(e.message || "Failed to submit payment");
     } finally {
@@ -173,7 +195,7 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
                 <Input value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} placeholder="Number you paid from (01XXXXXXXXX)" />
               </div>
               <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/30 p-3 text-xs">
-                ⏳ Your payment will be verified within 1–24 hours. You'll receive a notification once approved.
+                ⚡ Auto-verification: If your bank SMS reaches our system, your plan will activate within seconds. Otherwise it will activate as soon as the SMS arrives (usually a few minutes).
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setStep(2)} className="flex-1" disabled={submitting}>Back</Button>
@@ -186,13 +208,41 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
 
           {step === 4 && (
             <div className="text-center py-6 space-y-3">
-              <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-500/10 text-green-500">
-                <Check className="h-8 w-8" />
-              </div>
-              <h3 className="text-xl font-bold">Payment Submitted!</h3>
-              <p className="text-sm text-muted-foreground">Your payment is under review. We'll activate your plan within 1–24 hours.</p>
-              <p className="text-xs font-mono bg-muted rounded px-3 py-1.5 inline-block">Transaction ID: {trxId}</p>
-              <Button onClick={() => onOpenChange(false)} className="w-full mt-2">Go to Dashboard</Button>
+              {verifyState === "checking" && (
+                <>
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blue-500/10 text-blue-500">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                  <h3 className="text-xl font-bold">Verifying Payment...</h3>
+                  <p className="text-sm text-muted-foreground">Checking for your bank SMS. This may take up to 15 seconds.</p>
+                </>
+              )}
+              {verifyState === "approved" && (
+                <>
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-500/10 text-green-500">
+                    <Check className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-xl font-bold text-green-500">Plan Activated! 🎉</h3>
+                  <p className="text-sm text-muted-foreground">{verifyMessage}</p>
+                </>
+              )}
+              {verifyState === "pending" && (
+                <>
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-yellow-500/10 text-yellow-500">
+                    <Check className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-xl font-bold">Payment Submitted!</h3>
+                  <p className="text-sm text-muted-foreground">{verifyMessage}</p>
+                </>
+              )}
+              <p className="text-xs font-mono bg-muted rounded px-3 py-1.5 inline-block">TrxID: {trxId}</p>
+              <Button
+                onClick={() => { onOpenChange(false); if (verifyState === "approved") window.location.reload(); }}
+                className="w-full mt-2"
+                disabled={verifyState === "checking"}
+              >
+                {verifyState === "approved" ? "Go to Dashboard" : "Close"}
+              </Button>
             </div>
           )}
         </div>

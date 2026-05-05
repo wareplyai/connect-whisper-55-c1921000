@@ -86,14 +86,15 @@ Deno.serve(async (req) => {
       throw insErr;
     }
 
-    // Auto-match pending order
+    let matched = false;
+
+    // Auto-match pending orders (one-off products)
     const { data: orders } = await supabase
       .from("orders")
       .select("*")
       .eq("transaction_id", transaction_id)
       .eq("status", "pending");
 
-    let matched = false;
     if (orders && orders.length > 0) {
       for (const order of orders) {
         if (Math.abs(Number(order.amount) - Number(amount || 0)) <= 10) {
@@ -104,6 +105,53 @@ Deno.serve(async (req) => {
           await supabase.from("sms_transactions").update({ is_used: true }).eq("transaction_id", transaction_id);
           matched = true;
         }
+      }
+    }
+
+    // Auto-match pending plan payment_transactions (subscriptions)
+    const USD_TO_BDT = 122;
+    const { data: ptxs } = await supabase
+      .from("payment_transactions")
+      .select("*")
+      .eq("transaction_id", transaction_id)
+      .eq("status", "pending");
+
+    if (ptxs && ptxs.length > 0) {
+      for (const ptx of ptxs) {
+        const expectedBdt = Number(ptx.amount) * USD_TO_BDT;
+        if (amount && Math.abs(Number(amount) - expectedBdt) > 50) continue;
+
+        const { data: plan } = await supabase
+          .from("plan_pricing").select("*").eq("plan_name", ptx.plan).maybeSingle();
+        if (!plan) continue;
+
+        await supabase.from("payment_transactions").update({
+          status: "approved",
+          reviewed_at: new Date().toISOString(),
+          admin_note: "Auto-verified via SMS",
+        }).eq("id", ptx.id);
+        await supabase.from("sms_transactions").update({ is_used: true }).eq("transaction_id", transaction_id);
+
+        const { data: existing } = await supabase
+          .from("subscriptions").select("id").eq("user_id", ptx.user_id)
+          .order("created_at", { ascending: false }).limit(1).maybeSingle();
+        if (existing) {
+          await supabase.from("subscriptions").update({
+            plan: ptx.plan, max_sessions: plan.max_sessions, status: "active",
+          }).eq("id", existing.id);
+        } else {
+          await supabase.from("subscriptions").insert({
+            user_id: ptx.user_id, plan: ptx.plan, max_sessions: plan.max_sessions, status: "active",
+          });
+        }
+        await supabase.from("profiles").update({
+          plan: ptx.plan, max_sessions: plan.max_sessions,
+        }).eq("id", ptx.user_id);
+        await supabase.from("sales").insert({
+          user_id: ptx.user_id, plan: ptx.plan, amount: ptx.amount,
+          payment_method: ptx.payment_method, payment_status: "paid",
+        });
+        matched = true;
       }
     }
 
