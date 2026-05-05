@@ -134,15 +134,12 @@ const Plans = () => {
                     if (isCurrent) return;
                     if (p.plan_name === "trial") {
                       if (!user) return;
-                      const now = new Date();
-                      const ends = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-                      await supabase.from("subscriptions").insert({
-                        user_id: user.id, plan: "trial", max_sessions: p.max_sessions,
-                        status: "trial_active",
-                        trial_started_at: now.toISOString(), trial_ends_at: ends.toISOString(),
-                      });
-                      await supabase.from("profiles").update({ plan: "trial", max_sessions: p.max_sessions }).eq("id", user.id);
-                      toast.success(`Trial started! Ends on ${ends.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`);
+                      const { data, error } = await supabase.rpc("start_user_trial");
+                      if (error) { toast.error(error.message); return; }
+                      const sub: any = Array.isArray(data) ? data[0] : data;
+                      const ends = sub?.trial_ends_at ? new Date(sub.trial_ends_at) : null;
+                      if (!ends) { toast.error("Failed to start trial. Please try again."); return; }
+                      toast.success(`Trial started! Ends on ${ends.toLocaleString()}`);
                       window.location.href = "/trial-started";
                       return;
                     }
