@@ -13,8 +13,8 @@ import { Label } from "@/components/ui/label";
 import { MoreVertical, Download, Plus, Eye, Pencil, Ban, CheckCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-const PLANS = ["trial", "basic", "pro", "plus", "business"];
-const PLAN_SESSIONS: Record<string, number> = { trial: 1, basic: 2, pro: 5, plus: 10, business: 25 };
+const PLANS = ["free", "trial", "basic", "pro", "plus", "business"];
+const PLAN_SESSIONS: Record<string, number> = { free: 0, trial: 1, basic: 2, pro: 5, plus: 10, business: 25 };
 
 export default function AllUsers() {
   const [users, setUsers] = useState<any[]>([]);
