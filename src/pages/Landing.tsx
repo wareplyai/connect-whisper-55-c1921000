@@ -180,28 +180,64 @@ const Landing = () => {
       <Navbar />
 
       {/* HERO */}
-      <section className="relative overflow-hidden">
-        {/* Adaptive gradient background (works for both themes) */}
-        <div className="absolute inset-0 -z-20 bg-background" />
-        <div className="absolute inset-0 -z-20 dark:bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,hsl(142_70%_18%)_0%,hsl(160_45%_8%)_45%,hsl(215_28%_5%)_100%)] bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,hsl(142_70%_92%)_0%,hsl(160_50%_97%)_45%,hsl(210_30%_99%)_100%)]" />
-        {/* Soft top light streak */}
-        <div className="absolute top-0 right-1/4 -z-10 h-[400px] w-[600px] rotate-[20deg] bg-gradient-to-b from-primary/15 via-primary/5 to-transparent blur-3xl" />
-        {/* Faint grid in bottom-left corner */}
+      <section className="relative overflow-hidden isolate">
+        {/* Base background */}
+        <div className="absolute inset-0 -z-30 bg-background" />
+
+        {/* Premium aurora gradient (theme-aware) */}
+        <div className="absolute inset-0 -z-30 dark:bg-[radial-gradient(ellipse_100%_70%_at_50%_-10%,hsl(142_75%_22%)_0%,hsl(160_55%_10%)_40%,hsl(215_30%_5%)_75%,hsl(215_28%_4%)_100%)] bg-[radial-gradient(ellipse_100%_70%_at_50%_-10%,hsl(142_75%_90%)_0%,hsl(160_55%_96%)_40%,hsl(210_30%_99%)_100%)]" />
+
+        {/* Conic shimmer accent */}
+        <div className="pointer-events-none absolute -top-40 left-1/2 -z-20 h-[700px] w-[1200px] -translate-x-1/2 opacity-60 dark:opacity-70 [background:conic-gradient(from_180deg_at_50%_50%,transparent_0deg,hsl(var(--primary)/0.18)_60deg,transparent_120deg,hsl(160_70%_50%/0.12)_240deg,transparent_320deg)] blur-3xl" />
+
+        {/* Premium mesh grid with radial mask */}
         <div
-          className="absolute bottom-0 left-0 -z-10 h-[340px] w-[340px] opacity-30"
+          className="absolute inset-0 -z-20 opacity-[0.35] dark:opacity-[0.22]"
           style={{
             backgroundImage:
-              "linear-gradient(hsl(var(--primary)/0.18) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)/0.18) 1px, transparent 1px)",
-            backgroundSize: "32px 32px",
+              "linear-gradient(hsl(var(--primary)/0.22) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)/0.22) 1px, transparent 1px)",
+            backgroundSize: "56px 56px",
             maskImage:
-              "radial-gradient(ellipse at bottom left, black 0%, transparent 70%)",
+              "radial-gradient(ellipse 70% 60% at 50% 35%, black 0%, transparent 80%)",
             WebkitMaskImage:
-              "radial-gradient(ellipse at bottom left, black 0%, transparent 70%)",
+              "radial-gradient(ellipse 70% 60% at 50% 35%, black 0%, transparent 80%)",
           }}
         />
-        {/* Glow orbs */}
-        <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-[500px] w-[900px] rounded-full bg-primary/15 blur-[160px]" />
-        <div className="pointer-events-none absolute top-1/2 -right-40 h-[360px] w-[360px] rounded-full bg-primary/10 blur-[140px]" />
+
+        {/* Dotted texture overlay */}
+        <div
+          className="absolute inset-0 -z-20 opacity-40 dark:opacity-30"
+          style={{
+            backgroundImage:
+              "radial-gradient(hsl(var(--primary)/0.35) 1px, transparent 1px)",
+            backgroundSize: "22px 22px",
+            maskImage:
+              "radial-gradient(ellipse 60% 40% at 50% 100%, black 0%, transparent 75%)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse 60% 40% at 50% 100%, black 0%, transparent 75%)",
+          }}
+        />
+
+        {/* Floating glow orbs */}
+        <div className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-[560px] w-[1000px] -translate-x-1/2 rounded-full bg-primary/20 blur-[180px] animate-pulse [animation-duration:6s]" />
+        <div className="pointer-events-none absolute top-1/3 -left-48 -z-10 h-[420px] w-[420px] rounded-full bg-[hsl(160_70%_45%/0.18)] blur-[160px] animate-pulse [animation-duration:8s]" />
+        <div className="pointer-events-none absolute top-1/2 -right-48 -z-10 h-[420px] w-[420px] rounded-full bg-[hsl(142_70%_55%/0.15)] blur-[160px] animate-pulse [animation-duration:7s]" />
+
+        {/* Diagonal light streaks */}
+        <div className="pointer-events-none absolute top-0 right-1/4 -z-10 h-[500px] w-[700px] rotate-[18deg] bg-gradient-to-b from-primary/20 via-primary/5 to-transparent blur-3xl" />
+        <div className="pointer-events-none absolute top-20 left-1/4 -z-10 h-[400px] w-[500px] -rotate-[15deg] bg-gradient-to-b from-[hsl(160_70%_50%/0.15)] via-transparent to-transparent blur-3xl" />
+
+        {/* Subtle noise / grain for premium feel */}
+        <div
+          className="pointer-events-none absolute inset-0 -z-10 opacity-[0.08] mix-blend-overlay"
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E\")",
+          }}
+        />
+
+        {/* Bottom fade to blend into next section */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-b from-transparent to-background" />
 
         <div className="container relative py-28 md:py-36 text-center">
           {/* Premium top badge */}
