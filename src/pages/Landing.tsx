@@ -247,18 +247,56 @@ const Landing = () => {
       </section>
 
       {/* USE CASES */}
-      <section className="container py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight">Built for every use case</h2>
+      <section className="relative container py-24">
+        <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 h-72 w-72 rounded-full bg-primary/10 blur-[120px]" />
+          <div className="absolute bottom-1/4 right-1/4 h-72 w-72 rounded-full bg-primary/5 blur-[120px]" />
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {useCases.map((u) => (
-            <div key={u.title} className="rounded-xl border border-border bg-card p-6 hover:border-primary/40 transition-colors">
-              <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary mb-4">
-                <u.icon className="h-5 w-5" />
+
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground mb-4">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            Use cases
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
+            Built for <span className="text-gradient">every use case</span>
+          </h2>
+          <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
+            From customer support to advanced analytics — power any workflow with one API.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {useCases.map((u, i) => (
+            <div
+              key={u.title}
+              className="group relative rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-7 overflow-hidden transition-all duration-500 hover:border-primary/50 hover:-translate-y-1 hover:shadow-[0_20px_60px_-20px_hsl(var(--primary)/0.4)]"
+            >
+              {/* gradient border glow on hover */}
+              <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                style={{ background: "radial-gradient(600px circle at var(--x,50%) var(--y,0%), hsl(var(--primary)/0.08), transparent 40%)" }}
+              />
+              <div className="absolute -top-20 -right-20 h-44 w-44 rounded-full bg-primary/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+
+              <div className="absolute top-5 right-5 text-5xl font-bold text-primary/10 group-hover:text-primary/20 transition-colors leading-none select-none">
+                0{i + 1}
               </div>
-              <h3 className="font-semibold mb-1">{u.title}</h3>
-              <p className="text-sm text-muted-foreground">{u.desc}</p>
+
+              <div className="relative inline-flex">
+                <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="relative grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary/25 to-primary/5 border border-primary/30 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
+                  <u.icon className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+
+              <h3 className="mt-6 font-semibold text-lg tracking-tight">{u.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{u.desc}</p>
+
+              <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-medium text-primary opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500">
+                Learn more <ArrowRight className="h-3.5 w-3.5" />
+              </div>
+
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
             </div>
           ))}
         </div>
