@@ -11,7 +11,7 @@ import { ArrowLeft, ChevronDown, QrCode, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { backendApi } from "@/lib/backend";
 import { CountryCodeSelect } from "@/components/CountryCodeSelect";
-import { DEFAULT_COUNTRY, Country } from "@/lib/countries";
+import { DEFAULT_COUNTRY, Country, validatePhoneForCountry } from "@/lib/countries";
 
 const ALL_EVENTS = [
   "messages.received","messages-group.received","messages-newsletter.received","messages-personal.received",
@@ -64,18 +64,13 @@ const CreateSession = () => {
       return;
     }
 
-    // Phone validation
-    const cleaned = phoneNum.trim().replace(/\s|-/g, "");
-    if (cleaned.startsWith("+") && !cleaned.startsWith(country.code)) {
-      toast.error("Please include your country code (e.g., +880 for Bangladesh, +1 for US)");
+    // Phone validation (country-specific)
+    const v = validatePhoneForCountry(phoneNum, country);
+    if (!v.ok) {
+      toast.error(v.message || "The phone number field must be a valid number.");
       return;
     }
-    const digits = cleaned.replace(/^\+/, "").replace(country.code.replace("+",""), "");
-    if (!/^\d{6,15}$/.test(cleaned.replace(/^\+/, ""))) {
-      toast.error("Please enter a valid phone number with country code.");
-      return;
-    }
-    const fullPhone = `${country.code}${digits}`;
+    const fullPhone = `${country.code}${v.digits}`;
 
     // Webhook validation
     if (form.enable_webhook) {
@@ -149,7 +144,8 @@ const CreateSession = () => {
     }
   };
 
-  const showCcWarning = phoneNum.trim().length > 0 && !phoneNum.trim().startsWith("+");
+  const phoneCheck = phoneNum.trim() ? validatePhoneForCountry(phoneNum, country) : null;
+  const showPhoneError = !!phoneCheck && !phoneCheck.ok;
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -178,13 +174,13 @@ const CreateSession = () => {
                 value={phoneNum}
                 onChange={(e) => setPhoneNum(e.target.value)}
                 placeholder="1712345678"
-                className="flex-1"
+                className={`flex-1 ${showPhoneError ? "border-destructive focus-visible:ring-destructive" : ""}`}
               />
             </div>
-            {showCcWarning && (
-              <p className="mt-1.5 text-xs text-warning flex items-start gap-1.5">
+            {showPhoneError && (
+              <p className="mt-1.5 text-xs text-destructive flex items-start gap-1.5">
                 <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                Please include your country code (e.g., +880 for Bangladesh, +1 for US)
+                The phone number field must be a valid number.
               </p>
             )}
           </div>

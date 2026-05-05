@@ -9,7 +9,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ArrowLeft, ChevronDown, Edit, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { CountryCodeSelect } from "@/components/CountryCodeSelect";
-import { splitPhone, DEFAULT_COUNTRY, Country } from "@/lib/countries";
+import { splitPhone, DEFAULT_COUNTRY, Country, validatePhoneForCountry } from "@/lib/countries";
+import { AlertCircle } from "lucide-react";
 
 const ALL_EVENTS = [
   "messages.received","messages-group.received","messages-newsletter.received","messages-personal.received",
@@ -69,8 +70,13 @@ const EditSession = () => {
       if (!form.webhook_url.trim()) { toast.error("Please enter a webhook URL to receive notifications."); return; }
       if (!/^https:\/\//i.test(form.webhook_url.trim())) { toast.error("Webhook URL must start with https://"); return; }
     }
+    let phone: string | null = null;
+    if (num.trim()) {
+      const v = validatePhoneForCountry(num, country);
+      if (!v.ok) { toast.error(v.message || "The phone number field must be a valid number."); return; }
+      phone = `${country.code}${v.digits}`;
+    }
     setSaving(true);
-    const phone = num ? `${country.code}${num.replace(/^\+?/, "")}` : null;
     const { error } = await supabase.from("sessions").update({
       session_name: name,
       phone_number: phone,
@@ -111,8 +117,19 @@ const EditSession = () => {
             <Label>Phone Number</Label>
             <div className="flex gap-2 mt-1.5">
               <CountryCodeSelect value={country} onChange={setCountry} />
-              <Input value={num} onChange={(e) => setNum(e.target.value)} placeholder="234567890" className="flex-1" />
+              <Input
+                value={num}
+                onChange={(e) => setNum(e.target.value)}
+                placeholder="234567890"
+                className={`flex-1 ${num.trim() && !validatePhoneForCountry(num, country).ok ? "border-destructive focus-visible:ring-destructive" : ""}`}
+              />
             </div>
+            {num.trim() && !validatePhoneForCountry(num, country).ok && (
+              <p className="mt-1.5 text-xs text-destructive flex items-start gap-1.5">
+                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                The phone number field must be a valid number.
+              </p>
+            )}
           </div>
         </div>
 
