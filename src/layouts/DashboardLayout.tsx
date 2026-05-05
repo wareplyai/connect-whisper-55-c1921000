@@ -15,7 +15,7 @@ const nav = [
 ];
 
 const resources = [
-  { to: "#", label: "Documentation", icon: BookOpen },
+  { to: "/docs", label: "Documentation", icon: BookOpen },
   { to: "#", label: "Need Help?", icon: HelpCircle },
   { to: "#", label: "Contact Us", icon: Phone },
 ];
