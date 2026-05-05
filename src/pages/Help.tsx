@@ -83,7 +83,7 @@ function CategoryCard({ cat, delay }: { cat: Category; delay: number }) {
 
   return (
     <div
-      className="group relative rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary/60 hover:shadow-[0_0_30px_hsl(var(--primary)/0.25)] animate-fade-in"
+      className="group relative flex h-full flex-col rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary/60 hover:shadow-[0_0_30px_hsl(var(--primary)/0.25)] animate-fade-in"
       style={{ animationDelay: `${delay}ms`, animationFillMode: "both" }}
     >
       <div className="mb-4 flex items-center gap-3">
@@ -111,7 +111,7 @@ function CategoryCard({ cat, delay }: { cat: Category; delay: number }) {
         ))}
       </ul>
 
-      <div className="mt-5 flex items-center justify-between">
+      <div className="mt-auto flex items-center justify-between pt-5">
         {hasMore ? (
           <button
             onClick={() => setExpanded((v) => !v)}
@@ -190,7 +190,7 @@ export default function Help() {
         {filtered.length === 0 ? (
           <p className="text-center text-muted-foreground">No articles found for "{query}".</p>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 auto-rows-fr items-stretch">
             {filtered.map((cat, i) => (
               <CategoryCard key={cat.title} cat={cat} delay={i * 80} />
             ))}
