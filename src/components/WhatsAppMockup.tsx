@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
-import { Check, CheckCheck, Mic, Camera, Paperclip, Smile, Send, Phone, Video, ArrowLeft, MoreVertical, BadgeCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CheckCheck, Mic, Camera, Paperclip, Smile, Video, ArrowLeft, MoreVertical, BadgeCheck } from "lucide-react";
+import wareplyLogo from "@/assets/wareply-logo.png";
+import productImg from "@/assets/product-headphones.png";
 
 type MsgType = "text" | "image" | "voice" | "video" | "ai-text" | "ai-voice" | "typing";
 interface Msg {
@@ -27,6 +29,7 @@ const script: Msg[] = [
 
 export const WhatsAppMockup = () => {
   const [visible, setVisible] = useState<Msg[]>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,6 +50,11 @@ export const WhatsAppMockup = () => {
         if (i >= script.length) {
           await wait(2500);
           if (!cancelled) {
+            // smooth scroll back to top before restart
+            if (scrollRef.current) {
+              scrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+            }
+            await wait(1200);
             setVisible([]);
             i = 0;
           }
@@ -56,6 +64,16 @@ export const WhatsAppMockup = () => {
     tick();
     return () => { cancelled = true; };
   }, []);
+
+  // Auto scroll to bottom when a new message appears
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [visible]);
 
   return (
     <div className="relative">
@@ -79,8 +97,8 @@ export const WhatsAppMockup = () => {
           <div className="bg-[#1f2c33] pt-9 pb-2 px-3 flex items-center gap-2.5 z-20 shadow-md">
             <ArrowLeft className="h-5 w-5 text-white/80" />
             <div className="relative">
-              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/60 grid place-items-center text-black font-bold text-sm">
-                W
+              <div className="h-9 w-9 rounded-full bg-white overflow-hidden grid place-items-center shrink-0">
+                <img src={wareplyLogo} alt="WaReply AI" className="h-full w-full object-cover" />
               </div>
               <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-primary border-2 border-[#1f2c33]" />
             </div>
@@ -92,12 +110,14 @@ export const WhatsAppMockup = () => {
               <div className="text-[10px] text-white/60">online · typing instantly</div>
             </div>
             <Video className="h-5 w-5 text-white/80" />
-            <Phone className="h-4 w-4 text-white/80" />
             <MoreVertical className="h-5 w-5 text-white/80" />
           </div>
 
           {/* Chat area */}
-          <div className="wa-bg flex-1 overflow-hidden px-3 py-3 flex flex-col gap-1.5">
+          <div
+            ref={scrollRef}
+            className="wa-bg flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 flex flex-col gap-1.5 scroll-smooth wa-scroll"
+          >
             <div className="text-center my-1">
               <span className="bg-[#182229] text-[10px] text-white/60 px-2.5 py-1 rounded-md">TODAY</span>
             </div>
@@ -146,9 +166,8 @@ const ChatBubble = ({ msg }: { msg: Msg }) => {
   if (msg.type === "image") {
     return (
       <div className={`${base} ${tail} p-1`}>
-        <div className="h-32 w-44 rounded-xl bg-gradient-to-br from-primary/40 via-purple-500/30 to-primary/20 grid place-items-center overflow-hidden relative">
-          <Camera className="h-8 w-8 text-white/80" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+        <div className="h-40 w-48 rounded-xl bg-white grid place-items-center overflow-hidden relative">
+          <img src={productImg} alt="Product" className="h-full w-full object-contain p-2" />
         </div>
         {msg.caption && <div className="px-1.5 pt-1 text-[12px]">{msg.caption}</div>}
         <Meta time={msg.time} isOut={isOut} />
@@ -192,7 +211,6 @@ const ChatBubble = ({ msg }: { msg: Msg }) => {
     );
   }
 
-  // text / ai-text
   return (
     <div className={`${base} ${tail} pr-12`}>
       <span dangerouslySetInnerHTML={{ __html: (msg.content || "").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>") }} />
