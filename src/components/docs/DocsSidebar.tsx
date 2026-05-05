@@ -24,7 +24,7 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
 
 
   return (
-    <aside className="flex h-full w-full flex-col border-r bg-[#161b22]">
+    <aside className="flex h-full w-full flex-col border-r bg-card">
       <DocsSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
       <div className="border-b p-3">
         <div className="mb-2 flex items-center justify-between">
