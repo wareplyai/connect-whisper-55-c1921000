@@ -12,8 +12,12 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const filtered = navigation;
 
   useEffect(() => {
-    const el = navRef.current?.querySelector<HTMLElement>("a[aria-current='page']");
-    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+    const nav = navRef.current;
+    const el = nav?.querySelector<HTMLElement>("a[aria-current='page']");
+    if (nav && el) {
+      const top = el.offsetTop - 12;
+      nav.scrollTo({ top, behavior: "smooth" });
+    }
   }, [location.pathname]);
 
 
