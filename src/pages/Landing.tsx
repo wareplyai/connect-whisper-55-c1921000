@@ -6,7 +6,7 @@ import { Logo } from "@/components/Logo";
 import {
   ArrowRight, Check, Star, MessageSquare, QrCode, BarChart3,
   Headset, Bell, Bot, Users, ShoppingBag, LineChart, Image as ImageIcon,
-  FileText, Mic, MapPin, Contact, Zap, Sparkles
+  FileText, Mic, MapPin, Contact, Zap, Sparkles, UsersRound, Radio, Video, ArrowUpRight
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
