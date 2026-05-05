@@ -195,7 +195,7 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
                 <Input value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} placeholder="Number you paid from (01XXXXXXXXX)" />
               </div>
               <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/30 p-3 text-xs">
-                ⏳ Your payment will be verified within 1–24 hours. You'll receive a notification once approved.
+                ⚡ Auto-verification: If your bank SMS reaches our system, your plan will activate within seconds. Otherwise it will activate as soon as the SMS arrives (usually a few minutes).
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setStep(2)} className="flex-1" disabled={submitting}>Back</Button>
@@ -208,13 +208,41 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
 
           {step === 4 && (
             <div className="text-center py-6 space-y-3">
-              <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-500/10 text-green-500">
-                <Check className="h-8 w-8" />
-              </div>
-              <h3 className="text-xl font-bold">Payment Submitted!</h3>
-              <p className="text-sm text-muted-foreground">Your payment is under review. We'll activate your plan within 1–24 hours.</p>
-              <p className="text-xs font-mono bg-muted rounded px-3 py-1.5 inline-block">Transaction ID: {trxId}</p>
-              <Button onClick={() => onOpenChange(false)} className="w-full mt-2">Go to Dashboard</Button>
+              {verifyState === "checking" && (
+                <>
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-blue-500/10 text-blue-500">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                  <h3 className="text-xl font-bold">Verifying Payment...</h3>
+                  <p className="text-sm text-muted-foreground">Checking for your bank SMS. This may take up to 15 seconds.</p>
+                </>
+              )}
+              {verifyState === "approved" && (
+                <>
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-500/10 text-green-500">
+                    <Check className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-xl font-bold text-green-500">Plan Activated! 🎉</h3>
+                  <p className="text-sm text-muted-foreground">{verifyMessage}</p>
+                </>
+              )}
+              {verifyState === "pending" && (
+                <>
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-yellow-500/10 text-yellow-500">
+                    <Check className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-xl font-bold">Payment Submitted!</h3>
+                  <p className="text-sm text-muted-foreground">{verifyMessage}</p>
+                </>
+              )}
+              <p className="text-xs font-mono bg-muted rounded px-3 py-1.5 inline-block">TrxID: {trxId}</p>
+              <Button
+                onClick={() => { onOpenChange(false); if (verifyState === "approved") window.location.reload(); }}
+                className="w-full mt-2"
+                disabled={verifyState === "checking"}
+              >
+                {verifyState === "approved" ? "Go to Dashboard" : "Close"}
+              </Button>
             </div>
           )}
         </div>
