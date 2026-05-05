@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Navbar = () => {
   return (
@@ -17,6 +18,7 @@ export const Navbar = () => {
           <a href="#faq" className="hover:text-foreground transition-colors">Help</a>
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Button asChild variant="outline" size="sm">
             <Link to="/login">Login</Link>
           </Button>
