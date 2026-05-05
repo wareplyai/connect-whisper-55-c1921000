@@ -83,8 +83,18 @@ const Landing = () => {
   const [tab, setTab] = useState("JS");
   const [yearly, setYearly] = useState(false);
   const [currency, setCurrency] = useState<"USD" | "BDT">("USD");
+  const [plans, setPlans] = useState<DbPlan[]>([]);
   const fmtPrice = (usd: number) =>
-    currency === "USD" ? `$${usd}` : `৳${Math.round(usd * USD_TO_BDT)}`;
+    currency === "USD" ? `$${usd.toFixed(usd % 1 === 0 ? 0 : 2)}` : `৳${Math.round(usd * USD_TO_BDT)}`;
+
+  useEffect(() => {
+    supabase
+      .from("plan_pricing")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order")
+      .then(({ data }) => setPlans((data as DbPlan[]) || []));
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
