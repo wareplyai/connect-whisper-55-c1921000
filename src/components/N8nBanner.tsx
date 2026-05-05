@@ -30,14 +30,12 @@ export const N8nBanner = () => {
             Use our official WareplyAI n8n community node to send messages, handle webhooks, and manage sessions without manual HTTP requests. Faster setup, fewer errors, and built for production workflows.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <a
-              href="https://docs.n8n.io/integrations/community-nodes/"
-              target="_blank"
-              rel="noreferrer"
+            <Link
+              to="/docs"
               className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-card-elevated"
             >
               view docs →
-            </a>
+            </Link>
             <a
               href="https://www.npmjs.com/"
               target="_blank"
