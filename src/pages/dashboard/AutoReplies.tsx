@@ -156,6 +156,7 @@ const AutoReplies = () => {
       toast.error("Create a rule first");
       return;
     }
+    if (turnOn) await disableAIIfOn();
     const { error } = await supabase
       .from("auto_reply_rules")
       .update({ is_active: turnOn })
