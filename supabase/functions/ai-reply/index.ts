@@ -149,7 +149,9 @@ function collectPhoneCandidates(value: unknown, out: string[], depth = 0): void 
 
   const candidateKeys = new Set([
     "customer", "customer_number", "customernumber", "from", "from_number", "fromnumber",
-    "sender", "participant", "author", "remotejid", "remote_jid", "chatid", "chat_id", "jid",
+    "sender", "senderpn", "sender_pn", "participant", "participantalt", "participant_alt",
+    "author", "remotejid", "remote_jid", "remotejidalt", "remote_jid_alt",
+    "chatid", "chat_id", "jid",
   ]);
 
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
