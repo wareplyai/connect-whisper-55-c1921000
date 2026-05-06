@@ -45,6 +45,8 @@ const empty: Partial<Rule> = {
   is_active: true,
   priority: 0,
   session_id: null,
+  category: "",
+  description: "",
 };
 
 const AutoReplies = () => {
