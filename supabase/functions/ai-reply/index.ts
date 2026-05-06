@@ -19,15 +19,20 @@ async function getCryptoKey(): Promise<CryptoKey> {
   return crypto.subtle.importKey("raw", hash, { name: "AES-GCM" }, false, ["decrypt"]);
 }
 function b64decode(s: string): Uint8Array {
-  return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const binary = atob(s);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
 }
 async function decryptKey(payload: string): Promise<string> {
   const [ivB64, ctB64] = payload.split(".");
   const key = await getCryptoKey();
+  const iv = b64decode(ivB64) as BufferSource;
+  const ciphertext = b64decode(ctB64) as BufferSource;
   const pt = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: b64decode(ivB64) },
+    { name: "AES-GCM", iv },
     key,
-    b64decode(ctB64)
+    ciphertext
   );
   return dec.decode(pt);
 }
@@ -123,6 +128,15 @@ function numberFromValue(value: unknown): string | null {
   const beforeAt = text.includes("@") ? text.split("@")[0] : text;
   const digits = beforeAt.replace(/\D/g, "");
   return digits.length >= 8 && digits.length <= 16 ? digits : null;
+}
+
+export function looksLikeCustomerPhone(value: unknown): boolean {
+  const digits = digitsOnly(value);
+  if (!digits) return false;
+  if (digits.startsWith("8801") && digits.length === 13) return true;
+  if (digits.startsWith("01") && digits.length === 11) return true;
+  if (digits.startsWith("1") && digits.length === 10) return true;
+  return digits.length >= 10 && digits.length <= 15 && !/^(23|52)\d{12,14}$/.test(digits);
 }
 
 function collectPhoneCandidates(value: unknown, out: string[], depth = 0): void {
@@ -252,6 +266,21 @@ Deno.serve(async (req) => {
     const fromNumber = resolveCustomerNumber(body, session.phone_number);
     if (!fromNumber) {
       return jsonResp({ error: "customer number required" }, 400);
+    }
+    if (!looksLikeCustomerPhone(fromNumber)) {
+      if (sourceMessageId) {
+        await admin.from("incoming_messages").update({
+          delivery_status: "failed",
+          reply_error: `Invalid customer number from webhook payload: ${fromNumber}`,
+          processed_at: new Date().toISOString(),
+        }).eq("id", sourceMessageId);
+      }
+      return jsonResp({
+        ok: false,
+        error: "invalid_customer_number",
+        detail: "Webhook payload is sending a Baileys message id instead of the customer WhatsApp number. Send key.remoteJid/participant as from_number.",
+        from: fromNumber,
+      }, 422);
     }
     if (samePhone(fromNumber, session.phone_number)) {
       return jsonResp({ ok: true, skipped: "own_session_number", from: fromNumber });
