@@ -21,6 +21,8 @@ type Rule = {
   priority: number;
   match_count: number;
   session_id: string | null;
+  category: string | null;
+  description: string | null;
 };
 
 type Session = { id: string; session_name: string };
@@ -43,6 +45,8 @@ const empty: Partial<Rule> = {
   is_active: true,
   priority: 0,
   session_id: null,
+  category: "",
+  description: "",
 };
 
 const AutoReplies = () => {
@@ -94,6 +98,8 @@ const AutoReplies = () => {
       is_active: editing.is_active ?? true,
       priority: Number(editing.priority) || 0,
       session_id: editing.session_id || null,
+      category: editing.category || null,
+      description: editing.description || null,
       user_id: profile.id,
     };
 
@@ -156,6 +162,8 @@ const AutoReplies = () => {
                       <span className="px-2 py-0.5 rounded-full text-xs bg-muted text-muted-foreground">● Paused</span>
                     )}
                     <span className="px-2 py-0.5 rounded-full text-xs bg-muted text-muted-foreground capitalize">{r.match_type}</span>
+                    {r.category && <span className="px-2 py-0.5 rounded-full text-xs bg-accent text-accent-foreground">{r.category}</span>}
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-muted text-muted-foreground">{r.session_id ? (sessions.find(s=>s.id===r.session_id)?.session_name || "Session") : "All sessions"}</span>
                     <span className="text-xs text-muted-foreground">Matched: {r.match_count}</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 mt-2">
@@ -224,6 +232,16 @@ const AutoReplies = () => {
                   {sessions.map((s) => <SelectItem key={s.id} value={s.id}>{s.session_name}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Business Category</Label>
+                <Input value={editing.category || ""} onChange={(e) => setEditing({ ...editing, category: e.target.value })} placeholder="e.g. Restaurant, Shop, Clinic" />
+              </div>
+              <div>
+                <Label>Internal Note</Label>
+                <Input value={editing.description || ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} placeholder="Optional description" />
+              </div>
             </div>
             <div>
               <Label>Reply Message</Label>
