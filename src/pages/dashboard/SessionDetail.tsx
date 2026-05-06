@@ -218,11 +218,15 @@ const SessionDetail = () => {
         { event: "*", schema: "public", table: "message_logs", filter: `session_id=eq.${id}` },
         () => { if (page === 0) loadLogs(0); else loadLogs(page); }
       )
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "incoming_messages", filter: `session_id=eq.${id}` },
+        () => { if (incomingPage === 0) loadIncoming(0); else loadIncoming(incomingPage); }
+      )
       .subscribe();
     channelRef.current = ch;
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line
-  }, [id, page]);
+  }, [id, page, incomingPage]);
 
   const openEdit = () => {
     if (!s) return;
