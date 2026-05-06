@@ -131,6 +131,23 @@ const AutoReplies = () => {
     else load();
   };
 
+  const allActive = rules.length > 0 && rules.every((r) => r.is_active);
+  const anyActive = rules.some((r) => r.is_active);
+
+  const toggleAll = async (turnOn: boolean) => {
+    if (!profile || rules.length === 0) {
+      toast.error("Create a rule first");
+      return;
+    }
+    const { error } = await supabase
+      .from("auto_reply_rules")
+      .update({ is_active: turnOn })
+      .eq("user_id", profile.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(turnOn ? "All auto-replies turned ON" : "All auto-replies turned OFF");
+    load();
+  };
+
   const remove = async (id: string) => {
     if (!confirm("Delete this rule?")) return;
     const { error } = await supabase.from("auto_reply_rules").delete().eq("id", id);
