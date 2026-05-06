@@ -27,10 +27,12 @@ function b64decode(s: string): Uint8Array {
 async function decryptKey(payload: string): Promise<string> {
   const [ivB64, ctB64] = payload.split(".");
   const key = await getCryptoKey();
+  const iv = b64decode(ivB64) as BufferSource;
+  const ciphertext = b64decode(ctB64) as BufferSource;
   const pt = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: b64decode(ivB64) },
+    { name: "AES-GCM", iv },
     key,
-    b64decode(ctB64)
+    ciphertext
   );
   return dec.decode(pt);
 }
