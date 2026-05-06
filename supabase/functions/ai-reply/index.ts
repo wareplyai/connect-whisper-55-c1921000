@@ -125,6 +125,15 @@ function numberFromValue(value: unknown): string | null {
   return digits.length >= 8 && digits.length <= 16 ? digits : null;
 }
 
+function looksLikeCustomerPhone(value: unknown): boolean {
+  const digits = digitsOnly(value);
+  if (!digits) return false;
+  if (digits.startsWith("8801") && digits.length === 13) return true;
+  if (digits.startsWith("01") && digits.length === 11) return true;
+  if (digits.startsWith("1") && digits.length === 10) return true;
+  return digits.length >= 10 && digits.length <= 15 && !/^(23|52)\d{12,14}$/.test(digits);
+}
+
 function collectPhoneCandidates(value: unknown, out: string[], depth = 0): void {
   if (depth > 5 || value == null) return;
   if (Array.isArray(value)) {
@@ -252,6 +261,21 @@ Deno.serve(async (req) => {
     const fromNumber = resolveCustomerNumber(body, session.phone_number);
     if (!fromNumber) {
       return jsonResp({ error: "customer number required" }, 400);
+    }
+    if (!looksLikeCustomerPhone(fromNumber)) {
+      if (sourceMessageId) {
+        await admin.from("incoming_messages").update({
+          delivery_status: "failed",
+          reply_error: `Invalid customer number from webhook payload: ${fromNumber}`,
+          processed_at: new Date().toISOString(),
+        }).eq("id", sourceMessageId);
+      }
+      return jsonResp({
+        ok: false,
+        error: "invalid_customer_number",
+        detail: "Webhook payload is sending a Baileys message id instead of the customer WhatsApp number. Send key.remoteJid/participant as from_number.",
+        from: fromNumber,
+      }, 422);
     }
     if (samePhone(fromNumber, session.phone_number)) {
       return jsonResp({ ok: true, skipped: "own_session_number", from: fromNumber });
