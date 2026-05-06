@@ -440,99 +440,113 @@ Deno.serve(async (req) => {
 
     const lowerMsg = messageText.toLowerCase();
 
-    // Fixed Q&A — runs regardless of AI on/off
-    const { data: fixed } = await admin
-      .from("fixed_qa")
-      .select("keyword, reply, match_type")
-      .eq("user_id", userId)
-      .eq("is_active", true);
-    const fixedHit = (fixed || []).find((f: any) => {
-      const k = (f.keyword || "").toLowerCase().trim();
-      if (!k) return false;
-      return f.match_type === "contains" ? lowerMsg.includes(k) : lowerMsg === k;
-    });
-    if (fixedHit) {
-      const reply = fixedHit.reply;
-      const sendResult = await sendViaGateway({
-        gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
-      });
-      if (messageId) {
-        await admin.from("incoming_messages").update({
-          reply_text: reply, reply_sent: sendResult.ok,
-          delivery_status: sendResult.ok ? "sent" : "failed",
-          reply_error: sendResult.ok ? null : sendResult.error,
-          processed_at: new Date().toISOString(),
-          reply_attempted_at: new Date().toISOString(),
-          reply_sent_at: sendResult.ok ? new Date().toISOString() : null,
-        }).eq("id", messageId);
-      }
-      if (sendResult.ok) {
-        await admin.from("message_logs").insert({
-          user_id: userId, session_id: sessionId, to_number: sendResult.to,
-          message_type: "text", payload: { text: reply, auto_reply: true, source: "fixed_qa" },
-          status: "sent",
-        });
-      }
-      return jsonResp({ ok: true, reply, sent: sendResult.ok, send_error: sendResult.error, sent_to: sendResult.to, source: "fixed_qa", message_id: messageId });
-    }
-
-    // Keyword auto-reply rules — independent of AI on/off
-    const { data: rules } = await admin
-      .from("auto_reply_rules")
-      .select("id, keywords, match_type, reply_template, session_id, priority, match_count")
-      .eq("user_id", userId)
-      .eq("is_active", true)
-      .order("priority", { ascending: false });
-    const applicableRules = (rules || []).filter((r: any) => !r.session_id || r.session_id === sessionId);
-    const ruleHit = applicableRules.find((r: any) => {
-      const kws: string[] = Array.isArray(r.keywords) ? r.keywords : [];
-      return kws.some((k) => {
-        const kw = String(k || "").toLowerCase().trim();
-        if (!kw) return false;
-        if (r.match_type === "exact") return lowerMsg === kw;
-        if (r.match_type === "starts_with") return lowerMsg.startsWith(kw);
-        return lowerMsg.includes(kw);
-      });
-    });
-    if (ruleHit) {
-      const reply = ruleHit.reply_template;
-      const sendResult = await sendViaGateway({
-        gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
-      });
-      if (messageId) {
-        await admin.from("incoming_messages").update({
-          reply_text: reply, reply_sent: sendResult.ok,
-          delivery_status: sendResult.ok ? "sent" : "failed",
-          reply_error: sendResult.ok ? null : sendResult.error,
-          processed_at: new Date().toISOString(),
-          reply_attempted_at: new Date().toISOString(),
-          reply_sent_at: sendResult.ok ? new Date().toISOString() : null,
-        }).eq("id", messageId);
-      }
-      if (sendResult.ok) {
-        await admin.from("auto_reply_rules")
-          .update({ match_count: (ruleHit.match_count || 0) + 1, last_matched_at: new Date().toISOString() })
-          .eq("id", ruleHit.id);
-        await admin.from("message_logs").insert({
-          user_id: userId, session_id: sessionId, to_number: sendResult.to,
-          message_type: "text", payload: { text: reply, auto_reply: true, source: "keyword_rule", rule_id: ruleHit.id },
-          status: "sent",
-        });
-      }
-      return jsonResp({ ok: true, reply, sent: sendResult.ok, send_error: sendResult.error, sent_to: sendResult.to, source: "keyword_rule", rule_id: ruleHit.id, message_id: messageId });
-    }
-
-    // No keyword/fixed match → AI agent (only if enabled)
-    if (!aiEnabled) {
+    // MUTEX: route based on active_reply_mode
+    if (replyMode === "none") {
       if (messageId) {
         await admin.from("incoming_messages").update({
           delivery_status: "skipped",
-          reply_error: "AI disabled and no keyword rule matched",
+          reply_error: "Reply mode is none — both AI Agent and Auto-Reply are off",
           processed_at: new Date().toISOString(),
         }).eq("id", messageId);
       }
-      return jsonResp({ ok: true, skipped: "ai_disabled_no_rule_match", message_id: messageId });
+      return jsonResp({ ok: true, skipped: "reply_mode_none", message_id: messageId });
     }
+
+    if (autoReplyEnabled) {
+      // Fixed Q&A
+      const { data: fixed } = await admin
+        .from("fixed_qa")
+        .select("keyword, reply, match_type")
+        .eq("user_id", userId)
+        .eq("is_active", true);
+      const fixedHit = (fixed || []).find((f: any) => {
+        const k = (f.keyword || "").toLowerCase().trim();
+        if (!k) return false;
+        return f.match_type === "contains" ? lowerMsg.includes(k) : lowerMsg === k;
+      });
+      if (fixedHit) {
+        const reply = fixedHit.reply;
+        const sendResult = await sendViaGateway({
+          gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
+        });
+        if (messageId) {
+          await admin.from("incoming_messages").update({
+            reply_text: reply, reply_sent: sendResult.ok,
+            delivery_status: sendResult.ok ? "sent" : "failed",
+            reply_error: sendResult.ok ? null : sendResult.error,
+            processed_at: new Date().toISOString(),
+            reply_attempted_at: new Date().toISOString(),
+            reply_sent_at: sendResult.ok ? new Date().toISOString() : null,
+          }).eq("id", messageId);
+        }
+        if (sendResult.ok) {
+          await admin.from("message_logs").insert({
+            user_id: userId, session_id: sessionId, to_number: sendResult.to,
+            message_type: "text", payload: { text: reply, auto_reply: true, source: "fixed_qa" },
+            status: "sent",
+          });
+        }
+        return jsonResp({ ok: true, reply, sent: sendResult.ok, send_error: sendResult.error, sent_to: sendResult.to, source: "fixed_qa", message_id: messageId });
+      }
+
+      // Keyword rules
+      const { data: rules } = await admin
+        .from("auto_reply_rules")
+        .select("id, keywords, match_type, reply_template, session_id, priority, match_count")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .order("priority", { ascending: false });
+      const applicableRules = (rules || []).filter((r: any) => !r.session_id || r.session_id === sessionId);
+      const ruleHit = applicableRules.find((r: any) => {
+        const kws: string[] = Array.isArray(r.keywords) ? r.keywords : [];
+        return kws.some((k) => {
+          const kw = String(k || "").toLowerCase().trim();
+          if (!kw) return false;
+          if (r.match_type === "exact") return lowerMsg === kw;
+          if (r.match_type === "starts_with") return lowerMsg.startsWith(kw);
+          return lowerMsg.includes(kw);
+        });
+      });
+      if (ruleHit) {
+        const reply = ruleHit.reply_template;
+        const sendResult = await sendViaGateway({
+          gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
+        });
+        if (messageId) {
+          await admin.from("incoming_messages").update({
+            reply_text: reply, reply_sent: sendResult.ok,
+            delivery_status: sendResult.ok ? "sent" : "failed",
+            reply_error: sendResult.ok ? null : sendResult.error,
+            processed_at: new Date().toISOString(),
+            reply_attempted_at: new Date().toISOString(),
+            reply_sent_at: sendResult.ok ? new Date().toISOString() : null,
+          }).eq("id", messageId);
+        }
+        if (sendResult.ok) {
+          await admin.from("auto_reply_rules")
+            .update({ match_count: (ruleHit.match_count || 0) + 1 })
+            .eq("id", ruleHit.id);
+          await admin.from("message_logs").insert({
+            user_id: userId, session_id: sessionId, to_number: sendResult.to,
+            message_type: "text", payload: { text: reply, auto_reply: true, source: "keyword_rule", rule_id: ruleHit.id },
+            status: "sent",
+          });
+        }
+        return jsonResp({ ok: true, reply, sent: sendResult.ok, send_error: sendResult.error, sent_to: sendResult.to, source: "keyword_rule", rule_id: ruleHit.id, message_id: messageId });
+      }
+
+      // No keyword match in auto_reply mode → skip (do not call AI)
+      if (messageId) {
+        await admin.from("incoming_messages").update({
+          delivery_status: "skipped",
+          reply_error: "Auto-reply mode: no matching keyword rule",
+          processed_at: new Date().toISOString(),
+        }).eq("id", messageId);
+      }
+      return jsonResp({ ok: true, skipped: "no_keyword_match", message_id: messageId });
+    }
+
+    // From here on: aiEnabled === true
 
     // Load API key
     const { data: keyRow } = await admin
