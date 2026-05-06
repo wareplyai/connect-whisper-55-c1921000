@@ -131,6 +131,23 @@ const AutoReplies = () => {
     else load();
   };
 
+  const allActive = rules.length > 0 && rules.every((r) => r.is_active);
+  const anyActive = rules.some((r) => r.is_active);
+
+  const toggleAll = async (turnOn: boolean) => {
+    if (!profile || rules.length === 0) {
+      toast.error("Create a rule first");
+      return;
+    }
+    const { error } = await supabase
+      .from("auto_reply_rules")
+      .update({ is_active: turnOn })
+      .eq("user_id", profile.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(turnOn ? "All auto-replies turned ON" : "All auto-replies turned OFF");
+    load();
+  };
+
   const remove = async (id: string) => {
     if (!confirm("Delete this rule?")) return;
     const { error } = await supabase.from("auto_reply_rules").delete().eq("id", id);
@@ -147,6 +164,21 @@ const AutoReplies = () => {
         <Button onClick={openNew} className="bg-primary text-primary-foreground hover:bg-primary-hover">
           <Plus className="h-4 w-4 mr-1.5" /> New Rule
         </Button>
+      </div>
+
+      <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${anyActive ? "border-green-500/40 bg-green-500/10" : "border-border bg-card"}`}>
+        <Power className={`h-5 w-5 ${anyActive ? "text-green-500" : "text-muted-foreground"}`} />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold">{anyActive ? "Auto-Replies are ON" : "Auto-Replies are OFF"}</p>
+          <p className="text-xs text-muted-foreground">
+            {rules.length === 0
+              ? "Create a rule to enable auto-replies"
+              : anyActive
+                ? `${rules.filter(r => r.is_active).length} of ${rules.length} rules active`
+                : "Toggle on to enable all rules"}
+          </p>
+        </div>
+        <Switch checked={allActive} onCheckedChange={(v) => toggleAll(v)} disabled={rules.length === 0} />
       </div>
 
       {loading ? (
