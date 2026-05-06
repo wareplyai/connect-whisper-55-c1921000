@@ -75,12 +75,16 @@ const defaultBusiness = {
   system_prompt: "",
 };
 
+type SavedKey = { id: string; platform: Exclude<Platform, "unknown">; model: string; key_last4: string };
+
 const AIAgent = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [savingBiz, setSavingBiz] = useState(false);
+  const [savingKey, setSavingKey] = useState(false);
 
   const [local, setLocal] = useState(defaultLocal);
+  const [savedKey, setSavedKey] = useState<SavedKey | null>(null);
   const [business, setBusiness] = useState(defaultBusiness);
   const [qa, setQa] = useState<QA[]>([]);
   const [fixed, setFixed] = useState<FixedQA[]>([]);
@@ -104,10 +108,11 @@ const AIAgent = () => {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const [{ data: biz }, { data: qaRows }, { data: fxRows }] = await Promise.all([
+      const [{ data: biz }, { data: qaRows }, { data: fxRows }, keyRes] = await Promise.all([
         supabase.from("business_profiles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("qa_pairs").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
         supabase.from("fixed_qa").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
+        supabase.functions.invoke("ai-key-manager", { body: { action: "get" } }),
       ]);
       if (biz) {
         setBusiness({
@@ -123,31 +128,47 @@ const AIAgent = () => {
       }
       setQa((qaRows ?? []).map((r: any) => ({ id: r.id, question: r.question, answer: r.answer })));
       setFixed((fxRows ?? []).map((r: any) => ({ id: r.id, keyword: r.keyword, reply: r.reply })));
+      if (keyRes?.data?.key) setSavedKey(keyRes.data.key as SavedKey);
       setLoading(false);
     })();
   }, [user]);
 
-  const effectivePlatform: Platform = local.platform === "unknown" && local.savedKey ? local.manualPlatform : local.platform;
+  const effectivePlatform: Platform = savedKey?.platform ?? "unknown";
   const modelOptions = effectivePlatform !== "unknown" ? MODELS[effectivePlatform] : [];
+  const masked = savedKey ? `••••••••••••${savedKey.key_last4}` : "";
 
-  const masked = useMemo(() => {
-    if (!local.savedKey) return "";
-    return `••••••••••••${local.savedKey.slice(-4)}`;
-  }, [local.savedKey]);
-
-  const saveKey = () => {
+  const saveKey = async () => {
     if (!local.apiKey.trim()) { toast.error("Paste your API key first"); return; }
-    const platform = detectPlatform(local.apiKey);
-    const def = platform !== "unknown" ? MODELS[platform][0].value : "";
-    setLocal((p) => ({ ...p, savedKey: p.apiKey, apiKey: "", platform, model: def || p.model }));
-    toast.success(platform !== "unknown" ? `Detected ${PLATFORM_LABEL[platform]}` : "Key saved — pick platform manually");
-    toast("⚠️ Encrypted server-side storage coming next — currently local only", { duration: 4000 });
+    setSavingKey(true);
+    const detected = detectPlatform(local.apiKey);
+    const platform = detected !== "unknown" ? detected : local.manualPlatform;
+    const model = MODELS[platform][0].value;
+    const { data, error } = await supabase.functions.invoke("ai-key-manager", {
+      body: { action: "save", apiKey: local.apiKey, platform, model },
+    });
+    setSavingKey(false);
+    if (error || data?.error) { toast.error(error?.message || data?.error || "Failed to save key"); return; }
+    setSavedKey(data.key);
+    setLocal((p) => ({ ...p, apiKey: "" }));
+    toast.success(`🔒 Encrypted & saved — ${PLATFORM_LABEL[platform]}`);
   };
 
-  const removeKey = () => {
-    setLocal((p) => ({ ...p, savedKey: "", platform: "unknown", model: "" }));
+  const removeKey = async () => {
+    const { error } = await supabase.functions.invoke("ai-key-manager", { body: { action: "delete" } });
+    if (error) { toast.error(error.message); return; }
+    setSavedKey(null);
     toast("API key removed");
   };
+
+  const updateModel = async (model: string) => {
+    if (!savedKey) return;
+    setSavedKey({ ...savedKey, model });
+    const { error } = await supabase.functions.invoke("ai-key-manager", {
+      body: { action: "update_model", model },
+    });
+    if (error) toast.error(error.message);
+  };
+
 
   const generatePrompt = () => {
     if (!business.name || !business.description) { toast.error("Fill business name & description"); return; }
