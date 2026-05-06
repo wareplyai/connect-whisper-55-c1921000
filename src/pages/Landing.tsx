@@ -1154,7 +1154,7 @@ const Landing = () => {
           </div>
           {[
             { title: t("foot.product"), links: [{ label: t("foot.features"), href: "#features" }, { label: t("foot.pricing"), href: "#pricing" }, { label: t("foot.docs"), href: "/docs" }] },
-            { title: t("foot.company"), links: [{ label: t("foot.about"), href: "#" }, { label: t("foot.blog"), href: "#" }, { label: t("foot.partner"), href: "#" }] },
+            { title: t("foot.company"), links: [{ label: t("foot.about"), href: "/about" }, { label: t("foot.blog"), href: "#" }, { label: t("foot.partner"), href: "#" }] },
             { title: t("foot.resources"), links: [{ label: t("foot.help"), href: "#faq" }, { label: t("foot.status"), href: "#" }, { label: t("foot.changelog"), href: "#" }] },
           ].map((c) => (
             <div key={c.title}>
