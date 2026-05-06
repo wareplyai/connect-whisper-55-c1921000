@@ -51,15 +51,12 @@ type FixedQA = { id: string; keyword: string; reply: string };
 type FileItem = { id: string; name: string; size: number };
 type CrawlPage = { id: string; url: string };
 
-// Local-only state (API key + knowledge UI demo). Server state lives in DB.
-const LS_KEY = "ai_agent_local_v2";
+// Local-only state (knowledge UI demo). API key + business state live in DB.
+const LS_KEY = "ai_agent_local_v3";
 
 const defaultLocal = {
   apiKey: "",
-  savedKey: "",
-  platform: "unknown" as Platform,
   manualPlatform: "openai" as Exclude<Platform, "unknown">,
-  model: "",
   text: "",
   websiteUrl: "",
   maxSubpages: 3,
