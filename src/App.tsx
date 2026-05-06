@@ -19,6 +19,7 @@ import TrialStarted from "./pages/TrialStarted";
 import Help from "./pages/Help";
 import About from "./pages/About";
 import Status from "./pages/Status";
+import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardHome from "./pages/dashboard/DashboardHome";
@@ -72,6 +73,7 @@ const App = () => (
               <Route path="/help" element={<Help />} />
               <Route path="/about" element={<About />} />
               <Route path="/status" element={<Status />} />
+              <Route path="/privacy" element={<Privacy />} />
 
               <Route path="/docs" element={<DocsLayout />}>
                 <Route index element={<DocsIndex />} />
