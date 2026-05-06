@@ -211,7 +211,7 @@ const CreateSession = () => {
               <Input
                 value={form.webhook_url}
                 onChange={(e) => set("webhook_url", e.target.value)}
-                placeholder="https://your-endpoint.com/webhook"
+                placeholder={AI_REPLY_WEBHOOK_URL}
                 className="mt-1.5"
               />
               <p className="mt-1 text-xs text-muted-foreground">URL must start with https://</p>
