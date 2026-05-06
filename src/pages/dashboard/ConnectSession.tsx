@@ -59,6 +59,8 @@ const ConnectSession = () => {
   const [webhookOpen, setWebhookOpen] = useState(false);
   const redirectedRef = useRef(false);
   const qrLoadedRef = useRef(false);
+  const qrFetchInFlightRef = useRef(false);
+  const refreshInFlightRef = useRef(false);
 
   // Load session
   useEffect(() => {
@@ -70,7 +72,8 @@ const ConnectSession = () => {
   }, [id]);
 
   const fetchQrOnce = async () => {
-    if (!id) return;
+    if (!id || redirectedRef.current || qrFetchInFlightRef.current || status === "connected") return;
+    qrFetchInFlightRef.current = true;
     try {
       const data = await backendApi.getQr(id);
       if (data?.qr && !qrLoadedRef.current) {
@@ -85,6 +88,8 @@ const ConnectSession = () => {
       setError(null);
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      qrFetchInFlightRef.current = false;
     }
   };
 
@@ -116,15 +121,12 @@ const ConnectSession = () => {
 
   // Keep asking for the QR until the backend has finished generating it.
   useEffect(() => {
-    if (!id || status === "connected" || qrLoadedRef.current) return;
+    if (!id || status === "connected" || qrLoadedRef.current || refreshing) return;
 
     let stopped = false;
-    let inFlight = false;
     const pollQr = async () => {
-      if (stopped || inFlight || qrLoadedRef.current) return;
-      inFlight = true;
+      if (stopped || qrLoadedRef.current || refreshInFlightRef.current) return;
       await fetchQrOnce();
-      inFlight = false;
     };
 
     const delay = window.setTimeout(pollQr, 1200);
@@ -135,7 +137,7 @@ const ConnectSession = () => {
       window.clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, status]);
+  }, [id, status, refreshing]);
 
   // Poll status every 3s (no QR overwrite)
   useEffect(() => {
@@ -162,14 +164,18 @@ const ConnectSession = () => {
   }, [status, expired, qr]);
 
   const handleRefresh = async () => {
-    if (!id || refreshing) return;
+    if (!id || refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
     setRefreshing(true);
     try {
       qrLoadedRef.current = false;
       setQr(null);
       setExpired(false);
       setSecondsLeft(QR_LIFETIME);
-      await backendApi.restart(id);
+      if (expired) {
+        await backendApi.restart(id);
+        setStatus("qr_pending");
+      }
       // wait briefly for backend to generate
       await new Promise((r) => setTimeout(r, 1500));
       await fetchQrOnce();
@@ -180,10 +186,11 @@ const ConnectSession = () => {
         await fetchQrOnce();
         tries++;
       }
-      toast.success("New QR generated");
+      toast.success(expired ? "New QR generated" : "QR loaded");
     } catch (e: any) {
       toast.error(e.message || "Failed to refresh");
     } finally {
+      refreshInFlightRef.current = false;
       setRefreshing(false);
     }
   };
