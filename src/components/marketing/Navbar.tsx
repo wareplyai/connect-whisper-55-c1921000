@@ -90,6 +90,7 @@ export const Navbar = () => {
 
         {/* Mobile actions */}
         <div className="flex md:hidden items-center gap-1">
+          <LanguageToggle />
           <ThemeToggle />
           <button
             type="button"
