@@ -309,7 +309,7 @@ Deno.serve(async (req) => {
 
     const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
     let fromNumber = resolveCustomerNumber(body, session.phone_number);
-    if (fromNumber && !looksLikeSendableRecipient(fromNumber)) {
+    if (fromNumber && !looksLikeCustomerPhone(fromNumber)) {
       const recoveredNumber = await resolveFromGatewayMessageInfo({
         gateway: GATEWAY,
         sessionId,
@@ -317,12 +317,13 @@ Deno.serve(async (req) => {
         messageId: fromNumber,
         sessionPhone: session.phone_number,
       });
-      if (recoveredNumber) fromNumber = recoveredNumber;
+      if (recoveredNumber && looksLikeCustomerPhone(recoveredNumber)) fromNumber = recoveredNumber;
     }
     if (!fromNumber) {
       return jsonResp({ error: "customer number required" }, 400);
     }
-    if (!looksLikeSendableRecipient(fromNumber)) {
+    // STRICT: only allow real customer phone numbers — never send AI replies to fake Baileys/LID ids
+    if (!looksLikeCustomerPhone(fromNumber)) {
       if (sourceMessageId) {
         await admin.from("incoming_messages").update({
           delivery_status: "failed",
