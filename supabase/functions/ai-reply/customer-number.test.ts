@@ -30,3 +30,13 @@ Deno.test("does not resolve the connected session phone as the customer", () => 
     "8801739049039",
   );
 });
+
+Deno.test("supports Baileys pn/lid alternate jid fields", () => {
+  assertEquals(
+    resolveCustomerNumber({
+      from: "231872433004727",
+      raw_payload: { key: { remoteJidAlt: "8801739049039@s.whatsapp.net", participantAlt: "8801948695672@s.whatsapp.net" } },
+    }, "8801948695672"),
+    "8801739049039",
+  );
+});
