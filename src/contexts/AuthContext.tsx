@@ -61,6 +61,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Auto-logout if user is deactivated or deleted by headadmin
+  useEffect(() => {
+    if (!user) return;
+    const check = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("is_active")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (error) return;
+      if (!data || data.is_active === false) {
+        await supabase.auth.signOut();
+        window.location.href = "/login";
+      }
+    };
+    const interval = setInterval(check, 15000);
+    return () => clearInterval(interval);
+  }, [user]);
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
