@@ -95,6 +95,7 @@ const App = () => (
                 <Route path="payments" element={<Payments />} />
                 <Route path="auto-replies" element={<AutoReplies />} />
                 <Route path="ai-agent" element={<AIAgent />} />
+                <Route path="behavior" element={<BehaviorSettings />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>
