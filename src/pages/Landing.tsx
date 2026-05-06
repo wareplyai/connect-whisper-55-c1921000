@@ -1024,81 +1024,117 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* FINAL CTA */}
-      <section className="container py-20">
-        <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-card via-card to-card-elevated p-8 md:p-14">
-          <div className="pointer-events-none absolute -top-32 -left-32 h-80 w-80 rounded-full bg-primary/20 blur-[120px]" />
-          <div className="pointer-events-none absolute -bottom-32 -right-32 h-80 w-80 rounded-full bg-primary/10 blur-[120px]" />
-          <div className="pointer-events-none absolute inset-0 opacity-[0.04] [background-image:linear-gradient(hsl(var(--foreground))_1px,transparent_1px),linear-gradient(90deg,hsl(var(--foreground))_1px,transparent_1px)] [background-size:40px_40px]" />
+      {/* FINAL CTA — premium redesign */}
+      <section className="container py-24">
+        <div className="relative isolate overflow-hidden rounded-[32px] border border-primary/20 bg-gradient-to-b from-card to-background px-6 py-16 md:px-16 md:py-24 text-center shadow-[0_40px_100px_-30px_hsl(var(--primary)/0.4)]">
+          {/* Animated aurora glow */}
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
+            <div className="absolute left-1/2 top-0 h-[400px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/30 blur-[120px] opacity-70" />
+            <div className="absolute bottom-0 left-1/4 h-[280px] w-[280px] rounded-full bg-primary/20 blur-[100px]" />
+            <div className="absolute bottom-0 right-1/4 h-[280px] w-[280px] rounded-full bg-emerald-400/15 blur-[100px]" />
+          </div>
 
-          <div className="relative grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 border border-primary/30 px-3 py-1 text-xs font-semibold text-primary mb-6">
-                <Zap className="h-3.5 w-3.5 fill-primary" />
-                {t("cta.badge")}
+          {/* Grid pattern with mask */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10 opacity-[0.06] [background-image:linear-gradient(hsl(var(--foreground))_1px,transparent_1px),linear-gradient(90deg,hsl(var(--foreground))_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_30%,transparent_80%)]"
+          />
+
+          {/* Decorative orbital rings */}
+          <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 hidden md:block">
+            <div className="absolute inset-0 rounded-full border border-primary/10" />
+            <div className="absolute inset-12 rounded-full border border-primary/10" />
+            <div className="absolute inset-28 rounded-full border border-primary/[0.07]" />
+          </div>
+
+          {/* Floating chat bubble accents (desktop) */}
+          <div aria-hidden="true" className="pointer-events-none absolute left-6 top-12 hidden lg:flex items-center gap-2 rounded-2xl rounded-bl-sm border border-border/60 bg-card/80 backdrop-blur px-3 py-2 text-xs font-medium shadow-xl animate-fade-in">
+            <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+            New message · Acme Co
+          </div>
+          <div aria-hidden="true" className="pointer-events-none absolute right-6 top-20 hidden lg:flex items-center gap-2 rounded-2xl rounded-br-sm border border-primary/30 bg-primary/10 backdrop-blur px-3 py-2 text-xs font-semibold text-primary shadow-xl animate-fade-in">
+            <Bot className="h-3.5 w-3.5" /> AI replied · 0.4s
+          </div>
+          <div aria-hidden="true" className="pointer-events-none absolute left-10 bottom-16 hidden lg:flex items-center gap-2 rounded-2xl border border-border/60 bg-card/80 backdrop-blur px-3 py-2 text-xs font-medium shadow-xl animate-fade-in">
+            <Check className="h-3.5 w-3.5 text-primary" /> Delivered ✓✓
+          </div>
+
+          {/* Badge */}
+          <div className="relative inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 backdrop-blur px-4 py-1.5 text-xs font-semibold text-primary">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+            </span>
+            {t("cta.badge")}
+          </div>
+
+          {/* Headline */}
+          <h2 className="relative mx-auto mt-6 max-w-3xl font-display font-bold tracking-tight leading-[1.05] text-4xl md:text-6xl">
+            {t("cta.title.1")}{" "}
+            <span className="text-gradient">{t("cta.title.2")}</span>
+          </h2>
+
+          <p className="relative mx-auto mt-5 max-w-xl text-base md:text-lg text-muted-foreground leading-relaxed">
+            {t("cta.subtitle")}
+          </p>
+
+          {/* CTA buttons */}
+          <div className="relative mt-9 flex flex-wrap items-center justify-center gap-3">
+            <Button
+              asChild
+              size="lg"
+              className="group h-13 px-8 rounded-full bg-primary text-primary-foreground hover:bg-primary-hover font-semibold shadow-[0_15px_50px_-10px_hsl(var(--primary)/0.7)] hover:shadow-[0_20px_60px_-10px_hsl(var(--primary)/0.9)] hover:-translate-y-0.5 transition-all"
+            >
+              <Link to="/register">
+                {t("hero.cta.trial")}
+                <ArrowRight className="ml-1 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="h-13 px-8 rounded-full border-foreground/15 bg-transparent backdrop-blur hover:bg-card/60 hover:border-primary/40 font-medium"
+            >
+              <a href="#features">{t("hero.cta.docs")}</a>
+            </Button>
+          </div>
+
+          <p className="relative mt-4 text-xs text-muted-foreground">{t("cta.btn.note")}</p>
+
+          {/* Feature pill row */}
+          <div className="relative mx-auto mt-12 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl">
+            {[
+              { i: Check, label: t("cta.l1") },
+              { i: Zap, label: t("cta.l2") },
+              { i: MessageSquare, label: t("cta.l3") },
+            ].map((it) => (
+              <div
+                key={it.label}
+                className="group flex items-center justify-center gap-2.5 rounded-2xl border border-border/60 bg-card/40 backdrop-blur-md px-4 py-3 text-sm font-medium hover:border-primary/40 hover:bg-card/70 transition-all"
+              >
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/15 border border-primary/30 text-primary shrink-0 group-hover:bg-primary/25 transition-colors">
+                  <it.i className="h-3.5 w-3.5" />
+                </span>
+                <span>{it.label}</span>
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-[1.1]">
-                {t("cta.title.1")} <br />
-                <span className="text-gradient">{t("cta.title.2")}</span>
-              </h2>
-              <p className="mt-5 text-muted-foreground max-w-md leading-relaxed">
-                {t("cta.subtitle")}
-              </p>
+            ))}
+          </div>
 
-              <ul className="mt-8 space-y-4">
-                {[
-                  { i: Check, label: t("cta.l1") },
-                  { i: Zap, label: t("cta.l2") },
-                  { i: MessageSquare, label: t("cta.l3") },
-                ].map((it) => (
-                  <li key={it.label} className="flex items-center gap-3">
-                    <span className="grid h-9 w-9 place-items-center rounded-full bg-primary/15 border border-primary/30 text-primary shrink-0">
-                      <it.i className="h-4 w-4" />
-                    </span>
-                    <span className="font-medium">{it.label}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-8">
-                <Button
-                  asChild
-                  size="lg"
-                  className="group h-14 w-full sm:w-auto px-10 rounded-xl bg-gradient-to-r from-primary to-primary-hover text-primary-foreground font-semibold text-base shadow-[0_20px_50px_-15px_hsl(var(--primary)/0.7)] hover:shadow-[0_25px_60px_-15px_hsl(var(--primary)/0.9)] hover:-translate-y-0.5 transition-all duration-300"
-                >
-                  <Link to="/register">
-                    {t("hero.cta.trial")}
-                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-                <p className="mt-3 text-xs text-muted-foreground">{t("cta.btn.note")}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-5 gap-4">
-              <div className="col-span-3 rounded-2xl border border-border bg-[#0d0d0d] overflow-hidden shadow-2xl">
-                <div className="flex items-center gap-2 border-b border-border/50 px-4 py-2.5 text-xs font-mono text-primary">
-                  <span className="text-primary/70">›_</span>
-                  <span className="font-semibold">API Request</span>
-                </div>
-                <pre className="p-5 text-[12px] leading-relaxed font-mono overflow-x-auto"><code><span className="text-purple-400">import</span> <span className="text-code-foreground/90">{"{ createWareply }"}</span> <span className="text-purple-400">from</span> <span className="text-emerald-400">'wareplyapi'</span>;{"\n\n"}<span className="text-purple-400">const</span> <span className="text-sky-300">apiKey</span> = <span className="text-code-foreground/90">process.env</span>.<span className="text-amber-300">WAREPLY_API_KEY</span>;{"\n"}<span className="text-purple-400">const</span> <span className="text-sky-300">wareply</span> = <span className="text-code-foreground/90">createWareply</span>({"{ apiKey }"});{"\n\n"}<span className="text-purple-400">const</span> <span className="text-sky-300">response</span> = <span className="text-purple-400">await</span> <span className="text-code-foreground/90">wareply</span>.<span className="text-sky-300">send</span>({"{"}{"\n  "}<span className="text-code-foreground/90">to</span>: <span className="text-emerald-400">'1234567890'</span>,{"\n  "}<span className="text-code-foreground/90">text</span>: <span className="text-emerald-400">'Works like a charm!'</span>{"\n"}{"}"});{"\n\n"}<span className="text-emerald-400">✓ Message Sent</span></code></pre>
-              </div>
-
-              <div className="col-span-2 rounded-2xl border border-border bg-card-elevated p-4 shadow-2xl flex flex-col">
-                <div className="flex items-center gap-2 pb-3 border-b border-border/50">
-                  <span className="h-7 w-7 rounded-full bg-primary grid place-items-center text-primary-foreground text-xs font-bold">W</span>
-                  <span className="h-2 flex-1 rounded bg-muted" />
-                </div>
-                <div className="flex-1 flex flex-col justify-end gap-2 mt-4 min-h-[200px]">
-                  <div className="self-end max-w-[85%] rounded-2xl rounded-tr-sm bg-primary px-3 py-2 text-xs text-primary-foreground font-medium animate-fade-in">
-                    Works like a charm!
-                  </div>
-                  <div className="self-start max-w-[85%] rounded-2xl rounded-tl-sm bg-card border border-border px-3 py-2 text-xs animate-fade-in">
-                    Got it, thanks!
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Live stats strip */}
+          <div className="relative mx-auto mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+              <strong className="text-foreground">10,000+</strong> active developers
+            </span>
+            <span className="hidden sm:inline opacity-30">·</span>
+            <span className="inline-flex items-center gap-1.5">
+              <strong className="text-foreground">50M+</strong> messages delivered
+            </span>
+            <span className="hidden sm:inline opacity-30">·</span>
+            <span className="inline-flex items-center gap-1.5">
+              <strong className="text-foreground">99.9%</strong> uptime SLA
+            </span>
           </div>
         </div>
       </section>
