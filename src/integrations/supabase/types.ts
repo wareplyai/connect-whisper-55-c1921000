@@ -264,6 +264,7 @@ export type Database = {
       }
       business_profiles: {
         Row: {
+          active_reply_mode: string
           ai_enabled: boolean
           business_type: string | null
           connected_session_ids: string[]
@@ -280,6 +281,7 @@ export type Database = {
           working_hours: string | null
         }
         Insert: {
+          active_reply_mode?: string
           ai_enabled?: boolean
           business_type?: string | null
           connected_session_ids?: string[]
@@ -296,6 +298,7 @@ export type Database = {
           working_hours?: string | null
         }
         Update: {
+          active_reply_mode?: string
           ai_enabled?: boolean
           business_type?: string | null
           connected_session_ids?: string[]

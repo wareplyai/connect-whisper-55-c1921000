@@ -227,9 +227,9 @@ RULES:
       toast.error("Connect at least one WhatsApp session first");
       return;
     }
-    await persistBusinessPatch({ ai_enabled: v });
-    if (v && user) {
-      // Mutex: turning AI ON automatically disables all keyword auto-reply rules
+    if (!user) return;
+    if (v) {
+      // Disable all keyword auto-reply rules (mutex)
       const { data: activeRules } = await supabase
         .from("auto_reply_rules")
         .select("id")
@@ -240,10 +240,20 @@ RULES:
           .from("auto_reply_rules")
           .update({ is_active: false })
           .eq("user_id", user.id);
-        toast.info(`Auto-Replies mode OFF (${activeRules.length} rules paused) — only one can be active at a time`);
+        toast.info("Auto-Reply has been turned off. AI Agent is now active.");
       }
+      await supabase
+        .from("business_profiles")
+        .upsert({ user_id: user.id, ...business, ai_enabled: true, active_reply_mode: "ai_agent" }, { onConflict: "user_id" });
+      setBusiness((p) => ({ ...p, ai_enabled: true }));
+      toast.success("🟢 AI Agent ON");
+    } else {
+      await supabase
+        .from("business_profiles")
+        .upsert({ user_id: user.id, ...business, ai_enabled: false, active_reply_mode: "none" }, { onConflict: "user_id" });
+      setBusiness((p) => ({ ...p, ai_enabled: false }));
+      toast.success("⚪ AI Agent OFF");
     }
-    toast.success(v ? "🟢 AI Agent ON" : "⚪ AI Agent OFF");
   };
 
   const toggleSession = async (sessionId: string, checked: boolean) => {

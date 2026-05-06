@@ -25,13 +25,14 @@ const CreateSession = () => {
   const nav = useNavigate();
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [phoneNum, setPhoneNum] = useState("");
+  const AI_REPLY_WEBHOOK_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`;
   const [form, setForm] = useState({
     session_name: "",
     enable_account_protection: true,
     enable_message_logging: true,
-    enable_webhook: false,
-    webhook_url: "",
-    webhook_events: ["messages.received"] as string[],
+    enable_webhook: true,
+    webhook_url: AI_REPLY_WEBHOOK_URL,
+    webhook_events: ["messages.received", "message.sent"] as string[],
     read_incoming_messages: false,
     auto_reject_calls: false,
     always_online: true,
@@ -210,7 +211,7 @@ const CreateSession = () => {
               <Input
                 value={form.webhook_url}
                 onChange={(e) => set("webhook_url", e.target.value)}
-                placeholder="https://your-endpoint.com/webhook"
+                placeholder={AI_REPLY_WEBHOOK_URL}
                 className="mt-1.5"
               />
               <p className="mt-1 text-xs text-muted-foreground">URL must start with https://</p>

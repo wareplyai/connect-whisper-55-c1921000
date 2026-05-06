@@ -42,7 +42,7 @@ const EditSession = () => {
         enable_account_protection: data.enable_account_protection,
         enable_message_logging: data.enable_message_logging,
         enable_webhook: data.enable_webhook,
-        webhook_url: data.webhook_url || "",
+        webhook_url: data.webhook_url || `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`,
         webhook_events: data.webhook_events || [],
         read_incoming_messages: data.read_incoming_messages,
         auto_reject_calls: data.auto_reject_calls,
@@ -151,7 +151,8 @@ const EditSession = () => {
           <div className="space-y-4 rounded-lg border border-border bg-card-elevated p-4">
             <div>
               <Label>Webhook URL (POST)</Label>
-              <Input value={form.webhook_url} onChange={(e) => set("webhook_url", e.target.value)} placeholder="https://your-endpoint.com/webhook" className="mt-1.5" />
+              <Input value={form.webhook_url} onChange={(e) => set("webhook_url", e.target.value)} placeholder={`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`} className="mt-1.5" />
+              <p className="mt-1 text-xs text-muted-foreground">Default: our ai-reply endpoint. The webhook secret is auto-generated per session.</p>
             </div>
             <div>
               <Label className="mb-2 block">Webhook Events</Label>

@@ -125,27 +125,46 @@ const AutoReplies = () => {
     load();
   };
 
+  const setReplyMode = async (mode: "ai_agent" | "auto_reply" | "none") => {
+    if (!profile) return;
+    await supabase
+      .from("business_profiles")
+      .upsert({
+        user_id: profile.id,
+        active_reply_mode: mode,
+        ai_enabled: mode === "ai_agent",
+      }, { onConflict: "user_id" });
+  };
+
   const disableAIIfOn = async () => {
     if (!profile) return;
     const { data: biz } = await supabase
       .from("business_profiles")
-      .select("ai_enabled")
+      .select("ai_enabled, active_reply_mode")
       .eq("user_id", profile.id)
       .maybeSingle();
-    if (biz?.ai_enabled) {
+    if (biz?.ai_enabled || biz?.active_reply_mode === "ai_agent") {
       await supabase
         .from("business_profiles")
-        .update({ ai_enabled: false })
+        .update({ ai_enabled: false, active_reply_mode: "auto_reply" })
         .eq("user_id", profile.id);
-      toast.info("AI Agent mode OFF — only one of AI Agent or Auto-Replies can be active at a time");
+      toast.info("AI Agent has been turned off. Auto-Reply is now active.");
     }
   };
 
   const toggleActive = async (r: Rule) => {
     if (!r.is_active) await disableAIIfOn();
     const { error } = await supabase.from("auto_reply_rules").update({ is_active: !r.is_active }).eq("id", r.id);
-    if (error) toast.error(error.message);
-    else load();
+    if (error) { toast.error(error.message); return; }
+    // Sync mode
+    const { data: remaining } = await supabase
+      .from("auto_reply_rules")
+      .select("id")
+      .eq("user_id", profile!.id)
+      .eq("is_active", true)
+      .limit(1);
+    await setReplyMode((remaining && remaining.length > 0) ? "auto_reply" : "none");
+    load();
   };
 
   const allActive = rules.length > 0 && rules.every((r) => r.is_active);
@@ -162,6 +181,7 @@ const AutoReplies = () => {
       .update({ is_active: turnOn })
       .eq("user_id", profile.id);
     if (error) { toast.error(error.message); return; }
+    await setReplyMode(turnOn ? "auto_reply" : "none");
     toast.success(turnOn ? "All auto-replies turned ON" : "All auto-replies turned OFF");
     load();
   };
