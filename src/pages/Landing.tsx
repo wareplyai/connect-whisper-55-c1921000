@@ -184,15 +184,17 @@ const Landing = () => {
         {/* Base layered background */}
         <div aria-hidden="true" className="hero-bg absolute inset-0 z-0" />
 
-        {/* Aurora mesh blobs */}
+        {/* Concentric orbital arcs (like reference image) */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="hero-aurora hero-aurora-1" />
-          <div className="hero-aurora hero-aurora-2" />
-          <div className="hero-aurora hero-aurora-3" />
+          <div className="hero-arcs">
+            <span className="hero-arc" style={{ width: "600px", height: "600px" }} />
+            <span className="hero-arc" style={{ width: "900px", height: "900px" }} />
+            <span className="hero-arc" style={{ width: "1250px", height: "1250px" }} />
+            <span className="hero-arc" style={{ width: "1650px", height: "1650px" }} />
+            <span className="hero-arc" style={{ width: "2100px", height: "2100px" }} />
+            <span className="hero-arc" style={{ width: "2600px", height: "2600px" }} />
+          </div>
         </div>
-
-        {/* Perspective grid floor */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[55%] hero-floor" />
 
         {/* Soft dotted texture */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hero-dots" />
@@ -291,6 +293,39 @@ const Landing = () => {
             mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 80%);
             -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 80%);
             opacity: 0.45;
+          }
+
+          /* Concentric orbital arcs */
+          .hero-arcs {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: hero-arc-spin 60s linear infinite;
+          }
+          .hero-arc {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px solid hsl(var(--primary) / 0.18);
+            box-shadow:
+              inset 0 0 80px hsl(var(--primary) / 0.06),
+              0 0 40px hsl(var(--primary) / 0.05);
+          }
+          .dark .hero-arc {
+            border-color: hsl(var(--primary) / 0.22);
+            box-shadow:
+              inset 0 0 100px hsl(var(--primary) / 0.10),
+              0 0 60px hsl(var(--primary) / 0.08);
+          }
+          @keyframes hero-arc-spin {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
           }
 
           .hero-spotlight {
