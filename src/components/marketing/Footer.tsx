@@ -7,7 +7,7 @@ export const Footer = () => {
   const cols = [
     { title: t("foot.product"), links: [{ label: t("foot.features"), href: "/#features" }, { label: t("foot.pricing"), href: "/#pricing" }, { label: t("foot.docs"), href: "/docs" }] },
     { title: t("foot.company"), links: [{ label: t("foot.about"), href: "/about" }, { label: t("foot.blog"), href: "#" }, { label: t("foot.partner"), href: "#" }] },
-    { title: t("foot.resources"), links: [{ label: t("foot.help"), href: "/help" }, { label: t("foot.status"), href: "/status" }, { label: "Privacy & Policy", href: "/privacy" }, { label: t("foot.changelog"), href: "#" }] },
+    { title: t("foot.resources"), links: [{ label: t("foot.help"), href: "/help" }, { label: t("foot.status"), href: "/status" }, { label: "Privacy & Policy", href: "/privacy" }] },
   ];
   return (
     <footer className="border-t border-border mt-10">
