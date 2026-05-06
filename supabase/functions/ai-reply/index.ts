@@ -208,15 +208,15 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const sessionId = String(body.session_id || body.sessionId || "").trim();
-    const fromNumber = String(body.from || body.from_number || "").trim();
     const messageText = String(body.message || body.text || body.message_text || "").trim();
-    const isGroup = Boolean(body.is_group ?? false);
+    const isGroup = Boolean(body.is_group ?? body.isGroup ?? false) || hasGroupJid(body);
     const messageType = String(body.message_type || "text");
-    const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false);
+    const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false) ||
+      hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
 
-    if (!sessionId || !fromNumber || !messageText) {
-      return jsonResp({ error: "session_id, from, and message required" }, 400);
+    if (!sessionId || !messageText) {
+      return jsonResp({ error: "session_id and message required" }, 400);
     }
 
     // Skip messages sent BY the bot itself (prevents infinite loop)
@@ -240,13 +240,21 @@ Deno.serve(async (req) => {
     // Load session and validate webhook secret
     const { data: session, error: sErr } = await admin
       .from("sessions")
-      .select("id, user_id, webhook_secret, status, api_token")
+      .select("id, user_id, webhook_secret, status, api_token, phone_number")
       .eq("id", sessionId)
       .maybeSingle();
     if (sErr) throw sErr;
     if (!session) return jsonResp({ error: "Session not found" }, 404);
     if (!providedSecret || providedSecret !== session.webhook_secret) {
       return jsonResp({ error: "Invalid webhook secret" }, 401);
+    }
+
+    const fromNumber = resolveCustomerNumber(body, session.phone_number);
+    if (!fromNumber) {
+      return jsonResp({ error: "customer number required" }, 400);
+    }
+    if (samePhone(fromNumber, session.phone_number)) {
+      return jsonResp({ ok: true, skipped: "own_session_number", from: fromNumber });
     }
 
     const userId = session.user_id;
