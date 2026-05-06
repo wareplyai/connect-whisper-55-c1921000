@@ -125,7 +125,7 @@ function numberFromValue(value: unknown): string | null {
   return digits.length >= 8 && digits.length <= 16 ? digits : null;
 }
 
-function looksLikeCustomerPhone(value: unknown): boolean {
+export function looksLikeCustomerPhone(value: unknown): boolean {
   const digits = digitsOnly(value);
   if (!digits) return false;
   if (digits.startsWith("8801") && digits.length === 13) return true;
