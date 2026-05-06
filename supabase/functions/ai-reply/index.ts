@@ -94,6 +94,9 @@ function recipientVariants(input: string): string[] {
   const raw = input.trim();
   const digits = raw.replace(/\D/g, "");
   const variants = [raw];
+  const isExplicitPhone = raw.startsWith("+") || /@s\.whatsapp\.net$/i.test(raw);
+  const isLidRecipient = /@lid$/i.test(raw) || (!isExplicitPhone && looksLikeLidIdentifier(digits));
+  if (isLidRecipient && digits) return [...new Set([`${digits}@lid`, raw].filter(Boolean))];
   if (digits) variants.push(digits, `+${digits}`, `${digits}@s.whatsapp.net`);
   if (digits.startsWith("0") && digits.length >= 10) {
     variants.push(`88${digits}`, `+88${digits}`, `88${digits.slice(1)}`, `+88${digits.slice(1)}`);
@@ -137,6 +140,15 @@ export function looksLikeCustomerPhone(value: unknown): boolean {
   if (digits.startsWith("01") && digits.length === 11) return true;
   if (digits.startsWith("1") && digits.length === 10) return true;
   return digits.length >= 10 && digits.length <= 15 && !/^(23|52)\d{12,14}$/.test(digits);
+}
+
+export function looksLikeLidIdentifier(value: unknown): boolean {
+  const digits = digitsOnly(value);
+  return /^(23|52)\d{12,14}$/.test(digits);
+}
+
+export function looksLikeSendableRecipient(value: unknown): boolean {
+  return looksLikeCustomerPhone(value) || looksLikeLidIdentifier(value);
 }
 
 function collectPhoneCandidates(value: unknown, out: string[], depth = 0): void {
@@ -210,7 +222,7 @@ async function resolveFromGatewayMessageInfo(opts: {
       if (!res.ok) continue;
       const data = await res.json().catch(() => null);
       const resolved = resolveCustomerNumber({ gateway_message_info: data }, sessionPhone);
-      if (resolved && looksLikeCustomerPhone(resolved)) return resolved;
+      if (resolved && looksLikeSendableRecipient(resolved)) return resolved;
     } catch {
       // Keep webhook processing deterministic; invalid payload handling below will mark the row failed.
     }
@@ -297,7 +309,7 @@ Deno.serve(async (req) => {
 
     const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
     let fromNumber = resolveCustomerNumber(body, session.phone_number);
-    if (fromNumber && !looksLikeCustomerPhone(fromNumber)) {
+    if (fromNumber && !looksLikeSendableRecipient(fromNumber)) {
       const recoveredNumber = await resolveFromGatewayMessageInfo({
         gateway: GATEWAY,
         sessionId,
@@ -310,7 +322,7 @@ Deno.serve(async (req) => {
     if (!fromNumber) {
       return jsonResp({ error: "customer number required" }, 400);
     }
-    if (!looksLikeCustomerPhone(fromNumber)) {
+    if (!looksLikeSendableRecipient(fromNumber)) {
       if (sourceMessageId) {
         await admin.from("incoming_messages").update({
           delivery_status: "failed",
@@ -321,7 +333,7 @@ Deno.serve(async (req) => {
       return jsonResp({
         ok: false,
         error: "invalid_customer_number",
-        detail: "Webhook payload is sending a Baileys message id instead of the customer WhatsApp number. Send key.remoteJid/participant as from_number.",
+        detail: "Webhook payload is sending an unsupported sender id instead of a customer WhatsApp phone or LID recipient.",
         from: fromNumber,
       }, 422);
     }

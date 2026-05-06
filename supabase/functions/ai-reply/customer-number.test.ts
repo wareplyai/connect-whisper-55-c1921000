@@ -1,9 +1,14 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { looksLikeCustomerPhone, resolveCustomerNumber } from "./index.ts";
+import { looksLikeCustomerPhone, looksLikeSendableRecipient, resolveCustomerNumber } from "./index.ts";
 
 Deno.test("rejects Baileys generated message ids as recipients", () => {
   assertEquals(looksLikeCustomerPhone("231872433004727"), false);
   assertEquals(looksLikeCustomerPhone("52334780534993"), false);
+});
+
+Deno.test("allows Baileys LID identifiers only as gateway-sendable recipients", () => {
+  assertEquals(looksLikeSendableRecipient("231872433004727"), true);
+  assertEquals(looksLikeSendableRecipient("231872433004727@lid"), true);
 });
 
 Deno.test("accepts real Bangladesh WhatsApp phone numbers", () => {
