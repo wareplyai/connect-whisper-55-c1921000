@@ -180,6 +180,7 @@ export type Database = {
       }
       incoming_messages: {
         Row: {
+          delivery_status: string
           from_number: string
           id: string
           is_group: boolean
@@ -190,12 +191,16 @@ export type Database = {
           processed_at: string | null
           raw_payload: Json | null
           received_at: string
+          reply_attempted_at: string | null
+          reply_error: string | null
           reply_sent: boolean
+          reply_sent_at: string | null
           reply_text: string | null
           session_id: string
           user_id: string
         }
         Insert: {
+          delivery_status?: string
           from_number: string
           id?: string
           is_group?: boolean
@@ -206,12 +211,16 @@ export type Database = {
           processed_at?: string | null
           raw_payload?: Json | null
           received_at?: string
+          reply_attempted_at?: string | null
+          reply_error?: string | null
           reply_sent?: boolean
+          reply_sent_at?: string | null
           reply_text?: string | null
           session_id: string
           user_id: string
         }
         Update: {
+          delivery_status?: string
           from_number?: string
           id?: string
           is_group?: boolean
@@ -222,7 +231,10 @@ export type Database = {
           processed_at?: string | null
           raw_payload?: Json | null
           received_at?: string
+          reply_attempted_at?: string | null
+          reply_error?: string | null
           reply_sent?: boolean
+          reply_sent_at?: string | null
           reply_text?: string | null
           session_id?: string
           user_id?: string
@@ -816,6 +828,35 @@ export type Database = {
           message_id: string
           reply_text: string
         }[]
+      }
+      mark_auto_reply_delivery: {
+        Args: { p_error?: string; p_message_id: string; p_sent: boolean }
+        Returns: {
+          delivery_status: string
+          from_number: string
+          id: string
+          is_group: boolean
+          match_log: Json | null
+          matched_rule_id: string | null
+          message_text: string | null
+          message_type: string
+          processed_at: string | null
+          raw_payload: Json | null
+          received_at: string
+          reply_attempted_at: string | null
+          reply_error: string | null
+          reply_sent: boolean
+          reply_sent_at: string | null
+          reply_text: string | null
+          session_id: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "incoming_messages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       match_auto_reply_for_message: {
         Args: {
