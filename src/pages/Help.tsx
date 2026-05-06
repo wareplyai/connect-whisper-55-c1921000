@@ -7,6 +7,7 @@ import {
   Handshake, Zap, ArrowRight, ChevronDown, Facebook, Instagram, Linkedin, Star,
 } from "lucide-react";
 import wareplyLogo from "@/assets/wareply-logo.png";
+import { Footer } from "@/components/marketing/Footer";
 
 type Category = {
   icon: React.ComponentType<{ className?: string }>;
@@ -218,56 +219,7 @@ export default function Help() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-card/50">
-        <div className="container mx-auto grid grid-cols-1 gap-10 px-5 py-14 md:grid-cols-4">
-          <div>
-            <Link to="/" className="inline-flex items-center gap-2">
-              <img
-                src={wareplyLogo}
-                alt="WaReply AI"
-                className="h-9 w-9 rounded-lg object-cover shadow-[0_0_20px_hsl(var(--primary)/0.5)]"
-              />
-              <span className="font-display text-lg font-semibold">WaReply AI</span>
-            </Link>
-            <p className="mt-4 text-sm text-muted-foreground">
-              The most powerful WhatsApp API platform for businesses of all sizes. Send unlimited messages with no per-message fees.
-            </p>
-            <div className="mt-5 flex items-center gap-3 text-muted-foreground">
-              <a href="#" className="hover:text-primary"><Facebook className="h-4 w-4" /></a>
-              <a href="#" className="hover:text-primary"><Instagram className="h-4 w-4" /></a>
-              <a href="#" className="hover:text-primary"><Linkedin className="h-4 w-4" /></a>
-              <a href="#" className="hover:text-primary"><Star className="h-4 w-4" /></a>
-            </div>
-            <div className="mt-4 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs text-muted-foreground">
-              <Star className="h-3 w-3 fill-primary text-primary" /> Trustpilot · Excellent
-            </div>
-          </div>
-
-          <FooterCol title="Product" links={["Features", "Pricing", "Documentation", "API Status"]} />
-          <FooterCol title="Company" links={["About Us", "Blog", "Contact"]} />
-          <FooterCol
-            title="Resources"
-            links={["Help Center", "Terms of Service", "Privacy Policy", "Refund Policy", "Partner Program"]}
-          />
-        </div>
-        <div className="border-t border-border py-5 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} WaReply AI. All rights reserved.
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-function FooterCol({ title, links }: { title: string; links: string[] }) {
-  return (
-    <div>
-      <h4 className="mb-4 font-semibold text-foreground">{title}</h4>
-      <ul className="space-y-2 text-sm text-muted-foreground">
-        {links.map((l) => (
-          <li key={l}><a href="#" className="hover:text-primary">{l}</a></li>
-        ))}
-      </ul>
+      <Footer />
     </div>
   );
 }
