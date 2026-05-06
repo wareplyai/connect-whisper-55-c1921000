@@ -96,9 +96,19 @@ Deno.serve(async (req) => {
     const messageText = String(body.message || body.text || body.message_text || "").trim();
     const isGroup = Boolean(body.is_group ?? false);
     const messageType = String(body.message_type || "text");
+    const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false);
 
     if (!sessionId || !fromNumber || !messageText) {
       return jsonResp({ error: "session_id, from, and message required" }, 400);
+    }
+
+    // Skip messages sent BY the bot itself (prevents infinite loop)
+    if (fromMe) {
+      return jsonResp({ ok: true, skipped: "from_me" });
+    }
+    // Skip group messages
+    if (isGroup) {
+      return jsonResp({ ok: true, skipped: "group_message" });
     }
 
     const providedSecret =
