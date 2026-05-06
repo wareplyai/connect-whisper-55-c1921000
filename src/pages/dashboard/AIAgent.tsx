@@ -5,8 +5,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, KeyRound, CheckCircle2, Upload, FileText, Globe, MessagesSquare, Lock, Trash2, Plus, Bot } from "lucide-react";
+import { Sparkles, KeyRound, CheckCircle2, Upload, FileText, Globe, MessagesSquare, Lock, Trash2, Plus, Bot, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Platform = "openai" | "gemini" | "deepseek" | "unknown";
 
@@ -44,96 +46,196 @@ const PLATFORM_LABEL: Record<Platform, string> = {
   unknown: "Unknown",
 };
 
-type QA = { id: string; q: string; a: string };
+type QA = { id: string; question: string; answer: string };
 type FixedQA = { id: string; keyword: string; reply: string };
 type FileItem = { id: string; name: string; size: number };
 type CrawlPage = { id: string; url: string };
 
-const LS_KEY = "ai_agent_setup_v1";
+// Local-only state (API key + knowledge UI demo). Server state lives in DB.
+const LS_KEY = "ai_agent_local_v2";
 
-const defaultState = {
+const defaultLocal = {
   apiKey: "",
   savedKey: "",
   platform: "unknown" as Platform,
   manualPlatform: "openai" as Exclude<Platform, "unknown">,
   model: "",
-  business: {
-    name: "",
-    type: "",
-    description: "",
-    location: "",
-    hours: "",
-    contact: "",
-    website: "",
-  },
-  systemPrompt: "",
   text: "",
   websiteUrl: "",
   maxSubpages: 3,
   files: [] as FileItem[],
   pages: [] as CrawlPage[],
-  qa: [] as QA[],
-  fixed: [] as FixedQA[],
+};
+
+const defaultBusiness = {
+  name: "",
+  business_type: "",
+  description: "",
+  location: "",
+  working_hours: "",
+  contact: "",
+  website: "",
+  system_prompt: "",
 };
 
 const AIAgent = () => {
-  const [s, setS] = useState(defaultState);
-  const update = <K extends keyof typeof defaultState>(k: K, v: (typeof defaultState)[K]) =>
-    setS((p) => ({ ...p, [k]: v }));
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [savingBiz, setSavingBiz] = useState(false);
 
-  // hydrate
+  const [local, setLocal] = useState(defaultLocal);
+  const [business, setBusiness] = useState(defaultBusiness);
+  const [qa, setQa] = useState<QA[]>([]);
+  const [fixed, setFixed] = useState<FixedQA[]>([]);
+
+  const updateLocal = <K extends keyof typeof defaultLocal>(k: K, v: (typeof defaultLocal)[K]) =>
+    setLocal((p) => ({ ...p, [k]: v }));
+
+  // Hydrate local UI state
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LS_KEY);
-      if (raw) setS({ ...defaultState, ...JSON.parse(raw) });
+      if (raw) setLocal({ ...defaultLocal, ...JSON.parse(raw) });
     } catch {}
   }, []);
-  // persist
   useEffect(() => {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch {}
-  }, [s]);
+    try { localStorage.setItem(LS_KEY, JSON.stringify(local)); } catch {}
+  }, [local]);
 
-  const effectivePlatform: Platform = s.platform === "unknown" && s.savedKey ? s.manualPlatform : s.platform;
+  // Load DB state
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      setLoading(true);
+      const [{ data: biz }, { data: qaRows }, { data: fxRows }] = await Promise.all([
+        supabase.from("business_profiles").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("qa_pairs").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
+        supabase.from("fixed_qa").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
+      ]);
+      if (biz) {
+        setBusiness({
+          name: biz.name ?? "",
+          business_type: biz.business_type ?? "",
+          description: biz.description ?? "",
+          location: biz.location ?? "",
+          working_hours: biz.working_hours ?? "",
+          contact: biz.contact ?? "",
+          website: biz.website ?? "",
+          system_prompt: biz.system_prompt ?? "",
+        });
+      }
+      setQa((qaRows ?? []).map((r: any) => ({ id: r.id, question: r.question, answer: r.answer })));
+      setFixed((fxRows ?? []).map((r: any) => ({ id: r.id, keyword: r.keyword, reply: r.reply })));
+      setLoading(false);
+    })();
+  }, [user]);
+
+  const effectivePlatform: Platform = local.platform === "unknown" && local.savedKey ? local.manualPlatform : local.platform;
   const modelOptions = effectivePlatform !== "unknown" ? MODELS[effectivePlatform] : [];
 
   const masked = useMemo(() => {
-    if (!s.savedKey) return "";
-    const tail = s.savedKey.slice(-4);
-    return `••••••••••••${tail}`;
-  }, [s.savedKey]);
+    if (!local.savedKey) return "";
+    return `••••••••••••${local.savedKey.slice(-4)}`;
+  }, [local.savedKey]);
 
   const saveKey = () => {
-    if (!s.apiKey.trim()) { toast.error("Paste your API key first"); return; }
-    const platform = detectPlatform(s.apiKey);
+    if (!local.apiKey.trim()) { toast.error("Paste your API key first"); return; }
+    const platform = detectPlatform(local.apiKey);
     const def = platform !== "unknown" ? MODELS[platform][0].value : "";
-    setS((p) => ({ ...p, savedKey: p.apiKey, apiKey: "", platform, model: def || p.model }));
+    setLocal((p) => ({ ...p, savedKey: p.apiKey, apiKey: "", platform, model: def || p.model }));
     toast.success(platform !== "unknown" ? `Detected ${PLATFORM_LABEL[platform]}` : "Key saved — pick platform manually");
+    toast("⚠️ Encrypted server-side storage coming next — currently local only", { duration: 4000 });
   };
 
   const removeKey = () => {
-    setS((p) => ({ ...p, savedKey: "", platform: "unknown", model: "" }));
+    setLocal((p) => ({ ...p, savedKey: "", platform: "unknown", model: "" }));
     toast("API key removed");
   };
 
   const generatePrompt = () => {
-    const b = s.business;
-    if (!b.name || !b.description) { toast.error("Fill business name & description"); return; }
-    const prompt = `You are the official AI assistant for ${b.name}${b.type ? ` (${b.type})` : ""}.
+    if (!business.name || !business.description) { toast.error("Fill business name & description"); return; }
+    const prompt = `You are the official AI assistant for ${business.name}${business.business_type ? ` (${business.business_type})` : ""}.
 
 ABOUT THE BUSINESS:
-${b.description}
+${business.description}
 
-${b.location ? `Location: ${b.location}\n` : ""}${b.hours ? `Working Hours: ${b.hours}\n` : ""}${b.contact ? `Contact: ${b.contact}\n` : ""}${b.website ? `Website: ${b.website}\n` : ""}
+${business.location ? `Location: ${business.location}\n` : ""}${business.working_hours ? `Working Hours: ${business.working_hours}\n` : ""}${business.contact ? `Contact: ${business.contact}\n` : ""}${business.website ? `Website: ${business.website}\n` : ""}
 RULES:
 - Reply in the customer's language (auto-detect Bangla / English).
 - Be friendly, concise, and human-like. Avoid robotic phrases.
 - Use the knowledge base for accurate answers. If unsure, ask a clarifying question.
 - Never invent prices, stock, or policies that aren't in the knowledge base.
 - Out of scope or sensitive topics → politely redirect to a human agent.`;
-    update("systemPrompt", prompt);
-    toast.success("System prompt generated — edit & save");
+    setBusiness((p) => ({ ...p, system_prompt: prompt }));
+    toast.success("System prompt generated — click Save Business Profile");
   };
 
+  const saveBusiness = async () => {
+    if (!user) return;
+    setSavingBiz(true);
+    const { error } = await supabase
+      .from("business_profiles")
+      .upsert({ user_id: user.id, ...business }, { onConflict: "user_id" });
+    setSavingBiz(false);
+    if (error) toast.error(error.message);
+    else toast.success("Business profile saved");
+  };
+
+  // QA handlers
+  const addQA = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("qa_pairs")
+      .insert({ user_id: user.id, question: "", answer: "" })
+      .select()
+      .single();
+    if (error) { toast.error(error.message); return; }
+    setQa((p) => [...p, { id: data.id, question: "", answer: "" }]);
+  };
+  const updateQA = async (id: string, patch: Partial<QA>) => {
+    setQa((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+  };
+  const saveQA = async (row: QA) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from("qa_pairs")
+      .update({ question: row.question, answer: row.answer })
+      .eq("id", row.id);
+    if (error) toast.error(error.message);
+  };
+  const deleteQA = async (id: string) => {
+    const { error } = await supabase.from("qa_pairs").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    setQa((p) => p.filter((x) => x.id !== id));
+  };
+
+  // Fixed QA
+  const addFixed = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("fixed_qa")
+      .insert({ user_id: user.id, keyword: "", reply: "" })
+      .select()
+      .single();
+    if (error) { toast.error(error.message); return; }
+    setFixed((p) => [...p, { id: data.id, keyword: "", reply: "" }]);
+  };
+  const updateFixed = (id: string, patch: Partial<FixedQA>) =>
+    setFixed((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+  const saveFixed = async (row: FixedQA) => {
+    const { error } = await supabase
+      .from("fixed_qa")
+      .update({ keyword: row.keyword, reply: row.reply })
+      .eq("id", row.id);
+    if (error) toast.error(error.message);
+  };
+  const deleteFixed = async (id: string) => {
+    const { error } = await supabase.from("fixed_qa").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    setFixed((p) => p.filter((x) => x.id !== id));
+  };
+
+  // Knowledge UI demo (still local — needs embedding pipeline)
   const onFiles = (files: FileList | null) => {
     if (!files) return;
     const next: FileItem[] = [];
@@ -142,33 +244,27 @@ RULES:
       next.push({ id: crypto.randomUUID(), name: f.name, size: f.size });
     }
     if (next.length) {
-      update("files", [...s.files, ...next]);
-      toast.success(`${next.length} file(s) added`);
+      updateLocal("files", [...local.files, ...next]);
+      toast.success(`${next.length} file(s) added (UI demo)`);
     }
   };
-
-  const addText = () => {
-    if (!s.text.trim()) { toast.error("Enter some text"); return; }
-    toast.success("Text added to knowledge base");
-    update("text", "");
-  };
-
   const fetchLinks = () => {
-    if (!s.websiteUrl.trim()) { toast.error("Enter a URL"); return; }
-    const fake = Array.from({ length: Math.min(s.maxSubpages, 5) }).map((_, i) => ({
+    if (!local.websiteUrl.trim()) { toast.error("Enter a URL"); return; }
+    const fake = Array.from({ length: Math.min(local.maxSubpages, 5) }).map((_, i) => ({
       id: crypto.randomUUID(),
-      url: i === 0 ? s.websiteUrl : `${s.websiteUrl.replace(/\/$/, "")}/page-${i}`,
+      url: i === 0 ? local.websiteUrl : `${local.websiteUrl.replace(/\/$/, "")}/page-${i}`,
     }));
-    update("pages", [...s.pages, ...fake]);
+    updateLocal("pages", [...local.pages, ...fake]);
     toast.success(`Queued ${fake.length} pages (UI demo)`);
   };
 
-  const addQA = () => {
-    update("qa", [...s.qa, { id: crypto.randomUUID(), q: "", a: "" }]);
-  };
-  const addFixed = () => {
-    update("fixed", [...s.fixed, { id: crypto.randomUUID(), keyword: "", reply: "" }]);
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -177,25 +273,25 @@ RULES:
         <p className="text-sm text-muted-foreground">Connect your AI, train it on your business, and let it reply 24/7.</p>
       </div>
 
-      {/* 3a — API KEY */}
+      {/* API KEY (local only — encryption coming next) */}
       <section className="rounded-xl border border-border bg-card p-5 space-y-4">
         <div className="flex items-center gap-2">
           <KeyRound className="h-5 w-5 text-primary" />
           <h2 className="font-semibold">AI API Key</h2>
         </div>
 
-        {!s.savedKey ? (
+        {!local.savedKey ? (
           <div className="space-y-3">
             <div className="flex gap-2">
               <Input
                 type="password"
                 placeholder="Paste your AI API Key (OpenAI / Gemini / DeepSeek)"
-                value={s.apiKey}
-                onChange={(e) => update("apiKey", e.target.value)}
+                value={local.apiKey}
+                onChange={(e) => updateLocal("apiKey", e.target.value)}
               />
               <Button onClick={saveKey} className="bg-primary text-primary-foreground hover:bg-primary-hover">Save</Button>
             </div>
-            <p className="text-xs text-muted-foreground">Keys stay local in this scaffold. After Cloud is wired they will be encrypted server-side.</p>
+            <p className="text-xs text-muted-foreground">⚠️ Currently stored locally. Server-side encryption coming next.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -209,10 +305,10 @@ RULES:
             </div>
 
             <div className="grid md:grid-cols-2 gap-3">
-              {s.platform === "unknown" && (
+              {local.platform === "unknown" && (
                 <div>
                   <Label>Platform (manual)</Label>
-                  <Select value={s.manualPlatform} onValueChange={(v) => update("manualPlatform", v as any)}>
+                  <Select value={local.manualPlatform} onValueChange={(v) => updateLocal("manualPlatform", v as any)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="openai">OpenAI</SelectItem>
@@ -224,7 +320,7 @@ RULES:
               )}
               <div>
                 <Label>Model</Label>
-                <Select value={s.model || modelOptions[0]?.value} onValueChange={(v) => update("model", v)}>
+                <Select value={local.model || modelOptions[0]?.value} onValueChange={(v) => updateLocal("model", v)}>
                   <SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger>
                   <SelectContent>
                     {modelOptions.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
@@ -232,49 +328,53 @@ RULES:
                 </Select>
               </div>
             </div>
-            <p className="text-sm text-green-500">✅ Connected to {PLATFORM_LABEL[effectivePlatform]} — Model: {s.model || modelOptions[0]?.value}</p>
           </div>
         )}
       </section>
 
-      {/* 3b — BUSINESS INFO */}
+      {/* BUSINESS INFO (Supabase wired) */}
       <section className="rounded-xl border border-border bg-card p-5 space-y-4">
         <h2 className="font-semibold">Business Information</h2>
         <div className="grid md:grid-cols-2 gap-3">
-          <div><Label>Business Name</Label><Input value={s.business.name} onChange={(e) => update("business", { ...s.business, name: e.target.value })} /></div>
+          <div><Label>Business Name</Label><Input value={business.name} onChange={(e) => setBusiness({ ...business, name: e.target.value })} /></div>
           <div>
             <Label>Business Type</Label>
-            <Select value={s.business.type} onValueChange={(v) => update("business", { ...s.business, type: v })}>
+            <Select value={business.business_type} onValueChange={(v) => setBusiness({ ...business, business_type: v })}>
               <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
               <SelectContent>
                 {["E-commerce","Restaurant","Service","Education","Healthcare","Other"].map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-2"><Label>Description</Label><Textarea rows={3} placeholder="What do you sell / offer?" value={s.business.description} onChange={(e) => update("business", { ...s.business, description: e.target.value })} /></div>
-          <div><Label>Location / Address</Label><Input value={s.business.location} onChange={(e) => update("business", { ...s.business, location: e.target.value })} /></div>
-          <div><Label>Working Hours</Label><Input placeholder="Sat–Thu 10am–10pm" value={s.business.hours} onChange={(e) => update("business", { ...s.business, hours: e.target.value })} /></div>
-          <div><Label>Contact Info</Label><Input value={s.business.contact} onChange={(e) => update("business", { ...s.business, contact: e.target.value })} /></div>
-          <div><Label>Website (optional)</Label><Input value={s.business.website} onChange={(e) => update("business", { ...s.business, website: e.target.value })} /></div>
+          <div className="md:col-span-2"><Label>Description</Label><Textarea rows={3} placeholder="What do you sell / offer?" value={business.description} onChange={(e) => setBusiness({ ...business, description: e.target.value })} /></div>
+          <div><Label>Location / Address</Label><Input value={business.location} onChange={(e) => setBusiness({ ...business, location: e.target.value })} /></div>
+          <div><Label>Working Hours</Label><Input placeholder="Sat–Thu 10am–10pm" value={business.working_hours} onChange={(e) => setBusiness({ ...business, working_hours: e.target.value })} /></div>
+          <div><Label>Contact Info</Label><Input value={business.contact} onChange={(e) => setBusiness({ ...business, contact: e.target.value })} /></div>
+          <div><Label>Website (optional)</Label><Input value={business.website} onChange={(e) => setBusiness({ ...business, website: e.target.value })} /></div>
         </div>
 
-        <Button onClick={generatePrompt} className="bg-primary text-primary-foreground hover:bg-primary-hover">
-          <Sparkles className="h-4 w-4 mr-1.5" /> Auto-Generate Agent Prompt
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={generatePrompt} variant="outline">
+            <Sparkles className="h-4 w-4 mr-1.5" /> Auto-Generate Prompt
+          </Button>
+          <Button onClick={saveBusiness} disabled={savingBiz} className="bg-primary text-primary-foreground hover:bg-primary-hover">
+            {savingBiz && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+            Save Business Profile
+          </Button>
+        </div>
 
-        {s.systemPrompt && (
+        {business.system_prompt && (
           <div className="space-y-2">
             <Label>System Prompt (editable)</Label>
-            <Textarea rows={10} value={s.systemPrompt} onChange={(e) => update("systemPrompt", e.target.value)} />
-            <Button onClick={() => toast.success("Prompt saved")} variant="outline">Save Prompt</Button>
+            <Textarea rows={10} value={business.system_prompt} onChange={(e) => setBusiness({ ...business, system_prompt: e.target.value })} />
           </div>
         )}
       </section>
 
-      {/* 3c — KNOWLEDGE BASE */}
+      {/* KNOWLEDGE BASE */}
       <section className="rounded-xl border border-border bg-card p-5 space-y-4">
         <h2 className="font-semibold">Knowledge Base</h2>
-        <Tabs defaultValue="files">
+        <Tabs defaultValue="qa">
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="files"><FileText className="h-4 w-4 mr-1.5" />Files</TabsTrigger>
             <TabsTrigger value="text"><FileText className="h-4 w-4 mr-1.5" />Text</TabsTrigger>
@@ -284,20 +384,21 @@ RULES:
           </TabsList>
 
           <TabsContent value="files" className="space-y-3 pt-3">
+            <p className="text-xs text-muted-foreground">⚠️ UI demo — embedding pipeline coming next.</p>
             <label className="block border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/60 transition-colors">
               <input type="file" multiple className="hidden" accept=".pdf,.doc,.docx,.txt,.xlsx" onChange={(e) => onFiles(e.target.files)} />
               <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm font-medium">Drag & drop or click to upload</p>
               <p className="text-xs text-muted-foreground">PDF, DOC, DOCX, TXT, XLSX — max 25MB</p>
             </label>
-            {s.files.length > 0 && (
+            {local.files.length > 0 && (
               <div className="space-y-2">
-                {s.files.map((f) => (
+                {local.files.map((f) => (
                   <div key={f.id} className="flex items-center gap-3 rounded-lg border border-border bg-background/40 p-3">
                     <FileText className="h-4 w-4 text-primary" />
                     <span className="flex-1 text-sm truncate">{f.name}</span>
                     <span className="text-xs text-muted-foreground">{(f.size / 1024).toFixed(1)} KB</span>
-                    <Button variant="ghost" size="sm" onClick={() => update("files", s.files.filter((x) => x.id !== f.id))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => updateLocal("files", local.files.filter((x) => x.id !== f.id))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </div>
                 ))}
               </div>
@@ -305,30 +406,32 @@ RULES:
           </TabsContent>
 
           <TabsContent value="text" className="space-y-3 pt-3">
-            <Textarea rows={8} placeholder="Paste any business knowledge: FAQs, policies, product info..." value={s.text} onChange={(e) => update("text", e.target.value)} />
-            <Button onClick={addText} className="bg-primary text-primary-foreground hover:bg-primary-hover"><Plus className="h-4 w-4 mr-1.5" />Add Text</Button>
+            <p className="text-xs text-muted-foreground">⚠️ UI demo — embedding pipeline coming next.</p>
+            <Textarea rows={8} placeholder="Paste any business knowledge: FAQs, policies, product info..." value={local.text} onChange={(e) => updateLocal("text", e.target.value)} />
+            <Button onClick={() => { toast.success("Text queued (UI demo)"); updateLocal("text",""); }} className="bg-primary text-primary-foreground hover:bg-primary-hover"><Plus className="h-4 w-4 mr-1.5" />Add Text</Button>
           </TabsContent>
 
           <TabsContent value="website" className="space-y-3 pt-3">
+            <p className="text-xs text-muted-foreground">⚠️ UI demo — crawler coming next.</p>
             <div className="grid md:grid-cols-[1fr_180px_auto] gap-2">
-              <Input placeholder="https://yourbusiness.com" value={s.websiteUrl} onChange={(e) => update("websiteUrl", e.target.value)} />
+              <Input placeholder="https://yourbusiness.com" value={local.websiteUrl} onChange={(e) => updateLocal("websiteUrl", e.target.value)} />
               <div>
-                <Select value={String(s.maxSubpages)} onValueChange={(v) => update("maxSubpages", Number(v))}>
+                <Select value={String(local.maxSubpages)} onValueChange={(v) => updateLocal("maxSubpages", Number(v))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: 10 }).map((_, i) => <SelectItem key={i+1} value={String(i+1)}>Max {i+1} subpages</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={fetchLinks} className="bg-primary text-primary-foreground hover:bg-primary-hover">Fetch All Links</Button>
+              <Button onClick={fetchLinks} className="bg-primary text-primary-foreground hover:bg-primary-hover">Fetch Links</Button>
             </div>
-            {s.pages.length > 0 && (
+            {local.pages.length > 0 && (
               <div className="space-y-2">
-                {s.pages.map((p) => (
+                {local.pages.map((p) => (
                   <div key={p.id} className="flex items-center gap-3 rounded-lg border border-border bg-background/40 p-3">
                     <Globe className="h-4 w-4 text-primary" />
                     <span className="flex-1 text-sm truncate">{p.url}</span>
-                    <Button variant="ghost" size="sm" onClick={() => update("pages", s.pages.filter((x) => x.id !== p.id))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => updateLocal("pages", local.pages.filter((x) => x.id !== p.id))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </div>
                 ))}
               </div>
@@ -337,12 +440,12 @@ RULES:
 
           <TabsContent value="qa" className="space-y-3 pt-3">
             <Button onClick={addQA} variant="outline"><Plus className="h-4 w-4 mr-1.5" />Add Q&A Pair</Button>
-            {s.qa.map((row) => (
+            {qa.map((row) => (
               <div key={row.id} className="rounded-lg border border-border bg-background/40 p-3 space-y-2">
-                <Input placeholder="Question" value={row.q} onChange={(e) => update("qa", s.qa.map((x) => x.id === row.id ? { ...x, q: e.target.value } : x))} />
-                <Textarea rows={2} placeholder="Answer" value={row.a} onChange={(e) => update("qa", s.qa.map((x) => x.id === row.id ? { ...x, a: e.target.value } : x))} />
+                <Input placeholder="Question" value={row.question} onChange={(e) => updateQA(row.id, { question: e.target.value })} onBlur={() => saveQA(row)} />
+                <Textarea rows={2} placeholder="Answer" value={row.answer} onChange={(e) => updateQA(row.id, { answer: e.target.value })} onBlur={() => saveQA(row)} />
                 <div className="flex justify-end">
-                  <Button variant="ghost" size="sm" onClick={() => update("qa", s.qa.filter((x) => x.id !== row.id))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => deleteQA(row.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </div>
               </div>
             ))}
@@ -351,11 +454,11 @@ RULES:
           <TabsContent value="fixed" className="space-y-3 pt-3">
             <p className="text-xs text-muted-foreground">Exact keyword matches — bypass AI and send the fixed reply.</p>
             <Button onClick={addFixed} variant="outline"><Plus className="h-4 w-4 mr-1.5" />Add Fixed Reply</Button>
-            {s.fixed.map((row) => (
+            {fixed.map((row) => (
               <div key={row.id} className="rounded-lg border border-border bg-background/40 p-3 grid md:grid-cols-[200px_1fr_auto] gap-2 items-start">
-                <Input placeholder="keyword e.g. price" value={row.keyword} onChange={(e) => update("fixed", s.fixed.map((x) => x.id === row.id ? { ...x, keyword: e.target.value } : x))} />
-                <Textarea rows={2} placeholder="Exact reply to send" value={row.reply} onChange={(e) => update("fixed", s.fixed.map((x) => x.id === row.id ? { ...x, reply: e.target.value } : x))} />
-                <Button variant="ghost" size="sm" onClick={() => update("fixed", s.fixed.filter((x) => x.id !== row.id))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                <Input placeholder="keyword e.g. price" value={row.keyword} onChange={(e) => updateFixed(row.id, { keyword: e.target.value })} onBlur={() => saveFixed(row)} />
+                <Textarea rows={2} placeholder="Exact reply to send" value={row.reply} onChange={(e) => updateFixed(row.id, { reply: e.target.value })} onBlur={() => saveFixed(row)} />
+                <Button variant="ghost" size="sm" onClick={() => deleteFixed(row.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
               </div>
             ))}
           </TabsContent>
