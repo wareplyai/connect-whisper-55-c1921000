@@ -73,7 +73,11 @@ const defaultBusiness = {
   contact: "",
   website: "",
   system_prompt: "",
+  ai_enabled: false,
+  connected_session_ids: [] as string[],
 };
+
+type SessionRow = { id: string; session_name: string; phone_number: string | null; status: string };
 
 type SavedKey = { id: string; platform: Exclude<Platform, "unknown">; model: string; key_last4: string };
 
