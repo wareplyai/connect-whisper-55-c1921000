@@ -185,19 +185,39 @@ Deno.serve(async (req) => {
     const connectedSessions: string[] = (biz?.connected_session_ids ?? []) as string[];
     const sessionConnected = connectedSessions.includes(sessionId);
 
+    let messageId: string | undefined;
+
+    if (sourceMessageId) {
+      const { data: sourceRow } = await admin
+        .from("incoming_messages")
+        .select("id, reply_text, reply_sent, delivery_status")
+        .eq("id", sourceMessageId)
+        .eq("session_id", sessionId)
+        .maybeSingle();
+
+      if (sourceRow?.id) {
+        messageId = sourceRow.id;
+        if (sourceRow.reply_sent || sourceRow.delivery_status === "sent") {
+          return jsonResp({ ok: true, skipped: "already_processed", message_id: messageId });
+        }
+      }
+    }
+
     // DEDUPE: if same (session, from, text) seen in last 60 seconds, skip to prevent loops/retries
     const sinceIso = new Date(Date.now() - 60_000).toISOString();
-    const { data: recent } = await admin
-      .from("incoming_messages")
-      .select("id, reply_sent, delivery_status")
-      .eq("session_id", sessionId)
-      .eq("from_number", fromNumber)
-      .eq("message_text", messageText)
-      .gte("received_at", sinceIso)
-      .limit(1)
-      .maybeSingle();
-    if (recent) {
-      return jsonResp({ ok: true, skipped: "duplicate_within_60s", message_id: recent.id });
+    if (!messageId) {
+      const { data: recent } = await admin
+        .from("incoming_messages")
+        .select("id, reply_sent, delivery_status")
+        .eq("session_id", sessionId)
+        .eq("from_number", fromNumber)
+        .eq("message_text", messageText)
+        .gte("received_at", sinceIso)
+        .limit(1)
+        .maybeSingle();
+      if (recent) {
+        return jsonResp({ ok: true, skipped: "duplicate_within_60s", message_id: recent.id });
+      }
     }
 
     // RATE LIMIT: max 8 incoming from same number per minute
@@ -211,26 +231,27 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, skipped: "rate_limited" });
     }
 
-    // Always log the incoming message
-    const logRow = {
-      session_id: sessionId,
-      user_id: userId,
-      from_number: fromNumber,
-      message_text: messageText,
-      message_type: messageType,
-      is_group: isGroup,
-      raw_payload: body,
-      reply_sent: false,
-      delivery_status: "pending" as const,
-      received_at: new Date().toISOString(),
-    };
-    const { data: msgRow } = await admin
-      .from("incoming_messages")
-      .insert(logRow)
-      .select("id")
-      .single();
-
-    const messageId = msgRow?.id;
+    // Always log direct webhook messages. Trigger-queued messages reuse their existing row.
+    if (!messageId) {
+      const logRow = {
+        session_id: sessionId,
+        user_id: userId,
+        from_number: fromNumber,
+        message_text: messageText,
+        message_type: messageType,
+        is_group: isGroup,
+        raw_payload: body,
+        reply_sent: false,
+        delivery_status: "pending" as const,
+        received_at: new Date().toISOString(),
+      };
+      const { data: msgRow } = await admin
+        .from("incoming_messages")
+        .insert(logRow)
+        .select("id")
+        .single();
+      messageId = msgRow?.id;
+    }
 
     if (!aiEnabled) {
       return jsonResp({ ok: true, skipped: "ai_disabled", message_id: messageId });
