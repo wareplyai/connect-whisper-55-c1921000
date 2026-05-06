@@ -293,7 +293,18 @@ Deno.serve(async (req) => {
       return jsonResp({ error: "Invalid webhook secret" }, 401);
     }
 
-    const fromNumber = resolveCustomerNumber(body, session.phone_number);
+    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
+    let fromNumber = resolveCustomerNumber(body, session.phone_number);
+    if (fromNumber && !looksLikeCustomerPhone(fromNumber)) {
+      const recoveredNumber = await resolveFromGatewayMessageInfo({
+        gateway: GATEWAY,
+        sessionId,
+        apiToken: session.api_token,
+        messageId: fromNumber,
+        sessionPhone: session.phone_number,
+      });
+      if (recoveredNumber) fromNumber = recoveredNumber;
+    }
     if (!fromNumber) {
       return jsonResp({ error: "customer number required" }, 400);
     }
@@ -421,7 +432,6 @@ Deno.serve(async (req) => {
     });
     if (fixedHit) {
       const reply = fixedHit.reply;
-      const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
       const sendResult = await sendViaGateway({
         gateway: GATEWAY,
         sessionId,
@@ -524,7 +534,6 @@ Deno.serve(async (req) => {
     }
 
     // Send the reply back via WhatsApp gateway
-    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
     const sendResult = await sendViaGateway({
       gateway: GATEWAY,
       sessionId,
