@@ -31,6 +31,7 @@ import ConnectSession from "./pages/dashboard/ConnectSession";
 import Subscription from "./pages/dashboard/Subscription";
 import Plans from "./pages/dashboard/Plans";
 import Payments from "./pages/dashboard/Payments";
+import AutoReplies from "./pages/dashboard/AutoReplies";
 import AdminPanel from "./pages/admin/AdminPanel";
 import HAPayments from "./pages/headadmin/Payments";
 import HAPaymentMethods from "./pages/headadmin/PaymentMethods";
