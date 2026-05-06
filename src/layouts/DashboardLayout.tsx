@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, MessageCircle, Receipt, MessageSquareText, Bot } from "lucide-react";
+import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, MessageCircle, Receipt, MessageSquareText, Bot, ShieldCheck } from "lucide-react";
 import { TrialBanner } from "@/components/TrialBanner";
 import { N8nBanner } from "@/components/N8nBanner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,7 @@ const nav = [
   { to: "/dashboard/sessions", label: "Sessions", icon: Smartphone },
   { to: "/dashboard/auto-replies", label: "Auto-Replies", icon: MessageSquareText },
   { to: "/dashboard/ai-agent", label: "AI Agent", icon: Bot },
+  { to: "/dashboard/behavior", label: "Behavior & Anti-Ban", icon: ShieldCheck },
   { to: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
   { to: "/dashboard/payments", label: "My Payments", icon: Receipt },
 ];
