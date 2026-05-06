@@ -235,7 +235,7 @@ const Landing = () => {
           .hero-rise { animation: hero-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
         `}</style>
 
-        <div className="container relative py-20 md:py-28 text-center max-w-[760px]">
+        <div className="container relative py-20 md:py-28 text-center max-w-[920px]">
           {/* Top badge */}
           <div
             className="hero-rise mx-auto inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-card/40 backdrop-blur-md px-4 py-1.5 text-xs font-medium"
@@ -252,9 +252,9 @@ const Landing = () => {
 
           {/* Headline */}
           <h1
-            className="hero-rise mt-8 font-display font-bold text-foreground tracking-tight leading-[1.05]"
+            className="hero-rise mx-auto mt-8 font-display font-bold text-foreground tracking-tight leading-[1.1] max-w-[900px]"
             style={{
-              fontSize: "clamp(42px, 6vw, 72px)",
+              fontSize: "clamp(36px, 5vw, 60px)",
               letterSpacing: "-0.02em",
               animationDelay: "0.1s",
             }}
