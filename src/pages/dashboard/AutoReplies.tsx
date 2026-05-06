@@ -98,6 +98,8 @@ const AutoReplies = () => {
       is_active: editing.is_active ?? true,
       priority: Number(editing.priority) || 0,
       session_id: editing.session_id || null,
+      category: editing.category || null,
+      description: editing.description || null,
       user_id: profile.id,
     };
 
