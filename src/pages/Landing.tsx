@@ -415,7 +415,7 @@ const Landing = () => {
         <div className="container relative z-10 py-20 md:py-28 text-center max-w-[920px]">
           {/* Top badge */}
           <div
-            className="hero-rise mx-auto inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-card/40 backdrop-blur-md px-4 py-1.5 text-xs font-medium"
+            className="hero-rise mx-auto inline-flex items-center gap-2 rounded-full border-foreground/10 bg-card/40 backdrop-blur-md px-4 py-1.5 text-xs font-medium pt-[4px] pr-[36px] pb-0 pl-[18px] my-0 ml-0 mr-0 border-2 mt-[23px]"
             style={{ animationDelay: "0s" }}
           >
             <span className="relative flex h-2 w-2">
