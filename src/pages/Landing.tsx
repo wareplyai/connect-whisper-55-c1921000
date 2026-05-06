@@ -184,20 +184,6 @@ const Landing = () => {
         className="relative overflow-hidden min-h-[calc(100vh-4rem)] flex items-center"
         style={{ background: "#080b08" }}
       >
-        {/* Central green glow */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-1/2 h-[800px] w-[1100px] -translate-y-1/2 rounded-full"
-          style={{
-            zIndex: 0,
-            background:
-              "radial-gradient(ellipse 50% 50% at 50% 50%, rgba(0, 230, 118, 0.45) 0%, rgba(0, 200, 100, 0.18) 40%, transparent 70%)",
-            filter: "blur(40px)",
-            animation: "glowPulse 4s ease-in-out infinite",
-            transform: "translateX(-50%)",
-          }}
-        />
-
         {/* LEFT SIDE GLOW BEAMS */}
         <div
           aria-hidden="true"
@@ -220,7 +206,7 @@ const Landing = () => {
               width: "220px",
               height: "110%",
               background:
-                "linear-gradient(180deg, rgba(120,50,255,0.75) 0%, rgba(110,40,240,0.60) 20%, rgba(100,35,220,0.35) 55%, rgba(80,20,180,0.10) 80%, transparent 100%)",
+                "linear-gradient(180deg, rgba(0,230,118,0.75) 0%, rgba(0,210,100,0.60) 20%, rgba(0,190,90,0.35) 55%, rgba(0,150,70,0.10) 80%, transparent 100%)",
               borderRadius: "0 80px 80px 0",
               filter: "blur(18px)",
             }}
@@ -233,7 +219,7 @@ const Landing = () => {
               width: "55px",
               height: "85%",
               background:
-                "linear-gradient(180deg, rgba(180,120,255,0.85) 0%, rgba(160,90,255,0.65) 25%, rgba(130,60,240,0.30) 65%, transparent 100%)",
+                "linear-gradient(180deg, rgba(120,255,180,0.85) 0%, rgba(70,240,150,0.65) 25%, rgba(30,220,120,0.30) 65%, transparent 100%)",
               borderRadius: "40px",
               filter: "blur(8px)",
             }}
@@ -246,7 +232,7 @@ const Landing = () => {
               width: "35px",
               height: "70%",
               background:
-                "linear-gradient(180deg, rgba(150,80,255,0.60) 0%, rgba(120,55,230,0.30) 50%, transparent 100%)",
+                "linear-gradient(180deg, rgba(60,230,140,0.60) 0%, rgba(30,210,110,0.30) 50%, transparent 100%)",
               borderRadius: "30px",
               filter: "blur(10px)",
             }}
@@ -275,7 +261,7 @@ const Landing = () => {
               width: "220px",
               height: "110%",
               background:
-                "linear-gradient(180deg, rgba(180,100,255,0.70) 0%, rgba(160,80,255,0.55) 20%, rgba(130,55,230,0.30) 55%, rgba(90,30,190,0.08) 80%, transparent 100%)",
+                "linear-gradient(180deg, rgba(0,230,118,0.70) 0%, rgba(0,210,100,0.55) 20%, rgba(0,190,90,0.30) 55%, rgba(0,150,70,0.08) 80%, transparent 100%)",
               borderRadius: "80px 0 0 80px",
               filter: "blur(18px)",
             }}
@@ -288,7 +274,7 @@ const Landing = () => {
               width: "55px",
               height: "85%",
               background:
-                "linear-gradient(180deg, rgba(200,140,255,0.88) 0%, rgba(175,105,255,0.65) 25%, rgba(140,70,245,0.28) 65%, transparent 100%)",
+                "linear-gradient(180deg, rgba(140,255,190,0.88) 0%, rgba(80,245,160,0.65) 25%, rgba(40,225,130,0.28) 65%, transparent 100%)",
               borderRadius: "40px",
               filter: "blur(8px)",
             }}
@@ -301,7 +287,7 @@ const Landing = () => {
               width: "35px",
               height: "70%",
               background:
-                "linear-gradient(180deg, rgba(160,95,255,0.58) 0%, rgba(125,60,235,0.28) 50%, transparent 100%)",
+                "linear-gradient(180deg, rgba(70,235,150,0.58) 0%, rgba(30,215,115,0.28) 50%, transparent 100%)",
               borderRadius: "30px",
               filter: "blur(10px)",
             }}
