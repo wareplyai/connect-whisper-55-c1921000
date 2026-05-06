@@ -94,6 +94,7 @@ export type Database = {
       auto_reply_rules: {
         Row: {
           created_at: string
+          enabled: boolean | null
           id: string
           is_active: boolean
           keywords: string[]
@@ -108,6 +109,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          enabled?: boolean | null
           id?: string
           is_active?: boolean
           keywords?: string[]
@@ -122,6 +124,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          enabled?: boolean | null
           id?: string
           is_active?: boolean
           keywords?: string[]
