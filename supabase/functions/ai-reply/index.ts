@@ -19,7 +19,10 @@ async function getCryptoKey(): Promise<CryptoKey> {
   return crypto.subtle.importKey("raw", hash, { name: "AES-GCM" }, false, ["decrypt"]);
 }
 function b64decode(s: string): Uint8Array {
-  return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const binary = atob(s);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
 }
 async function decryptKey(payload: string): Promise<string> {
   const [ivB64, ctB64] = payload.split(".");
