@@ -91,6 +91,7 @@ const App = () => (
                 <Route path="subscription" element={<Subscription />} />
                 <Route path="subscription/plans" element={<Plans />} />
                 <Route path="payments" element={<Payments />} />
+                <Route path="auto-replies" element={<AutoReplies />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>
