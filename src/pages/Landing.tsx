@@ -252,9 +252,9 @@ const Landing = () => {
 
           {/* Headline */}
           <h1
-            className="hero-rise mt-8 font-display font-bold text-foreground tracking-tight leading-[1.05]"
+            className="hero-rise mx-auto mt-8 font-display font-bold text-foreground tracking-tight leading-[1.1] max-w-[900px]"
             style={{
-              fontSize: "clamp(42px, 6vw, 72px)",
+              fontSize: "clamp(36px, 5vw, 60px)",
               letterSpacing: "-0.02em",
               animationDelay: "0.1s",
             }}
