@@ -324,10 +324,63 @@ RULES:
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2"><Bot className="h-7 w-7 text-primary" /> AI Agent Setup</h1>
-        <p className="text-sm text-muted-foreground">Connect your AI, train it on your business, and let it reply 24/7.</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2"><Bot className="h-7 w-7 text-primary" /> AI Agent Setup</h1>
+          <p className="text-sm text-muted-foreground">Connect your AI, train it on your business, and let it reply 24/7.</p>
+        </div>
+
+        {/* MASTER ON/OFF */}
+        <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${business.ai_enabled ? "border-green-500/40 bg-green-500/10" : "border-border bg-card"}`}>
+          <Power className={`h-5 w-5 ${business.ai_enabled ? "text-green-500" : "text-muted-foreground"}`} />
+          <div className="text-sm">
+            <p className="font-semibold">{business.ai_enabled ? "AI Agent is ON" : "AI Agent is OFF"}</p>
+            <p className="text-xs text-muted-foreground">{business.ai_enabled ? "Replying automatically" : "Toggle on to start replying"}</p>
+          </div>
+          <Switch checked={business.ai_enabled} onCheckedChange={toggleAI} />
+        </div>
       </div>
+
+      {/* SESSIONS */}
+      <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Smartphone className="h-5 w-5 text-primary" />
+          <h2 className="font-semibold">WhatsApp Sessions</h2>
+          <span className="ml-auto text-xs text-muted-foreground">
+            {business.connected_session_ids.length} of {sessions.length} connected
+          </span>
+        </div>
+
+        {sessions.length === 0 ? (
+          <div className="text-center py-6 border border-dashed border-border rounded-lg">
+            <p className="text-sm text-muted-foreground mb-3">No WhatsApp sessions yet.</p>
+            <Link to="/dashboard/sessions/create">
+              <Button variant="outline"><Plus className="h-4 w-4 mr-1.5" />Create a Session</Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {sessions.map((s) => {
+              const checked = business.connected_session_ids.includes(s.id);
+              const connected = s.status === "connected";
+              return (
+                <label key={s.id} className="flex items-center gap-3 rounded-lg border border-border bg-background/40 p-3 cursor-pointer hover:border-primary/50 transition-colors">
+                  <Checkbox checked={checked} onCheckedChange={(v) => toggleSession(s.id, !!v)} />
+                  <Smartphone className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{s.session_name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{s.phone_number || "Not connected yet"}</p>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${connected ? "bg-green-500/15 text-green-500" : "bg-muted text-muted-foreground"}`}>
+                    {s.status}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">Select which WhatsApp numbers the AI agent should reply on.</p>
+      </section>
 
       {/* API KEY (encrypted server-side) */}
       <section className="rounded-xl border border-border bg-card p-5 space-y-4">
