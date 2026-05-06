@@ -683,11 +683,15 @@ const Landing = () => {
           <div className="absolute -top-10 left-1/3 h-72 w-72 rounded-full bg-primary/10 blur-[120px]" />
         </div>
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs text-primary mb-4">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-3.5 py-1.5 text-xs font-medium text-primary mb-5 shadow-sm shadow-primary/10">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inset-0 animate-ping rounded-full bg-primary/60" />
+              <span className="relative h-2 w-2 rounded-full bg-primary" />
+            </span>
             <Sparkles className="h-3 w-3" />
             {t("mt.badge")}
           </div>
-          <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight mb-4">
+          <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight mb-4 leading-[1.05]">
             {t("mt.title.1")}<br />
             <span className="text-gradient">{t("mt.title.2")}</span>
           </h2>
@@ -697,26 +701,36 @@ const Landing = () => {
 
           {/* Bento grid */}
           <div className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t("mt.section.types")}</span>
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+            <div className="flex items-center gap-3 mb-4">
+              <span className="grid h-5 w-5 place-items-center rounded-md bg-primary/15 text-[10px] font-bold text-primary">01</span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/80">{t("mt.section.types")}</span>
+              <div className="h-px flex-1 bg-gradient-to-r from-border via-border/50 to-transparent" />
             </div>
 
             <div className="grid grid-cols-6 gap-2.5">
               {/* Featured */}
-              <div className="col-span-6 sm:col-span-6 md:col-span-3 md:row-span-2 group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-5 hover:border-primary/40 transition-all duration-500 hover:-translate-y-1">
-                <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/15 blur-2xl group-hover:bg-primary/25 transition-all" />
+              <div className="col-span-6 sm:col-span-6 md:col-span-3 md:row-span-2 group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-primary/10 p-5 hover:border-primary/50 transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10">
+                <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-primary/20 blur-2xl group-hover:bg-primary/30 transition-all" />
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
                 <div className="relative">
-                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-lg shadow-primary/30 mb-4">
-                    <MessageSquare className="h-5 w-5" />
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-lg shadow-primary/30">
+                      <MessageSquare className="h-5 w-5" />
+                    </div>
+                    <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">AI</span>
                   </div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <h4 className="font-semibold text-base">{t("mt.featured.t")}</h4>
-                    <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">AI</span>
-                  </div>
+                  <h4 className="font-semibold text-base mb-1.5">{t("mt.featured.t")}</h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">{t("mt.featured.d")}</p>
-                  <div className="mt-4 flex items-center gap-1 text-[11px] text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+
+                  {/* Mini chat preview */}
+                  <div className="mt-4 space-y-1.5">
+                    <div className="inline-flex items-center gap-1.5 rounded-lg rounded-bl-sm bg-muted/70 px-2.5 py-1 text-[10px] text-foreground/80">Hi! 👋</div>
+                    <div className="ml-auto flex justify-end">
+                      <div className="inline-flex items-center gap-1.5 rounded-lg rounded-br-sm bg-primary/15 border border-primary/20 px-2.5 py-1 text-[10px] text-primary font-medium">Auto-reply ✓✓</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-1 text-[11px] font-medium text-primary opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
                     <span>{t("mt.featured.tag")}</span><ArrowUpRight className="h-3 w-3" />
                   </div>
                 </div>
@@ -732,11 +746,12 @@ const Landing = () => {
               ].map((it, idx) => (
                 <div
                   key={it.l}
-                  className="wa-feature col-span-3 group relative overflow-hidden rounded-xl border border-border bg-card/60 backdrop-blur p-3 hover:border-primary/40 hover:bg-card transition-all duration-300 hover:-translate-y-0.5"
+                  className="wa-feature col-span-3 group relative overflow-hidden rounded-xl border border-border bg-card/60 backdrop-blur p-3 hover:border-primary/40 hover:bg-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/5"
                   style={{ animationDelay: `${idx * 0.06}s` }}
                 >
+                  <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="flex items-center gap-2.5">
-                    <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br ${it.c} text-white shadow-sm group-hover:scale-110 transition-transform`}>
+                    <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br ${it.c} text-white shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-transform`}>
                       <it.i className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
@@ -750,10 +765,10 @@ const Landing = () => {
           </div>
 
           {/* Senders */}
-          <div className="flex items-center gap-2 mb-4">
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t("mt.section.sendTo")}</span>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+          <div className="flex items-center gap-3 mb-4">
+            <span className="grid h-5 w-5 place-items-center rounded-md bg-primary/15 text-[10px] font-bold text-primary">02</span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/80">{t("mt.section.sendTo")}</span>
+            <div className="h-px flex-1 bg-gradient-to-r from-border via-border/50 to-transparent" />
           </div>
           <div className="grid grid-cols-3 gap-2.5 mb-8">
             {[
@@ -761,18 +776,20 @@ const Landing = () => {
               { i: UsersRound, l: t("mt.groups.l"), d: t("mt.groups.d") },
               { i: Radio, l: t("mt.channels.l"), d: t("mt.channels.d") },
             ].map((s) => (
-              <div key={s.l} className="group relative overflow-hidden rounded-xl border border-border bg-card/60 backdrop-blur p-3 text-center hover:border-primary/40 hover:bg-card transition-all hover:-translate-y-0.5">
-                <div className="mx-auto mb-2 grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
+              <div key={s.l} className="group relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-card/80 to-card/40 backdrop-blur p-4 text-center hover:border-primary/40 transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/5">
+                <div className="absolute -inset-x-4 -top-8 h-16 bg-primary/0 group-hover:bg-primary/10 blur-2xl transition-all" />
+                <div className="relative mx-auto mb-2 grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20 text-primary group-hover:scale-110 transition-transform">
                   <s.i className="h-4 w-4" />
                 </div>
-                <div className="text-sm font-semibold">{s.l}</div>
-                <div className="text-[10px] text-muted-foreground">{s.d}</div>
+                <div className="relative text-sm font-semibold">{s.l}</div>
+                <div className="relative text-[10px] text-muted-foreground">{s.d}</div>
               </div>
             ))}
           </div>
 
-          <Button asChild size="lg" className="group bg-gradient-to-r from-primary to-primary/80 hover:from-primary-hover hover:to-primary shadow-lg shadow-primary/20">
+          <Button asChild size="lg" className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/80 hover:from-primary-hover hover:to-primary shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all">
             <Link to="/register">
+              <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700" />
               {t("mt.cta")}
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Link>
