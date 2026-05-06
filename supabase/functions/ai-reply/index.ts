@@ -85,6 +85,45 @@ async function callAI(opts: {
   throw new Error(`Unsupported platform: ${platform}`);
 }
 
+function recipientVariants(input: string): string[] {
+  const raw = input.trim();
+  const digits = raw.replace(/\D/g, "");
+  const variants = [raw];
+  if (digits) variants.push(digits, `+${digits}`, `${digits}@s.whatsapp.net`);
+  if (digits.startsWith("0") && digits.length >= 10) {
+    variants.push(`88${digits}`, `+88${digits}`, `88${digits.slice(1)}`, `+88${digits.slice(1)}`);
+  }
+  return [...new Set(variants.filter(Boolean))];
+}
+
+async function sendViaGateway(opts: {
+  gateway: string; sessionId: string; apiToken?: string | null; to: string; message: string;
+}): Promise<{ ok: boolean; to: string; error: string | null; data: unknown }> {
+  const { gateway, sessionId, apiToken, to, message } = opts;
+  const errors: string[] = [];
+
+  for (const candidate of recipientVariants(to)) {
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+      const sendRes = await fetch(`${gateway}/api/session/${sessionId}/send`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ to: candidate, message }),
+      });
+      const sendData = await sendRes.json().catch(() => ({}));
+      const explicitFailure = sendData?.success === false || sendData?.ok === false || sendData?.sent === false ||
+        sendData?.status === "failed" || Boolean(sendData?.error);
+      if (sendRes.ok && !explicitFailure) return { ok: true, to: candidate, error: null, data: sendData };
+      errors.push(`${candidate}: ${sendData?.error || sendData?.message || `gateway ${sendRes.status}`}`);
+    } catch (e: any) {
+      errors.push(`${candidate}: ${e?.message || "gateway unreachable"}`);
+    }
+  }
+
+  return { ok: false, to, error: errors.join("; ") || "gateway send failed", data: null };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResp({ error: "Method not allowed" }, 405);
@@ -97,6 +136,7 @@ Deno.serve(async (req) => {
     const isGroup = Boolean(body.is_group ?? false);
     const messageType = String(body.message_type || "text");
     const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false);
+    const sourceMessageId = String(body.source_message_id || "").trim();
 
     if (!sessionId || !fromNumber || !messageText) {
       return jsonResp({ error: "session_id, from, and message required" }, 400);
@@ -123,7 +163,7 @@ Deno.serve(async (req) => {
     // Load session and validate webhook secret
     const { data: session, error: sErr } = await admin
       .from("sessions")
-      .select("id, user_id, webhook_secret, status")
+      .select("id, user_id, webhook_secret, status, api_token")
       .eq("id", sessionId)
       .maybeSingle();
     if (sErr) throw sErr;
@@ -145,19 +185,42 @@ Deno.serve(async (req) => {
     const connectedSessions: string[] = (biz?.connected_session_ids ?? []) as string[];
     const sessionConnected = connectedSessions.includes(sessionId);
 
+    let messageId: string | undefined;
+
+    if (sourceMessageId) {
+      const { data: claimedRow, error: claimErr } = await admin
+        .from("incoming_messages")
+        .update({ delivery_status: "processing", reply_attempted_at: new Date().toISOString() })
+        .eq("id", sourceMessageId)
+        .eq("session_id", sessionId)
+        .eq("reply_sent", false)
+        .eq("delivery_status", "pending")
+        .select("id")
+        .maybeSingle();
+      if (claimErr) throw claimErr;
+
+      if (claimedRow?.id) {
+        messageId = claimedRow.id;
+      } else {
+        return jsonResp({ ok: true, skipped: "already_claimed_or_processed", message_id: sourceMessageId });
+      }
+    }
+
     // DEDUPE: if same (session, from, text) seen in last 60 seconds, skip to prevent loops/retries
     const sinceIso = new Date(Date.now() - 60_000).toISOString();
-    const { data: recent } = await admin
-      .from("incoming_messages")
-      .select("id, reply_sent, delivery_status")
-      .eq("session_id", sessionId)
-      .eq("from_number", fromNumber)
-      .eq("message_text", messageText)
-      .gte("received_at", sinceIso)
-      .limit(1)
-      .maybeSingle();
-    if (recent) {
-      return jsonResp({ ok: true, skipped: "duplicate_within_60s", message_id: recent.id });
+    if (!messageId) {
+      const { data: recent } = await admin
+        .from("incoming_messages")
+        .select("id, reply_sent, delivery_status")
+        .eq("session_id", sessionId)
+        .eq("from_number", fromNumber)
+        .eq("message_text", messageText)
+        .gte("received_at", sinceIso)
+        .limit(1)
+        .maybeSingle();
+      if (recent) {
+        return jsonResp({ ok: true, skipped: "duplicate_within_60s", message_id: recent.id });
+      }
     }
 
     // RATE LIMIT: max 8 incoming from same number per minute
@@ -171,26 +234,27 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, skipped: "rate_limited" });
     }
 
-    // Always log the incoming message
-    const logRow = {
-      session_id: sessionId,
-      user_id: userId,
-      from_number: fromNumber,
-      message_text: messageText,
-      message_type: messageType,
-      is_group: isGroup,
-      raw_payload: body,
-      reply_sent: false,
-      delivery_status: "pending" as const,
-      received_at: new Date().toISOString(),
-    };
-    const { data: msgRow } = await admin
-      .from("incoming_messages")
-      .insert(logRow)
-      .select("id")
-      .single();
-
-    const messageId = msgRow?.id;
+    // Always log direct webhook messages. Trigger-queued messages reuse their existing row.
+    if (!messageId) {
+      const logRow = {
+        session_id: sessionId,
+        user_id: userId,
+        from_number: fromNumber,
+        message_text: messageText,
+        message_type: messageType,
+        is_group: isGroup,
+        raw_payload: body,
+        reply_sent: false,
+        delivery_status: "processing" as const,
+        received_at: new Date().toISOString(),
+      };
+      const { data: msgRow } = await admin
+        .from("incoming_messages")
+        .insert(logRow)
+        .select("id")
+        .single();
+      messageId = msgRow?.id;
+    }
 
     if (!aiEnabled) {
       return jsonResp({ ok: true, skipped: "ai_disabled", message_id: messageId });
@@ -213,13 +277,33 @@ Deno.serve(async (req) => {
     });
     if (fixedHit) {
       const reply = fixedHit.reply;
+      const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
+      const sendResult = await sendViaGateway({
+        gateway: GATEWAY,
+        sessionId,
+        apiToken: session.api_token,
+        to: fromNumber,
+        message: reply,
+      });
       if (messageId) {
         await admin.from("incoming_messages").update({
-          reply_text: reply, reply_sent: true,
-          delivery_status: "sent", processed_at: new Date().toISOString(),
+          reply_text: reply,
+          reply_sent: sendResult.ok,
+          delivery_status: sendResult.ok ? "sent" : "failed",
+          reply_error: sendResult.ok ? null : sendResult.error,
+          processed_at: new Date().toISOString(),
+          reply_attempted_at: new Date().toISOString(),
+          reply_sent_at: sendResult.ok ? new Date().toISOString() : null,
         }).eq("id", messageId);
       }
-      return jsonResp({ ok: true, reply, source: "fixed_qa", message_id: messageId });
+      if (sendResult.ok) {
+        await admin.from("message_logs").insert({
+          user_id: userId, session_id: sessionId, to_number: sendResult.to,
+          message_type: "text", payload: { text: reply, auto_reply: true, source: "fixed_qa" },
+          status: "sent",
+        });
+      }
+      return jsonResp({ ok: true, reply, sent: sendResult.ok, send_error: sendResult.error, sent_to: sendResult.to, source: "fixed_qa", message_id: messageId });
     }
 
     // Load API key
@@ -297,20 +381,15 @@ Deno.serve(async (req) => {
 
     // Send the reply back via WhatsApp gateway
     const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
-    let sendOk = false;
-    let sendErr: string | null = null;
-    try {
-      const sendRes = await fetch(`${GATEWAY}/api/session/${sessionId}/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: fromNumber, message: reply }),
-      });
-      const sendData = await sendRes.json().catch(() => ({}));
-      sendOk = sendRes.ok;
-      if (!sendRes.ok) sendErr = sendData?.error || `gateway ${sendRes.status}`;
-    } catch (e: any) {
-      sendErr = e?.message || "gateway unreachable";
-    }
+    const sendResult = await sendViaGateway({
+      gateway: GATEWAY,
+      sessionId,
+      apiToken: session.api_token,
+      to: fromNumber,
+      message: reply,
+    });
+    const sendOk = sendResult.ok;
+    const sendErr = sendResult.error;
 
     if (messageId) {
       await admin.from("incoming_messages").update({
@@ -326,13 +405,13 @@ Deno.serve(async (req) => {
 
     if (sendOk) {
       await admin.from("message_logs").insert({
-        user_id: userId, session_id: sessionId, to_number: fromNumber,
+        user_id: userId, session_id: sessionId, to_number: sendResult.to,
         message_type: "text", payload: { text: reply, auto_reply: true },
         status: "sent",
       });
     }
 
-    return jsonResp({ ok: true, reply, sent: sendOk, send_error: sendErr, source: "ai", message_id: messageId });
+    return jsonResp({ ok: true, reply, sent: sendOk, send_error: sendErr, sent_to: sendResult.to, source: "ai", message_id: messageId });
   } catch (e: any) {
     console.error("ai-reply error:", e);
     return jsonResp({ error: e?.message || "Internal error" }, 500);
