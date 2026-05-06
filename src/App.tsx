@@ -32,6 +32,7 @@ import Subscription from "./pages/dashboard/Subscription";
 import Plans from "./pages/dashboard/Plans";
 import Payments from "./pages/dashboard/Payments";
 import AutoReplies from "./pages/dashboard/AutoReplies";
+import AIAgent from "./pages/dashboard/AIAgent";
 import AdminPanel from "./pages/admin/AdminPanel";
 import HAPayments from "./pages/headadmin/Payments";
 import HAPaymentMethods from "./pages/headadmin/PaymentMethods";
@@ -92,6 +93,7 @@ const App = () => (
                 <Route path="subscription/plans" element={<Plans />} />
                 <Route path="payments" element={<Payments />} />
                 <Route path="auto-replies" element={<AutoReplies />} />
+                <Route path="ai-agent" element={<AIAgent />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>
