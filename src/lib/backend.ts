@@ -37,6 +37,9 @@ export const backendApi = {
 
   restart: (sessionId: string) =>
     request("/api/session/create", { method: "POST", body: JSON.stringify({ sessionId }) }),
+
+  listSessions: () =>
+    request<Array<{ id: string; status?: string; phone?: string }>>("/api/sessions"),
 };
 
 export const BACKEND_URL = BASE_URL;
