@@ -162,6 +162,8 @@ const AutoReplies = () => {
                       <span className="px-2 py-0.5 rounded-full text-xs bg-muted text-muted-foreground">● Paused</span>
                     )}
                     <span className="px-2 py-0.5 rounded-full text-xs bg-muted text-muted-foreground capitalize">{r.match_type}</span>
+                    {r.category && <span className="px-2 py-0.5 rounded-full text-xs bg-accent text-accent-foreground">{r.category}</span>}
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-muted text-muted-foreground">{r.session_id ? (sessions.find(s=>s.id===r.session_id)?.session_name || "Session") : "All sessions"}</span>
                     <span className="text-xs text-muted-foreground">Matched: {r.match_count}</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 mt-2">
