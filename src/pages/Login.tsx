@@ -19,9 +19,26 @@ const Login = () => {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: signIn, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setLoading(false);
+      return toast.error(error.message);
+    }
+
+    // Check if user is active before allowing login
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("is_active")
+      .eq("id", signIn.user!.id)
+      .maybeSingle();
+
+    if (!prof || prof.is_active === false) {
+      await supabase.auth.signOut();
+      setLoading(false);
+      return toast.error("Your account has been deactivated. Please contact support.");
+    }
+
     setLoading(false);
-    if (error) return toast.error(error.message);
     toast.success("Welcome back!");
     nav("/dashboard");
   };
