@@ -233,6 +233,16 @@ const AutoReplies = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Business Category</Label>
+                <Input value={editing.category || ""} onChange={(e) => setEditing({ ...editing, category: e.target.value })} placeholder="e.g. Restaurant, Shop, Clinic" />
+              </div>
+              <div>
+                <Label>Internal Note</Label>
+                <Input value={editing.description || ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} placeholder="Optional description" />
+              </div>
+            </div>
             <div>
               <Label>Reply Message</Label>
               <Textarea rows={4} value={editing.reply_template || ""} onChange={(e) => setEditing({ ...editing, reply_template: e.target.value })} placeholder="Hi! Thanks for messaging. We'll get back to you soon." />
