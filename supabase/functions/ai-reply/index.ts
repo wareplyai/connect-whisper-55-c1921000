@@ -85,6 +85,45 @@ async function callAI(opts: {
   throw new Error(`Unsupported platform: ${platform}`);
 }
 
+function recipientVariants(input: string): string[] {
+  const raw = input.trim();
+  const digits = raw.replace(/\D/g, "");
+  const variants = [raw];
+  if (digits) variants.push(digits, `+${digits}`, `${digits}@s.whatsapp.net`);
+  if (digits.startsWith("0") && digits.length >= 10) {
+    variants.push(`88${digits}`, `+88${digits}`, `88${digits.slice(1)}`, `+88${digits.slice(1)}`);
+  }
+  return [...new Set(variants.filter(Boolean))];
+}
+
+async function sendViaGateway(opts: {
+  gateway: string; sessionId: string; apiToken?: string | null; to: string; message: string;
+}): Promise<{ ok: boolean; to: string; error: string | null; data: unknown }> {
+  const { gateway, sessionId, apiToken, to, message } = opts;
+  const errors: string[] = [];
+
+  for (const candidate of recipientVariants(to)) {
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+      const sendRes = await fetch(`${gateway}/api/session/${sessionId}/send`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ to: candidate, message }),
+      });
+      const sendData = await sendRes.json().catch(() => ({}));
+      const explicitFailure = sendData?.success === false || sendData?.ok === false || sendData?.sent === false ||
+        sendData?.status === "failed" || Boolean(sendData?.error);
+      if (sendRes.ok && !explicitFailure) return { ok: true, to: candidate, error: null, data: sendData };
+      errors.push(`${candidate}: ${sendData?.error || sendData?.message || `gateway ${sendRes.status}`}`);
+    } catch (e: any) {
+      errors.push(`${candidate}: ${e?.message || "gateway unreachable"}`);
+    }
+  }
+
+  return { ok: false, to, error: errors.join("; ") || "gateway send failed", data: null };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResp({ error: "Method not allowed" }, 405);
@@ -97,6 +136,7 @@ Deno.serve(async (req) => {
     const isGroup = Boolean(body.is_group ?? false);
     const messageType = String(body.message_type || "text");
     const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false);
+    const sourceMessageId = String(body.source_message_id || "").trim();
 
     if (!sessionId || !fromNumber || !messageText) {
       return jsonResp({ error: "session_id, from, and message required" }, 400);
@@ -123,7 +163,7 @@ Deno.serve(async (req) => {
     // Load session and validate webhook secret
     const { data: session, error: sErr } = await admin
       .from("sessions")
-      .select("id, user_id, webhook_secret, status")
+      .select("id, user_id, webhook_secret, status, api_token")
       .eq("id", sessionId)
       .maybeSingle();
     if (sErr) throw sErr;
