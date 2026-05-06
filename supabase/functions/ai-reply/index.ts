@@ -96,7 +96,7 @@ function recipientVariants(input: string): string[] {
   const variants = [raw];
   const isExplicitPhone = raw.startsWith("+") || /@s\.whatsapp\.net$/i.test(raw);
   const isLidRecipient = /@lid$/i.test(raw) || (!isExplicitPhone && looksLikeLidIdentifier(digits));
-  if (isLidRecipient && digits) variants.push(`${digits}@lid`);
+  if (isLidRecipient && digits) return [...new Set([`${digits}@lid`, raw].filter(Boolean))];
   if (digits) variants.push(digits, `+${digits}`, `${digits}@s.whatsapp.net`);
   if (digits.startsWith("0") && digits.length >= 10) {
     variants.push(`88${digits}`, `+88${digits}`, `88${digits.slice(1)}`, `+88${digits.slice(1)}`);
