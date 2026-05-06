@@ -169,8 +169,23 @@ const SessionDetail = () => {
     setTotalLogs(count || 0);
   };
 
-  useEffect(() => { loadSession(); loadLogs(0); setPage(0); /* eslint-disable-next-line */ }, [id]);
+  const loadIncoming = async (p = incomingPage) => {
+    if (!id) return;
+    const from = p * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const { data, count } = await supabase
+      .from("incoming_messages")
+      .select("*", { count: "exact" })
+      .eq("session_id", id)
+      .order("received_at", { ascending: false })
+      .range(from, to);
+    setIncoming(data || []);
+    setTotalIncoming(count || 0);
+  };
+
+  useEffect(() => { loadSession(); loadLogs(0); loadIncoming(0); setPage(0); setIncomingPage(0); /* eslint-disable-next-line */ }, [id]);
   useEffect(() => { loadLogs(page); /* eslint-disable-next-line */ }, [page]);
+  useEffect(() => { loadIncoming(incomingPage); /* eslint-disable-next-line */ }, [incomingPage]);
 
   // Poll backend status + auto-update last_active every 30s
   useEffect(() => {
