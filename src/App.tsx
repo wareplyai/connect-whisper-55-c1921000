@@ -8,6 +8,7 @@ import { HeadAdminProvider } from "@/contexts/HeadAdminContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { HeadAdminRoute } from "@/components/HeadAdminRoute";
+import { ScrollToTop } from "@/components/ScrollToTop";
 
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -60,6 +61,7 @@ const App = () => (
         <LanguageProvider>
         <AuthProvider>
           <HeadAdminProvider>
+            <ScrollToTop />
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
