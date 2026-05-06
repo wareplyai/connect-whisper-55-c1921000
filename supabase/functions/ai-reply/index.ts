@@ -277,13 +277,33 @@ Deno.serve(async (req) => {
     });
     if (fixedHit) {
       const reply = fixedHit.reply;
+      const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
+      const sendResult = await sendViaGateway({
+        gateway: GATEWAY,
+        sessionId,
+        apiToken: session.api_token,
+        to: fromNumber,
+        message: reply,
+      });
       if (messageId) {
         await admin.from("incoming_messages").update({
-          reply_text: reply, reply_sent: true,
-          delivery_status: "sent", processed_at: new Date().toISOString(),
+          reply_text: reply,
+          reply_sent: sendResult.ok,
+          delivery_status: sendResult.ok ? "sent" : "failed",
+          reply_error: sendResult.ok ? null : sendResult.error,
+          processed_at: new Date().toISOString(),
+          reply_attempted_at: new Date().toISOString(),
+          reply_sent_at: sendResult.ok ? new Date().toISOString() : null,
         }).eq("id", messageId);
       }
-      return jsonResp({ ok: true, reply, source: "fixed_qa", message_id: messageId });
+      if (sendResult.ok) {
+        await admin.from("message_logs").insert({
+          user_id: userId, session_id: sessionId, to_number: sendResult.to,
+          message_type: "text", payload: { text: reply, auto_reply: true, source: "fixed_qa" },
+          status: "sent",
+        });
+      }
+      return jsonResp({ ok: true, reply, sent: sendResult.ok, send_error: sendResult.error, sent_to: sendResult.to, source: "fixed_qa", message_id: messageId });
     }
 
     // Load API key
