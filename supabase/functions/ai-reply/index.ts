@@ -149,7 +149,9 @@ function collectPhoneCandidates(value: unknown, out: string[], depth = 0): void 
 
   const candidateKeys = new Set([
     "customer", "customer_number", "customernumber", "from", "from_number", "fromnumber",
-    "sender", "participant", "author", "remotejid", "remote_jid", "chatid", "chat_id", "jid",
+    "sender", "senderpn", "sender_pn", "participant", "participantalt", "participant_alt",
+    "author", "remotejid", "remote_jid", "remotejidalt", "remote_jid_alt",
+    "chatid", "chat_id", "jid",
   ]);
 
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
@@ -180,11 +182,41 @@ function hasGroupJid(value: unknown, depth = 0): boolean {
   return Object.values(value as Record<string, unknown>).some((child) => hasGroupJid(child, depth + 1));
 }
 
-function resolveCustomerNumber(body: Record<string, unknown>, sessionPhone?: string | null): string {
+export function resolveCustomerNumber(body: Record<string, unknown>, sessionPhone?: string | null): string {
   const candidates: string[] = [];
   collectPhoneCandidates(body, candidates);
   const unique = [...new Set(candidates)];
-  return unique.find((n) => !samePhone(n, sessionPhone)) || unique[0] || "";
+  const customerCandidates = unique.filter((n) => !samePhone(n, sessionPhone));
+  return customerCandidates.find(looksLikeCustomerPhone) || customerCandidates[0] || unique[0] || "";
+}
+
+async function resolveFromGatewayMessageInfo(opts: {
+  gateway: string; sessionId: string; apiToken?: string | null; messageId: string; sessionPhone?: string | null;
+}): Promise<string> {
+  const { gateway, sessionId, apiToken, messageId, sessionPhone } = opts;
+  if (!messageId) return "";
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+  const encodedMessageId = encodeURIComponent(messageId);
+  const paths = [
+    `/api/messages/${encodedMessageId}/info`,
+    `/api/session/${sessionId}/messages/${encodedMessageId}/info`,
+  ];
+
+  for (const path of paths) {
+    try {
+      const res = await fetch(`${gateway}${path}`, { method: "GET", headers });
+      if (!res.ok) continue;
+      const data = await res.json().catch(() => null);
+      const resolved = resolveCustomerNumber({ gateway_message_info: data }, sessionPhone);
+      if (resolved && looksLikeCustomerPhone(resolved)) return resolved;
+    } catch {
+      // Keep webhook processing deterministic; invalid payload handling below will mark the row failed.
+    }
+  }
+
+  return "";
 }
 
 async function sendViaGateway(opts: {
@@ -263,7 +295,18 @@ Deno.serve(async (req) => {
       return jsonResp({ error: "Invalid webhook secret" }, 401);
     }
 
-    const fromNumber = resolveCustomerNumber(body, session.phone_number);
+    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
+    let fromNumber = resolveCustomerNumber(body, session.phone_number);
+    if (fromNumber && !looksLikeCustomerPhone(fromNumber)) {
+      const recoveredNumber = await resolveFromGatewayMessageInfo({
+        gateway: GATEWAY,
+        sessionId,
+        apiToken: session.api_token,
+        messageId: fromNumber,
+        sessionPhone: session.phone_number,
+      });
+      if (recoveredNumber) fromNumber = recoveredNumber;
+    }
     if (!fromNumber) {
       return jsonResp({ error: "customer number required" }, 400);
     }
@@ -391,7 +434,6 @@ Deno.serve(async (req) => {
     });
     if (fixedHit) {
       const reply = fixedHit.reply;
-      const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
       const sendResult = await sendViaGateway({
         gateway: GATEWAY,
         sessionId,
@@ -494,7 +536,6 @@ Deno.serve(async (req) => {
     }
 
     // Send the reply back via WhatsApp gateway
-    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
     const sendResult = await sendViaGateway({
       gateway: GATEWAY,
       sessionId,
