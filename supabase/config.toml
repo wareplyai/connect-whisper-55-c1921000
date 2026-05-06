@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.headadmin-update-user-plan]
 verify_jwt = false
+
+[functions.ai-reply]
+verify_jwt = false
