@@ -566,6 +566,59 @@ const SessionDetail = () => {
         )}
       </div>
 
+      {/* Incoming Messages & Auto-Replies */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold">Incoming Messages & Auto-Replies</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Messages received on this session and any auto-reply sent back.</p>
+          </div>
+          <span className="text-xs text-muted-foreground">{totalIncoming} total · live</span>
+        </div>
+        {incoming.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">No incoming messages yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {incoming.map((m) => {
+              const raw: string = m.from_number || "";
+              const isGroup = m.is_group || raw.length > 15;
+              const display = isGroup ? `Group · ${raw.slice(0, 12)}…` : (raw.startsWith("+") ? raw : `+${raw}`);
+              return (
+                <div key={m.id} className="rounded-lg border border-border bg-card-elevated p-3 text-sm">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">FROM {display}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(m.received_at).toLocaleString()}</p>
+                      <p className="mt-1 text-sm break-words">{m.message_text || <span className="italic text-muted-foreground">(no text / media)</span>}</p>
+                      {m.reply_sent && m.reply_text && (
+                        <div className="mt-2 rounded-md border-l-2 border-primary bg-primary/5 px-2 py-1.5">
+                          <p className="text-[10px] uppercase tracking-wide text-primary font-semibold">Auto-Reply Sent</p>
+                          <p className="text-xs text-foreground/90 mt-0.5 break-words">{m.reply_text}</p>
+                        </div>
+                      )}
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${m.reply_sent ? "bg-green-500/15 text-green-500" : "bg-muted text-muted-foreground"}`}>
+                      {m.reply_sent ? "replied" : "no rule"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {totalIncoming > PAGE_SIZE && (
+          <div className="flex items-center justify-between mt-4">
+            <Button size="sm" variant="outline" onClick={() => setIncomingPage((p) => Math.max(0, p - 1))} disabled={incomingPage === 0}>
+              <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+            </Button>
+            <span className="text-xs text-muted-foreground">Page {incomingPage + 1} of {Math.max(1, Math.ceil(totalIncoming / PAGE_SIZE))}</span>
+            <Button size="sm" variant="outline" onClick={() => setIncomingPage((p) => p + 1)} disabled={(incomingPage + 1) * PAGE_SIZE >= totalIncoming}>
+              Next <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        )}
+      </div>
+
       {/* Regenerate Confirm */}
       <AlertDialog open={!!confirmRegen} onOpenChange={(o) => !o && setConfirmRegen(null)}>
         <AlertDialogContent>
