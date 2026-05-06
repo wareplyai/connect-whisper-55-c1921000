@@ -788,6 +788,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      latest_session_for_user: { Args: { _user_id: string }; Returns: string }
       start_user_trial: {
         Args: never
         Returns: {
