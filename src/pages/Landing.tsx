@@ -210,7 +210,7 @@ const Landing = () => {
           .hero-rise { animation: hero-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
         `}</style>
 
-        <div className="container relative py-20 md:py-28 text-center max-w-[920px]">
+        <div className="container relative z-10 py-20 md:py-28 text-center max-w-[920px]">
           {/* Top badge */}
           <div
             className="hero-rise mx-auto inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-card/40 backdrop-blur-md px-4 py-1.5 text-xs font-medium"
