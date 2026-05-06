@@ -166,6 +166,21 @@ const AutoReplies = () => {
         </Button>
       </div>
 
+      <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${anyActive ? "border-green-500/40 bg-green-500/10" : "border-border bg-card"}`}>
+        <Power className={`h-5 w-5 ${anyActive ? "text-green-500" : "text-muted-foreground"}`} />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold">{anyActive ? "Auto-Replies are ON" : "Auto-Replies are OFF"}</p>
+          <p className="text-xs text-muted-foreground">
+            {rules.length === 0
+              ? "Create a rule to enable auto-replies"
+              : anyActive
+                ? `${rules.filter(r => r.is_active).length} of ${rules.length} rules active`
+                : "Toggle on to enable all rules"}
+          </p>
+        </div>
+        <Switch checked={allActive} onCheckedChange={(v) => toggleAll(v)} disabled={rules.length === 0} />
+      </div>
+
       {loading ? (
         <div className="grid gap-3">{[1, 2].map((i) => <div key={i} className="h-24 rounded-xl border border-border bg-card animate-pulse" />)}</div>
       ) : rules.length === 0 ? (
