@@ -198,6 +198,116 @@ const Landing = () => {
           }}
         />
 
+        {/* LEFT SIDE GLOW BEAMS */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "320px",
+            height: "100%",
+            pointerEvents: "none",
+            zIndex: 0,
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: "-50px",
+              left: "-60px",
+              width: "220px",
+              height: "110%",
+              background:
+                "linear-gradient(180deg, rgba(120,50,255,0.75) 0%, rgba(110,40,240,0.60) 20%, rgba(100,35,220,0.35) 55%, rgba(80,20,180,0.10) 80%, transparent 100%)",
+              borderRadius: "0 80px 80px 0",
+              filter: "blur(18px)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: "-50px",
+              left: "60px",
+              width: "55px",
+              height: "85%",
+              background:
+                "linear-gradient(180deg, rgba(180,120,255,0.85) 0%, rgba(160,90,255,0.65) 25%, rgba(130,60,240,0.30) 65%, transparent 100%)",
+              borderRadius: "40px",
+              filter: "blur(8px)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: "-30px",
+              left: "130px",
+              width: "35px",
+              height: "70%",
+              background:
+                "linear-gradient(180deg, rgba(150,80,255,0.60) 0%, rgba(120,55,230,0.30) 50%, transparent 100%)",
+              borderRadius: "30px",
+              filter: "blur(10px)",
+            }}
+          />
+        </div>
+
+        {/* RIGHT SIDE GLOW BEAMS */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            width: "320px",
+            height: "100%",
+            pointerEvents: "none",
+            zIndex: 0,
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: "-50px",
+              right: "-60px",
+              width: "220px",
+              height: "110%",
+              background:
+                "linear-gradient(180deg, rgba(180,100,255,0.70) 0%, rgba(160,80,255,0.55) 20%, rgba(130,55,230,0.30) 55%, rgba(90,30,190,0.08) 80%, transparent 100%)",
+              borderRadius: "80px 0 0 80px",
+              filter: "blur(18px)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: "-50px",
+              right: "60px",
+              width: "55px",
+              height: "85%",
+              background:
+                "linear-gradient(180deg, rgba(200,140,255,0.88) 0%, rgba(175,105,255,0.65) 25%, rgba(140,70,245,0.28) 65%, transparent 100%)",
+              borderRadius: "40px",
+              filter: "blur(8px)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: "-30px",
+              right: "130px",
+              width: "35px",
+              height: "70%",
+              background:
+                "linear-gradient(180deg, rgba(160,95,255,0.58) 0%, rgba(125,60,235,0.28) 50%, transparent 100%)",
+              borderRadius: "30px",
+              filter: "blur(10px)",
+            }}
+          />
+        </div>
+
         <style>{`
           @keyframes glowPulse {
             0%, 100% { opacity: 0.8; transform: translateX(-50%) scale(1); }
