@@ -259,15 +259,44 @@ Deno.serve(async (req) => {
       return jsonResp({ error: "Empty AI response" }, 502);
     }
 
+    // Send the reply back via WhatsApp gateway
+    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
+    let sendOk = false;
+    let sendErr: string | null = null;
+    try {
+      const sendRes = await fetch(`${GATEWAY}/api/session/${sessionId}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: fromNumber, message: reply }),
+      });
+      const sendData = await sendRes.json().catch(() => ({}));
+      sendOk = sendRes.ok;
+      if (!sendRes.ok) sendErr = sendData?.error || `gateway ${sendRes.status}`;
+    } catch (e: any) {
+      sendErr = e?.message || "gateway unreachable";
+    }
+
     if (messageId) {
       await admin.from("incoming_messages").update({
-        reply_text: reply, reply_sent: true,
-        delivery_status: "sent", processed_at: new Date().toISOString(),
-        reply_sent_at: new Date().toISOString(),
+        reply_text: reply,
+        reply_sent: sendOk,
+        delivery_status: sendOk ? "sent" : "failed",
+        reply_error: sendOk ? null : sendErr,
+        processed_at: new Date().toISOString(),
+        reply_attempted_at: new Date().toISOString(),
+        reply_sent_at: sendOk ? new Date().toISOString() : null,
       }).eq("id", messageId);
     }
 
-    return jsonResp({ ok: true, reply, source: "ai", message_id: messageId });
+    if (sendOk) {
+      await admin.from("message_logs").insert({
+        user_id: userId, session_id: sessionId, to_number: fromNumber,
+        message_type: "text", payload: { text: reply, auto_reply: true },
+        status: "sent",
+      });
+    }
+
+    return jsonResp({ ok: true, reply, sent: sendOk, send_error: sendErr, source: "ai", message_id: messageId });
   } catch (e: any) {
     console.error("ai-reply error:", e);
     return jsonResp({ error: e?.message || "Internal error" }, 500);
