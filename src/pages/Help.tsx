@@ -7,6 +7,7 @@ import {
   Handshake, Zap, ArrowRight, ChevronDown, Facebook, Instagram, Linkedin, Star,
 } from "lucide-react";
 import wareplyLogo from "@/assets/wareply-logo.png";
+import { Footer } from "@/components/marketing/Footer";
 
 type Category = {
   icon: React.ComponentType<{ className?: string }>;
