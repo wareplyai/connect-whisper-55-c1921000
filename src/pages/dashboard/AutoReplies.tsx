@@ -25,6 +25,16 @@ type Rule = {
 
 type Session = { id: string; session_name: string };
 
+const parseKeywords = (value: string) =>
+  Array.from(
+    new Set(
+      value
+        .split(/[\s,\n]+/)
+        .map((k) => k.trim().toLowerCase())
+        .filter(Boolean)
+    )
+  );
+
 const empty: Partial<Rule> = {
   rule_name: "",
   keywords: [],
@@ -75,7 +85,7 @@ const AutoReplies = () => {
       toast.error("Rule name, keywords, and reply are required");
       return;
     }
-    const keywords = keywordsText.split(",").map((k) => k.trim().toLowerCase()).filter(Boolean);
+    const keywords = parseKeywords(keywordsText);
     const payload = {
       rule_name: editing.rule_name!,
       keywords,
@@ -182,7 +192,7 @@ const AutoReplies = () => {
             </div>
             <div>
               <Label>Keywords (comma-separated)</Label>
-              <Input value={keywordsText} onChange={(e) => setKeywordsText(e.target.value)} placeholder="hi, hello, hey, salam" />
+              <Input value={keywordsText} onChange={(e) => setKeywordsText(e.target.value)} placeholder="hi hello hey salam" />
               <p className="text-xs text-muted-foreground mt-1">Case-insensitive. Matches based on Match Type below.</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
