@@ -480,61 +480,8 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, reply, sent: sendResult.ok, send_error: sendResult.error, sent_to: sendResult.to, source: "fixed_qa", message_id: messageId });
     }
 
-    // Check keyword-based auto-reply rules BEFORE calling AI
-    const { data: rules } = await admin
-      .from("auto_reply_rules")
-      .select("id, keywords, match_type, reply_template, priority, session_id, match_count")
-      .eq("user_id", userId)
-      .eq("is_active", true)
-      .or(`session_id.is.null,session_id.eq.${sessionId}`)
-      .order("priority", { ascending: false });
-    const trimmedMsg = lowerMsg.trim();
-    const keywordHit = (rules || []).find((rule: any) => {
-      const keywords = Array.isArray(rule.keywords) ? rule.keywords : [];
-      return keywords.some((kw: string) => {
-        const k = (kw || "").toLowerCase().trim();
-        if (!k) return false;
-        switch (rule.match_type) {
-          case "exact": return trimmedMsg === k;
-          case "starts_with": return trimmedMsg.startsWith(k);
-          case "ends_with": return trimmedMsg.endsWith(k);
-          default: return trimmedMsg.includes(k);
-        }
-      });
-    });
-    if (keywordHit) {
-      const reply = keywordHit.reply_template;
-      const sendResult = await sendViaGateway({
-        gateway: GATEWAY,
-        sessionId,
-        apiToken: session.api_token,
-        to: fromNumber,
-        message: reply,
-      });
-      if (messageId) {
-        await admin.from("incoming_messages").update({
-          matched_rule_id: keywordHit.id,
-          reply_text: reply,
-          reply_sent: sendResult.ok,
-          delivery_status: sendResult.ok ? "sent" : "failed",
-          reply_error: sendResult.ok ? null : sendResult.error,
-          processed_at: new Date().toISOString(),
-          reply_attempted_at: new Date().toISOString(),
-          reply_sent_at: sendResult.ok ? new Date().toISOString() : null,
-        }).eq("id", messageId);
-      }
-      if (sendResult.ok) {
-        await admin.from("auto_reply_rules")
-          .update({ match_count: (keywordHit.match_count || 0) + 1 })
-          .eq("id", keywordHit.id);
-        await admin.from("message_logs").insert({
-          user_id: userId, session_id: sessionId, to_number: sendResult.to,
-          message_type: "text", payload: { text: reply, auto_reply: true, source: "keyword_rule", rule_id: keywordHit.id },
-          status: "sent",
-        });
-      }
-      return jsonResp({ ok: true, reply, sent: sendResult.ok, send_error: sendResult.error, sent_to: sendResult.to, source: "keyword_rule", rule_id: keywordHit.id, message_id: messageId });
-    }
+    // Keyword-based auto-reply system is fully disabled per user request.
+    // All incoming messages go straight to the AI agent below — no keyword rule will trigger.
 
     // Load API key
     const { data: keyRow } = await admin
