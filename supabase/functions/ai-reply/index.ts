@@ -145,6 +145,32 @@ Deno.serve(async (req) => {
     const connectedSessions: string[] = (biz?.connected_session_ids ?? []) as string[];
     const sessionConnected = connectedSessions.includes(sessionId);
 
+    // DEDUPE: if same (session, from, text) seen in last 60 seconds, skip to prevent loops/retries
+    const sinceIso = new Date(Date.now() - 60_000).toISOString();
+    const { data: recent } = await admin
+      .from("incoming_messages")
+      .select("id, reply_sent, delivery_status")
+      .eq("session_id", sessionId)
+      .eq("from_number", fromNumber)
+      .eq("message_text", messageText)
+      .gte("received_at", sinceIso)
+      .limit(1)
+      .maybeSingle();
+    if (recent) {
+      return jsonResp({ ok: true, skipped: "duplicate_within_60s", message_id: recent.id });
+    }
+
+    // RATE LIMIT: max 8 incoming from same number per minute
+    const { count: recentCount } = await admin
+      .from("incoming_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("session_id", sessionId)
+      .eq("from_number", fromNumber)
+      .gte("received_at", sinceIso);
+    if ((recentCount ?? 0) >= 8) {
+      return jsonResp({ ok: true, skipped: "rate_limited" });
+    }
+
     // Always log the incoming message
     const logRow = {
       session_id: sessionId,
