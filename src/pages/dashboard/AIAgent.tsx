@@ -113,10 +113,11 @@ const AIAgent = () => {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const [{ data: biz }, { data: qaRows }, { data: fxRows }, keyRes] = await Promise.all([
+      const [{ data: biz }, { data: qaRows }, { data: fxRows }, { data: sessRows }, keyRes] = await Promise.all([
         supabase.from("business_profiles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("qa_pairs").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
         supabase.from("fixed_qa").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
+        supabase.from("sessions").select("id, session_name, phone_number, status").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.functions.invoke("ai-key-manager", { body: { action: "get" } }),
       ]);
       if (biz) {
@@ -129,8 +130,11 @@ const AIAgent = () => {
           contact: biz.contact ?? "",
           website: biz.website ?? "",
           system_prompt: biz.system_prompt ?? "",
+          ai_enabled: (biz as any).ai_enabled ?? false,
+          connected_session_ids: ((biz as any).connected_session_ids ?? []) as string[],
         });
       }
+      setSessions((sessRows ?? []) as SessionRow[]);
       setQa((qaRows ?? []).map((r: any) => ({ id: r.id, question: r.question, answer: r.answer })));
       setFixed((fxRows ?? []).map((r: any) => ({ id: r.id, keyword: r.keyword, reply: r.reply })));
       if (keyRes?.data?.key) setSavedKey(keyRes.data.key as SavedKey);
