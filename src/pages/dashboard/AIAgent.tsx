@@ -291,25 +291,35 @@ RULES:
         <p className="text-sm text-muted-foreground">Connect your AI, train it on your business, and let it reply 24/7.</p>
       </div>
 
-      {/* API KEY (local only — encryption coming next) */}
+      {/* API KEY (encrypted server-side) */}
       <section className="rounded-xl border border-border bg-card p-5 space-y-4">
         <div className="flex items-center gap-2">
           <KeyRound className="h-5 w-5 text-primary" />
           <h2 className="font-semibold">AI API Key</h2>
         </div>
 
-        {!local.savedKey ? (
+        {!savedKey ? (
           <div className="space-y-3">
-            <div className="flex gap-2">
+            <div className="grid md:grid-cols-[180px_1fr_auto] gap-2">
+              <Select value={local.manualPlatform} onValueChange={(v) => updateLocal("manualPlatform", v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="gemini">Google Gemini</SelectItem>
+                  <SelectItem value="deepseek">DeepSeek</SelectItem>
+                </SelectContent>
+              </Select>
               <Input
                 type="password"
-                placeholder="Paste your AI API Key (OpenAI / Gemini / DeepSeek)"
+                placeholder="Paste your AI API Key"
                 value={local.apiKey}
                 onChange={(e) => updateLocal("apiKey", e.target.value)}
               />
-              <Button onClick={saveKey} className="bg-primary text-primary-foreground hover:bg-primary-hover">Save</Button>
+              <Button onClick={saveKey} disabled={savingKey} className="bg-primary text-primary-foreground hover:bg-primary-hover">
+                {savingKey && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}Save
+              </Button>
             </div>
-            <p className="text-xs text-muted-foreground">⚠️ Currently stored locally. Server-side encryption coming next.</p>
+            <p className="text-xs text-muted-foreground">🔒 Your key is AES-256 encrypted server-side. Only the last 4 characters are ever shown.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -322,29 +332,14 @@ RULES:
               <Button variant="outline" size="sm" onClick={removeKey}>Remove</Button>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-3">
-              {local.platform === "unknown" && (
-                <div>
-                  <Label>Platform (manual)</Label>
-                  <Select value={local.manualPlatform} onValueChange={(v) => updateLocal("manualPlatform", v as any)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="openai">OpenAI</SelectItem>
-                      <SelectItem value="gemini">Google Gemini</SelectItem>
-                      <SelectItem value="deepseek">DeepSeek</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div>
-                <Label>Model</Label>
-                <Select value={local.model || modelOptions[0]?.value} onValueChange={(v) => updateLocal("model", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger>
-                  <SelectContent>
-                    {modelOptions.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label>Model</Label>
+              <Select value={savedKey.model || modelOptions[0]?.value} onValueChange={updateModel}>
+                <SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger>
+                <SelectContent>
+                  {modelOptions.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         )}
