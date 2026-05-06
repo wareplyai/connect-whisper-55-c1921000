@@ -228,6 +228,21 @@ RULES:
       return;
     }
     await persistBusinessPatch({ ai_enabled: v });
+    if (v && user) {
+      // Mutex: turning AI ON automatically disables all keyword auto-reply rules
+      const { data: activeRules } = await supabase
+        .from("auto_reply_rules")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("is_active", true);
+      if (activeRules && activeRules.length > 0) {
+        await supabase
+          .from("auto_reply_rules")
+          .update({ is_active: false })
+          .eq("user_id", user.id);
+        toast.info(`Auto-Replies mode OFF (${activeRules.length} rules paused) — only one can be active at a time`);
+      }
+    }
     toast.success(v ? "🟢 AI Agent ON" : "⚪ AI Agent OFF");
   };
 

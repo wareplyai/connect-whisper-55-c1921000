@@ -125,7 +125,24 @@ const AutoReplies = () => {
     load();
   };
 
+  const disableAIIfOn = async () => {
+    if (!profile) return;
+    const { data: biz } = await supabase
+      .from("business_profiles")
+      .select("ai_enabled")
+      .eq("user_id", profile.id)
+      .maybeSingle();
+    if (biz?.ai_enabled) {
+      await supabase
+        .from("business_profiles")
+        .update({ ai_enabled: false })
+        .eq("user_id", profile.id);
+      toast.info("AI Agent mode OFF — only one of AI Agent or Auto-Replies can be active at a time");
+    }
+  };
+
   const toggleActive = async (r: Rule) => {
+    if (!r.is_active) await disableAIIfOn();
     const { error } = await supabase.from("auto_reply_rules").update({ is_active: !r.is_active }).eq("id", r.id);
     if (error) toast.error(error.message);
     else load();
@@ -139,6 +156,7 @@ const AutoReplies = () => {
       toast.error("Create a rule first");
       return;
     }
+    if (turnOn) await disableAIIfOn();
     const { error } = await supabase
       .from("auto_reply_rules")
       .update({ is_active: turnOn })
