@@ -205,12 +205,7 @@ const Landing = () => {
           className="pointer-events-none absolute left-1/2 -top-40 z-0 h-[680px] w-[1100px] max-w-[140vw] -translate-x-1/2 rounded-full hero-spotlight"
         />
 
-        {/* Animated beams */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden hidden sm:block">
-          <span className="hero-beam hero-beam-1" />
-          <span className="hero-beam hero-beam-2" />
-          <span className="hero-beam hero-beam-3" />
-        </div>
+        {/* Animated vertical beams removed per request */}
 
         {/* Floating chat-bubble accents (WhatsApp vibe) */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hidden md:block">
