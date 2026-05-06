@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MoreVertical, RefreshCw, PowerOff, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { backendApi } from "@/lib/backend";
 
 const STATUS = {
   connected: { label: "Connected", cls: "bg-primary/15 text-primary" },
@@ -60,6 +61,8 @@ export default function AllSessions() {
 
   const action = async (s: any, type: "restart" | "disconnect") => {
     const newStatus = type === "disconnect" ? "disconnected" : "qr_pending";
+    if (type === "disconnect") await backendApi.logout(s.id).catch(() => {});
+    if (type === "restart") await backendApi.restart(s.id);
     await supabase.from("sessions").update({ status: newStatus }).eq("id", s.id);
     await supabase.from("activity_logs").insert({ action: `session.${type}`, actor_type: "headadmin", target_type: "session", target_id: s.id });
     toast.success(`Session ${type}ed`);
@@ -67,6 +70,7 @@ export default function AllSessions() {
   };
 
   const doDelete = async () => {
+    await backendApi.logout(del.id).catch(() => {});
     await supabase.from("sessions").delete().eq("id", del.id);
     await supabase.from("activity_logs").insert({ action: "session.delete", actor_type: "headadmin", target_type: "session", target_id: del.id });
     toast.success("Session deleted");
