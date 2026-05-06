@@ -53,12 +53,16 @@ const CreateSession = () => {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+    setLoading(true);
+
     const userId = profile?.id || user?.id;
-    if (!userId) { toast.error("You must be signed in to create a session."); return; }
+    if (!userId) { setLoading(false); toast.error("You must be signed in to create a session."); return; }
 
     // Block if user has no active service (expired trial / no paid plan)
     const { data: activeOk } = await supabase.rpc("has_active_service", { _user_id: userId });
     if (!activeOk) {
+      setLoading(false);
       toast.error("Your trial has ended. Subscribe to a paid plan to create sessions.");
       nav("/dashboard/subscription/plans");
       return;
@@ -67,6 +71,7 @@ const CreateSession = () => {
     // Phone validation (country-specific)
     const v = validatePhoneForCountry(phoneNum, country);
     if (!v.ok) {
+      setLoading(false);
       toast.error(v.message || "The phone number field must be a valid number.");
       return;
     }
@@ -74,11 +79,9 @@ const CreateSession = () => {
 
     // Webhook validation
     if (form.enable_webhook) {
-      if (!form.webhook_url.trim()) { toast.error("Please enter a webhook URL to receive notifications."); return; }
-      if (!/^https:\/\//i.test(form.webhook_url.trim())) { toast.error("Webhook URL must start with https://"); return; }
+      if (!form.webhook_url.trim()) { setLoading(false); toast.error("Please enter a webhook URL to receive notifications."); return; }
+      if (!/^https:\/\//i.test(form.webhook_url.trim())) { setLoading(false); toast.error("Webhook URL must start with https://"); return; }
     }
-
-    setLoading(true);
 
     // Duplicate phone check — own sessions
     const { data: ownExisting } = await supabase
