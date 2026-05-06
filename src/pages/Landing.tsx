@@ -181,121 +181,204 @@ const Landing = () => {
 
       {/* HERO */}
       <section className="hero-section relative overflow-hidden min-h-[calc(100vh-4rem)] flex items-center">
-        {/* Base gradient background — adapts to light/dark */}
+        {/* Base layered background */}
         <div aria-hidden="true" className="hero-bg absolute inset-0 z-0" />
 
-        {/* Subtle dot grid pattern */}
+        {/* Aurora mesh blobs */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div className="hero-aurora hero-aurora-1" />
+          <div className="hero-aurora hero-aurora-2" />
+          <div className="hero-aurora hero-aurora-3" />
+        </div>
+
+        {/* Perspective grid floor */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[55%] hero-floor" />
+
+        {/* Soft dotted texture */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hero-dots" />
+
+        {/* Top spotlight */}
         <div
           aria-hidden="true"
-          className="absolute inset-0 z-0 hero-grid opacity-[0.35] dark:opacity-[0.25]"
+          className="pointer-events-none absolute left-1/2 -top-40 z-0 h-[680px] w-[1100px] max-w-[140vw] -translate-x-1/2 rounded-full hero-spotlight"
         />
 
-        {/* Top center spotlight glow */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 -top-32 z-0 h-[600px] w-[900px] max-w-[120vw] -translate-x-1/2 rounded-full hero-spotlight"
-        />
+        {/* Animated beams */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden hidden sm:block">
+          <span className="hero-beam hero-beam-1" />
+          <span className="hero-beam hero-beam-2" />
+          <span className="hero-beam hero-beam-3" />
+        </div>
 
-        {/* Floating orbs — left & right (responsive) */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-24 top-1/4 z-0 h-[280px] w-[280px] sm:h-[380px] sm:w-[380px] rounded-full hero-orb-left"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-24 bottom-1/4 z-0 h-[280px] w-[280px] sm:h-[420px] sm:w-[420px] rounded-full hero-orb-right"
-        />
+        {/* Floating chat-bubble accents (WhatsApp vibe) */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hidden md:block">
+          <div className="hero-bubble hero-bubble-a">
+            <span className="hero-bubble-dot" />
+            <span className="hero-bubble-dot" style={{ animationDelay: ".2s" }} />
+            <span className="hero-bubble-dot" style={{ animationDelay: ".4s" }} />
+          </div>
+          <div className="hero-bubble hero-bubble-b">AI replied · 0.4s</div>
+          <div className="hero-bubble hero-bubble-c">✓✓ Delivered</div>
+        </div>
 
-        {/* Conic accent ring — premium feel */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full hero-conic opacity-30 dark:opacity-40 hidden sm:block"
-        />
+        {/* Noise overlay */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hero-noise mix-blend-overlay opacity-[0.06] dark:opacity-[0.08]" />
 
         {/* Bottom fade into page */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-40 bg-gradient-to-b from-transparent to-background"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-48 bg-gradient-to-b from-transparent to-background"
         />
 
         <style>{`
           .hero-bg {
             background:
-              radial-gradient(ellipse 80% 60% at 50% 0%, hsl(var(--primary) / 0.12), transparent 60%),
-              linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--card)) 100%);
+              radial-gradient(1200px 600px at 50% -10%, hsl(var(--primary) / 0.18), transparent 60%),
+              radial-gradient(800px 500px at 0% 100%, hsl(160 80% 45% / 0.10), transparent 60%),
+              radial-gradient(800px 500px at 100% 100%, hsl(190 90% 50% / 0.08), transparent 60%),
+              linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--card) / 0.6) 100%);
           }
           .dark .hero-bg {
             background:
-              radial-gradient(ellipse 80% 60% at 50% 0%, hsl(var(--primary) / 0.22), transparent 60%),
-              linear-gradient(180deg, #07120c 0%, #050a08 60%, #030605 100%);
+              radial-gradient(1200px 600px at 50% -10%, hsl(var(--primary) / 0.30), transparent 60%),
+              radial-gradient(900px 600px at 0% 100%, hsl(160 90% 40% / 0.18), transparent 60%),
+              radial-gradient(900px 600px at 100% 100%, hsl(190 90% 45% / 0.14), transparent 60%),
+              linear-gradient(180deg, #050a07 0%, #03070a 60%, #02050a 100%);
           }
-          .hero-grid {
+
+          .hero-aurora {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.6;
+            mix-blend-mode: screen;
+          }
+          .hero-aurora-1 {
+            top: -10%; left: 10%;
+            width: 520px; height: 520px;
+            background: radial-gradient(circle, hsl(var(--primary) / 0.55), transparent 70%);
+            animation: hero-drift 18s ease-in-out infinite;
+          }
+          .hero-aurora-2 {
+            top: 20%; right: 5%;
+            width: 480px; height: 480px;
+            background: radial-gradient(circle, hsl(160 90% 50% / 0.45), transparent 70%);
+            animation: hero-drift 22s ease-in-out infinite reverse;
+          }
+          .hero-aurora-3 {
+            bottom: -15%; left: 35%;
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, hsl(190 90% 55% / 0.35), transparent 70%);
+            animation: hero-drift 26s ease-in-out infinite;
+          }
+
+          .hero-floor {
             background-image:
-              linear-gradient(hsl(var(--foreground) / 0.06) 1px, transparent 1px),
-              linear-gradient(90deg, hsl(var(--foreground) / 0.06) 1px, transparent 1px);
-            background-size: 44px 44px;
-            mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 80%);
-            -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 80%);
+              linear-gradient(hsl(var(--primary) / 0.18) 1px, transparent 1px),
+              linear-gradient(90deg, hsl(var(--primary) / 0.18) 1px, transparent 1px);
+            background-size: 60px 60px;
+            transform: perspective(700px) rotateX(60deg);
+            transform-origin: bottom center;
+            mask-image: linear-gradient(to top, #000 10%, transparent 90%);
+            -webkit-mask-image: linear-gradient(to top, #000 10%, transparent 90%);
+            opacity: 0.35;
           }
+          .dark .hero-floor { opacity: 0.55; }
+
+          .hero-dots {
+            background-image: radial-gradient(hsl(var(--foreground) / 0.10) 1px, transparent 1px);
+            background-size: 22px 22px;
+            mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 80%);
+            -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 80%);
+            opacity: 0.45;
+          }
+
           .hero-spotlight {
             background: radial-gradient(ellipse at center,
-              hsl(var(--primary) / 0.45) 0%,
-              hsl(var(--primary) / 0.18) 30%,
+              hsl(var(--primary) / 0.55) 0%,
+              hsl(var(--primary) / 0.20) 30%,
               transparent 65%);
-            filter: blur(50px);
+            filter: blur(60px);
             animation: hero-pulse 6s ease-in-out infinite;
           }
-          .hero-orb-left {
-            background: radial-gradient(circle at center,
-              hsl(var(--primary) / 0.35) 0%,
-              hsl(var(--primary) / 0.12) 40%,
-              transparent 70%);
-            filter: blur(60px);
-            animation: hero-float 9s ease-in-out infinite;
+
+          .hero-beam {
+            position: absolute;
+            top: -20%;
+            width: 1px;
+            height: 140%;
+            background: linear-gradient(180deg, transparent, hsl(var(--primary) / 0.7), transparent);
+            box-shadow: 0 0 20px 2px hsl(var(--primary) / 0.5);
+            animation: hero-beam-move 7s linear infinite;
           }
-          .hero-orb-right {
-            background: radial-gradient(circle at center,
-              hsl(160 80% 50% / 0.30) 0%,
-              hsl(160 80% 50% / 0.10) 40%,
-              transparent 70%);
-            filter: blur(60px);
-            animation: hero-float 11s ease-in-out infinite reverse;
+          .hero-beam-1 { left: 18%; animation-delay: 0s; }
+          .hero-beam-2 { left: 50%; animation-delay: 2.5s; opacity: .7; }
+          .hero-beam-3 { left: 82%; animation-delay: 4.5s; }
+
+          .hero-bubble {
+            position: absolute;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            backdrop-filter: blur(12px);
+            background: hsl(var(--card) / 0.55);
+            border: 1px solid hsl(var(--primary) / 0.25);
+            color: hsl(var(--foreground));
+            box-shadow: 0 10px 40px -10px hsl(var(--primary) / 0.4);
+            animation: hero-float 8s ease-in-out infinite;
           }
-          .hero-conic {
-            background: conic-gradient(from 0deg,
-              transparent 0deg,
-              hsl(var(--primary) / 0.18) 60deg,
-              transparent 120deg,
-              hsl(160 80% 50% / 0.15) 200deg,
-              transparent 260deg,
-              hsl(var(--primary) / 0.18) 320deg,
-              transparent 360deg);
-            filter: blur(60px);
-            animation: hero-spin 30s linear infinite;
+          .hero-bubble-a { top: 22%; left: 7%; animation-delay: 0s; }
+          .hero-bubble-b { top: 68%; left: 10%; animation-delay: 1.2s; }
+          .hero-bubble-c { top: 30%; right: 8%; animation-delay: 2s; }
+          .hero-bubble-dot {
+            display: inline-block;
+            width: 6px; height: 6px; border-radius: 50%;
+            background: hsl(var(--primary));
+            animation: hero-dot 1.2s ease-in-out infinite;
           }
+
+          .hero-noise {
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.6'/></svg>");
+          }
+
           @keyframes hero-pulse {
             0%, 100% { opacity: 0.85; transform: translateX(-50%) scale(1); }
             50% { opacity: 1; transform: translateX(-50%) scale(1.06); }
           }
-          @keyframes hero-float {
-            0%, 100% { transform: translateY(0) scale(1); }
-            50% { transform: translateY(-30px) scale(1.05); }
+          @keyframes hero-drift {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(40px, -30px) scale(1.1); }
           }
-          @keyframes hero-spin {
-            from { transform: translate(-50%, -50%) rotate(0deg); }
-            to { transform: translate(-50%, -50%) rotate(360deg); }
+          @keyframes hero-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+          }
+          @keyframes hero-beam-move {
+            0% { transform: translateY(-20%); opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(20%); opacity: 0; }
+          }
+          @keyframes hero-dot {
+            0%, 60%, 100% { transform: translateY(0); opacity: .5; }
+            30% { transform: translateY(-3px); opacity: 1; }
           }
           @keyframes hero-rise {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
           }
           .hero-rise { animation: hero-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
           @media (max-width: 640px) {
-            .hero-spotlight { filter: blur(40px); }
-            .hero-orb-left, .hero-orb-right { filter: blur(45px); }
+            .hero-aurora { filter: blur(60px); opacity: 0.5; }
+            .hero-spotlight { filter: blur(45px); }
           }
           @media (prefers-reduced-motion: reduce) {
-            .hero-spotlight, .hero-orb-left, .hero-orb-right, .hero-conic { animation: none; }
+            .hero-aurora, .hero-spotlight, .hero-beam, .hero-bubble, .hero-bubble-dot { animation: none; }
           }
         `}</style>
 
