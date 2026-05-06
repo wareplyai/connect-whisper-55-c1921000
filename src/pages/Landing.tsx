@@ -412,7 +412,7 @@ const Landing = () => {
           }
         `}</style>
 
-        <div className="container relative z-10 py-20 md:py-28 text-center max-w-[920px]">
+        <div className="container relative z-10 pt-8 pb-20 md:pt-10 md:pb-24 text-center max-w-[920px]">
           {/* Top badge */}
           <div
             className="hero-rise mx-auto mt-[23px] inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-card/40 backdrop-blur-md text-xs font-medium px-4 py-1.5 sm:px-[18px] sm:py-[7px] leading-none"
