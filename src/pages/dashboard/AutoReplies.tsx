@@ -149,41 +149,6 @@ const AutoReplies = () => {
         </Button>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-4 text-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p className="font-medium">Gateway diagnostic</p>
-            <p className="text-muted-foreground">Backend: {BACKEND_URL}</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={load}>Refresh</Button>
-        </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <div className="rounded-md bg-muted p-3">
-            <p className="text-muted-foreground">Supabase sessions</p>
-            <p className="font-semibold">{sessions.length}</p>
-          </div>
-          <div className="rounded-md bg-muted p-3">
-            <p className="text-muted-foreground">Gateway sessions</p>
-            <p className="font-semibold">{gatewaySessions.length}</p>
-          </div>
-          <div className="rounded-md bg-muted p-3">
-            <p className="text-muted-foreground">Gateway status</p>
-            <p className="font-semibold">{gatewayError ? "Error" : "Reachable"}</p>
-          </div>
-        </div>
-        {gatewayError ? (
-          <p className="mt-3 text-destructive">{gatewayError}</p>
-        ) : gatewaySessions.length ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {gatewaySessions.map((session) => (
-              <span key={session.id} className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
-                {session.id}: {session.status || "unknown"}{session.phone ? ` (${session.phone})` : ""}
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </div>
-
       {loading ? (
         <div className="grid gap-3">{[1, 2].map((i) => <div key={i} className="h-24 rounded-xl border border-border bg-card animate-pulse" />)}</div>
       ) : rules.length === 0 ? (
