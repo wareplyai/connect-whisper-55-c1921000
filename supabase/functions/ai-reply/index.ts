@@ -180,11 +180,41 @@ function hasGroupJid(value: unknown, depth = 0): boolean {
   return Object.values(value as Record<string, unknown>).some((child) => hasGroupJid(child, depth + 1));
 }
 
-function resolveCustomerNumber(body: Record<string, unknown>, sessionPhone?: string | null): string {
+export function resolveCustomerNumber(body: Record<string, unknown>, sessionPhone?: string | null): string {
   const candidates: string[] = [];
   collectPhoneCandidates(body, candidates);
   const unique = [...new Set(candidates)];
-  return unique.find((n) => !samePhone(n, sessionPhone)) || unique[0] || "";
+  const customerCandidates = unique.filter((n) => !samePhone(n, sessionPhone));
+  return customerCandidates.find(looksLikeCustomerPhone) || customerCandidates[0] || unique[0] || "";
+}
+
+async function resolveFromGatewayMessageInfo(opts: {
+  gateway: string; sessionId: string; apiToken?: string | null; messageId: string; sessionPhone?: string | null;
+}): Promise<string> {
+  const { gateway, sessionId, apiToken, messageId, sessionPhone } = opts;
+  if (!messageId) return "";
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+  const encodedMessageId = encodeURIComponent(messageId);
+  const paths = [
+    `/api/messages/${encodedMessageId}/info`,
+    `/api/session/${sessionId}/messages/${encodedMessageId}/info`,
+  ];
+
+  for (const path of paths) {
+    try {
+      const res = await fetch(`${gateway}${path}`, { method: "GET", headers });
+      if (!res.ok) continue;
+      const data = await res.json().catch(() => null);
+      const resolved = resolveCustomerNumber({ gateway_message_info: data }, sessionPhone);
+      if (resolved && looksLikeCustomerPhone(resolved)) return resolved;
+    } catch {
+      // Keep webhook processing deterministic; invalid payload handling below will mark the row failed.
+    }
+  }
+
+  return "";
 }
 
 async function sendViaGateway(opts: {
