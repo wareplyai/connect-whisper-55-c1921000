@@ -98,7 +98,7 @@ export const Navbar = () => {
             onClick={() => setOpen((v) => !v)}
             className="p-2 rounded-lg hover:bg-foreground/5 text-foreground transition-colors"
           >
-            {open ? <Menu className="h-5 w-5 rotate-90 transition-transform" /> : <Menu className="h-5 w-5" />}
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </nav>
