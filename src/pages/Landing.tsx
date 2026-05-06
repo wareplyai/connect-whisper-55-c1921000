@@ -184,15 +184,17 @@ const Landing = () => {
         {/* Base layered background */}
         <div aria-hidden="true" className="hero-bg absolute inset-0 z-0" />
 
-        {/* Aurora mesh blobs */}
+        {/* Concentric orbital arcs (like reference image) */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="hero-aurora hero-aurora-1" />
-          <div className="hero-aurora hero-aurora-2" />
-          <div className="hero-aurora hero-aurora-3" />
+          <div className="hero-arcs">
+            <span className="hero-arc" style={{ width: "600px", height: "600px" }} />
+            <span className="hero-arc" style={{ width: "900px", height: "900px" }} />
+            <span className="hero-arc" style={{ width: "1250px", height: "1250px" }} />
+            <span className="hero-arc" style={{ width: "1650px", height: "1650px" }} />
+            <span className="hero-arc" style={{ width: "2100px", height: "2100px" }} />
+            <span className="hero-arc" style={{ width: "2600px", height: "2600px" }} />
+          </div>
         </div>
-
-        {/* Perspective grid floor */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[55%] hero-floor" />
 
         {/* Soft dotted texture */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hero-dots" />
