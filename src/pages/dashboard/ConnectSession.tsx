@@ -114,6 +114,29 @@ const ConnectSession = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // Keep asking for the QR until the backend has finished generating it.
+  useEffect(() => {
+    if (!id || status === "connected" || qrLoadedRef.current) return;
+
+    let stopped = false;
+    let inFlight = false;
+    const pollQr = async () => {
+      if (stopped || inFlight || qrLoadedRef.current) return;
+      inFlight = true;
+      await fetchQrOnce();
+      inFlight = false;
+    };
+
+    const delay = window.setTimeout(pollQr, 1200);
+    const interval = window.setInterval(pollQr, 2000);
+    return () => {
+      stopped = true;
+      window.clearTimeout(delay);
+      window.clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, status]);
+
   // Poll status every 3s (no QR overwrite)
   useEffect(() => {
     if (!id) return;
