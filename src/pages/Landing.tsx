@@ -180,53 +180,28 @@ const Landing = () => {
       <Navbar />
 
       {/* HERO */}
-      <section className="relative overflow-hidden min-h-[calc(100vh-4rem)] flex items-center">
-        {/* Deep dark base */}
-        <div className="absolute inset-0 -z-20 bg-background" />
-
-        {/* Central radial spotlight glow (green theme) */}
+      <section
+        className="relative overflow-hidden min-h-[calc(100vh-4rem)] flex items-center"
+        style={{ background: "#080b08" }}
+      >
+        {/* Central green glow */}
         <div
-          className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-[800px] w-[1100px] -translate-y-1/2 rounded-full"
           style={{
+            zIndex: 0,
             background:
-              "radial-gradient(ellipse 60% 60% at 50% 50%, hsl(var(--primary) / 0.45) 0%, hsl(var(--primary) / 0.18) 35%, transparent 70%)",
-            animation: "hero-glow-pulse 4s ease-in-out infinite",
-            filter: "blur(20px)",
-          }}
-        />
-
-        {/* Vertical beam rising behind text */}
-        <div
-          className="pointer-events-none absolute left-1/2 top-0 -z-10 h-full w-[420px] -translate-x-1/2"
-          style={{
-            background:
-              "linear-gradient(180deg, hsl(var(--primary) / 0.25) 0%, hsl(var(--primary) / 0.08) 40%, transparent 80%)",
-            maskImage:
-              "linear-gradient(180deg, black 0%, black 60%, transparent 100%)",
-            WebkitMaskImage:
-              "linear-gradient(180deg, black 0%, black 60%, transparent 100%)",
+              "radial-gradient(ellipse 50% 50% at 50% 50%, rgba(0, 230, 118, 0.45) 0%, rgba(0, 200, 100, 0.18) 40%, transparent 70%)",
             filter: "blur(40px)",
-          }}
-        />
-
-        {/* Subtle dot pattern texture */}
-        <div
-          className="pointer-events-none absolute inset-0 -z-10 opacity-[0.18]"
-          style={{
-            backgroundImage:
-              "radial-gradient(hsl(var(--foreground)/0.25) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-            maskImage:
-              "radial-gradient(ellipse 70% 60% at 50% 40%, black 0%, transparent 80%)",
-            WebkitMaskImage:
-              "radial-gradient(ellipse 70% 60% at 50% 40%, black 0%, transparent 80%)",
+            animation: "glowPulse 4s ease-in-out infinite",
+            transform: "translateX(-50%)",
           }}
         />
 
         <style>{`
-          @keyframes hero-glow-pulse {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.95; }
-            50% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
+          @keyframes glowPulse {
+            0%, 100% { opacity: 0.8; transform: translateX(-50%) scale(1); }
+            50% { opacity: 1; transform: translateX(-50%) scale(1.08); }
           }
           @keyframes hero-rise {
             from { opacity: 0; transform: translateY(20px); }
