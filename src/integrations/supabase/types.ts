@@ -181,6 +181,87 @@ export type Database = {
         }
         Relationships: []
       }
+      behavior_settings: {
+        Row: {
+          auto_pause_threshold: number
+          created_at: string
+          fifo_enabled: boolean
+          id: string
+          is_active: boolean
+          max_replies_per_hour: number
+          max_replies_per_minute: number
+          online_presence: boolean
+          random_variation: boolean
+          read_delay_max_ms: number
+          read_delay_min_ms: number
+          reply_delay_max_ms: number
+          reply_delay_min_ms: number
+          reply_only_first_in_burst: boolean
+          session_id: string | null
+          timezone: string
+          typing_max_ms: number
+          typing_min_ms: number
+          typing_simulation: boolean
+          updated_at: string
+          user_id: string
+          working_hours_enabled: boolean
+          working_hours_end: string
+          working_hours_start: string
+        }
+        Insert: {
+          auto_pause_threshold?: number
+          created_at?: string
+          fifo_enabled?: boolean
+          id?: string
+          is_active?: boolean
+          max_replies_per_hour?: number
+          max_replies_per_minute?: number
+          online_presence?: boolean
+          random_variation?: boolean
+          read_delay_max_ms?: number
+          read_delay_min_ms?: number
+          reply_delay_max_ms?: number
+          reply_delay_min_ms?: number
+          reply_only_first_in_burst?: boolean
+          session_id?: string | null
+          timezone?: string
+          typing_max_ms?: number
+          typing_min_ms?: number
+          typing_simulation?: boolean
+          updated_at?: string
+          user_id: string
+          working_hours_enabled?: boolean
+          working_hours_end?: string
+          working_hours_start?: string
+        }
+        Update: {
+          auto_pause_threshold?: number
+          created_at?: string
+          fifo_enabled?: boolean
+          id?: string
+          is_active?: boolean
+          max_replies_per_hour?: number
+          max_replies_per_minute?: number
+          online_presence?: boolean
+          random_variation?: boolean
+          read_delay_max_ms?: number
+          read_delay_min_ms?: number
+          reply_delay_max_ms?: number
+          reply_delay_min_ms?: number
+          reply_only_first_in_burst?: boolean
+          session_id?: string | null
+          timezone?: string
+          typing_max_ms?: number
+          typing_min_ms?: number
+          typing_simulation?: boolean
+          updated_at?: string
+          user_id?: string
+          working_hours_enabled?: boolean
+          working_hours_end?: string
+          working_hours_start?: string
+        }
+        Relationships: []
+      }
       business_profiles: {
         Row: {
           business_type: string | null

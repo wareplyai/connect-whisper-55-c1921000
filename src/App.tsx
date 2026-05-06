@@ -33,6 +33,7 @@ import Plans from "./pages/dashboard/Plans";
 import Payments from "./pages/dashboard/Payments";
 import AutoReplies from "./pages/dashboard/AutoReplies";
 import AIAgent from "./pages/dashboard/AIAgent";
+import BehaviorSettings from "./pages/dashboard/BehaviorSettings";
 import AdminPanel from "./pages/admin/AdminPanel";
 import HAPayments from "./pages/headadmin/Payments";
 import HAPaymentMethods from "./pages/headadmin/PaymentMethods";
@@ -94,6 +95,7 @@ const App = () => (
                 <Route path="payments" element={<Payments />} />
                 <Route path="auto-replies" element={<AutoReplies />} />
                 <Route path="ai-agent" element={<AIAgent />} />
+                <Route path="behavior" element={<BehaviorSettings />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>

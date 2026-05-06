@@ -51,15 +51,12 @@ type FixedQA = { id: string; keyword: string; reply: string };
 type FileItem = { id: string; name: string; size: number };
 type CrawlPage = { id: string; url: string };
 
-// Local-only state (API key + knowledge UI demo). Server state lives in DB.
-const LS_KEY = "ai_agent_local_v2";
+// Local-only state (knowledge UI demo). API key + business state live in DB.
+const LS_KEY = "ai_agent_local_v3";
 
 const defaultLocal = {
   apiKey: "",
-  savedKey: "",
-  platform: "unknown" as Platform,
   manualPlatform: "openai" as Exclude<Platform, "unknown">,
-  model: "",
   text: "",
   websiteUrl: "",
   maxSubpages: 3,
@@ -78,12 +75,16 @@ const defaultBusiness = {
   system_prompt: "",
 };
 
+type SavedKey = { id: string; platform: Exclude<Platform, "unknown">; model: string; key_last4: string };
+
 const AIAgent = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [savingBiz, setSavingBiz] = useState(false);
+  const [savingKey, setSavingKey] = useState(false);
 
   const [local, setLocal] = useState(defaultLocal);
+  const [savedKey, setSavedKey] = useState<SavedKey | null>(null);
   const [business, setBusiness] = useState(defaultBusiness);
   const [qa, setQa] = useState<QA[]>([]);
   const [fixed, setFixed] = useState<FixedQA[]>([]);
@@ -107,10 +108,11 @@ const AIAgent = () => {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const [{ data: biz }, { data: qaRows }, { data: fxRows }] = await Promise.all([
+      const [{ data: biz }, { data: qaRows }, { data: fxRows }, keyRes] = await Promise.all([
         supabase.from("business_profiles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("qa_pairs").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
         supabase.from("fixed_qa").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
+        supabase.functions.invoke("ai-key-manager", { body: { action: "get" } }),
       ]);
       if (biz) {
         setBusiness({
@@ -126,31 +128,47 @@ const AIAgent = () => {
       }
       setQa((qaRows ?? []).map((r: any) => ({ id: r.id, question: r.question, answer: r.answer })));
       setFixed((fxRows ?? []).map((r: any) => ({ id: r.id, keyword: r.keyword, reply: r.reply })));
+      if (keyRes?.data?.key) setSavedKey(keyRes.data.key as SavedKey);
       setLoading(false);
     })();
   }, [user]);
 
-  const effectivePlatform: Platform = local.platform === "unknown" && local.savedKey ? local.manualPlatform : local.platform;
+  const effectivePlatform: Platform = savedKey?.platform ?? "unknown";
   const modelOptions = effectivePlatform !== "unknown" ? MODELS[effectivePlatform] : [];
+  const masked = savedKey ? `••••••••••••${savedKey.key_last4}` : "";
 
-  const masked = useMemo(() => {
-    if (!local.savedKey) return "";
-    return `••••••••••••${local.savedKey.slice(-4)}`;
-  }, [local.savedKey]);
-
-  const saveKey = () => {
+  const saveKey = async () => {
     if (!local.apiKey.trim()) { toast.error("Paste your API key first"); return; }
-    const platform = detectPlatform(local.apiKey);
-    const def = platform !== "unknown" ? MODELS[platform][0].value : "";
-    setLocal((p) => ({ ...p, savedKey: p.apiKey, apiKey: "", platform, model: def || p.model }));
-    toast.success(platform !== "unknown" ? `Detected ${PLATFORM_LABEL[platform]}` : "Key saved — pick platform manually");
-    toast("⚠️ Encrypted server-side storage coming next — currently local only", { duration: 4000 });
+    setSavingKey(true);
+    const detected = detectPlatform(local.apiKey);
+    const platform = detected !== "unknown" ? detected : local.manualPlatform;
+    const model = MODELS[platform][0].value;
+    const { data, error } = await supabase.functions.invoke("ai-key-manager", {
+      body: { action: "save", apiKey: local.apiKey, platform, model },
+    });
+    setSavingKey(false);
+    if (error || data?.error) { toast.error(error?.message || data?.error || "Failed to save key"); return; }
+    setSavedKey(data.key);
+    setLocal((p) => ({ ...p, apiKey: "" }));
+    toast.success(`🔒 Encrypted & saved — ${PLATFORM_LABEL[platform]}`);
   };
 
-  const removeKey = () => {
-    setLocal((p) => ({ ...p, savedKey: "", platform: "unknown", model: "" }));
+  const removeKey = async () => {
+    const { error } = await supabase.functions.invoke("ai-key-manager", { body: { action: "delete" } });
+    if (error) { toast.error(error.message); return; }
+    setSavedKey(null);
     toast("API key removed");
   };
+
+  const updateModel = async (model: string) => {
+    if (!savedKey) return;
+    setSavedKey({ ...savedKey, model });
+    const { error } = await supabase.functions.invoke("ai-key-manager", {
+      body: { action: "update_model", model },
+    });
+    if (error) toast.error(error.message);
+  };
+
 
   const generatePrompt = () => {
     if (!business.name || !business.description) { toast.error("Fill business name & description"); return; }
@@ -273,25 +291,35 @@ RULES:
         <p className="text-sm text-muted-foreground">Connect your AI, train it on your business, and let it reply 24/7.</p>
       </div>
 
-      {/* API KEY (local only — encryption coming next) */}
+      {/* API KEY (encrypted server-side) */}
       <section className="rounded-xl border border-border bg-card p-5 space-y-4">
         <div className="flex items-center gap-2">
           <KeyRound className="h-5 w-5 text-primary" />
           <h2 className="font-semibold">AI API Key</h2>
         </div>
 
-        {!local.savedKey ? (
+        {!savedKey ? (
           <div className="space-y-3">
-            <div className="flex gap-2">
+            <div className="grid md:grid-cols-[180px_1fr_auto] gap-2">
+              <Select value={local.manualPlatform} onValueChange={(v) => updateLocal("manualPlatform", v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="gemini">Google Gemini</SelectItem>
+                  <SelectItem value="deepseek">DeepSeek</SelectItem>
+                </SelectContent>
+              </Select>
               <Input
                 type="password"
-                placeholder="Paste your AI API Key (OpenAI / Gemini / DeepSeek)"
+                placeholder="Paste your AI API Key"
                 value={local.apiKey}
                 onChange={(e) => updateLocal("apiKey", e.target.value)}
               />
-              <Button onClick={saveKey} className="bg-primary text-primary-foreground hover:bg-primary-hover">Save</Button>
+              <Button onClick={saveKey} disabled={savingKey} className="bg-primary text-primary-foreground hover:bg-primary-hover">
+                {savingKey && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}Save
+              </Button>
             </div>
-            <p className="text-xs text-muted-foreground">⚠️ Currently stored locally. Server-side encryption coming next.</p>
+            <p className="text-xs text-muted-foreground">🔒 Your key is AES-256 encrypted server-side. Only the last 4 characters are ever shown.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -304,29 +332,14 @@ RULES:
               <Button variant="outline" size="sm" onClick={removeKey}>Remove</Button>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-3">
-              {local.platform === "unknown" && (
-                <div>
-                  <Label>Platform (manual)</Label>
-                  <Select value={local.manualPlatform} onValueChange={(v) => updateLocal("manualPlatform", v as any)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="openai">OpenAI</SelectItem>
-                      <SelectItem value="gemini">Google Gemini</SelectItem>
-                      <SelectItem value="deepseek">DeepSeek</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div>
-                <Label>Model</Label>
-                <Select value={local.model || modelOptions[0]?.value} onValueChange={(v) => updateLocal("model", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger>
-                  <SelectContent>
-                    {modelOptions.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label>Model</Label>
+              <Select value={savedKey.model || modelOptions[0]?.value} onValueChange={updateModel}>
+                <SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger>
+                <SelectContent>
+                  {modelOptions.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         )}
