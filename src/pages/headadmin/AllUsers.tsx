@@ -79,18 +79,30 @@ export default function AllUsers() {
 
   const saveEdit = async () => {
     const u = editUser;
+    // Update basic profile fields
     await supabase.from("profiles").update({
-      full_name: u.full_name, email: u.email, plan: u.plan,
+      full_name: u.full_name, email: u.email,
       max_sessions: u.max_sessions, is_active: u.is_active,
     }).eq("id", u.id);
+
+    // If plan changed, sync subscription via edge function
+    const original = users.find((x) => x.id === u.id);
+    if (original && original.plan !== u.plan) {
+      const { error } = await supabase.functions.invoke("headadmin-update-user-plan", {
+        body: { user_id: u.id, plan: u.plan },
+      });
+      if (error) { toast.error("Plan update failed: " + error.message); return; }
+    }
     await supabase.from("activity_logs").insert({ action: "user.edit", actor_type: "headadmin", target_type: "user", target_id: u.id });
     toast.success("User updated");
     setEditUser(null); load();
   };
 
   const deleteUserConfirm = async () => {
-    await supabase.from("profiles").delete().eq("id", deleteUser.id);
-    await supabase.from("activity_logs").insert({ action: "user.delete", actor_type: "headadmin", target_type: "user", target_id: deleteUser.id });
+    const { error } = await supabase.functions.invoke("headadmin-delete-user", {
+      body: { user_id: deleteUser.id },
+    });
+    if (error) { toast.error("Delete failed: " + error.message); return; }
     toast.success("User deleted");
     setDeleteUser(null); load();
   };
