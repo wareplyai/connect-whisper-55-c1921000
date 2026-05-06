@@ -17,6 +17,7 @@ import ResetPassword from "./pages/ResetPassword";
 import TrialStarted from "./pages/TrialStarted";
 import Help from "./pages/Help";
 import About from "./pages/About";
+import Status from "./pages/Status";
 import NotFound from "./pages/NotFound";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardHome from "./pages/dashboard/DashboardHome";
@@ -68,6 +69,7 @@ const App = () => (
               <Route path="/trial-started" element={<TrialStarted />} />
               <Route path="/help" element={<Help />} />
               <Route path="/about" element={<About />} />
+              <Route path="/status" element={<Status />} />
 
               <Route path="/docs" element={<DocsLayout />}>
                 <Route index element={<DocsIndex />} />
