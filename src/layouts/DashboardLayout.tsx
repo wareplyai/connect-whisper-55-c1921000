@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/dashboard/sessions", label: "Sessions", icon: Smartphone },
+  { to: "/dashboard/auto-replies", label: "Auto-Replies", icon: MessageSquareText },
   { to: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
   { to: "/dashboard/payments", label: "My Payments", icon: Receipt },
 ];
