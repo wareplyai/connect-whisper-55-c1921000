@@ -1117,11 +1117,6 @@ const Landing = () => {
 
               <div className="mt-8 flex items-center justify-between gap-4 rounded-xl border border-border bg-background/50 px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <div className="flex -space-x-2">
-                    {["bg-primary", "bg-emerald-500", "bg-amber-500", "bg-sky-500"].map((c, i) => (
-                      <span key={i} className={`h-7 w-7 rounded-full border-2 border-card ${c}`} />
-                    ))}
-                  </div>
                   <div className="text-xs">
                     <div className="font-semibold text-foreground">Trusted by 10,000+ teams</div>
                     <div className="text-muted-foreground">★★★★★ 4.9/5 from 1,200+ reviews</div>
