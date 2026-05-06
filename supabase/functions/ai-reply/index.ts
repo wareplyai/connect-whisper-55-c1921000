@@ -96,9 +96,19 @@ Deno.serve(async (req) => {
     const messageText = String(body.message || body.text || body.message_text || "").trim();
     const isGroup = Boolean(body.is_group ?? false);
     const messageType = String(body.message_type || "text");
+    const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false);
 
     if (!sessionId || !fromNumber || !messageText) {
       return jsonResp({ error: "session_id, from, and message required" }, 400);
+    }
+
+    // Skip messages sent BY the bot itself (prevents infinite loop)
+    if (fromMe) {
+      return jsonResp({ ok: true, skipped: "from_me" });
+    }
+    // Skip group messages
+    if (isGroup) {
+      return jsonResp({ ok: true, skipped: "group_message" });
     }
 
     const providedSecret =
@@ -134,6 +144,32 @@ Deno.serve(async (req) => {
     const aiEnabled = Boolean(biz?.ai_enabled);
     const connectedSessions: string[] = (biz?.connected_session_ids ?? []) as string[];
     const sessionConnected = connectedSessions.includes(sessionId);
+
+    // DEDUPE: if same (session, from, text) seen in last 60 seconds, skip to prevent loops/retries
+    const sinceIso = new Date(Date.now() - 60_000).toISOString();
+    const { data: recent } = await admin
+      .from("incoming_messages")
+      .select("id, reply_sent, delivery_status")
+      .eq("session_id", sessionId)
+      .eq("from_number", fromNumber)
+      .eq("message_text", messageText)
+      .gte("received_at", sinceIso)
+      .limit(1)
+      .maybeSingle();
+    if (recent) {
+      return jsonResp({ ok: true, skipped: "duplicate_within_60s", message_id: recent.id });
+    }
+
+    // RATE LIMIT: max 8 incoming from same number per minute
+    const { count: recentCount } = await admin
+      .from("incoming_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("session_id", sessionId)
+      .eq("from_number", fromNumber)
+      .gte("received_at", sinceIso);
+    if ((recentCount ?? 0) >= 8) {
+      return jsonResp({ ok: true, skipped: "rate_limited" });
+    }
 
     // Always log the incoming message
     const logRow = {
