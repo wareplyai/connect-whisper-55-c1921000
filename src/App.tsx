@@ -33,6 +33,7 @@ import Plans from "./pages/dashboard/Plans";
 import Payments from "./pages/dashboard/Payments";
 import AutoReplies from "./pages/dashboard/AutoReplies";
 import AIAgent from "./pages/dashboard/AIAgent";
+import BehaviorSettings from "./pages/dashboard/BehaviorSettings";
 import AdminPanel from "./pages/admin/AdminPanel";
 import HAPayments from "./pages/headadmin/Payments";
 import HAPaymentMethods from "./pages/headadmin/PaymentMethods";
