@@ -91,6 +91,42 @@ export type Database = {
           },
         ]
       }
+      ai_api_keys: {
+        Row: {
+          created_at: string
+          encrypted_key: string
+          id: string
+          is_active: boolean
+          key_last4: string
+          model: string
+          platform: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          encrypted_key: string
+          id?: string
+          is_active?: boolean
+          key_last4: string
+          model: string
+          platform: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          encrypted_key?: string
+          id?: string
+          is_active?: boolean
+          key_last4?: string
+          model?: string
+          platform?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       auto_reply_rules: {
         Row: {
           category: string | null
@@ -140,6 +176,84 @@ export type Database = {
           reply_template?: string
           rule_name?: string
           session_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      business_profiles: {
+        Row: {
+          business_type: string | null
+          contact: string | null
+          created_at: string
+          description: string | null
+          id: string
+          location: string | null
+          name: string | null
+          system_prompt: string | null
+          updated_at: string
+          user_id: string
+          website: string | null
+          working_hours: string | null
+        }
+        Insert: {
+          business_type?: string | null
+          contact?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          name?: string | null
+          system_prompt?: string | null
+          updated_at?: string
+          user_id: string
+          website?: string | null
+          working_hours?: string | null
+        }
+        Update: {
+          business_type?: string | null
+          contact?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          name?: string | null
+          system_prompt?: string | null
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+          working_hours?: string | null
+        }
+        Relationships: []
+      }
+      fixed_qa: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          keyword: string
+          match_type: string
+          reply: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keyword: string
+          match_type?: string
+          reply: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keyword?: string
+          match_type?: string
+          reply?: string
           updated_at?: string
           user_id?: string
         }
@@ -237,6 +351,42 @@ export type Database = {
           reply_sent_at?: string | null
           reply_text?: string | null
           session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      knowledge_chunks: {
+        Row: {
+          content: string
+          created_at: string
+          embedding: string | null
+          id: string
+          metadata: Json | null
+          source_name: string | null
+          source_type: string
+          source_url: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          source_name?: string | null
+          source_type: string
+          source_url?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          source_name?: string | null
+          source_type?: string
+          source_url?: string | null
           user_id?: string
         }
         Relationships: []
@@ -541,6 +691,36 @@ export type Database = {
           is_active?: boolean
           max_sessions?: number
           plan?: string
+        }
+        Relationships: []
+      }
+      qa_pairs: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          is_active: boolean
+          question: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          question: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          question?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
