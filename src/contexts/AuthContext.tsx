@@ -61,23 +61,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Auto-logout if user is deactivated or deleted by headadmin
+  // Auto-logout if user is deactivated or deleted by headadmin (realtime + safety check)
   useEffect(() => {
     if (!user) return;
-    const check = async () => {
+
+    const forceLogout = async () => {
+      try { await supabase.auth.signOut(); } catch {}
+      window.location.href = "/login";
+    };
+
+    const verify = async () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("is_active")
         .eq("id", user.id)
         .maybeSingle();
       if (error) return;
-      if (!data || data.is_active === false) {
-        await supabase.auth.signOut();
-        window.location.href = "/login";
-      }
+      if (!data || data.is_active === false) forceLogout();
     };
-    const interval = setInterval(check, 15000);
-    return () => clearInterval(interval);
+
+    // Initial check
+    verify();
+
+    // Realtime: react instantly to UPDATE/DELETE on this user's profile row
+    const channel = supabase
+      .channel(`profile-watch-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` },
+        (payload: any) => {
+          if (!payload.new || payload.new.is_active === false) forceLogout();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` },
+        () => forceLogout()
+      )
+      .subscribe();
+
+    // Safety net: re-verify when tab regains focus
+    const onFocus = () => verify();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
+    };
   }, [user]);
 
   const signOut = async () => {
