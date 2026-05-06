@@ -308,7 +308,12 @@ Deno.serve(async (req) => {
     }
 
     const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
-    let fromNumber = resolveCustomerNumber(body, session.phone_number);
+    // PRIORITY: trust body.from when it's a real customer phone and not the session's own number
+    const directFromDigits = digitsOnly(body.from ?? body.from_number ?? body.fromNumber);
+    let fromNumber =
+      (directFromDigits && looksLikeCustomerPhone(directFromDigits) && !samePhone(directFromDigits, session.phone_number))
+        ? directFromDigits
+        : resolveCustomerNumber(body, session.phone_number);
     if (fromNumber && !looksLikeCustomerPhone(fromNumber)) {
       const recoveredNumber = await resolveFromGatewayMessageInfo({
         gateway: GATEWAY,
