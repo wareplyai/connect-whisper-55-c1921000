@@ -151,7 +151,8 @@ const EditSession = () => {
           <div className="space-y-4 rounded-lg border border-border bg-card-elevated p-4">
             <div>
               <Label>Webhook URL (POST)</Label>
-              <Input value={form.webhook_url} onChange={(e) => set("webhook_url", e.target.value)} placeholder="https://your-endpoint.com/webhook" className="mt-1.5" />
+              <Input value={form.webhook_url} onChange={(e) => set("webhook_url", e.target.value)} placeholder={`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`} className="mt-1.5" />
+              <p className="mt-1 text-xs text-muted-foreground">Default: our ai-reply endpoint. The webhook secret is auto-generated per session.</p>
             </div>
             <div>
               <Label className="mb-2 block">Webhook Events</Label>
