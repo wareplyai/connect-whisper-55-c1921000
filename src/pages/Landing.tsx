@@ -295,6 +295,39 @@ const Landing = () => {
             opacity: 0.45;
           }
 
+          /* Concentric orbital arcs */
+          .hero-arcs {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: hero-arc-spin 60s linear infinite;
+          }
+          .hero-arc {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px solid hsl(var(--primary) / 0.18);
+            box-shadow:
+              inset 0 0 80px hsl(var(--primary) / 0.06),
+              0 0 40px hsl(var(--primary) / 0.05);
+          }
+          .dark .hero-arc {
+            border-color: hsl(var(--primary) / 0.22);
+            box-shadow:
+              inset 0 0 100px hsl(var(--primary) / 0.10),
+              0 0 60px hsl(var(--primary) / 0.08);
+          }
+          @keyframes hero-arc-spin {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+          }
+
           .hero-spotlight {
             background: radial-gradient(ellipse at center,
               hsl(var(--primary) / 0.55) 0%,
