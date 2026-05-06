@@ -35,7 +35,19 @@ export const Navbar = () => {
           <Logo size={32} textClassName="text-base" />
         </Link>
         <div className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
-          <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
+          <Link
+            to="/"
+            onClick={(e) => {
+              if (location.pathname === "/") {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                history.replaceState(null, "", "/");
+              }
+            }}
+            className="hover:text-foreground transition-colors"
+          >
+            Home
+          </Link>
           <a href="/#how" onClick={(e) => goToSection(e, "how")} className="hover:text-foreground transition-colors">{t("nav.how")}</a>
           <a href="/#pricing" onClick={(e) => goToSection(e, "pricing")} className="hover:text-foreground transition-colors">{t("nav.pricing")}</a>
           <Link to="/docs" className="hover:text-foreground transition-colors">{t("nav.docs")}</Link>
