@@ -21,7 +21,7 @@ export const backendApi = {
     request("/api/session/create", { method: "POST", body: JSON.stringify({ sessionId }) }),
 
   getQr: (sessionId: string) =>
-    request<{ qr?: string; status?: string }>(`/api/session/${sessionId}/qr`),
+    request<{ qr?: string; status?: string }>(`/api/session/${sessionId}/qr?raw=1`),
 
   getStatus: (sessionId: string) =>
     request<{ status?: string; phone?: string; name?: string }>(`/api/session/${sessionId}/status`),
