@@ -180,130 +180,123 @@ const Landing = () => {
       <Navbar />
 
       {/* HERO */}
-      <section
-        className="relative overflow-hidden min-h-[calc(100vh-4rem)] flex items-center"
-        style={{ background: "#080b08" }}
-      >
-        {/* LEFT SIDE GLOW BEAMS */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "320px",
-            height: "100%",
-            pointerEvents: "none",
-            zIndex: 0,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: "-50px",
-              left: "-60px",
-              width: "220px",
-              height: "110%",
-              background:
-                "linear-gradient(180deg, rgba(0,230,118,0.75) 0%, rgba(0,210,100,0.60) 20%, rgba(0,190,90,0.35) 55%, rgba(0,150,70,0.10) 80%, transparent 100%)",
-              borderRadius: "0 80px 80px 0",
-              filter: "blur(18px)",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: "-50px",
-              left: "60px",
-              width: "55px",
-              height: "85%",
-              background:
-                "linear-gradient(180deg, rgba(120,255,180,0.85) 0%, rgba(70,240,150,0.65) 25%, rgba(30,220,120,0.30) 65%, transparent 100%)",
-              borderRadius: "40px",
-              filter: "blur(8px)",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: "-30px",
-              left: "130px",
-              width: "35px",
-              height: "70%",
-              background:
-                "linear-gradient(180deg, rgba(60,230,140,0.60) 0%, rgba(30,210,110,0.30) 50%, transparent 100%)",
-              borderRadius: "30px",
-              filter: "blur(10px)",
-            }}
-          />
-        </div>
+      <section className="hero-section relative overflow-hidden min-h-[calc(100vh-4rem)] flex items-center">
+        {/* Base gradient background — adapts to light/dark */}
+        <div aria-hidden="true" className="hero-bg absolute inset-0 z-0" />
 
-        {/* RIGHT SIDE GLOW BEAMS */}
+        {/* Subtle dot grid pattern */}
         <div
           aria-hidden="true"
-          style={{
-            position: "absolute",
-            top: 0,
-            right: 0,
-            width: "320px",
-            height: "100%",
-            pointerEvents: "none",
-            zIndex: 0,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: "-50px",
-              right: "-60px",
-              width: "220px",
-              height: "110%",
-              background:
-                "linear-gradient(180deg, rgba(0,230,118,0.70) 0%, rgba(0,210,100,0.55) 20%, rgba(0,190,90,0.30) 55%, rgba(0,150,70,0.08) 80%, transparent 100%)",
-              borderRadius: "80px 0 0 80px",
-              filter: "blur(18px)",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: "-50px",
-              right: "60px",
-              width: "55px",
-              height: "85%",
-              background:
-                "linear-gradient(180deg, rgba(140,255,190,0.88) 0%, rgba(80,245,160,0.65) 25%, rgba(40,225,130,0.28) 65%, transparent 100%)",
-              borderRadius: "40px",
-              filter: "blur(8px)",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: "-30px",
-              right: "130px",
-              width: "35px",
-              height: "70%",
-              background:
-                "linear-gradient(180deg, rgba(70,235,150,0.58) 0%, rgba(30,215,115,0.28) 50%, transparent 100%)",
-              borderRadius: "30px",
-              filter: "blur(10px)",
-            }}
-          />
-        </div>
+          className="absolute inset-0 z-0 hero-grid opacity-[0.35] dark:opacity-[0.25]"
+        />
+
+        {/* Top center spotlight glow */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 -top-32 z-0 h-[600px] w-[900px] max-w-[120vw] -translate-x-1/2 rounded-full hero-spotlight"
+        />
+
+        {/* Floating orbs — left & right (responsive) */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-24 top-1/4 z-0 h-[280px] w-[280px] sm:h-[380px] sm:w-[380px] rounded-full hero-orb-left"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-24 bottom-1/4 z-0 h-[280px] w-[280px] sm:h-[420px] sm:w-[420px] rounded-full hero-orb-right"
+        />
+
+        {/* Conic accent ring — premium feel */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full hero-conic opacity-30 dark:opacity-40 hidden sm:block"
+        />
+
+        {/* Bottom fade into page */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-40 bg-gradient-to-b from-transparent to-background"
+        />
 
         <style>{`
-          @keyframes glowPulse {
-            0%, 100% { opacity: 0.8; transform: translateX(-50%) scale(1); }
-            50% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+          .hero-bg {
+            background:
+              radial-gradient(ellipse 80% 60% at 50% 0%, hsl(var(--primary) / 0.12), transparent 60%),
+              linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--card)) 100%);
+          }
+          .dark .hero-bg {
+            background:
+              radial-gradient(ellipse 80% 60% at 50% 0%, hsl(var(--primary) / 0.22), transparent 60%),
+              linear-gradient(180deg, #07120c 0%, #050a08 60%, #030605 100%);
+          }
+          .hero-grid {
+            background-image:
+              linear-gradient(hsl(var(--foreground) / 0.06) 1px, transparent 1px),
+              linear-gradient(90deg, hsl(var(--foreground) / 0.06) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 80%);
+            -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 80%);
+          }
+          .hero-spotlight {
+            background: radial-gradient(ellipse at center,
+              hsl(var(--primary) / 0.45) 0%,
+              hsl(var(--primary) / 0.18) 30%,
+              transparent 65%);
+            filter: blur(50px);
+            animation: hero-pulse 6s ease-in-out infinite;
+          }
+          .hero-orb-left {
+            background: radial-gradient(circle at center,
+              hsl(var(--primary) / 0.35) 0%,
+              hsl(var(--primary) / 0.12) 40%,
+              transparent 70%);
+            filter: blur(60px);
+            animation: hero-float 9s ease-in-out infinite;
+          }
+          .hero-orb-right {
+            background: radial-gradient(circle at center,
+              hsl(160 80% 50% / 0.30) 0%,
+              hsl(160 80% 50% / 0.10) 40%,
+              transparent 70%);
+            filter: blur(60px);
+            animation: hero-float 11s ease-in-out infinite reverse;
+          }
+          .hero-conic {
+            background: conic-gradient(from 0deg,
+              transparent 0deg,
+              hsl(var(--primary) / 0.18) 60deg,
+              transparent 120deg,
+              hsl(160 80% 50% / 0.15) 200deg,
+              transparent 260deg,
+              hsl(var(--primary) / 0.18) 320deg,
+              transparent 360deg);
+            filter: blur(60px);
+            animation: hero-spin 30s linear infinite;
+          }
+          @keyframes hero-pulse {
+            0%, 100% { opacity: 0.85; transform: translateX(-50%) scale(1); }
+            50% { opacity: 1; transform: translateX(-50%) scale(1.06); }
+          }
+          @keyframes hero-float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-30px) scale(1.05); }
+          }
+          @keyframes hero-spin {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
           }
           @keyframes hero-rise {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
           }
           .hero-rise { animation: hero-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+          @media (max-width: 640px) {
+            .hero-spotlight { filter: blur(40px); }
+            .hero-orb-left, .hero-orb-right { filter: blur(45px); }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .hero-spotlight, .hero-orb-left, .hero-orb-right, .hero-conic { animation: none; }
+          }
         `}</style>
 
         <div className="container relative z-10 py-20 md:py-28 text-center max-w-[920px]">
