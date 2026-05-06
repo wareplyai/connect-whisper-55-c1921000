@@ -93,7 +93,9 @@ export type Database = {
       }
       auto_reply_rules: {
         Row: {
+          category: string | null
           created_at: string
+          description: string | null
           enabled: boolean | null
           id: string
           is_active: boolean
@@ -108,7 +110,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
+          description?: string | null
           enabled?: boolean | null
           id?: string
           is_active?: boolean
@@ -123,7 +127,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          category?: string | null
           created_at?: string
+          description?: string | null
           enabled?: boolean | null
           id?: string
           is_active?: boolean
@@ -177,9 +183,11 @@ export type Database = {
           from_number: string
           id: string
           is_group: boolean
+          match_log: Json | null
           matched_rule_id: string | null
           message_text: string | null
           message_type: string
+          processed_at: string | null
           raw_payload: Json | null
           received_at: string
           reply_sent: boolean
@@ -191,9 +199,11 @@ export type Database = {
           from_number: string
           id?: string
           is_group?: boolean
+          match_log?: Json | null
           matched_rule_id?: string | null
           message_text?: string | null
           message_type?: string
+          processed_at?: string | null
           raw_payload?: Json | null
           received_at?: string
           reply_sent?: boolean
@@ -205,9 +215,11 @@ export type Database = {
           from_number?: string
           id?: string
           is_group?: boolean
+          match_log?: Json | null
           matched_rule_id?: string | null
           message_text?: string | null
           message_type?: string
+          processed_at?: string | null
           raw_payload?: Json | null
           received_at?: string
           reply_sent?: boolean
@@ -789,6 +801,34 @@ export type Database = {
         Returns: boolean
       }
       latest_session_for_user: { Args: { _user_id: string }; Returns: string }
+      log_incoming_message_with_match: {
+        Args: {
+          p_from_number: string
+          p_is_group?: boolean
+          p_message_text: string
+          p_message_type?: string
+          p_raw_payload?: Json
+          p_session_id: string
+        }
+        Returns: {
+          match_log: Json
+          matched_rule_id: string
+          message_id: string
+          reply_text: string
+        }[]
+      }
+      match_auto_reply_for_message: {
+        Args: {
+          p_message_text: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: {
+          match_log: Json
+          reply_template: string
+          rule_id: string
+        }[]
+      }
       normalize_auto_reply_keywords: {
         Args: { _keywords: string[] }
         Returns: string[]

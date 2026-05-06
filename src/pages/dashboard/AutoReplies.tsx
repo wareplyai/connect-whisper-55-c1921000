@@ -21,6 +21,8 @@ type Rule = {
   priority: number;
   match_count: number;
   session_id: string | null;
+  category: string | null;
+  description: string | null;
 };
 
 type Session = { id: string; session_name: string };
