@@ -180,93 +180,67 @@ const Landing = () => {
       <Navbar />
 
       {/* HERO */}
-      <section className="relative overflow-hidden">
-        {/* Adaptive gradient background (works for both themes) */}
+      <section className="relative overflow-hidden min-h-[calc(100vh-4rem)] flex items-center">
+        {/* Deep dark base */}
         <div className="absolute inset-0 -z-20 bg-background" />
-        <div className="absolute inset-0 -z-20 dark:bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,hsl(142_70%_18%)_0%,hsl(160_45%_8%)_45%,hsl(215_28%_5%)_100%)] bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,hsl(142_70%_92%)_0%,hsl(160_50%_97%)_45%,hsl(210_30%_99%)_100%)]" />
-        {/* Soft top light streak */}
-        <div className="absolute top-0 right-1/4 -z-10 h-[400px] w-[600px] rotate-[20deg] bg-gradient-to-b from-primary/15 via-primary/5 to-transparent blur-3xl" />
-        {/* Faint grid in bottom-left corner */}
-        <div
-          className="absolute bottom-0 left-0 -z-10 h-[340px] w-[340px] opacity-30"
-          style={{
-            backgroundImage:
-              "linear-gradient(hsl(var(--primary)/0.18) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)/0.18) 1px, transparent 1px)",
-            backgroundSize: "32px 32px",
-            maskImage:
-              "radial-gradient(ellipse at bottom left, black 0%, transparent 70%)",
-            WebkitMaskImage:
-              "radial-gradient(ellipse at bottom left, black 0%, transparent 70%)",
-          }}
-        />
-        {/* Glow orbs */}
-        <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-[500px] w-[900px] rounded-full bg-primary/15 blur-[160px]" />
 
-        {/* Left side green light pillar (Orbix-style) */}
+        {/* Central radial spotlight glow (green theme) */}
         <div
-          className="pointer-events-none absolute left-0 top-0 -z-10 h-full w-[28%] md:w-[24%]"
+          className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full"
           style={{
             background:
-              "linear-gradient(90deg, hsl(var(--primary) / 0.55) 0%, hsl(var(--primary) / 0.28) 35%, hsl(var(--primary) / 0.08) 70%, transparent 100%)",
+              "radial-gradient(ellipse 60% 60% at 50% 50%, hsl(var(--primary) / 0.45) 0%, hsl(var(--primary) / 0.18) 35%, transparent 70%)",
+            animation: "hero-glow-pulse 4s ease-in-out infinite",
+            filter: "blur(20px)",
+          }}
+        />
+
+        {/* Vertical beam rising behind text */}
+        <div
+          className="pointer-events-none absolute left-1/2 top-0 -z-10 h-full w-[420px] -translate-x-1/2"
+          style={{
+            background:
+              "linear-gradient(180deg, hsl(var(--primary) / 0.25) 0%, hsl(var(--primary) / 0.08) 40%, transparent 80%)",
             maskImage:
-              "linear-gradient(90deg, black 0%, black 55%, transparent 100%), linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%)",
+              "linear-gradient(180deg, black 0%, black 60%, transparent 100%)",
             WebkitMaskImage:
-              "linear-gradient(90deg, black 0%, black 55%, transparent 100%), linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%)",
-            maskComposite: "intersect",
-            WebkitMaskComposite: "source-in",
+              "linear-gradient(180deg, black 0%, black 60%, transparent 100%)",
             filter: "blur(40px)",
           }}
         />
-        {/* Vertical streak lines on left */}
+
+        {/* Subtle dot pattern texture */}
         <div
-          className="pointer-events-none absolute left-0 top-0 -z-10 h-full w-[26%] md:w-[22%] opacity-60 mix-blend-screen"
+          className="pointer-events-none absolute inset-0 -z-10 opacity-[0.18]"
           style={{
             backgroundImage:
-              "repeating-linear-gradient(90deg, transparent 0px, transparent 18px, hsl(var(--primary) / 0.18) 19px, transparent 22px, transparent 60px, hsl(var(--primary) / 0.10) 61px, transparent 64px)",
+              "radial-gradient(hsl(var(--foreground)/0.25) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
             maskImage:
-              "linear-gradient(90deg, black 0%, black 60%, transparent 100%), linear-gradient(180deg, transparent 0%, black 15%, black 85%, transparent 100%)",
+              "radial-gradient(ellipse 70% 60% at 50% 40%, black 0%, transparent 80%)",
             WebkitMaskImage:
-              "linear-gradient(90deg, black 0%, black 60%, transparent 100%), linear-gradient(180deg, transparent 0%, black 15%, black 85%, transparent 100%)",
-            maskComposite: "intersect",
-            WebkitMaskComposite: "source-in",
-            filter: "blur(2px)",
+              "radial-gradient(ellipse 70% 60% at 50% 40%, black 0%, transparent 80%)",
           }}
         />
 
-        {/* Right side green light pillar */}
-        <div
-          className="pointer-events-none absolute right-0 top-0 -z-10 h-full w-[28%] md:w-[24%]"
-          style={{
-            background:
-              "linear-gradient(270deg, hsl(var(--primary) / 0.55) 0%, hsl(var(--primary) / 0.28) 35%, hsl(var(--primary) / 0.08) 70%, transparent 100%)",
-            maskImage:
-              "linear-gradient(270deg, black 0%, black 55%, transparent 100%), linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%)",
-            WebkitMaskImage:
-              "linear-gradient(270deg, black 0%, black 55%, transparent 100%), linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%)",
-            maskComposite: "intersect",
-            WebkitMaskComposite: "source-in",
-            filter: "blur(40px)",
-          }}
-        />
-        {/* Vertical streak lines on right */}
-        <div
-          className="pointer-events-none absolute right-0 top-0 -z-10 h-full w-[26%] md:w-[22%] opacity-60 mix-blend-screen"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(90deg, transparent 0px, transparent 18px, hsl(var(--primary) / 0.18) 19px, transparent 22px, transparent 60px, hsl(var(--primary) / 0.10) 61px, transparent 64px)",
-            maskImage:
-              "linear-gradient(270deg, black 0%, black 60%, transparent 100%), linear-gradient(180deg, transparent 0%, black 15%, black 85%, transparent 100%)",
-            WebkitMaskImage:
-              "linear-gradient(270deg, black 0%, black 60%, transparent 100%), linear-gradient(180deg, transparent 0%, black 15%, black 85%, transparent 100%)",
-            maskComposite: "intersect",
-            WebkitMaskComposite: "source-in",
-            filter: "blur(2px)",
-          }}
-        />
+        <style>{`
+          @keyframes hero-glow-pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.95; }
+            50% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
+          }
+          @keyframes hero-rise {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          .hero-rise { animation: hero-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        `}</style>
 
-        <div className="container relative py-28 md:py-36 text-center">
-          {/* Premium top badge */}
-          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary/20 bg-card/40 backdrop-blur-md px-4 py-1.5 text-xs font-medium shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.4)]">
+        <div className="container relative py-20 md:py-28 text-center max-w-[760px]">
+          {/* Top badge */}
+          <div
+            className="hero-rise mx-auto inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-card/40 backdrop-blur-md px-4 py-1.5 text-xs font-medium"
+            style={{ animationDelay: "0s" }}
+          >
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
@@ -274,26 +248,39 @@ const Landing = () => {
             <span className="text-foreground/90">{t("hero.badge.new")}</span>
             <span className="h-3 w-px bg-border" />
             <span className="text-muted-foreground">{t("hero.badge.trust")}</span>
-            <ArrowRight className="h-3 w-3 text-primary" />
           </div>
 
           {/* Headline */}
-          <h1 className="mt-8 font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.15] text-foreground text-center">
-            {t("hero.title.1")} <br className="hidden md:block" />
-            {t("hero.title.2")} <span className="text-gradient">{t("hero.title.3")}</span> <br className="hidden md:block" />
+          <h1
+            className="hero-rise mt-8 font-display font-bold text-foreground tracking-tight leading-[1.05]"
+            style={{
+              fontSize: "clamp(42px, 6vw, 72px)",
+              letterSpacing: "-0.02em",
+              animationDelay: "0.1s",
+            }}
+          >
+            {t("hero.title.1")} {t("hero.title.2")}{" "}
+            <span className="text-gradient">{t("hero.title.3")}</span>{" "}
             {t("hero.title.4")}
           </h1>
 
-          <p className="mx-auto mt-6 max-w-2xl text-sm md:text-base text-muted-foreground leading-relaxed">
+          {/* Subheadline */}
+          <p
+            className="hero-rise mx-auto mt-6 max-w-xl text-sm md:text-base text-muted-foreground leading-relaxed"
+            style={{ animationDelay: "0.2s" }}
+          >
             {t("hero.subtitle")}
           </p>
 
           {/* CTAs */}
-          <div className="mt-10 flex flex-wrap justify-center gap-3">
+          <div
+            className="hero-rise mt-10 flex flex-wrap justify-center gap-3"
+            style={{ animationDelay: "0.3s" }}
+          >
             <Button
               asChild
               size="lg"
-              className="group h-14 px-8 rounded-full bg-primary text-primary-foreground hover:bg-primary-hover shadow-[0_20px_50px_-15px_hsl(var(--primary)/0.7)] hover:shadow-[0_25px_60px_-15px_hsl(var(--primary)/0.9)] hover:-translate-y-0.5 transition-all duration-300 text-base font-semibold"
+              className="group h-12 px-7 rounded-full bg-primary text-primary-foreground hover:bg-primary-hover shadow-[0_10px_40px_-5px_hsl(var(--primary)/0.6)] hover:shadow-[0_15px_50px_-5px_hsl(var(--primary)/0.85)] hover:scale-[1.03] transition-all duration-300 text-sm font-semibold"
             >
               <Link to="/register">
                 {t("hero.cta.trial")}
@@ -304,21 +291,63 @@ const Landing = () => {
               asChild
               size="lg"
               variant="outline"
-              className="h-14 px-8 rounded-full border-border/80 bg-card/50 backdrop-blur hover:bg-card hover:border-primary/40 text-base font-medium transition-all"
+              className="h-12 px-7 rounded-full border-foreground/15 bg-transparent backdrop-blur hover:bg-card/60 hover:border-primary/40 text-sm font-medium transition-all"
             >
-              <a href="#features">{t("hero.cta.docs")} <ArrowRight className="ml-1 h-4 w-4" /></a>
+              <a href="#features">{t("hero.cta.docs")}</a>
             </Button>
           </div>
 
-          {/* Trust row */}
-          <div className="mt-8 flex flex-wrap justify-center items-center gap-x-7 gap-y-3 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> {t("hero.trust.noCard")}</span>
-            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> {t("hero.trust.trial")}</span>
-            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> {t("hero.trust.cancel")}</span>
+          {/* Star rating row */}
+          <div
+            className="hero-rise mt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground"
+            style={{ animationDelay: "0.4s" }}
+          >
+            <div className="flex items-center gap-0.5">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+              ))}
+            </div>
+            <span>Trusted by 10,000+ businesses</span>
+          </div>
+
+          {/* Trust check row */}
+          <div
+            className="hero-rise mt-5 flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-xs text-muted-foreground"
+            style={{ animationDelay: "0.45s" }}
+          >
+            <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> {t("hero.trust.noCard")}</span>
+            <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> {t("hero.trust.trial")}</span>
+            <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> {t("hero.trust.cancel")}</span>
+          </div>
+
+          {/* Logo strip — social proof */}
+          <div
+            className="hero-rise mt-14"
+            style={{ animationDelay: "0.55s" }}
+          >
+            <p className="text-xs uppercase tracking-widest text-muted-foreground/70">
+              Trusted by teams at
+            </p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 opacity-70">
+              {[
+                { name: "Phantom", icon: Sparkles },
+                { name: "Digistack", icon: Zap },
+                { name: "Printester", icon: FileText },
+                { name: "Truthnote", icon: Bot },
+              ].map((b) => (
+                <div key={b.name} className="flex items-center gap-2 text-foreground/70">
+                  <b.icon className="h-4 w-4" />
+                  <span className="text-sm font-semibold tracking-tight">{b.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Stats strip */}
-          <div className="mt-14 mx-auto max-w-3xl grid grid-cols-2 md:grid-cols-4 gap-px overflow-hidden rounded-2xl border border-border bg-border/60 backdrop-blur">
+          <div
+            className="hero-rise mt-14 mx-auto max-w-3xl grid grid-cols-2 md:grid-cols-4 gap-px overflow-hidden rounded-2xl border border-border bg-border/60 backdrop-blur"
+            style={{ animationDelay: "0.65s" }}
+          >
             {[
               { v: "10K+", l: t("hero.stat.devs") },
               { v: "50M+", l: t("hero.stat.msgs") },
