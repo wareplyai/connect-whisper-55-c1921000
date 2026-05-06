@@ -1,4 +1,5 @@
 import { Navbar } from "@/components/marketing/Navbar";
+import { Footer } from "@/components/marketing/Footer";
 import { Link } from "react-router-dom";
 import { Sparkles, ShieldCheck, Heart, Award, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -166,6 +167,8 @@ const About = () => {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 };
