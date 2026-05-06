@@ -96,6 +96,83 @@ function recipientVariants(input: string): string[] {
   return [...new Set(variants.filter(Boolean))];
 }
 
+function digitsOnly(value: unknown): string {
+  return String(value ?? "").replace(/\D/g, "");
+}
+
+function bdComparable(value: unknown): string {
+  const digits = digitsOnly(value);
+  if (digits.startsWith("880") && digits.length === 13) return digits.slice(2);
+  if (digits.startsWith("0") && digits.length === 11) return digits.slice(1);
+  return digits;
+}
+
+function samePhone(a: unknown, b: unknown): boolean {
+  const ad = digitsOnly(a);
+  const bd = digitsOnly(b);
+  if (!ad || !bd) return false;
+  if (ad === bd) return true;
+  const ac = bdComparable(a);
+  const bc = bdComparable(b);
+  return ac.length >= 10 && bc.length >= 10 && ac === bc;
+}
+
+function numberFromValue(value: unknown): string | null {
+  const text = String(value ?? "").trim();
+  if (!text || /@g\.us|status@broadcast|@broadcast/i.test(text)) return null;
+  const beforeAt = text.includes("@") ? text.split("@")[0] : text;
+  const digits = beforeAt.replace(/\D/g, "");
+  return digits.length >= 8 && digits.length <= 16 ? digits : null;
+}
+
+function collectPhoneCandidates(value: unknown, out: string[], depth = 0): void {
+  if (depth > 5 || value == null) return;
+  if (Array.isArray(value)) {
+    for (const item of value.slice(0, 20)) collectPhoneCandidates(item, out, depth + 1);
+    return;
+  }
+  if (typeof value !== "object") return;
+
+  const candidateKeys = new Set([
+    "customer", "customer_number", "customernumber", "from", "from_number", "fromnumber",
+    "sender", "participant", "author", "remotejid", "remote_jid", "chatid", "chat_id", "jid",
+  ]);
+
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    const normalizedKey = key.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    if (candidateKeys.has(normalizedKey)) {
+      const n = numberFromValue(child);
+      if (n) out.push(n);
+    }
+    if (typeof child === "object" && child !== null) collectPhoneCandidates(child, out, depth + 1);
+  }
+}
+
+function hasDeepTruthy(value: unknown, keys: Set<string>, depth = 0): boolean {
+  if (depth > 5 || value == null || typeof value !== "object") return false;
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    const normalizedKey = key.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    if (keys.has(normalizedKey) && child === true) return true;
+    if (typeof child === "object" && child !== null && hasDeepTruthy(child, keys, depth + 1)) return true;
+  }
+  return false;
+}
+
+function hasGroupJid(value: unknown, depth = 0): boolean {
+  if (depth > 5 || value == null) return false;
+  if (typeof value === "string") return /@g\.us/i.test(value);
+  if (Array.isArray(value)) return value.slice(0, 20).some((item) => hasGroupJid(item, depth + 1));
+  if (typeof value !== "object") return false;
+  return Object.values(value as Record<string, unknown>).some((child) => hasGroupJid(child, depth + 1));
+}
+
+function resolveCustomerNumber(body: Record<string, unknown>, sessionPhone?: string | null): string {
+  const candidates: string[] = [];
+  collectPhoneCandidates(body, candidates);
+  const unique = [...new Set(candidates)];
+  return unique.find((n) => !samePhone(n, sessionPhone)) || unique[0] || "";
+}
+
 async function sendViaGateway(opts: {
   gateway: string; sessionId: string; apiToken?: string | null; to: string; message: string;
 }): Promise<{ ok: boolean; to: string; error: string | null; data: unknown }> {
@@ -131,15 +208,15 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const sessionId = String(body.session_id || body.sessionId || "").trim();
-    const fromNumber = String(body.from || body.from_number || "").trim();
     const messageText = String(body.message || body.text || body.message_text || "").trim();
-    const isGroup = Boolean(body.is_group ?? false);
+    const isGroup = Boolean(body.is_group ?? body.isGroup ?? false) || hasGroupJid(body);
     const messageType = String(body.message_type || "text");
-    const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false);
+    const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false) ||
+      hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
 
-    if (!sessionId || !fromNumber || !messageText) {
-      return jsonResp({ error: "session_id, from, and message required" }, 400);
+    if (!sessionId || !messageText) {
+      return jsonResp({ error: "session_id and message required" }, 400);
     }
 
     // Skip messages sent BY the bot itself (prevents infinite loop)
@@ -163,13 +240,21 @@ Deno.serve(async (req) => {
     // Load session and validate webhook secret
     const { data: session, error: sErr } = await admin
       .from("sessions")
-      .select("id, user_id, webhook_secret, status, api_token")
+      .select("id, user_id, webhook_secret, status, api_token, phone_number")
       .eq("id", sessionId)
       .maybeSingle();
     if (sErr) throw sErr;
     if (!session) return jsonResp({ error: "Session not found" }, 404);
     if (!providedSecret || providedSecret !== session.webhook_secret) {
       return jsonResp({ error: "Invalid webhook secret" }, 401);
+    }
+
+    const fromNumber = resolveCustomerNumber(body, session.phone_number);
+    if (!fromNumber) {
+      return jsonResp({ error: "customer number required" }, 400);
+    }
+    if (samePhone(fromNumber, session.phone_number)) {
+      return jsonResp({ ok: true, skipped: "own_session_number", from: fromNumber });
     }
 
     const userId = session.user_id;
