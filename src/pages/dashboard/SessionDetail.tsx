@@ -130,6 +130,9 @@ const SessionDetail = () => {
   const [logs, setLogs] = useState<any[]>([]);
   const [page, setPage] = useState(0);
   const [totalLogs, setTotalLogs] = useState(0);
+  const [incoming, setIncoming] = useState<any[]>([]);
+  const [incomingPage, setIncomingPage] = useState(0);
+  const [totalIncoming, setTotalIncoming] = useState(0);
   const [to, setTo] = useState("");
   const [text, setText] = useState("");
   const [msgType, setMsgType] = useState("text");
