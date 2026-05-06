@@ -94,6 +94,9 @@ function recipientVariants(input: string): string[] {
   const raw = input.trim();
   const digits = raw.replace(/\D/g, "");
   const variants = [raw];
+  const isExplicitPhone = raw.startsWith("+") || /@s\.whatsapp\.net$/i.test(raw);
+  const isLidRecipient = /@lid$/i.test(raw) || (!isExplicitPhone && looksLikeLidIdentifier(digits));
+  if (isLidRecipient && digits) variants.push(`${digits}@lid`);
   if (digits) variants.push(digits, `+${digits}`, `${digits}@s.whatsapp.net`);
   if (digits.startsWith("0") && digits.length >= 10) {
     variants.push(`88${digits}`, `+88${digits}`, `88${digits.slice(1)}`, `+88${digits.slice(1)}`);
@@ -137,6 +140,15 @@ export function looksLikeCustomerPhone(value: unknown): boolean {
   if (digits.startsWith("01") && digits.length === 11) return true;
   if (digits.startsWith("1") && digits.length === 10) return true;
   return digits.length >= 10 && digits.length <= 15 && !/^(23|52)\d{12,14}$/.test(digits);
+}
+
+function looksLikeLidIdentifier(value: unknown): boolean {
+  const digits = digitsOnly(value);
+  return /^(23|52)\d{12,14}$/.test(digits);
+}
+
+function looksLikeSendableRecipient(value: unknown): boolean {
+  return looksLikeCustomerPhone(value) || looksLikeLidIdentifier(value);
 }
 
 function collectPhoneCandidates(value: unknown, out: string[], depth = 0): void {
@@ -210,7 +222,7 @@ async function resolveFromGatewayMessageInfo(opts: {
       if (!res.ok) continue;
       const data = await res.json().catch(() => null);
       const resolved = resolveCustomerNumber({ gateway_message_info: data }, sessionPhone);
-      if (resolved && looksLikeCustomerPhone(resolved)) return resolved;
+      if (resolved && looksLikeSendableRecipient(resolved)) return resolved;
     } catch {
       // Keep webhook processing deterministic; invalid payload handling below will mark the row failed.
     }
