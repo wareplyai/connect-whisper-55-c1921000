@@ -42,7 +42,7 @@ const EditSession = () => {
         enable_account_protection: data.enable_account_protection,
         enable_message_logging: data.enable_message_logging,
         enable_webhook: data.enable_webhook,
-        webhook_url: data.webhook_url || "",
+        webhook_url: data.webhook_url || `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`,
         webhook_events: data.webhook_events || [],
         read_incoming_messages: data.read_incoming_messages,
         auto_reject_calls: data.auto_reject_calls,
