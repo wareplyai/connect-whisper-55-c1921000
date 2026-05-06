@@ -188,18 +188,21 @@ Deno.serve(async (req) => {
     let messageId: string | undefined;
 
     if (sourceMessageId) {
-      const { data: sourceRow } = await admin
+      const { data: claimedRow, error: claimErr } = await admin
         .from("incoming_messages")
-        .select("id, reply_text, reply_sent, delivery_status")
+        .update({ delivery_status: "processing", reply_attempted_at: new Date().toISOString() })
         .eq("id", sourceMessageId)
         .eq("session_id", sessionId)
+        .eq("reply_sent", false)
+        .eq("delivery_status", "pending")
+        .select("id")
         .maybeSingle();
+      if (claimErr) throw claimErr;
 
-      if (sourceRow?.id) {
-        messageId = sourceRow.id;
-        if (sourceRow.reply_sent || sourceRow.delivery_status === "sent") {
-          return jsonResp({ ok: true, skipped: "already_processed", message_id: messageId });
-        }
+      if (claimedRow?.id) {
+        messageId = claimedRow.id;
+      } else {
+        return jsonResp({ ok: true, skipped: "already_claimed_or_processed", message_id: sourceMessageId });
       }
     }
 
@@ -242,7 +245,7 @@ Deno.serve(async (req) => {
         is_group: isGroup,
         raw_payload: body,
         reply_sent: false,
-        delivery_status: "pending" as const,
+        delivery_status: "processing" as const,
         received_at: new Date().toISOString(),
       };
       const { data: msgRow } = await admin
