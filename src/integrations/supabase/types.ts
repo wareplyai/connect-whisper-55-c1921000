@@ -91,6 +91,51 @@ export type Database = {
           },
         ]
       }
+      auto_reply_rules: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          keywords: string[]
+          match_count: number
+          match_type: string
+          priority: number
+          reply_template: string
+          rule_name: string
+          session_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          match_count?: number
+          match_type?: string
+          priority?: number
+          reply_template: string
+          rule_name: string
+          session_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          match_count?: number
+          match_type?: string
+          priority?: number
+          reply_template?: string
+          rule_name?: string
+          session_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       headadmin: {
         Row: {
           auth_user_id: string | null
@@ -121,6 +166,51 @@ export type Database = {
           last_login?: string | null
           name?: string
           password_hash?: string | null
+        }
+        Relationships: []
+      }
+      incoming_messages: {
+        Row: {
+          from_number: string
+          id: string
+          is_group: boolean
+          matched_rule_id: string | null
+          message_text: string | null
+          message_type: string
+          raw_payload: Json | null
+          received_at: string
+          reply_sent: boolean
+          reply_text: string | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          from_number: string
+          id?: string
+          is_group?: boolean
+          matched_rule_id?: string | null
+          message_text?: string | null
+          message_type?: string
+          raw_payload?: Json | null
+          received_at?: string
+          reply_sent?: boolean
+          reply_text?: string | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          from_number?: string
+          id?: string
+          is_group?: boolean
+          matched_rule_id?: string | null
+          message_text?: string | null
+          message_type?: string
+          raw_payload?: Json | null
+          received_at?: string
+          reply_sent?: boolean
+          reply_text?: string | null
+          session_id?: string
+          user_id?: string
         }
         Relationships: []
       }

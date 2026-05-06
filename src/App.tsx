@@ -31,6 +31,7 @@ import ConnectSession from "./pages/dashboard/ConnectSession";
 import Subscription from "./pages/dashboard/Subscription";
 import Plans from "./pages/dashboard/Plans";
 import Payments from "./pages/dashboard/Payments";
+import AutoReplies from "./pages/dashboard/AutoReplies";
 import AdminPanel from "./pages/admin/AdminPanel";
 import HAPayments from "./pages/headadmin/Payments";
 import HAPaymentMethods from "./pages/headadmin/PaymentMethods";
@@ -90,6 +91,7 @@ const App = () => (
                 <Route path="subscription" element={<Subscription />} />
                 <Route path="subscription/plans" element={<Plans />} />
                 <Route path="payments" element={<Payments />} />
+                <Route path="auto-replies" element={<AutoReplies />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>
