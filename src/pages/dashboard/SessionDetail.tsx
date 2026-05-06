@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { backendApi } from "@/lib/backend";
+import WebhookConfigDialog from "@/components/dashboard/WebhookConfigDialog";
 
 const PAGE_SIZE = 25;
 
@@ -146,6 +147,7 @@ const SessionDetail = () => {
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState<null | "api_token" | "webhook_secret">(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [webhookOpen, setWebhookOpen] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const channelRef = useRef<any>(null);
 
@@ -363,7 +365,7 @@ const SessionDetail = () => {
             <div className="flex gap-1">
               <Button size="icon" variant="outline" onClick={() => { loadSession(); loadLogs(page); }}><RefreshCw className="h-4 w-4" /></Button>
               <Button size="icon" variant="outline" onClick={() => nav(`/dashboard/sessions/${s.id}/edit`)}><Edit className="h-4 w-4" /></Button>
-              <Button size="icon" variant="outline"><Webhook className="h-4 w-4" /></Button>
+              <Button size="icon" variant="outline" onClick={() => setWebhookOpen(true)}><Webhook className="h-4 w-4" /></Button>
               <Button size="icon" variant="outline" onClick={() => setConfirmDelete(true)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
             </div>
           </div>
@@ -672,6 +674,8 @@ const SessionDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <WebhookConfigDialog open={webhookOpen} onOpenChange={setWebhookOpen} session={s} onSaved={loadSession} />
 
       {/* Delete Confirm */}
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
