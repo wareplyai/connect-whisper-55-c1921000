@@ -497,29 +497,6 @@ const Landing = () => {
             <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> {t("hero.trust.cancel")}</span>
           </div>
 
-          {/* Logo strip — social proof */}
-          <div
-            className="hero-rise mt-14"
-            style={{ animationDelay: "0.55s" }}
-          >
-            <p className="text-xs uppercase tracking-widest text-muted-foreground/70">
-              Trusted by teams at
-            </p>
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 opacity-70">
-              {[
-                { name: "Phantom", icon: Sparkles },
-                { name: "Digistack", icon: Zap },
-                { name: "Printester", icon: FileText },
-                { name: "Truthnote", icon: Bot },
-              ].map((b) => (
-                <div key={b.name} className="flex items-center gap-2 text-foreground/70">
-                  <b.icon className="h-4 w-4" />
-                  <span className="text-sm font-semibold tracking-tight">{b.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Stats strip */}
           <div
             className="hero-rise mt-14 mx-auto max-w-3xl grid grid-cols-2 md:grid-cols-4 gap-px overflow-hidden rounded-2xl border border-border bg-border/60 backdrop-blur"
