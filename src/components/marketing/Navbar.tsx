@@ -118,7 +118,6 @@ export const Navbar = () => {
           <Link to="/help" className="px-3 py-3 rounded-lg hover:bg-foreground/5 text-foreground">{t("nav.help")}</Link>
 
           <div className="mt-3 pt-3 border-t border-border/60 flex items-center justify-between gap-2">
-            <LanguageToggle />
             {user ? (
               <Button asChild size="sm" variant="outline" className="gap-1.5 flex-1">
                 <Link to="/dashboard">
