@@ -142,12 +142,12 @@ export function looksLikeCustomerPhone(value: unknown): boolean {
   return digits.length >= 10 && digits.length <= 15 && !/^(23|52)\d{12,14}$/.test(digits);
 }
 
-function looksLikeLidIdentifier(value: unknown): boolean {
+export function looksLikeLidIdentifier(value: unknown): boolean {
   const digits = digitsOnly(value);
   return /^(23|52)\d{12,14}$/.test(digits);
 }
 
-function looksLikeSendableRecipient(value: unknown): boolean {
+export function looksLikeSendableRecipient(value: unknown): boolean {
   return looksLikeCustomerPhone(value) || looksLikeLidIdentifier(value);
 }
 
