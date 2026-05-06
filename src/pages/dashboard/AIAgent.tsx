@@ -208,6 +208,32 @@ RULES:
     else toast.success("Business profile saved");
   };
 
+  const persistBusinessPatch = async (patch: Partial<typeof defaultBusiness>) => {
+    if (!user) return;
+    const next = { ...business, ...patch };
+    setBusiness(next);
+    const { error } = await supabase
+      .from("business_profiles")
+      .upsert({ user_id: user.id, ...next }, { onConflict: "user_id" });
+    if (error) toast.error(error.message);
+  };
+
+  const toggleAI = async (v: boolean) => {
+    if (v && !savedKey) { toast.error("Save your AI API key first"); return; }
+    if (v && business.connected_session_ids.length === 0) {
+      toast.error("Connect at least one WhatsApp session first");
+      return;
+    }
+    await persistBusinessPatch({ ai_enabled: v });
+    toast.success(v ? "🟢 AI Agent ON" : "⚪ AI Agent OFF");
+  };
+
+  const toggleSession = async (sessionId: string, checked: boolean) => {
+    const set = new Set(business.connected_session_ids);
+    if (checked) set.add(sessionId); else set.delete(sessionId);
+    await persistBusinessPatch({ connected_session_ids: Array.from(set) });
+  };
+
   // QA handlers
   const addQA = async () => {
     if (!user) return;
