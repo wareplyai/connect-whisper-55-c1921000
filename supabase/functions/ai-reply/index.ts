@@ -575,9 +575,25 @@ Deno.serve(async (req) => {
     const replyMode: string = (biz as any)?.active_reply_mode
       ?? (biz?.ai_enabled ? "ai_agent" : "none");
     const aiEnabled = customerMode === "ai" && replyMode === "ai_agent";
-    const autoReplyEnabled = customerMode === "auto_reply" || replyMode === "auto_reply";
+    const autoReplyEnabled = (customerMode === "auto_reply" || replyMode === "auto_reply")
+      && (session.auto_replies_enabled !== false)
+      && ((biz as any)?.ai_auto_replies_enabled !== false);
     const connectedSessions: string[] = (biz?.connected_session_ids ?? []) as string[];
     const sessionConnected = connectedSessions.includes(sessionId);
+
+    // Resolve effective behaviour flags (AI Agent panel overrides session for AI replies)
+    const aiTyping = (biz as any)?.ai_show_typing !== false;
+    const aiReadReceipts = (biz as any)?.ai_read_receipts !== false;
+    const sessionTyping = session.show_typing_indicator !== false;
+    const sessionReadReceipts = session.read_incoming_messages === true;
+    const accountProtection = session.enable_account_protection !== false;
+    const messageLogging = session.enable_message_logging !== false;
+
+    // Mark incoming as read on WhatsApp if enabled (session-level)
+    if (sessionReadReceipts) {
+      // best-effort, fire and forget
+      markAsRead({ gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber }).catch(() => {});
+    }
 
     let messageId: string | undefined;
 
