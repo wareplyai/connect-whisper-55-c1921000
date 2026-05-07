@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 type IncomingRow = {
   id: string;
@@ -164,12 +165,12 @@ const Inbox = () => {
       const { error } = await supabase.from("blocked_customers" as any).insert({
         user_id: user.id, session_id: selected.session_id, phone_number: selected.phone_number,
       });
-      if (error) return toast.error(error.message);
+      if (error) return toast.error(friendlyError(error));
       toast.success("Customer blocked");
     } else {
       const { error } = await supabase.from("blocked_customers" as any).delete()
         .eq("user_id", user.id).eq("session_id", selected.session_id).eq("phone_number", selected.phone_number);
-      if (error) return toast.error(error.message);
+      if (error) return toast.error(friendlyError(error));
       toast.success("Customer unblocked");
     }
     load();
@@ -185,7 +186,7 @@ const Inbox = () => {
       ai_paused: next === "human",
       paused_at: next === "human" ? new Date().toISOString() : null,
     }, { onConflict: "user_id,session_id,phone_number" });
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success(
       next === "ai" ? "AI Agent active for this customer" :
       next === "human" ? "Human takeover — reply manually" :

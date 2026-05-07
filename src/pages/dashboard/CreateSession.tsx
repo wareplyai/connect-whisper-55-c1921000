@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { backendApi } from "@/lib/backend";
 import { CountryCodeSelect } from "@/components/CountryCodeSelect";
 import { DEFAULT_COUNTRY, Country, validatePhoneForCountry } from "@/lib/countries";
+import { friendlyError } from "@/lib/friendlyError";
 
 const ALL_EVENTS = [
   "messages.received","messages-group.received","messages-newsletter.received","messages-personal.received",
@@ -133,7 +134,7 @@ const CreateSession = () => {
       if ((error as any).code === "23505" || /unique/i.test(error.message)) {
         return toast.error("The phone number has already been taken. Disconnect the existing session first.");
       }
-      return toast.error(error.message);
+      return toast.error(friendlyError(error));
     }
 
     try {
@@ -141,7 +142,7 @@ const CreateSession = () => {
       toast.success("Session created!");
       nav(`/dashboard/sessions/${data.id}/connect`);
     } catch (err: any) {
-      toast.error(`Backend error: ${err.message}`);
+      toast.error(`Backend error: ${friendlyError(err)}`);
       nav(`/dashboard/sessions/${data.id}/connect`);
     } finally {
       setLoading(false);

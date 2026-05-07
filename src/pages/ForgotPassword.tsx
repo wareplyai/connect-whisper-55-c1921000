@@ -20,7 +20,7 @@ const ForgotPassword = () => {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     setSent(true);
     toast.success("Check your email for the reset link");
   };

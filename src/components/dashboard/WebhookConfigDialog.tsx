@@ -10,6 +10,7 @@ import {
   ShieldCheck, Globe, ExternalLink, Zap, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 const ALL_EVENTS = [
   "messages.received", "messages-group.received", "messages-newsletter.received",
@@ -121,7 +122,7 @@ const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) =>
       ignore_channels: ignoreChannels,
     }).eq("id", session.id);
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success("Webhook configuration saved");
     onSaved();
     onOpenChange(false);
