@@ -134,7 +134,7 @@ function numberFromValue(value: unknown): string | null {
 export function looksLikeCustomerPhone(value: unknown): boolean {
   const digits = digitsOnly(value);
   if (!digits) return false;
-  return digits.length >= 8 && digits.length <= 15;
+  return digits.length >= 8 && digits.length <= 15 && !isWhatsAppLID(digits);
 }
 
 export function isWhatsAppLID(value: unknown): boolean {
@@ -159,8 +159,8 @@ function collectPhoneCandidates(value: unknown, out: Array<{ num: string; truste
   if (typeof value !== "object") return;
 
   const candidateKeys = new Set([
-    "customer", "customer_number", "customernumber", "from", "from_number", "fromnumber",
-    "sender", "senderpn", "sender_pn", "participant", "participantalt", "participant_alt",
+    "customer", "customer_number", "customernumber", "from", "from_real", "fromreal", "from_number", "fromnumber",
+    "sender", "senderpn", "sender_pn", "cleanedsenderpn", "cleaned_sender_pn", "participant", "participantalt", "participant_alt",
     "author", "remotejid", "remote_jid", "remotejidalt", "remote_jid_alt",
     "chatid", "chat_id", "jid",
   ]);
@@ -168,8 +168,8 @@ function collectPhoneCandidates(value: unknown, out: Array<{ num: string; truste
   // We mark these as "trusted" so they win over Baileys-generated ids in body.from.
   const trustedKeys = new Set([
     "remotejid", "remote_jid", "remotejidalt", "remote_jid_alt",
-    "senderpn", "sender_pn", "participant", "participantalt", "participant_alt",
-    "chatid", "chat_id", "jid", "customer", "customer_number", "customernumber",
+    "senderpn", "sender_pn", "cleanedsenderpn", "cleaned_sender_pn", "participant", "participantalt", "participant_alt",
+    "chatid", "chat_id", "jid", "customer", "customer_number", "customernumber", "from_real", "fromreal",
   ]);
 
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
@@ -178,7 +178,7 @@ function collectPhoneCandidates(value: unknown, out: Array<{ num: string; truste
       const n = numberFromValue(child);
       if (n) {
         const raw = String(child ?? "");
-        const trusted = trustedKeys.has(normalizedKey) && /@s\.whatsapp\.net/i.test(raw);
+        const trusted = trustedKeys.has(normalizedKey) && (normalizedKey.includes("cleanedsenderpn") || normalizedKey.includes("fromreal") || /@s\.whatsapp\.net/i.test(raw));
         out.push({ num: n, trusted });
       }
     }
@@ -207,14 +207,14 @@ function hasGroupJid(value: unknown, depth = 0): boolean {
 export function resolveCustomerNumber(body: Record<string, unknown>, sessionPhone?: string | null): string {
   const candidates: Array<{ num: string; trusted: boolean }> = [];
   collectPhoneCandidates(body, candidates);
-  const notSession = candidates.filter((c) => !samePhone(c.num, sessionPhone));
+  const notSession = candidates.filter((c) => !samePhone(c.num, sessionPhone) && !isWhatsAppLID(c.num));
   // 1) Prefer trusted (@s.whatsapp.net) jids that look like real phones
   const trustedPhone = notSession.find((c) => c.trusted && looksLikeCustomerPhone(c.num));
   if (trustedPhone) return trustedPhone.num;
   // 2) Otherwise fall back to first candidate that looks like a customer phone
   const anyPhone = notSession.find((c) => looksLikeCustomerPhone(c.num));
   if (anyPhone) return anyPhone.num;
-  return notSession[0]?.num || candidates[0]?.num || "";
+  return notSession[0]?.num || "";
 }
 
 async function resolveFromGatewayMessageInfo(opts: {
@@ -376,38 +376,31 @@ Deno.serve(async (req) => {
     }
 
     const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
-    // PRIORITY: prefer real WhatsApp jids nested in raw payload (key.remoteJid, remoteJidAlt, senderPn)
-    // over top-level body.from, because Baileys often sets body.from to a generated message id (LID)
-    // that happens to look like a 15-digit phone but is NOT a real customer number.
-    // PRIORITY 1: cleanedSenderPn (real phone, already cleaned by gateway)
-    // PRIORITY 2: senderPn (real phone with @s.whatsapp.net suffix)
-    // PRIORITY 3: body.from / body.from_real (top-level from gateway)
-    // PRIORITY 4: resolveCustomerNumber scan (skips @lid jids)
-    let fromNumber = "";
-    const rawKey = (body?.raw_payload as Record<string, unknown> | undefined)?.key as Record<string, unknown> | undefined;
-    const cleanedSenderPn = rawKey?.cleanedSenderPn;
-    if (cleanedSenderPn) {
-      const d = String(cleanedSenderPn).replace(/\D/g, "");
-      if (d.length >= 8 && !isWhatsAppLID(d)) fromNumber = d;
-    }
-    if (!fromNumber && rawKey?.senderPn) {
-      const d = String(rawKey.senderPn).replace("@s.whatsapp.net", "").replace(/\D/g, "");
-      if (d.length >= 8 && !isWhatsAppLID(d)) fromNumber = d;
-    }
-    if (!fromNumber) {
-      const fromReal = (body as Record<string, unknown>).from_real;
-      const directFromDigits = digitsOnly(fromReal ?? body.from ?? body.from_number ?? body.fromNumber);
-      if (directFromDigits && looksLikeCustomerPhone(directFromDigits) && !samePhone(directFromDigits, session.phone_number) && !isWhatsAppLID(directFromDigits)) {
-        fromNumber = directFromDigits;
+    const rawPayload = (body?.raw_payload as Record<string, unknown> | undefined) || {};
+    const rawKey = (rawPayload?.key as Record<string, unknown> | undefined) || {};
+    const pickRealNumber = (...values: unknown[]) => {
+      for (const value of values) {
+        const digits = digitsOnly(value);
+        if (digits && looksLikeCustomerPhone(digits) && !samePhone(digits, session.phone_number)) return digits;
       }
-    }
-    if (!fromNumber) {
-      const remoteJid = String(rawKey?.remoteJid || "");
-      if (!/@lid/i.test(remoteJid)) {
-        const resolvedFromPayload = resolveCustomerNumber(body, session.phone_number);
-        if (resolvedFromPayload && !isWhatsAppLID(resolvedFromPayload)) fromNumber = resolvedFromPayload;
-      }
-    }
+      return "";
+    };
+
+    let fromNumber = pickRealNumber(
+      rawKey.cleanedSenderPn,
+      (rawPayload as any).cleanedSenderPn,
+      (body as any).cleanedSenderPn,
+      rawKey.senderPn,
+      (rawPayload as any).senderPn,
+      (body as any).senderPn,
+      (body as any).from_real,
+      (body as any).fromReal,
+      (body as any).from_number,
+      (body as any).fromNumber,
+      (body as any).from,
+      !/@lid/i.test(String(rawKey.remoteJid || "")) ? rawKey.remoteJid : "",
+      resolveCustomerNumber(body, session.phone_number),
+    );
     if (fromNumber && !looksLikeCustomerPhone(fromNumber)) {
       const recoveredNumber = await resolveFromGatewayMessageInfo({
         gateway: GATEWAY,
@@ -420,10 +413,6 @@ Deno.serve(async (req) => {
     }
     if (!fromNumber) {
       return jsonResp({ error: "customer number required" }, 400);
-    }
-    // Skip WhatsApp internal LID identifiers (15 digits starting with 23 or 13) — these are NOT real phone numbers
-    if (isWhatsAppLID(fromNumber)) {
-      return jsonResp({ ok: true, skipped: "whatsapp_lid_not_supported", from: fromNumber });
     }
     // STRICT: only allow real customer phone numbers — never send AI replies to fake Baileys/LID ids
     if (!looksLikeCustomerPhone(fromNumber)) {
