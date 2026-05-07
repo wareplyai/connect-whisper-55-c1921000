@@ -345,6 +345,7 @@ export type Database = {
           ai_paused: boolean
           created_at: string
           id: string
+          mode: string
           paused_at: string | null
           phone_number: string
           session_id: string
@@ -355,6 +356,7 @@ export type Database = {
           ai_paused?: boolean
           created_at?: string
           id?: string
+          mode?: string
           paused_at?: string | null
           phone_number: string
           session_id: string
@@ -365,6 +367,7 @@ export type Database = {
           ai_paused?: boolean
           created_at?: string
           id?: string
+          mode?: string
           paused_at?: string | null
           phone_number?: string
           session_id?: string

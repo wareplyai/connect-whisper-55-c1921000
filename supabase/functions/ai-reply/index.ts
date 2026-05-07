@@ -360,22 +360,24 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, skipped: "own_session_number", from: fromNumber });
     }
 
-    // Skip if user paused AI for this customer (manual mode)
-    const { data: pausedRow } = await admin
+    // Per-customer mode: ai (default) | human (manual only) | auto_reply (keyword rules only)
+    const { data: customerSetting } = await admin
       .from("customer_reply_settings")
-      .select("ai_paused")
+      .select("mode, ai_paused")
       .eq("session_id", sessionId)
       .eq("phone_number", fromNumber)
       .maybeSingle();
-    if (pausedRow?.ai_paused) {
+    const customerMode: "ai" | "human" | "auto_reply" =
+      (customerSetting?.mode as any) || (customerSetting?.ai_paused ? "human" : "ai");
+    if (customerMode === "human") {
       if (sourceMessageId) {
         await admin.from("incoming_messages").update({
           delivery_status: "skipped",
-          reply_error: "AI paused for this customer (manual mode)",
+          reply_error: "Human takeover mode — AI paused for this customer",
           processed_at: new Date().toISOString(),
         }).eq("id", sourceMessageId);
       }
-      return jsonResp({ ok: true, skipped: "ai_paused_for_customer", from: fromNumber });
+      return jsonResp({ ok: true, skipped: "human_mode_active", from: fromNumber });
     }
 
     // Skip if customer is blocked
