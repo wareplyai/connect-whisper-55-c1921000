@@ -79,6 +79,9 @@ const defaultBusiness = {
   system_prompt: "",
   ai_enabled: false,
   connected_session_ids: [] as string[],
+  ai_show_typing: true,
+  ai_read_receipts: true,
+  ai_auto_replies_enabled: true,
 };
 
 type SessionRow = { id: string; session_name: string; phone_number: string | null; status: string };
@@ -136,6 +139,9 @@ const AIAgent = () => {
           system_prompt: biz.system_prompt ?? "",
           ai_enabled: (biz as any).ai_enabled ?? false,
           connected_session_ids: ((biz as any).connected_session_ids ?? []) as string[],
+          ai_show_typing: (biz as any).ai_show_typing ?? true,
+          ai_read_receipts: (biz as any).ai_read_receipts ?? true,
+          ai_auto_replies_enabled: (biz as any).ai_auto_replies_enabled ?? true,
         });
       }
       setSessions((sessRows ?? []) as SessionRow[]);
