@@ -62,12 +62,12 @@ const Inbox = () => {
       supabase.from("incoming_messages").select("*").eq("user_id", user.id).order("received_at", { ascending: false }).limit(500),
       supabase.from("message_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(500),
       supabase.from("blocked_customers" as any).select("id, phone_number, session_id").eq("user_id", user.id),
-      supabase.from("customer_reply_settings" as any).select("phone_number, session_id, ai_paused").eq("user_id", user.id),
+      supabase.from("customer_reply_settings" as any).select("phone_number, session_id, ai_paused, mode").eq("user_id", user.id),
     ]);
     setIncoming((inc as any) || []);
     setOutgoing((out as any) || []);
     setBlocked((bl as any) || []);
-    setPaused((pa as any) || []);
+    setModes((pa as any) || []);
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
