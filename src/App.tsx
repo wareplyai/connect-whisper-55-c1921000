@@ -120,6 +120,7 @@ const App = () => (
                 <Route path="plan-pricing" element={<HAPlanPricing />} />
                 <Route path="settings" element={<HASettings />} />
                 <Route path="sms-logs" element={<SmsLogs />} />
+                <Route path="feature-access" element={<HAFeatureAccess />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
