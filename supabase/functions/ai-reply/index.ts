@@ -91,15 +91,13 @@ async function callAI(opts: {
 }
 
 function recipientVariants(input: string): string[] {
-  const raw = input.trim();
+  const raw = String(input ?? "").trim();
+  // Strip any @lid / @s.whatsapp.net suffix and use digits only
   const digits = raw.replace(/\D/g, "");
-  const variants = [raw];
-  const isExplicitPhone = raw.startsWith("+") || /@s\.whatsapp\.net$/i.test(raw);
-  const isLidRecipient = /@lid$/i.test(raw) || (!isExplicitPhone && looksLikeLidIdentifier(digits));
-  if (isLidRecipient && digits) return [...new Set([`${digits}@lid`, raw].filter(Boolean))];
-  if (digits) variants.push(digits, `+${digits}`, `${digits}@s.whatsapp.net`);
+  if (!digits) return [raw].filter(Boolean);
+  const variants = [digits, `${digits}@s.whatsapp.net`, `+${digits}`];
   if (digits.startsWith("0") && digits.length >= 10) {
-    variants.push(`88${digits}`, `+88${digits}`, `88${digits.slice(1)}`, `+88${digits.slice(1)}`);
+    variants.push(`88${digits.slice(1)}`, `+88${digits.slice(1)}`, `${digits.slice(1)}@s.whatsapp.net`);
   }
   return [...new Set(variants.filter(Boolean))];
 }
@@ -136,19 +134,15 @@ function numberFromValue(value: unknown): string | null {
 export function looksLikeCustomerPhone(value: unknown): boolean {
   const digits = digitsOnly(value);
   if (!digits) return false;
-  if (digits.startsWith("8801") && digits.length === 13) return true;
-  if (digits.startsWith("01") && digits.length === 11) return true;
-  if (digits.startsWith("1") && digits.length === 10) return true;
-  return digits.length >= 10 && digits.length <= 15 && !/^(23|52)\d{12,14}$/.test(digits);
+  return digits.length >= 8 && digits.length <= 15;
 }
 
-export function looksLikeLidIdentifier(value: unknown): boolean {
-  const digits = digitsOnly(value);
-  return /^(23|52)\d{12,14}$/.test(digits);
+export function looksLikeLidIdentifier(_value: unknown): boolean {
+  return false; // Disabled - always send to @s.whatsapp.net
 }
 
 export function looksLikeSendableRecipient(value: unknown): boolean {
-  return looksLikeCustomerPhone(value) || looksLikeLidIdentifier(value);
+  return looksLikeCustomerPhone(value);
 }
 
 function collectPhoneCandidates(value: unknown, out: string[], depth = 0): void {
