@@ -357,7 +357,7 @@ const Inbox = () => {
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendManual(); } }}
-                    placeholder={isAiPaused ? "Type your manual reply..." : "Type a reply (AI will be paused for this customer once you send)"}
+                    placeholder={customerMode === "human" ? "Type your manual reply..." : "Type a reply (sending will switch this customer to Human mode)"}
                     disabled={sending || isBlocked}
                   />
                   <Button onClick={sendManual} disabled={sending || isBlocked || !draft.trim()}>
