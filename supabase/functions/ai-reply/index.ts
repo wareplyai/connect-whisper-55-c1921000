@@ -360,6 +360,24 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, skipped: "own_session_number", from: fromNumber });
     }
 
+    // Skip if user paused AI for this customer (manual mode)
+    const { data: pausedRow } = await admin
+      .from("customer_reply_settings")
+      .select("ai_paused")
+      .eq("session_id", sessionId)
+      .eq("phone_number", fromNumber)
+      .maybeSingle();
+    if (pausedRow?.ai_paused) {
+      if (sourceMessageId) {
+        await admin.from("incoming_messages").update({
+          delivery_status: "skipped",
+          reply_error: "AI paused for this customer (manual mode)",
+          processed_at: new Date().toISOString(),
+        }).eq("id", sourceMessageId);
+      }
+      return jsonResp({ ok: true, skipped: "ai_paused_for_customer", from: fromNumber });
+    }
+
     // Skip if customer is blocked
     const { data: blockedRow } = await admin
       .from("blocked_customers")
