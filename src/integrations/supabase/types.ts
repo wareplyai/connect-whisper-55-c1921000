@@ -262,6 +262,30 @@ export type Database = {
         }
         Relationships: []
       }
+      blocked_customers: {
+        Row: {
+          blocked_at: string
+          id: string
+          phone_number: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          blocked_at?: string
+          id?: string
+          phone_number: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          blocked_at?: string
+          id?: string
+          phone_number?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       business_profiles: {
         Row: {
           active_reply_mode: string
