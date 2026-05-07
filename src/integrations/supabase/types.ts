@@ -1142,6 +1142,10 @@ export type Database = {
     }
     Functions: {
       expire_own_trial: { Args: never; Returns: boolean }
+      extract_real_customer_number_from_payload: {
+        Args: { _payload: Json }
+        Returns: string
+      }
       has_active_service: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
