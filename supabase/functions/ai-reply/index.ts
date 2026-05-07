@@ -409,8 +409,8 @@ Deno.serve(async (req) => {
 
     const replyMode: string = (biz as any)?.active_reply_mode
       ?? (biz?.ai_enabled ? "ai_agent" : "none");
-    const aiEnabled = replyMode === "ai_agent";
-    const autoReplyEnabled = replyMode === "auto_reply";
+    const aiEnabled = customerMode === "ai" && replyMode === "ai_agent";
+    const autoReplyEnabled = customerMode === "auto_reply" || replyMode === "auto_reply";
     const connectedSessions: string[] = (biz?.connected_session_ids ?? []) as string[];
     const sessionConnected = connectedSessions.includes(sessionId);
 
