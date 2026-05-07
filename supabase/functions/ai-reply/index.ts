@@ -295,21 +295,44 @@ async function sendTypingIndicator(opts: {
   console.log(`[typing] all attempts failed for to=${to}`);
 }
 
+async function markAsRead(opts: {
+  gateway: string; sessionId: string; apiToken?: string | null; to: string; messageId?: string;
+}): Promise<void> {
+  const { gateway, sessionId, apiToken, to, messageId } = opts;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+  const attempts = [
+    { path: `/api/session/${sessionId}/read`, body: { to, messageId } },
+    { path: `/api/session/${sessionId}/mark-read`, body: { to, messageId } },
+    { path: `/api/session/${sessionId}/chat/read`, body: { to } },
+  ];
+  for (const a of attempts) {
+    try {
+      const r = await fetch(`${gateway}${a.path}`, { method: "POST", headers, body: JSON.stringify(a.body) });
+      if (r.ok) return;
+    } catch { /* swallow */ }
+  }
+}
+
 async function sendViaGateway(opts: {
   gateway: string; sessionId: string; apiToken?: string | null; to: string; message: string;
+  showTyping?: boolean; accountProtection?: boolean;
 }): Promise<{ ok: boolean; to: string; error: string | null; data: unknown }> {
-  const { gateway, sessionId, apiToken, to, message } = opts;
+  const { gateway, sessionId, apiToken, to, message, showTyping = true, accountProtection = true } = opts;
 
-  // Send ONLY ONCE to a single canonical recipient to prevent duplicate replies.
-  // The gateway accepts plain digits and resolves to @s.whatsapp.net internally.
   const digits = String(to).replace(/\D/g, "");
   const candidate = digits || String(to);
 
-  // Show "typing…" on the customer's phone before sending. Duration scales with message length
-  // (≈ 30ms per char, clamped to 800ms–4000ms) so it feels natural.
-  const typingMs = Math.max(800, Math.min(4000, message.length * 30));
-  await sendTypingIndicator({ gateway, sessionId, apiToken, to: candidate, durationMs: typingMs });
-  await new Promise((res) => setTimeout(res, typingMs));
+  // Show typing indicator (only if enabled)
+  if (showTyping) {
+    const typingMs = Math.max(800, Math.min(4000, message.length * 30));
+    await sendTypingIndicator({ gateway, sessionId, apiToken, to: candidate, durationMs: typingMs });
+    await new Promise((res) => setTimeout(res, typingMs));
+  } else if (accountProtection) {
+    // Even without typing, add small human-like delay for account protection
+    const delay = 1000 + Math.floor(Math.random() * 2000);
+    await new Promise((res) => setTimeout(res, delay));
+  }
 
   try {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
