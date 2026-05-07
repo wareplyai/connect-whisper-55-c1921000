@@ -285,11 +285,14 @@ async function sendTypingIndicator(opts: {
         headers,
         body: JSON.stringify(a.body),
       });
+      const txt = await r.text().catch(() => "");
+      console.log(`[typing] ${a.path} -> ${r.status} ${txt.slice(0, 200)}`);
       if (r.ok) return; // first endpoint that works wins
-    } catch {
-      // try the next variant
+    } catch (e) {
+      console.log(`[typing] ${a.path} failed:`, (e as Error)?.message);
     }
   }
+  console.log(`[typing] all attempts failed for to=${to}`);
 }
 
 async function sendViaGateway(opts: {
