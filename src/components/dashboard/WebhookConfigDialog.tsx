@@ -47,6 +47,33 @@ const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) =>
   const [ignoreBroadcasts, setIgnoreBroadcasts] = useState(true);
   const [ignoreChannels, setIgnoreChannels] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  const sendTest = async () => {
+    if (!session) return;
+    if (!enabled || !url.trim()) {
+      toast.error("Enable webhook and enter a URL first, then Save.");
+      return;
+    }
+    setTesting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("webhook-test", {
+        body: { session_id: session.id, event_type: "messages.received" },
+      });
+      if (error) throw error;
+      if (data?.ok) {
+        toast.success(`Test delivered ✓ (HTTP ${data.status})`);
+      } else {
+        toast.error(`Test failed: ${data?.error || `HTTP ${data?.status}`}`, {
+          description: (data?.response || "").slice(0, 200),
+        });
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Test failed");
+    } finally {
+      setTesting(false);
+    }
+  };
 
   useEffect(() => {
     if (!session || !open) return;
