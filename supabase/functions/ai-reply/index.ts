@@ -360,22 +360,24 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, skipped: "own_session_number", from: fromNumber });
     }
 
-    // Skip if user paused AI for this customer (manual mode)
-    const { data: pausedRow } = await admin
+    // Per-customer mode: ai (default) | human (manual only) | auto_reply (keyword rules only)
+    const { data: customerSetting } = await admin
       .from("customer_reply_settings")
-      .select("ai_paused")
+      .select("mode, ai_paused")
       .eq("session_id", sessionId)
       .eq("phone_number", fromNumber)
       .maybeSingle();
-    if (pausedRow?.ai_paused) {
+    const customerMode: "ai" | "human" | "auto_reply" =
+      (customerSetting?.mode as any) || (customerSetting?.ai_paused ? "human" : "ai");
+    if (customerMode === "human") {
       if (sourceMessageId) {
         await admin.from("incoming_messages").update({
           delivery_status: "skipped",
-          reply_error: "AI paused for this customer (manual mode)",
+          reply_error: "Human takeover mode — AI paused for this customer",
           processed_at: new Date().toISOString(),
         }).eq("id", sourceMessageId);
       }
-      return jsonResp({ ok: true, skipped: "ai_paused_for_customer", from: fromNumber });
+      return jsonResp({ ok: true, skipped: "human_mode_active", from: fromNumber });
     }
 
     // Skip if customer is blocked
@@ -407,8 +409,8 @@ Deno.serve(async (req) => {
 
     const replyMode: string = (biz as any)?.active_reply_mode
       ?? (biz?.ai_enabled ? "ai_agent" : "none");
-    const aiEnabled = replyMode === "ai_agent";
-    const autoReplyEnabled = replyMode === "auto_reply";
+    const aiEnabled = customerMode === "ai" && replyMode === "ai_agent";
+    const autoReplyEnabled = customerMode === "auto_reply" || replyMode === "auto_reply";
     const connectedSessions: string[] = (biz?.connected_session_ids ?? []) as string[];
     const sessionConnected = connectedSessions.includes(sessionId);
 
@@ -489,8 +491,8 @@ Deno.serve(async (req) => {
 
     const lowerMsg = messageText.toLowerCase();
 
-    // MUTEX: route based on active_reply_mode
-    if (replyMode === "none") {
+    // MUTEX: route based on active_reply_mode (per-customer auto_reply overrides global "none")
+    if (replyMode === "none" && customerMode !== "auto_reply") {
       if (messageId) {
         await admin.from("incoming_messages").update({
           delivery_status: "skipped",
@@ -696,7 +698,7 @@ Deno.serve(async (req) => {
     if (sendOk) {
       await admin.from("message_logs").insert({
         user_id: userId, session_id: sessionId, to_number: sendResult.to,
-        message_type: "text", payload: { text: reply, auto_reply: true },
+        message_type: "text", payload: { text: reply, auto_reply: true, source: "ai" },
         status: "sent",
       });
     }

@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Pause, Play } from "lucide-react";
+import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 type IncomingRow = {
@@ -49,7 +49,7 @@ const Inbox = () => {
   const [incoming, setIncoming] = useState<IncomingRow[]>([]);
   const [outgoing, setOutgoing] = useState<OutgoingRow[]>([]);
   const [blocked, setBlocked] = useState<{ id: string; phone_number: string; session_id: string }[]>([]);
-  const [paused, setPaused] = useState<{ phone_number: string; session_id: string; ai_paused: boolean }[]>([]);
+  const [modes, setModes] = useState<{ phone_number: string; session_id: string; mode: string; ai_paused: boolean }[]>([]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<{ session_id: string; phone_number: string } | null>(null);
   const [draft, setDraft] = useState("");
@@ -62,12 +62,12 @@ const Inbox = () => {
       supabase.from("incoming_messages").select("*").eq("user_id", user.id).order("received_at", { ascending: false }).limit(500),
       supabase.from("message_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(500),
       supabase.from("blocked_customers" as any).select("id, phone_number, session_id").eq("user_id", user.id),
-      supabase.from("customer_reply_settings" as any).select("phone_number, session_id, ai_paused").eq("user_id", user.id),
+      supabase.from("customer_reply_settings" as any).select("phone_number, session_id, ai_paused, mode").eq("user_id", user.id),
     ]);
     setIncoming((inc as any) || []);
     setOutgoing((out as any) || []);
     setBlocked((bl as any) || []);
-    setPaused((pa as any) || []);
+    setModes((pa as any) || []);
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
@@ -109,10 +109,12 @@ const Inbox = () => {
     if (!selected) return false;
     return blocked.some((b) => b.session_id === selected.session_id && b.phone_number === selected.phone_number);
   }, [blocked, selected]);
-  const isAiPaused = useMemo(() => {
-    if (!selected) return false;
-    return paused.some((p) => p.session_id === selected.session_id && p.phone_number === selected.phone_number && p.ai_paused);
-  }, [paused, selected]);
+  const customerMode: "ai" | "human" | "auto_reply" = useMemo(() => {
+    if (!selected) return "ai";
+    const row = modes.find((p) => p.session_id === selected.session_id && p.phone_number === selected.phone_number);
+    if (row?.mode === "human" || row?.mode === "auto_reply" || row?.mode === "ai") return row.mode as any;
+    return row?.ai_paused ? "human" : "ai";
+  }, [modes, selected]);
 
   const conversation = useMemo(() => {
     if (!selected) return [];
@@ -124,6 +126,7 @@ const Inbox = () => {
         kind: "in" as const,
         text: m.message_text || "(no text)",
         ts: m.received_at,
+        pending: !m.reply_sent && !m.reply_text,
       }));
     const replies = incoming
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number && m.reply_text)
@@ -171,17 +174,22 @@ const Inbox = () => {
     load();
   };
 
-  const toggleAiPause = async (next: boolean) => {
+  const setMode = async (next: "ai" | "human" | "auto_reply") => {
     if (!user || !selected) return;
     const { error } = await supabase.from("customer_reply_settings" as any).upsert({
       user_id: user.id,
       session_id: selected.session_id,
       phone_number: selected.phone_number,
-      ai_paused: next,
-      paused_at: next ? new Date().toISOString() : null,
+      mode: next,
+      ai_paused: next === "human",
+      paused_at: next === "human" ? new Date().toISOString() : null,
     }, { onConflict: "user_id,session_id,phone_number" });
     if (error) return toast.error(error.message);
-    toast.success(next ? "AI paused — you can reply manually" : "AI resumed");
+    toast.success(
+      next === "ai" ? "AI Agent active for this customer" :
+      next === "human" ? "Human takeover — reply manually" :
+      "Auto-Reply only (keyword rules)"
+    );
     load();
   };
 
@@ -289,15 +297,28 @@ const Inbox = () => {
                 <div className="min-w-0">
                   <p className="font-medium truncate">+{selected.phone_number}</p>
                   <p className="text-xs text-muted-foreground">
-                    {isBlocked ? "Blocked" : isAiPaused ? "AI paused — manual mode" : "AI active"}
+                    {isBlocked ? "Blocked" :
+                      customerMode === "human" ? "Human takeover — manual mode" :
+                      customerMode === "auto_reply" ? "Auto-Reply only (keyword rules)" :
+                      "AI Agent active"}
                   </p>
                 </div>
-                <div className="flex items-center gap-4 flex-wrap">
-                  <label className="flex items-center gap-2 text-xs">
-                    {isAiPaused ? <Pause className="h-3.5 w-3.5 text-yellow-500" /> : <Play className="h-3.5 w-3.5 text-green-500" />}
-                    <span className="text-muted-foreground">{isAiPaused ? "AI paused" : "AI on"}</span>
-                    <Switch checked={!isAiPaused} onCheckedChange={(v) => toggleAiPause(!v)} />
-                  </label>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
+                    {(["ai", "human", "auto_reply"] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setMode(m)}
+                        className={`px-2.5 py-1.5 flex items-center gap-1 transition-colors ${
+                          customerMode === m ? "bg-primary text-primary-foreground" : "bg-card hover:bg-card-elevated text-muted-foreground"
+                        }`}
+                      >
+                        {m === "ai" ? <><Bot className="h-3 w-3" /> AI</> :
+                          m === "human" ? <><User className="h-3 w-3" /> Human</> :
+                          <><Zap className="h-3 w-3" /> Auto</>}
+                      </button>
+                    ))}
+                  </div>
                   <label className="flex items-center gap-2 text-xs">
                     <span className="text-muted-foreground">{isBlocked ? "Blocked" : "Block"}</span>
                     <Switch checked={isBlocked} onCheckedChange={toggleBlock} />
@@ -321,6 +342,11 @@ const Inbox = () => {
                                 <><User className="h-2.5 w-2.5" /> Manual</>}
                             </Badge>
                           )}
+                          {m.kind === "in" && (m as any).pending && (
+                            <Badge variant="outline" className="text-[10px] py-0 h-4 gap-1 border-yellow-500/50 text-yellow-600">
+                              <Clock className="h-2.5 w-2.5" /> Pending
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -336,7 +362,7 @@ const Inbox = () => {
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendManual(); } }}
-                    placeholder={isAiPaused ? "Type your manual reply..." : "Type a reply (AI will be paused for this customer once you send)"}
+                    placeholder={customerMode === "human" ? "Type your manual reply..." : "Type a reply (sending will switch this customer to Human mode)"}
                     disabled={sending || isBlocked}
                   />
                   <Button onClick={sendManual} disabled={sending || isBlocked || !draft.trim()}>
