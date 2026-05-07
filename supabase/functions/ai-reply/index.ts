@@ -269,6 +269,55 @@ async function sendViaGateway(opts: {
   return { ok: false, to, error: errors.join("; ") || "gateway send failed", data: null };
 }
 
+function isInternalAiReplyWebhook(url: string): boolean {
+  return /\.supabase\.co\/functions\/v1\/ai-reply\/?$/i.test(url.trim());
+}
+
+async function deliverUserWebhook(opts: {
+  admin: any;
+  session: any;
+  eventType: string;
+  payload: Record<string, unknown>;
+}): Promise<void> {
+  const { admin, session, eventType, payload } = opts;
+  const url = String(session.webhook_url || "").trim();
+  const events = Array.isArray(session.webhook_events) ? session.webhook_events : [];
+
+  if (!session.enable_webhook || !url || !events.includes(eventType) || isInternalAiReplyWebhook(url)) return;
+
+  const logPayload = { event: eventType, ...payload };
+  let delivered = false;
+  let error: string | null = null;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "WaReplyAI-Webhook/1.0",
+        "X-WaReply-Event": eventType,
+        "X-WaReply-Session": session.id,
+      },
+      body: JSON.stringify(logPayload),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    delivered = res.ok;
+    if (!res.ok) error = `Webhook returned HTTP ${res.status}`;
+  } catch (e: any) {
+    error = e?.name === "AbortError" ? "Webhook request timed out" : (e?.message || "Webhook request failed");
+  }
+
+  await admin.from("webhook_logs").insert({
+    session_id: session.id,
+    event_type: eventType,
+    delivered,
+    payload: error ? { ...logPayload, delivery_error: error } : logPayload,
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResp({ error: "Method not allowed" }, 405);
@@ -308,7 +357,7 @@ Deno.serve(async (req) => {
     // Load session and validate webhook secret
     const { data: session, error: sErr } = await admin
       .from("sessions")
-      .select("id, user_id, webhook_secret, status, api_token, phone_number")
+      .select("id, user_id, webhook_secret, status, api_token, phone_number, enable_webhook, webhook_url, webhook_events")
       .eq("id", sessionId)
       .maybeSingle();
     if (sErr) throw sErr;
@@ -484,6 +533,24 @@ Deno.serve(async (req) => {
         .single();
       messageId = msgRow?.id;
     }
+
+    await deliverUserWebhook({
+      admin,
+      session,
+      eventType: "messages.received",
+      payload: {
+        session_id: sessionId,
+        message_id: messageId,
+        from: fromNumber,
+        from_number: fromNumber,
+        message: messageText,
+        message_text: messageText,
+        message_type: messageType,
+        is_group: isGroup,
+        received_at: new Date().toISOString(),
+        raw_payload: body.raw_payload ?? body,
+      },
+    });
 
     if (!sessionConnected) {
       return jsonResp({ ok: true, skipped: "session_not_connected", message_id: messageId });
