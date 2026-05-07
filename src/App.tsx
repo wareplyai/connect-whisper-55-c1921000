@@ -51,6 +51,7 @@ import HANotifications from "./pages/headadmin/Notifications";
 import ActivityLogs from "./pages/headadmin/ActivityLogs";
 import HASettings from "./pages/headadmin/Settings";
 import SmsLogs from "./pages/headadmin/SmsLogs";
+import HAFeatureAccess from "./pages/headadmin/FeatureAccess";
 import { FeatureGuard } from "./components/FeatureGuard";
 import DocsLayout from "./layouts/DocsLayout";
 import DocsIndex from "./pages/docs/DocsIndex";
