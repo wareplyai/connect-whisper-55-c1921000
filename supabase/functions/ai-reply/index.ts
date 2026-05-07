@@ -347,6 +347,24 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, skipped: "own_session_number", from: fromNumber });
     }
 
+    // Skip if customer is blocked
+    const { data: blockedRow } = await admin
+      .from("blocked_customers")
+      .select("id")
+      .eq("session_id", sessionId)
+      .eq("phone_number", fromNumber)
+      .maybeSingle();
+    if (blockedRow) {
+      if (sourceMessageId) {
+        await admin.from("incoming_messages").update({
+          delivery_status: "skipped",
+          reply_error: "Customer is blocked",
+          processed_at: new Date().toISOString(),
+        }).eq("id", sourceMessageId);
+      }
+      return jsonResp({ ok: true, skipped: "customer_blocked", from: fromNumber });
+    }
+
     const userId = session.user_id;
 
     // Load business profile
