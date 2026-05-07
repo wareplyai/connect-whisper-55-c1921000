@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { backendApi, BACKEND_URL } from "@/lib/backend";
 import WebhookConfigDialog from "@/components/dashboard/WebhookConfigDialog";
+import { friendlyError } from "@/lib/friendlyError";
 
 const PAGE_SIZE = 25;
 
@@ -252,7 +253,7 @@ const SessionDetail = () => {
       phone_number: editForm.phone_number || null,
     }).eq("id", s.id);
     setSavingEdit(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success("Session updated!");
     setEditOpen(false);
     loadSession();
@@ -283,7 +284,7 @@ const SessionDetail = () => {
         user_id: s.user_id, session_id: s.id, to_number: to,
         message_type: msgType, payload: { text }, status: "failed", error_message: err.message,
       });
-      toast.error(`Send failed: ${err.message}`);
+      toast.error(`Send failed: ${friendlyError(err)}`);
       loadLogs(page);
     } finally {
       setSending(false);
@@ -299,7 +300,7 @@ const SessionDetail = () => {
       toast.success("Session disconnected successfully");
       loadSession();
     } catch (err: any) {
-      toast.error(`Disconnect failed: ${err.message}`);
+      toast.error(`Disconnect failed: ${friendlyError(err)}`);
     } finally {
       setDisconnecting(false);
       setConfirmDisconnect(false);
@@ -315,7 +316,7 @@ const SessionDetail = () => {
       toast.success("Session restarting...");
       nav(`/dashboard/sessions/${s.id}/connect`);
     } catch (err: any) {
-      toast.error(`Restart failed: ${err.message}`);
+      toast.error(`Restart failed: ${friendlyError(err)}`);
     } finally {
       setRestarting(false);
     }
@@ -338,7 +339,7 @@ const SessionDetail = () => {
     const { error } = await supabase.from("sessions").update(update).eq("id", s.id);
     setLoad(false);
     setConfirmRegen(null);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success(`${field === "api_token" ? "API token" : "Webhook secret"} regenerated`);
     loadSession();
   };

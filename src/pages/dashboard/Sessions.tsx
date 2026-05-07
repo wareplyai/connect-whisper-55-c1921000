@@ -11,6 +11,7 @@ import { backendApi } from "@/lib/backend";
 import { PlanUsageBar } from "@/components/PlanUsageBar";
 import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { friendlyError } from "@/lib/friendlyError";
 
 const statusBadge = (s: string) => {
   if (s === "connected") return "bg-primary/15 text-primary";
@@ -75,7 +76,7 @@ const Sessions = () => {
     if (!confirm("Delete this session?")) return;
     await backendApi.logout(id).catch(() => {});
     const { error } = await supabase.from("sessions").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Session deleted"); load(); }
+    if (error) toast.error(friendlyError(error)); else { toast.success("Session deleted"); load(); }
   };
 
   const visible = sessions.filter(

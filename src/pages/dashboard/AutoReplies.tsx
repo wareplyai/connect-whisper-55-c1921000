@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Plus, Pencil, Trash2, MessageSquareText, Power } from "lucide-react";
 import { toast } from "sonner";
 import { backendApi, BACKEND_URL } from "@/lib/backend";
+import { friendlyError } from "@/lib/friendlyError";
 
 type Rule = {
   id: string;
@@ -119,7 +120,7 @@ const AutoReplies = () => {
       ? await supabase.from("auto_reply_rules").update(payload).eq("id", editing.id)
       : await supabase.from("auto_reply_rules").insert(payload);
 
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success(editing.id ? "Rule updated" : "Rule created");
     setOpen(false);
     load();
@@ -155,7 +156,7 @@ const AutoReplies = () => {
   const toggleActive = async (r: Rule) => {
     if (!r.is_active) await disableAIIfOn();
     const { error } = await supabase.from("auto_reply_rules").update({ is_active: !r.is_active }).eq("id", r.id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     // Sync mode
     const { data: remaining } = await supabase
       .from("auto_reply_rules")
@@ -180,7 +181,7 @@ const AutoReplies = () => {
       .from("auto_reply_rules")
       .update({ is_active: turnOn })
       .eq("user_id", profile.id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     await setReplyMode(turnOn ? "auto_reply" : "none");
     toast.success(turnOn ? "All auto-replies turned ON" : "All auto-replies turned OFF");
     load();
@@ -189,7 +190,7 @@ const AutoReplies = () => {
   const remove = async (id: string) => {
     if (!confirm("Delete this rule?")) return;
     const { error } = await supabase.from("auto_reply_rules").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
+    if (error) toast.error(friendlyError(error)); else { toast.success("Deleted"); load(); }
   };
 
   return (

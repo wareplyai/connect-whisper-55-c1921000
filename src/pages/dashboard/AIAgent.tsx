@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { friendlyError } from "@/lib/friendlyError";
 
 type Platform = "openai" | "gemini" | "deepseek" | "unknown";
 
@@ -167,7 +168,7 @@ const AIAgent = () => {
 
   const removeKey = async () => {
     const { error } = await supabase.functions.invoke("ai-key-manager", { body: { action: "delete" } });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     setSavedKey(null);
     toast("API key removed");
   };
@@ -178,7 +179,7 @@ const AIAgent = () => {
     const { error } = await supabase.functions.invoke("ai-key-manager", {
       body: { action: "update_model", model },
     });
-    if (error) toast.error(error.message);
+    if (error) toast.error(friendlyError(error));
   };
 
 
@@ -207,7 +208,7 @@ RULES:
       .from("business_profiles")
       .upsert({ user_id: user.id, ...business }, { onConflict: "user_id" });
     setSavingBiz(false);
-    if (error) toast.error(error.message);
+    if (error) toast.error(friendlyError(error));
     else toast.success("Business profile saved");
   };
 
@@ -218,7 +219,7 @@ RULES:
     const { error } = await supabase
       .from("business_profiles")
       .upsert({ user_id: user.id, ...next }, { onConflict: "user_id" });
-    if (error) toast.error(error.message);
+    if (error) toast.error(friendlyError(error));
   };
 
   const toggleAI = async (v: boolean) => {
@@ -270,7 +271,7 @@ RULES:
       .insert({ user_id: user.id, question: "", answer: "" })
       .select()
       .single();
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     setQa((p) => [...p, { id: data.id, question: "", answer: "" }]);
   };
   const updateQA = async (id: string, patch: Partial<QA>) => {
@@ -282,11 +283,11 @@ RULES:
       .from("qa_pairs")
       .update({ question: row.question, answer: row.answer })
       .eq("id", row.id);
-    if (error) toast.error(error.message);
+    if (error) toast.error(friendlyError(error));
   };
   const deleteQA = async (id: string) => {
     const { error } = await supabase.from("qa_pairs").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     setQa((p) => p.filter((x) => x.id !== id));
   };
 
@@ -298,7 +299,7 @@ RULES:
       .insert({ user_id: user.id, keyword: "", reply: "" })
       .select()
       .single();
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     setFixed((p) => [...p, { id: data.id, keyword: "", reply: "" }]);
   };
   const updateFixed = (id: string, patch: Partial<FixedQA>) =>
@@ -308,11 +309,11 @@ RULES:
       .from("fixed_qa")
       .update({ keyword: row.keyword, reply: row.reply })
       .eq("id", row.id);
-    if (error) toast.error(error.message);
+    if (error) toast.error(friendlyError(error));
   };
   const deleteFixed = async (id: string) => {
     const { error } = await supabase.from("fixed_qa").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     setFixed((p) => p.filter((x) => x.id !== id));
   };
 

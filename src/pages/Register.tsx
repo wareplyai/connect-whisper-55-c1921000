@@ -31,7 +31,7 @@ const Register = () => {
         data: { full_name: fullName },
       },
     });
-    if (error) { setLoading(false); return toast.error(error.message); }
+    if (error) { setLoading(false); return toast.error(friendlyError(error)); }
     setLoading(false);
     toast.success("Account created!");
     nav("/dashboard");

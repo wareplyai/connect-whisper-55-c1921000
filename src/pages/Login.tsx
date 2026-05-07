@@ -22,7 +22,7 @@ const Login = () => {
     const { data: signIn, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setLoading(false);
-      return toast.error(error.message);
+      return toast.error(friendlyError(error));
     }
 
     // Check if user is active before allowing login

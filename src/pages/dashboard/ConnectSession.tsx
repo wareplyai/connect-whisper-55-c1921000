@@ -35,6 +35,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { backendApi } from "@/lib/backend";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { friendlyError } from "@/lib/friendlyError";
 
 const QR_LIFETIME = 50; // seconds
 
@@ -490,7 +491,7 @@ const WebhookConfigDialog = ({
       ignore_channels: ignoreChannels,
     }).eq("id", session.id).select().maybeSingle();
     setSaving(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success("Webhook configuration saved");
     if (data) onSaved(data);
     onOpenChange(false);

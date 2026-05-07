@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PaymentModal } from "@/components/PaymentModal";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/friendlyError";
 
 type Plan = {
   id: string;
@@ -135,7 +136,7 @@ const Plans = () => {
                     if (p.plan_name === "trial") {
                       if (!user) return;
                       const { data, error } = await supabase.rpc("start_user_trial");
-                      if (error) { toast.error(error.message); return; }
+                      if (error) { toast.error(friendlyError(error)); return; }
                       const sub: any = Array.isArray(data) ? data[0] : data;
                       const ends = sub?.trial_ends_at ? new Date(sub.trial_ends_at) : null;
                       if (!ends) { toast.error("Failed to start trial. Please try again."); return; }

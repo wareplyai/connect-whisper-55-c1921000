@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { CountryCodeSelect } from "@/components/CountryCodeSelect";
 import { splitPhone, DEFAULT_COUNTRY, Country, validatePhoneForCountry } from "@/lib/countries";
 import { AlertCircle } from "lucide-react";
+import { friendlyError } from "@/lib/friendlyError";
 
 const ALL_EVENTS = [
   "messages.received","messages-group.received","messages-newsletter.received","messages-personal.received",
@@ -85,7 +86,7 @@ const EditSession = () => {
       webhook_url: form.webhook_url || null,
     }).eq("id", id);
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyError(error));
     toast.success("Session updated successfully");
     nav(`/dashboard/sessions/${id}`);
   };

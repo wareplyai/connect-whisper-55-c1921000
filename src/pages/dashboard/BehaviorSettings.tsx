@@ -9,6 +9,7 @@ import { ShieldCheck, Clock, Gauge, Zap, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { friendlyError } from "@/lib/friendlyError";
 
 const defaults = {
   fifo_enabled: true,
@@ -114,7 +115,7 @@ const BehaviorSettings = () => {
       if (res.data) setRowId(res.data.id);
     }
     setSaving(false);
-    if (error) toast.error(error.message);
+    if (error) toast.error(friendlyError(error));
     else toast.success("Behavior settings saved");
   };
 
