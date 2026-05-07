@@ -87,13 +87,14 @@ const Inbox = () => {
 
   const customers = useMemo(() => {
     const map = new Map<string, { key: string; session_id: string; phone_number: string; last: IncomingRow; unread: number }>();
+    const replied = (m: IncomingRow) => m.reply_sent || !!m.reply_text;
     for (const m of incoming) {
       const key = `${m.session_id}|${m.from_number}`;
       const ex = map.get(key);
       if (!ex) {
-        map.set(key, { key, session_id: m.session_id, phone_number: m.from_number, last: m, unread: m.reply_sent ? 0 : 1 });
+        map.set(key, { key, session_id: m.session_id, phone_number: m.from_number, last: m, unread: replied(m) ? 0 : 1 });
       } else {
-        if (!m.reply_sent) ex.unread += 1;
+        if (!replied(m)) ex.unread += 1;
       }
     }
     let arr = [...map.values()];
