@@ -376,38 +376,31 @@ Deno.serve(async (req) => {
     }
 
     const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
-    // PRIORITY: prefer real WhatsApp jids nested in raw payload (key.remoteJid, remoteJidAlt, senderPn)
-    // over top-level body.from, because Baileys often sets body.from to a generated message id (LID)
-    // that happens to look like a 15-digit phone but is NOT a real customer number.
-    // PRIORITY 1: cleanedSenderPn (real phone, already cleaned by gateway)
-    // PRIORITY 2: senderPn (real phone with @s.whatsapp.net suffix)
-    // PRIORITY 3: body.from / body.from_real (top-level from gateway)
-    // PRIORITY 4: resolveCustomerNumber scan (skips @lid jids)
-    let fromNumber = "";
-    const rawKey = (body?.raw_payload as Record<string, unknown> | undefined)?.key as Record<string, unknown> | undefined;
-    const cleanedSenderPn = rawKey?.cleanedSenderPn;
-    if (cleanedSenderPn) {
-      const d = String(cleanedSenderPn).replace(/\D/g, "");
-      if (d.length >= 8 && !isWhatsAppLID(d)) fromNumber = d;
-    }
-    if (!fromNumber && rawKey?.senderPn) {
-      const d = String(rawKey.senderPn).replace("@s.whatsapp.net", "").replace(/\D/g, "");
-      if (d.length >= 8 && !isWhatsAppLID(d)) fromNumber = d;
-    }
-    if (!fromNumber) {
-      const fromReal = (body as Record<string, unknown>).from_real;
-      const directFromDigits = digitsOnly(fromReal ?? body.from ?? body.from_number ?? body.fromNumber);
-      if (directFromDigits && looksLikeCustomerPhone(directFromDigits) && !samePhone(directFromDigits, session.phone_number) && !isWhatsAppLID(directFromDigits)) {
-        fromNumber = directFromDigits;
+    const rawPayload = (body?.raw_payload as Record<string, unknown> | undefined) || {};
+    const rawKey = (rawPayload?.key as Record<string, unknown> | undefined) || {};
+    const pickRealNumber = (...values: unknown[]) => {
+      for (const value of values) {
+        const digits = digitsOnly(value);
+        if (digits && looksLikeCustomerPhone(digits) && !samePhone(digits, session.phone_number)) return digits;
       }
-    }
-    if (!fromNumber) {
-      const remoteJid = String(rawKey?.remoteJid || "");
-      if (!/@lid/i.test(remoteJid)) {
-        const resolvedFromPayload = resolveCustomerNumber(body, session.phone_number);
-        if (resolvedFromPayload && !isWhatsAppLID(resolvedFromPayload)) fromNumber = resolvedFromPayload;
-      }
-    }
+      return "";
+    };
+
+    const fromNumber = pickRealNumber(
+      rawKey.cleanedSenderPn,
+      (rawPayload as any).cleanedSenderPn,
+      (body as any).cleanedSenderPn,
+      rawKey.senderPn,
+      (rawPayload as any).senderPn,
+      (body as any).senderPn,
+      (body as any).from_real,
+      (body as any).fromReal,
+      (body as any).from_number,
+      (body as any).fromNumber,
+      (body as any).from,
+      !/@lid/i.test(String(rawKey.remoteJid || "")) ? rawKey.remoteJid : "",
+      resolveCustomerNumber(body, session.phone_number),
+    );
     if (fromNumber && !looksLikeCustomerPhone(fromNumber)) {
       const recoveredNumber = await resolveFromGatewayMessageInfo({
         gateway: GATEWAY,
@@ -420,10 +413,6 @@ Deno.serve(async (req) => {
     }
     if (!fromNumber) {
       return jsonResp({ error: "customer number required" }, 400);
-    }
-    // Skip WhatsApp internal LID identifiers (15 digits starting with 23 or 13) — these are NOT real phone numbers
-    if (isWhatsAppLID(fromNumber)) {
-      return jsonResp({ ok: true, skipped: "whatsapp_lid_not_supported", from: fromNumber });
     }
     // STRICT: only allow real customer phone numbers — never send AI replies to fake Baileys/LID ids
     if (!looksLikeCustomerPhone(fromNumber)) {
