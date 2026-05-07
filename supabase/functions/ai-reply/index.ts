@@ -137,6 +137,11 @@ export function looksLikeCustomerPhone(value: unknown): boolean {
   return digits.length >= 8 && digits.length <= 15;
 }
 
+export function isWhatsAppLID(value: unknown): boolean {
+  const digits = digitsOnly(value);
+  return /^(23|13)\d{13}$/.test(digits);
+}
+
 export function looksLikeLidIdentifier(_value: unknown): boolean {
   return false; // Disabled - always send to @s.whatsapp.net
 }
