@@ -27,6 +27,12 @@ const resources = [
 
 const DashboardLayout = () => {
   const { profile, isAdmin, signOut } = useAuth();
+  const { access } = useFeatureAccess();
+  const visibleNav = nav.filter((n) => {
+    if (n.to === "/dashboard/ai-agent") return access.ai_agent;
+    if (n.to === "/dashboard/auto-replies") return access.auto_replies;
+    return true;
+  });
   const location = useLocation();
   const navigate = useNavigate();
   const handleSignOut = async () => {
