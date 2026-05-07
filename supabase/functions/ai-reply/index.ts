@@ -276,11 +276,12 @@ function isInternalAiReplyWebhook(url: string): boolean {
 async function deliverUserWebhook(opts: {
   admin: any;
   session: any;
+  webhookUrl?: string | null;
   eventType: string;
   payload: Record<string, unknown>;
 }): Promise<void> {
-  const { admin, session, eventType, payload } = opts;
-  const url = String(session.webhook_url || "").trim();
+  const { admin, session, webhookUrl, eventType, payload } = opts;
+  const url = String(webhookUrl || session.webhook_url || "").trim();
   const events = Array.isArray(session.webhook_events) ? session.webhook_events : [];
 
   if (!session.enable_webhook || !url || !events.includes(eventType) || isInternalAiReplyWebhook(url)) return;
