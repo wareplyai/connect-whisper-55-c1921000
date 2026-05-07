@@ -91,15 +91,13 @@ async function callAI(opts: {
 }
 
 function recipientVariants(input: string): string[] {
-  const raw = input.trim();
+  const raw = String(input ?? "").trim();
+  // Strip any @lid / @s.whatsapp.net suffix and use digits only
   const digits = raw.replace(/\D/g, "");
-  const variants = [raw];
-  const isExplicitPhone = raw.startsWith("+") || /@s\.whatsapp\.net$/i.test(raw);
-  const isLidRecipient = /@lid$/i.test(raw) || (!isExplicitPhone && looksLikeLidIdentifier(digits));
-  if (isLidRecipient && digits) return [...new Set([`${digits}@lid`, raw].filter(Boolean))];
-  if (digits) variants.push(digits, `+${digits}`, `${digits}@s.whatsapp.net`);
+  if (!digits) return [raw].filter(Boolean);
+  const variants = [digits, `${digits}@s.whatsapp.net`, `+${digits}`];
   if (digits.startsWith("0") && digits.length >= 10) {
-    variants.push(`88${digits}`, `+88${digits}`, `88${digits.slice(1)}`, `+88${digits.slice(1)}`);
+    variants.push(`88${digits.slice(1)}`, `+88${digits.slice(1)}`, `${digits.slice(1)}@s.whatsapp.net`);
   }
   return [...new Set(variants.filter(Boolean))];
 }
