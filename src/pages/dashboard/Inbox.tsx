@@ -297,15 +297,28 @@ const Inbox = () => {
                 <div className="min-w-0">
                   <p className="font-medium truncate">+{selected.phone_number}</p>
                   <p className="text-xs text-muted-foreground">
-                    {isBlocked ? "Blocked" : isAiPaused ? "AI paused — manual mode" : "AI active"}
+                    {isBlocked ? "Blocked" :
+                      customerMode === "human" ? "Human takeover — manual mode" :
+                      customerMode === "auto_reply" ? "Auto-Reply only (keyword rules)" :
+                      "AI Agent active"}
                   </p>
                 </div>
-                <div className="flex items-center gap-4 flex-wrap">
-                  <label className="flex items-center gap-2 text-xs">
-                    {isAiPaused ? <Pause className="h-3.5 w-3.5 text-yellow-500" /> : <Play className="h-3.5 w-3.5 text-green-500" />}
-                    <span className="text-muted-foreground">{isAiPaused ? "AI paused" : "AI on"}</span>
-                    <Switch checked={!isAiPaused} onCheckedChange={(v) => toggleAiPause(!v)} />
-                  </label>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
+                    {(["ai", "human", "auto_reply"] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setMode(m)}
+                        className={`px-2.5 py-1.5 flex items-center gap-1 transition-colors ${
+                          customerMode === m ? "bg-primary text-primary-foreground" : "bg-card hover:bg-card-elevated text-muted-foreground"
+                        }`}
+                      >
+                        {m === "ai" ? <><Bot className="h-3 w-3" /> AI</> :
+                          m === "human" ? <><User className="h-3 w-3" /> Human</> :
+                          <><Zap className="h-3 w-3" /> Auto</>}
+                      </button>
+                    ))}
+                  </div>
                   <label className="flex items-center gap-2 text-xs">
                     <span className="text-muted-foreground">{isBlocked ? "Blocked" : "Block"}</span>
                     <Switch checked={isBlocked} onCheckedChange={toggleBlock} />
