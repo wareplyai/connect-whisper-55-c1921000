@@ -393,6 +393,10 @@ Deno.serve(async (req) => {
     if (!fromNumber) {
       return jsonResp({ error: "customer number required" }, 400);
     }
+    // Skip WhatsApp internal LID identifiers (15 digits starting with 23 or 13) — these are NOT real phone numbers
+    if (isWhatsAppLID(fromNumber)) {
+      return jsonResp({ ok: true, skipped: "whatsapp_lid_not_supported", from: fromNumber });
+    }
     // STRICT: only allow real customer phone numbers — never send AI replies to fake Baileys/LID ids
     if (!looksLikeCustomerPhone(fromNumber)) {
       if (sourceMessageId) {
