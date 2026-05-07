@@ -3,6 +3,7 @@ import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, L
 import { TrialBanner } from "@/components/TrialBanner";
 import { N8nBanner } from "@/components/N8nBanner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
