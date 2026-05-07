@@ -131,7 +131,7 @@ const Inbox = () => {
         id: `r-${m.id}`,
         kind: "out" as const,
         text: m.reply_text!,
-        ts: m.reply_sent_at || m.received_at,
+        ts: (m as any).reply_sent_at || m.received_at,
         source: sourceOf(m),
       }));
     const manualOut = outgoing
