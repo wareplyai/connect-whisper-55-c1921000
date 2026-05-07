@@ -56,23 +56,29 @@ const Inbox = () => {
   const [selected, setSelected] = useState<{ session_id: string; phone_number: string } | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
   const channelRef = useRef<any>(null);
 
-  const load = async () => {
+  const load = async (showLoader = false) => {
     if (!user) return;
-    const [{ data: inc }, { data: out }, { data: bl }, { data: pa }] = await Promise.all([
-      supabase.from("incoming_messages").select("*").eq("user_id", user.id).order("received_at", { ascending: false }).limit(500),
-      supabase.from("message_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(500),
-      supabase.from("blocked_customers" as any).select("id, phone_number, session_id").eq("user_id", user.id),
-      supabase.from("customer_reply_settings" as any).select("phone_number, session_id, ai_paused, mode").eq("user_id", user.id),
-    ]);
-    setIncoming((inc as any) || []);
-    setOutgoing((out as any) || []);
-    setBlocked((bl as any) || []);
-    setModes((pa as any) || []);
+    if (showLoader) setLoading(true);
+    try {
+      const [{ data: inc }, { data: out }, { data: bl }, { data: pa }] = await Promise.all([
+        supabase.from("incoming_messages").select("*").eq("user_id", user.id).order("received_at", { ascending: false }).limit(500),
+        supabase.from("message_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(500),
+        supabase.from("blocked_customers" as any).select("id, phone_number, session_id").eq("user_id", user.id),
+        supabase.from("customer_reply_settings" as any).select("phone_number, session_id, ai_paused, mode").eq("user_id", user.id),
+      ]);
+      setIncoming((inc as any) || []);
+      setOutgoing((out as any) || []);
+      setBlocked((bl as any) || []);
+      setModes((pa as any) || []);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
+  useEffect(() => { load(true); /* eslint-disable-next-line */ }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
