@@ -281,7 +281,10 @@ async function deliverUserWebhook(opts: {
   payload: Record<string, unknown>;
 }): Promise<void> {
   const { admin, session, webhookUrl, eventType, payload } = opts;
-  const url = String(webhookUrl || session.webhook_url || "").trim();
+  // Prefer the dedicated external forwarding URL (n8n etc). Fall back to webhook_url
+  // ONLY when it's NOT the internal ai-reply endpoint (prevents loops).
+  const fallback = isInternalAiReplyWebhook(String(session.webhook_url || "")) ? "" : (session.webhook_url || "");
+  const url = String(webhookUrl || session.forward_webhook_url || fallback || "").trim();
   const events = Array.isArray(session.webhook_events) ? session.webhook_events : [];
 
   if (!session.enable_webhook || !url || !events.includes(eventType) || isInternalAiReplyWebhook(url)) return;
@@ -358,7 +361,7 @@ Deno.serve(async (req) => {
     // Load session and validate webhook secret
     const { data: session, error: sErr } = await admin
       .from("sessions")
-      .select("id, user_id, webhook_secret, status, api_token, phone_number, enable_webhook, webhook_url, webhook_events")
+      .select("id, user_id, webhook_secret, status, api_token, phone_number, enable_webhook, webhook_url, forward_webhook_url, webhook_events")
       .eq("id", sessionId)
       .maybeSingle();
     if (sErr) throw sErr;

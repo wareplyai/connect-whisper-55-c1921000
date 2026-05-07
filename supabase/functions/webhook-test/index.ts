@@ -57,9 +57,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    const url = String(session.webhook_url || "").trim();
+    // Prefer external forwarding URL (n8n etc.) over the internal ai-reply endpoint.
+    const isInternal = /\.supabase\.co\/functions\/v1\/ai-reply\/?$/i.test(String(session.webhook_url || "").trim());
+    const url = String(session.forward_webhook_url || (isInternal ? "" : session.webhook_url) || "").trim();
     if (!url) {
-      return new Response(JSON.stringify({ error: "No webhook URL configured" }), {
+      return new Response(JSON.stringify({ error: "No external webhook URL configured. Add an n8n/forwarding URL in Webhook settings." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
