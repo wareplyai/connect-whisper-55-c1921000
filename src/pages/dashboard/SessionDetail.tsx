@@ -18,7 +18,7 @@ import {
   ArrowLeft, Copy, Eye, EyeOff, RefreshCw, Trash2, Edit, Webhook, Loader2, ChevronLeft, ChevronRight, Link2 as LinkIcon2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { backendApi } from "@/lib/backend";
+import { backendApi, BACKEND_URL } from "@/lib/backend";
 import WebhookConfigDialog from "@/components/dashboard/WebhookConfigDialog";
 
 const PAGE_SIZE = 25;
