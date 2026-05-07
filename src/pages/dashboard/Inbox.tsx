@@ -342,6 +342,11 @@ const Inbox = () => {
                                 <><User className="h-2.5 w-2.5" /> Manual</>}
                             </Badge>
                           )}
+                          {m.kind === "in" && (m as any).pending && (
+                            <Badge variant="outline" className="text-[10px] py-0 h-4 gap-1 border-yellow-500/50 text-yellow-600">
+                              <Clock className="h-2.5 w-2.5" /> Pending
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
