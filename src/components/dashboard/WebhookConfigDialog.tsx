@@ -40,6 +40,7 @@ interface Props {
 const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) => {
   const [enabled, setEnabled] = useState(false);
   const [url, setUrl] = useState("");
+  const [forwardUrl, setForwardUrl] = useState("");
   const [secret, setSecret] = useState("");
   const [showSecret, setShowSecret] = useState(false);
   const [events, setEvents] = useState<string[]>([]);
@@ -79,6 +80,7 @@ const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) =>
     if (!session || !open) return;
     setEnabled(!!session.enable_webhook);
     setUrl(session.webhook_url || `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`);
+    setForwardUrl(session.forward_webhook_url || "");
     setSecret(session.webhook_secret || "");
     setEvents(session.webhook_events || ["messages.received"]);
     setIgnoreGroups(session.ignore_groups ?? true);
@@ -103,13 +105,15 @@ const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) =>
   const save = async () => {
     if (!session) return;
     if (enabled) {
-      if (!url.trim()) return toast.error("Please enter a webhook URL.");
+      if (!url.trim()) return toast.error("Please enter the gateway webhook URL (ai-reply).");
       if (!/^https:\/\//i.test(url.trim())) return toast.error("Webhook URL must start with https://");
+      if (forwardUrl.trim() && !/^https:\/\//i.test(forwardUrl.trim())) return toast.error("Forward URL must start with https://");
     }
     setSaving(true);
     const { error } = await supabase.from("sessions").update({
       enable_webhook: enabled,
       webhook_url: url || null,
+      forward_webhook_url: forwardUrl.trim() || null,
       webhook_secret: secret,
       webhook_events: events,
       ignore_groups: ignoreGroups,
