@@ -719,6 +719,7 @@ Deno.serve(async (req) => {
         const reply = fixedHit.reply;
         const sendResult = await sendViaGateway({
           gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
+          showTyping: sessionTyping, accountProtection,
         });
         if (messageId) {
           await admin.from("incoming_messages").update({
@@ -762,6 +763,7 @@ Deno.serve(async (req) => {
         const reply = ruleHit.reply_template;
         const sendResult = await sendViaGateway({
           gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
+          showTyping: sessionTyping, accountProtection,
         });
         if (messageId) {
           await admin.from("incoming_messages").update({
@@ -879,7 +881,14 @@ Deno.serve(async (req) => {
       apiToken: session.api_token,
       to: fromNumber,
       message: reply,
+      showTyping: aiTyping,
+      accountProtection,
     });
+
+    // AI-side read receipts (independent from session setting)
+    if (aiReadReceipts) {
+      markAsRead({ gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber }).catch(() => {});
+    }
     const sendOk = sendResult.ok;
     const sendErr = sendResult.error;
 
