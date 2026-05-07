@@ -50,12 +50,9 @@ export default function SmsLogs() {
 
   useEffect(() => {
     load();
-    const ch = supabase
-      .channel("admin-sms-orders")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "sms_transactions" }, load)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    // Realtime disabled for sms_transactions/orders for security; poll instead.
+    const i = setInterval(load, 8000);
+    return () => { clearInterval(i); };
   }, []);
 
   const approveOrder = async (order: Order) => {
