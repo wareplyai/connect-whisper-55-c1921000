@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type IncomingRow = {
   id: string;
