@@ -106,8 +106,16 @@ export const findCountryByCode = (code: string): Country | undefined =>
 
 export const splitPhone = (full: string | null | undefined): { country: Country; number: string } => {
   if (!full) return { country: DEFAULT_COUNTRY, number: "" };
+  const normalized = full.trim().startsWith("+") ? full.trim() : `+${full.trim().replace(/^\+/, "")}`;
   const sorted = [...ALL_COUNTRIES].sort((a, b) => b.code.length - a.code.length);
-  const match = sorted.find((c) => full.startsWith(c.code));
-  if (match) return { country: match, number: full.slice(match.code.length).trim() };
+  const match = sorted.find((c) => normalized.startsWith(c.code));
+  if (match) {
+    const rest = normalized.slice(match.code.length).trim();
+    // Validate that the remainder fits the country's national length; otherwise fall back.
+    const [min, max] = getPhoneLength(match.iso);
+    if (rest.length >= min && rest.length <= max) {
+      return { country: match, number: rest };
+    }
+  }
   return { country: DEFAULT_COUNTRY, number: full.replace(/^\+/, "") };
 };

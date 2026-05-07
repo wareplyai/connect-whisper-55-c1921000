@@ -266,6 +266,32 @@ async function resolveFromGatewayMessageInfo(opts: {
   return "";
 }
 
+async function sendTypingIndicator(opts: {
+  gateway: string; sessionId: string; apiToken?: string | null; to: string; durationMs: number;
+}): Promise<void> {
+  const { gateway, sessionId, apiToken, to, durationMs } = opts;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+  // Best-effort: try a few common gateway endpoints. The customer should see "typing…" on their phone.
+  const attempts = [
+    { path: `/api/session/${sessionId}/typing`, body: { to, state: "composing", duration: durationMs } },
+    { path: `/api/session/${sessionId}/presence`, body: { to, presence: "composing", duration: durationMs } },
+    { path: `/api/session/${sessionId}/chat-state`, body: { to, state: "composing", duration: durationMs } },
+  ];
+  for (const a of attempts) {
+    try {
+      const r = await fetch(`${gateway}${a.path}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(a.body),
+      });
+      if (r.ok) return; // first endpoint that works wins
+    } catch {
+      // try the next variant
+    }
+  }
+}
+
 async function sendViaGateway(opts: {
   gateway: string; sessionId: string; apiToken?: string | null; to: string; message: string;
 }): Promise<{ ok: boolean; to: string; error: string | null; data: unknown }> {
@@ -275,6 +301,12 @@ async function sendViaGateway(opts: {
   // The gateway accepts plain digits and resolves to @s.whatsapp.net internally.
   const digits = String(to).replace(/\D/g, "");
   const candidate = digits || String(to);
+
+  // Show "typing…" on the customer's phone before sending. Duration scales with message length
+  // (≈ 30ms per char, clamped to 800ms–4000ms) so it feels natural.
+  const typingMs = Math.max(800, Math.min(4000, message.length * 30));
+  await sendTypingIndicator({ gateway, sessionId, apiToken, to: candidate, durationMs: typingMs });
+  await new Promise((res) => setTimeout(res, typingMs));
 
   try {
     const headers: Record<string, string> = { "Content-Type": "application/json" };

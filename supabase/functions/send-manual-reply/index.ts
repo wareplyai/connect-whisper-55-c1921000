@@ -77,6 +77,22 @@ Deno.serve(async (req) => {
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (session.api_token) headers.Authorization = `Bearer ${session.api_token}`;
+
+      // Show "typing…" on the customer's phone before delivering the manual message.
+      const typingMs = Math.max(800, Math.min(4000, message.length * 30));
+      const typingAttempts = [
+        { path: `/api/session/${sessionId}/typing`, body: { to: candidate, state: "composing", duration: typingMs } },
+        { path: `/api/session/${sessionId}/presence`, body: { to: candidate, presence: "composing", duration: typingMs } },
+        { path: `/api/session/${sessionId}/chat-state`, body: { to: candidate, state: "composing", duration: typingMs } },
+      ];
+      for (const a of typingAttempts) {
+        try {
+          const tr = await fetch(`${GATEWAY}${a.path}`, { method: "POST", headers, body: JSON.stringify(a.body) });
+          if (tr.ok) break;
+        } catch { /* try next */ }
+      }
+      await new Promise((res) => setTimeout(res, typingMs));
+
       const r = await fetch(`${GATEWAY}/api/session/${sessionId}/send`, {
         method: "POST",
         headers,
