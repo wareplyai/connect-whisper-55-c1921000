@@ -95,8 +95,8 @@ const App = () => (
                 <Route path="subscription" element={<Subscription />} />
                 <Route path="subscription/plans" element={<Plans />} />
                 <Route path="payments" element={<Payments />} />
-                <Route path="auto-replies" element={<AutoReplies />} />
-                <Route path="ai-agent" element={<AIAgent />} />
+                <Route path="auto-replies" element={<FeatureGuard feature="auto_replies"><AutoReplies /></FeatureGuard>} />
+                <Route path="ai-agent" element={<FeatureGuard feature="ai_agent"><AIAgent /></FeatureGuard>} />
                 <Route path="behavior" element={<BehaviorSettings />} />
               </Route>
 
