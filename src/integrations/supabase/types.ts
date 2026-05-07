@@ -932,6 +932,7 @@ export type Database = {
           enable_account_protection: boolean
           enable_message_logging: boolean
           enable_webhook: boolean
+          forward_webhook_url: string | null
           id: string
           ignore_broadcasts: boolean
           ignore_channels: boolean
@@ -956,6 +957,7 @@ export type Database = {
           enable_account_protection?: boolean
           enable_message_logging?: boolean
           enable_webhook?: boolean
+          forward_webhook_url?: string | null
           id?: string
           ignore_broadcasts?: boolean
           ignore_channels?: boolean
@@ -980,6 +982,7 @@ export type Database = {
           enable_account_protection?: boolean
           enable_message_logging?: boolean
           enable_webhook?: boolean
+          forward_webhook_url?: string | null
           id?: string
           ignore_broadcasts?: boolean
           ignore_channels?: boolean
