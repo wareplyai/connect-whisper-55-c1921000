@@ -538,6 +538,7 @@ Deno.serve(async (req) => {
     await deliverUserWebhook({
       admin,
       session,
+      webhookUrl: body.forward_webhook_url as string | undefined,
       eventType: "messages.received",
       payload: {
         session_id: sessionId,
