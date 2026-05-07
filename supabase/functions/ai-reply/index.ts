@@ -379,12 +379,35 @@ Deno.serve(async (req) => {
     // PRIORITY: prefer real WhatsApp jids nested in raw payload (key.remoteJid, remoteJidAlt, senderPn)
     // over top-level body.from, because Baileys often sets body.from to a generated message id (LID)
     // that happens to look like a 15-digit phone but is NOT a real customer number.
-    const resolvedFromPayload = resolveCustomerNumber(body, session.phone_number);
-    const directFromDigits = digitsOnly(body.from ?? body.from_number ?? body.fromNumber);
-    let fromNumber = resolvedFromPayload
-      || ((directFromDigits && looksLikeCustomerPhone(directFromDigits) && !samePhone(directFromDigits, session.phone_number))
-            ? directFromDigits
-            : "");
+    // PRIORITY 1: cleanedSenderPn (real phone, already cleaned by gateway)
+    // PRIORITY 2: senderPn (real phone with @s.whatsapp.net suffix)
+    // PRIORITY 3: body.from / body.from_real (top-level from gateway)
+    // PRIORITY 4: resolveCustomerNumber scan (skips @lid jids)
+    let fromNumber = "";
+    const rawKey = (body?.raw_payload as Record<string, unknown> | undefined)?.key as Record<string, unknown> | undefined;
+    const cleanedSenderPn = rawKey?.cleanedSenderPn;
+    if (cleanedSenderPn) {
+      const d = String(cleanedSenderPn).replace(/\D/g, "");
+      if (d.length >= 8 && !isWhatsAppLID(d)) fromNumber = d;
+    }
+    if (!fromNumber && rawKey?.senderPn) {
+      const d = String(rawKey.senderPn).replace("@s.whatsapp.net", "").replace(/\D/g, "");
+      if (d.length >= 8 && !isWhatsAppLID(d)) fromNumber = d;
+    }
+    if (!fromNumber) {
+      const fromReal = (body as Record<string, unknown>).from_real;
+      const directFromDigits = digitsOnly(fromReal ?? body.from ?? body.from_number ?? body.fromNumber);
+      if (directFromDigits && looksLikeCustomerPhone(directFromDigits) && !samePhone(directFromDigits, session.phone_number) && !isWhatsAppLID(directFromDigits)) {
+        fromNumber = directFromDigits;
+      }
+    }
+    if (!fromNumber) {
+      const remoteJid = String(rawKey?.remoteJid || "");
+      if (!/@lid/i.test(remoteJid)) {
+        const resolvedFromPayload = resolveCustomerNumber(body, session.phone_number);
+        if (resolvedFromPayload && !isWhatsAppLID(resolvedFromPayload)) fromNumber = resolvedFromPayload;
+      }
+    }
     if (fromNumber && !looksLikeCustomerPhone(fromNumber)) {
       const recoveredNumber = await resolveFromGatewayMessageInfo({
         gateway: GATEWAY,
