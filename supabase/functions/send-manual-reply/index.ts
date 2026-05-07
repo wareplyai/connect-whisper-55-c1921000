@@ -70,23 +70,25 @@ Deno.serve(async (req) => {
     const errors: string[] = [];
     let sentTo: string | null = null;
 
-    for (const candidate of recipientVariants(toNumber)) {
-      try {
-        const headers: Record<string, string> = { "Content-Type": "application/json" };
-        if (session.api_token) headers.Authorization = `Bearer ${session.api_token}`;
-        const r = await fetch(`${GATEWAY}/api/session/${sessionId}/send`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ to: candidate, message }),
-        });
-        const data = await r.json().catch(() => ({}));
-        const failed = data?.success === false || data?.ok === false || data?.sent === false ||
-          data?.status === "failed" || Boolean(data?.error);
-        if (r.ok && !failed) { sentTo = candidate; break; }
-        errors.push(`${candidate}: ${data?.error || data?.message || `gateway ${r.status}`}`);
-      } catch (e: any) {
-        errors.push(`${candidate}: ${e?.message || "gateway unreachable"}`);
-      }
+    // Send ONLY ONCE to a single canonical recipient to prevent duplicate messages.
+    const digits = String(toNumber).replace(/\D/g, "");
+    const candidate = digits || String(toNumber);
+
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session.api_token) headers.Authorization = `Bearer ${session.api_token}`;
+      const r = await fetch(`${GATEWAY}/api/session/${sessionId}/send`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ to: candidate, message }),
+      });
+      const data = await r.json().catch(() => ({}));
+      const failed = data?.success === false || data?.ok === false || data?.sent === false ||
+        data?.status === "failed" || Boolean(data?.error);
+      if (r.ok && !failed) sentTo = candidate;
+      else errors.push(`${candidate}: ${data?.error || data?.message || `gateway ${r.status}`}`);
+    } catch (e: any) {
+      errors.push(`${candidate}: ${e?.message || "gateway unreachable"}`);
     }
 
     if (!sentTo) {
