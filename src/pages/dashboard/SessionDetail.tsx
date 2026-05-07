@@ -189,6 +189,14 @@ const SessionDetail = () => {
   useEffect(() => { loadLogs(page); /* eslint-disable-next-line */ }, [page]);
   useEffect(() => { loadIncoming(incomingPage); /* eslint-disable-next-line */ }, [incomingPage]);
 
+  // Auto-refresh incoming messages every 10 seconds
+  useEffect(() => {
+    if (!id) return;
+    const i = setInterval(() => loadIncoming(incomingPage), 10000);
+    return () => clearInterval(i);
+    // eslint-disable-next-line
+  }, [id, incomingPage]);
+
   // Poll backend status + auto-update last_active every 30s
   useEffect(() => {
     if (!id) return;
@@ -585,6 +593,13 @@ const SessionDetail = () => {
               const raw: string = m.from_number || "";
               const isGroup = m.is_group || raw.length > 15;
               const display = isGroup ? `Group · ${raw.slice(0, 12)}…` : (raw.startsWith("+") ? raw : `+${raw}`);
+              const ds = m.delivery_status || "pending";
+              const dsClass = ds === "sent" ? "bg-green-500/15 text-green-500"
+                : ds === "failed" ? "bg-destructive/15 text-destructive"
+                : ds === "pending" || ds === "processing" ? "bg-yellow-500/15 text-yellow-500"
+                : "bg-muted text-muted-foreground";
+              const src = m?.raw_payload?.source;
+              const srcLabel = src === "ai" ? "AI" : (src === "keyword_rule" || src === "fixed_qa") ? "Keyword" : m.reply_text ? "Manual" : null;
               return (
                 <div key={m.id} className="rounded-lg border border-border bg-card-elevated p-3 text-sm">
                   <div className="flex justify-between items-start gap-3">
@@ -592,16 +607,17 @@ const SessionDetail = () => {
                       <p className="font-medium">FROM {display}</p>
                       <p className="text-xs text-muted-foreground">{new Date(m.received_at).toLocaleString()}</p>
                       <p className="mt-1 text-sm break-words">{m.message_text || <span className="italic text-muted-foreground">(no text / media)</span>}</p>
-                      {m.reply_sent && m.reply_text && (
+                      {m.reply_text && (
                         <div className="mt-2 rounded-md border-l-2 border-primary bg-primary/5 px-2 py-1.5">
-                          <p className="text-[10px] uppercase tracking-wide text-primary font-semibold">Auto-Reply Sent</p>
+                          <p className="text-[10px] uppercase tracking-wide text-primary font-semibold flex items-center gap-1">
+                            Reply Sent {srcLabel && <span className="text-muted-foreground font-normal">· {srcLabel}</span>}
+                          </p>
                           <p className="text-xs text-foreground/90 mt-0.5 break-words">{m.reply_text}</p>
                         </div>
                       )}
+                      {m.reply_error && <p className="text-xs text-destructive mt-1">{m.reply_error}</p>}
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${m.reply_sent ? "bg-green-500/15 text-green-500" : "bg-muted text-muted-foreground"}`}>
-                      {m.reply_sent ? "replied" : "no rule"}
-                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${dsClass}`}>{ds}</span>
                   </div>
                 </div>
               );
