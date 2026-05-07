@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Zap, User, Search, MessageSquare } from "lucide-react";
+import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Pause, Play } from "lucide-react";
 import { toast } from "sonner";
 
 type IncomingRow = {
@@ -48,20 +49,25 @@ const Inbox = () => {
   const [incoming, setIncoming] = useState<IncomingRow[]>([]);
   const [outgoing, setOutgoing] = useState<OutgoingRow[]>([]);
   const [blocked, setBlocked] = useState<{ id: string; phone_number: string; session_id: string }[]>([]);
+  const [paused, setPaused] = useState<{ phone_number: string; session_id: string; ai_paused: boolean }[]>([]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<{ session_id: string; phone_number: string } | null>(null);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
   const channelRef = useRef<any>(null);
 
   const load = async () => {
     if (!user) return;
-    const [{ data: inc }, { data: out }, { data: bl }] = await Promise.all([
+    const [{ data: inc }, { data: out }, { data: bl }, { data: pa }] = await Promise.all([
       supabase.from("incoming_messages").select("*").eq("user_id", user.id).order("received_at", { ascending: false }).limit(500),
       supabase.from("message_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(500),
       supabase.from("blocked_customers" as any).select("id, phone_number, session_id").eq("user_id", user.id),
+      supabase.from("customer_reply_settings" as any).select("phone_number, session_id, ai_paused").eq("user_id", user.id),
     ]);
     setIncoming((inc as any) || []);
     setOutgoing((out as any) || []);
     setBlocked((bl as any) || []);
+    setPaused((pa as any) || []);
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
@@ -79,7 +85,6 @@ const Inbox = () => {
     // eslint-disable-next-line
   }, [user?.id]);
 
-  // Group by (session_id, from_number)
   const customers = useMemo(() => {
     const map = new Map<string, { key: string; session_id: string; phone_number: string; last: IncomingRow; unread: number }>();
     for (const m of incoming) {
@@ -104,10 +109,14 @@ const Inbox = () => {
     if (!selected) return false;
     return blocked.some((b) => b.session_id === selected.session_id && b.phone_number === selected.phone_number);
   }, [blocked, selected]);
+  const isAiPaused = useMemo(() => {
+    if (!selected) return false;
+    return paused.some((p) => p.session_id === selected.session_id && p.phone_number === selected.phone_number && p.ai_paused);
+  }, [paused, selected]);
 
-  // Build conversation timeline
   const conversation = useMemo(() => {
     if (!selected) return [];
+    const phoneTail = selected.phone_number.replace(/\D/g, "").slice(-9);
     const inc = incoming
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number)
       .map((m) => ({
@@ -115,7 +124,6 @@ const Inbox = () => {
         kind: "in" as const,
         text: m.message_text || "(no text)",
         ts: m.received_at,
-        delivery_status: m.delivery_status,
       }));
     const replies = incoming
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number && m.reply_text)
@@ -123,19 +131,26 @@ const Inbox = () => {
         id: `r-${m.id}`,
         kind: "out" as const,
         text: m.reply_text!,
-        ts: m.received_at,
+        ts: (m as any).reply_sent_at || m.received_at,
         source: sourceOf(m),
       }));
     const manualOut = outgoing
-      .filter((o) => o.session_id === selected.session_id && (o.to_number || "").replace(/\D/g, "").endsWith(selected.phone_number.replace(/\D/g, "").slice(-9)))
-      .filter((o) => !(o.payload?.auto_reply))
-      .map((o) => ({
-        id: `o-${o.id}`,
-        kind: "out" as const,
-        text: typeof o.payload === "object" ? (o.payload?.text || JSON.stringify(o.payload)) : String(o.payload || ""),
-        ts: o.created_at,
-        source: "manual" as const,
-      }));
+      .filter((o) => o.session_id === selected.session_id && (o.to_number || "").replace(/\D/g, "").endsWith(phoneTail))
+      .map((o) => {
+        const src = o.payload?.source;
+        const source: "ai" | "keyword_rule" | "manual" =
+          src === "ai" ? "ai" : (src === "keyword_rule" || src === "fixed_qa") ? "keyword_rule" : "manual";
+        // Skip auto replies that already came from incoming.reply_text to avoid duplicates
+        if (o.payload?.auto_reply && source !== "manual") return null;
+        return {
+          id: `o-${o.id}`,
+          kind: "out" as const,
+          text: typeof o.payload === "object" ? (o.payload?.text || JSON.stringify(o.payload)) : String(o.payload || ""),
+          ts: o.created_at,
+          source,
+        };
+      })
+      .filter(Boolean) as any[];
     return [...inc, ...replies, ...manualOut].sort((a, b) => +new Date(a.ts) - +new Date(b.ts));
   }, [incoming, outgoing, selected]);
 
@@ -143,21 +158,62 @@ const Inbox = () => {
     if (!user || !selected) return;
     if (next) {
       const { error } = await supabase.from("blocked_customers" as any).insert({
-        user_id: user.id,
-        session_id: selected.session_id,
-        phone_number: selected.phone_number,
+        user_id: user.id, session_id: selected.session_id, phone_number: selected.phone_number,
       });
       if (error) return toast.error(error.message);
       toast.success("Customer blocked");
     } else {
       const { error } = await supabase.from("blocked_customers" as any).delete()
-        .eq("user_id", user.id)
-        .eq("session_id", selected.session_id)
-        .eq("phone_number", selected.phone_number);
+        .eq("user_id", user.id).eq("session_id", selected.session_id).eq("phone_number", selected.phone_number);
       if (error) return toast.error(error.message);
       toast.success("Customer unblocked");
     }
     load();
+  };
+
+  const toggleAiPause = async (next: boolean) => {
+    if (!user || !selected) return;
+    const { error } = await supabase.from("customer_reply_settings" as any).upsert({
+      user_id: user.id,
+      session_id: selected.session_id,
+      phone_number: selected.phone_number,
+      ai_paused: next,
+      paused_at: next ? new Date().toISOString() : null,
+    }, { onConflict: "user_id,session_id,phone_number" });
+    if (error) return toast.error(error.message);
+    toast.success(next ? "AI paused — you can reply manually" : "AI resumed");
+    load();
+  };
+
+  const sendManual = async () => {
+    if (!user || !selected || !draft.trim()) return;
+    setSending(true);
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token;
+      const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/send-manual-reply`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          session_id: selected.session_id,
+          to_number: selected.phone_number,
+          message: draft.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.ok === false) {
+        toast.error(data?.error || "Send failed");
+      } else {
+        toast.success("Message sent");
+        setDraft("");
+        load();
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Send failed");
+    } finally {
+      setSending(false);
+    }
   };
 
   const isActive = (iso: string) => Date.now() - +new Date(iso) < 5 * 60 * 1000;
@@ -229,14 +285,23 @@ const Inbox = () => {
             </div>
           ) : (
             <>
-              <div className="p-3 border-b border-border flex items-center justify-between">
-                <div>
-                  <p className="font-medium">+{selected.phone_number}</p>
-                  <p className="text-xs text-muted-foreground">{isBlocked ? "Blocked" : "Active"}</p>
+              <div className="p-3 border-b border-border flex items-center justify-between gap-3 flex-wrap">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">+{selected.phone_number}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isBlocked ? "Blocked" : isAiPaused ? "AI paused — manual mode" : "AI active"}
+                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">{isBlocked ? "Unblock" : "Block"}</span>
-                  <Switch checked={isBlocked} onCheckedChange={toggleBlock} />
+                <div className="flex items-center gap-4 flex-wrap">
+                  <label className="flex items-center gap-2 text-xs">
+                    {isAiPaused ? <Pause className="h-3.5 w-3.5 text-yellow-500" /> : <Play className="h-3.5 w-3.5 text-green-500" />}
+                    <span className="text-muted-foreground">{isAiPaused ? "AI paused" : "AI on"}</span>
+                    <Switch checked={!isAiPaused} onCheckedChange={(v) => toggleAiPause(!v)} />
+                  </label>
+                  <label className="flex items-center gap-2 text-xs">
+                    <span className="text-muted-foreground">{isBlocked ? "Blocked" : "Block"}</span>
+                    <Switch checked={isBlocked} onCheckedChange={toggleBlock} />
+                  </label>
                 </div>
               </div>
               <ScrollArea className="flex-1 p-4">
@@ -244,16 +309,16 @@ const Inbox = () => {
                   {conversation.map((m) => (
                     <div key={m.id} className={`flex ${m.kind === "out" ? "justify-end" : "justify-start"}`}>
                       <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
-                        m.kind === "out"
-                          ? "bg-green-500/15 text-foreground"
-                          : "bg-muted text-foreground"
+                        m.kind === "out" ? "bg-green-500/15 text-foreground" : "bg-muted text-foreground"
                       }`}>
                         <p className="whitespace-pre-wrap break-words">{m.text}</p>
                         <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
                           <span>{new Date(m.ts).toLocaleString()}</span>
                           {m.kind === "out" && (
-                            <Badge variant="outline" className="text-[10px] py-0 h-4">
-                              {(m as any).source === "ai" ? "AI Agent" : (m as any).source === "keyword_rule" ? "Auto Reply" : "Manual"}
+                            <Badge variant="outline" className="text-[10px] py-0 h-4 gap-1">
+                              {(m as any).source === "ai" ? <><Bot className="h-2.5 w-2.5" /> AI Agent</> :
+                                (m as any).source === "keyword_rule" ? <><Zap className="h-2.5 w-2.5" /> Auto Reply</> :
+                                <><User className="h-2.5 w-2.5" /> Manual</>}
                             </Badge>
                           )}
                         </div>
@@ -265,6 +330,21 @@ const Inbox = () => {
                   )}
                 </div>
               </ScrollArea>
+              <div className="p-3 border-t border-border">
+                <div className="flex items-end gap-2">
+                  <Input
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendManual(); } }}
+                    placeholder={isAiPaused ? "Type your manual reply..." : "Type a reply (AI will be paused for this customer once you send)"}
+                    disabled={sending || isBlocked}
+                  />
+                  <Button onClick={sendManual} disabled={sending || isBlocked || !draft.trim()}>
+                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+                </div>
+                {isBlocked && <p className="text-[11px] text-muted-foreground mt-1.5">Unblock the customer to send messages.</p>}
+              </div>
             </>
           )}
         </div>
