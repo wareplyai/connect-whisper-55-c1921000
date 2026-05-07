@@ -386,7 +386,7 @@ Deno.serve(async (req) => {
       return "";
     };
 
-    const fromNumber = pickRealNumber(
+    let fromNumber = pickRealNumber(
       rawKey.cleanedSenderPn,
       (rawPayload as any).cleanedSenderPn,
       (body as any).cleanedSenderPn,
