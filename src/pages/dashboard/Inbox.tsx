@@ -173,17 +173,22 @@ const Inbox = () => {
     load();
   };
 
-  const toggleAiPause = async (next: boolean) => {
+  const setMode = async (next: "ai" | "human" | "auto_reply") => {
     if (!user || !selected) return;
     const { error } = await supabase.from("customer_reply_settings" as any).upsert({
       user_id: user.id,
       session_id: selected.session_id,
       phone_number: selected.phone_number,
-      ai_paused: next,
-      paused_at: next ? new Date().toISOString() : null,
+      mode: next,
+      ai_paused: next === "human",
+      paused_at: next === "human" ? new Date().toISOString() : null,
     }, { onConflict: "user_id,session_id,phone_number" });
     if (error) return toast.error(error.message);
-    toast.success(next ? "AI paused — you can reply manually" : "AI resumed");
+    toast.success(
+      next === "ai" ? "AI Agent active for this customer" :
+      next === "human" ? "Human takeover — reply manually" :
+      "Auto-Reply only (keyword rules)"
+    );
     load();
   };
 
