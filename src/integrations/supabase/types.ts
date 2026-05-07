@@ -289,7 +289,10 @@ export type Database = {
       business_profiles: {
         Row: {
           active_reply_mode: string
+          ai_auto_replies_enabled: boolean
           ai_enabled: boolean
+          ai_read_receipts: boolean
+          ai_show_typing: boolean
           business_type: string | null
           connected_session_ids: string[]
           contact: string | null
@@ -306,7 +309,10 @@ export type Database = {
         }
         Insert: {
           active_reply_mode?: string
+          ai_auto_replies_enabled?: boolean
           ai_enabled?: boolean
+          ai_read_receipts?: boolean
+          ai_show_typing?: boolean
           business_type?: string | null
           connected_session_ids?: string[]
           contact?: string | null
@@ -323,7 +329,10 @@ export type Database = {
         }
         Update: {
           active_reply_mode?: string
+          ai_auto_replies_enabled?: boolean
           ai_enabled?: boolean
+          ai_read_receipts?: boolean
+          ai_show_typing?: boolean
           business_type?: string | null
           connected_session_ids?: string[]
           contact?: string | null
@@ -943,6 +952,7 @@ export type Database = {
           always_online: boolean
           api_token: string
           auto_reject_calls: boolean
+          auto_replies_enabled: boolean
           created_at: string
           enable_account_protection: boolean
           enable_message_logging: boolean
@@ -957,6 +967,7 @@ export type Database = {
           proxy_url: string | null
           read_incoming_messages: boolean
           session_name: string
+          show_typing_indicator: boolean
           status: string
           user_id: string
           webhook_events: string[]
@@ -968,6 +979,7 @@ export type Database = {
           always_online?: boolean
           api_token?: string
           auto_reject_calls?: boolean
+          auto_replies_enabled?: boolean
           created_at?: string
           enable_account_protection?: boolean
           enable_message_logging?: boolean
@@ -982,6 +994,7 @@ export type Database = {
           proxy_url?: string | null
           read_incoming_messages?: boolean
           session_name: string
+          show_typing_indicator?: boolean
           status?: string
           user_id: string
           webhook_events?: string[]
@@ -993,6 +1006,7 @@ export type Database = {
           always_online?: boolean
           api_token?: string
           auto_reject_calls?: boolean
+          auto_replies_enabled?: boolean
           created_at?: string
           enable_account_protection?: boolean
           enable_message_logging?: boolean
@@ -1007,6 +1021,7 @@ export type Database = {
           proxy_url?: string | null
           read_incoming_messages?: boolean
           session_name?: string
+          show_typing_indicator?: boolean
           status?: string
           user_id?: string
           webhook_events?: string[]
