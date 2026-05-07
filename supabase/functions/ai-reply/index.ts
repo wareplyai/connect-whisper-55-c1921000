@@ -491,8 +491,8 @@ Deno.serve(async (req) => {
 
     const lowerMsg = messageText.toLowerCase();
 
-    // MUTEX: route based on active_reply_mode
-    if (replyMode === "none") {
+    // MUTEX: route based on active_reply_mode (per-customer auto_reply overrides global "none")
+    if (replyMode === "none" && customerMode !== "auto_reply") {
       if (messageId) {
         await admin.from("incoming_messages").update({
           delivery_status: "skipped",
