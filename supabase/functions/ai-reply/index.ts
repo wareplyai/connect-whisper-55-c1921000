@@ -145,7 +145,7 @@ export function looksLikeSendableRecipient(value: unknown): boolean {
   return looksLikeCustomerPhone(value);
 }
 
-function collectPhoneCandidates(value: unknown, out: string[], depth = 0): void {
+function collectPhoneCandidates(value: unknown, out: Array<{ num: string; trusted: boolean }>, depth = 0): void {
   if (depth > 5 || value == null) return;
   if (Array.isArray(value)) {
     for (const item of value.slice(0, 20)) collectPhoneCandidates(item, out, depth + 1);
@@ -159,12 +159,23 @@ function collectPhoneCandidates(value: unknown, out: string[], depth = 0): void 
     "author", "remotejid", "remote_jid", "remotejidalt", "remote_jid_alt",
     "chatid", "chat_id", "jid",
   ]);
+  // Keys that, when their value contains "@s.whatsapp.net", carry the real customer phone.
+  // We mark these as "trusted" so they win over Baileys-generated ids in body.from.
+  const trustedKeys = new Set([
+    "remotejid", "remote_jid", "remotejidalt", "remote_jid_alt",
+    "senderpn", "sender_pn", "participant", "participantalt", "participant_alt",
+    "chatid", "chat_id", "jid", "customer", "customer_number", "customernumber",
+  ]);
 
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
     const normalizedKey = key.toLowerCase().replace(/[^a-z0-9_]/g, "");
     if (candidateKeys.has(normalizedKey)) {
       const n = numberFromValue(child);
-      if (n) out.push(n);
+      if (n) {
+        const raw = String(child ?? "");
+        const trusted = trustedKeys.has(normalizedKey) && /@s\.whatsapp\.net/i.test(raw);
+        out.push({ num: n, trusted });
+      }
     }
     if (typeof child === "object" && child !== null) collectPhoneCandidates(child, out, depth + 1);
   }
@@ -189,11 +200,16 @@ function hasGroupJid(value: unknown, depth = 0): boolean {
 }
 
 export function resolveCustomerNumber(body: Record<string, unknown>, sessionPhone?: string | null): string {
-  const candidates: string[] = [];
+  const candidates: Array<{ num: string; trusted: boolean }> = [];
   collectPhoneCandidates(body, candidates);
-  const unique = [...new Set(candidates)];
-  const customerCandidates = unique.filter((n) => !samePhone(n, sessionPhone));
-  return customerCandidates.find(looksLikeCustomerPhone) || customerCandidates[0] || unique[0] || "";
+  const notSession = candidates.filter((c) => !samePhone(c.num, sessionPhone));
+  // 1) Prefer trusted (@s.whatsapp.net) jids that look like real phones
+  const trustedPhone = notSession.find((c) => c.trusted && looksLikeCustomerPhone(c.num));
+  if (trustedPhone) return trustedPhone.num;
+  // 2) Otherwise fall back to first candidate that looks like a customer phone
+  const anyPhone = notSession.find((c) => looksLikeCustomerPhone(c.num));
+  if (anyPhone) return anyPhone.num;
+  return notSession[0]?.num || candidates[0]?.num || "";
 }
 
 async function resolveFromGatewayMessageInfo(opts: {
@@ -302,12 +318,15 @@ Deno.serve(async (req) => {
     }
 
     const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
-    // PRIORITY: trust body.from when it's a real customer phone and not the session's own number
+    // PRIORITY: prefer real WhatsApp jids nested in raw payload (key.remoteJid, remoteJidAlt, senderPn)
+    // over top-level body.from, because Baileys often sets body.from to a generated message id (LID)
+    // that happens to look like a 15-digit phone but is NOT a real customer number.
+    const resolvedFromPayload = resolveCustomerNumber(body, session.phone_number);
     const directFromDigits = digitsOnly(body.from ?? body.from_number ?? body.fromNumber);
-    let fromNumber =
-      (directFromDigits && looksLikeCustomerPhone(directFromDigits) && !samePhone(directFromDigits, session.phone_number))
-        ? directFromDigits
-        : resolveCustomerNumber(body, session.phone_number);
+    let fromNumber = resolvedFromPayload
+      || ((directFromDigits && looksLikeCustomerPhone(directFromDigits) && !samePhone(directFromDigits, session.phone_number))
+            ? directFromDigits
+            : "");
     if (fromNumber && !looksLikeCustomerPhone(fromNumber)) {
       const recoveredNumber = await resolveFromGatewayMessageInfo({
         gateway: GATEWAY,
