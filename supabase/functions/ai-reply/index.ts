@@ -698,7 +698,7 @@ Deno.serve(async (req) => {
     if (sendOk) {
       await admin.from("message_logs").insert({
         user_id: userId, session_id: sessionId, to_number: sendResult.to,
-        message_type: "text", payload: { text: reply, auto_reply: true },
+        message_type: "text", payload: { text: reply, auto_reply: true, source: "ai" },
         status: "sent",
       });
     }
