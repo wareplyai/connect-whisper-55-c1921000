@@ -426,7 +426,6 @@ export type Database = {
           is_active: boolean | null
           last_login: string | null
           name: string
-          password_hash: string | null
         }
         Insert: {
           auth_user_id?: string | null
@@ -436,7 +435,6 @@ export type Database = {
           is_active?: boolean | null
           last_login?: string | null
           name: string
-          password_hash?: string | null
         }
         Update: {
           auth_user_id?: string | null
@@ -446,7 +444,6 @@ export type Database = {
           is_active?: boolean | null
           last_login?: string | null
           name?: string
-          password_hash?: string | null
         }
         Relationships: []
       }
