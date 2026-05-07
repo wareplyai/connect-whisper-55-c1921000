@@ -270,28 +270,29 @@ async function sendViaGateway(opts: {
   gateway: string; sessionId: string; apiToken?: string | null; to: string; message: string;
 }): Promise<{ ok: boolean; to: string; error: string | null; data: unknown }> {
   const { gateway, sessionId, apiToken, to, message } = opts;
-  const errors: string[] = [];
 
-  for (const candidate of recipientVariants(to)) {
-    try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
-      const sendRes = await fetch(`${gateway}/api/session/${sessionId}/send`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ to: candidate, message }),
-      });
-      const sendData = await sendRes.json().catch(() => ({}));
-      const explicitFailure = sendData?.success === false || sendData?.ok === false || sendData?.sent === false ||
-        sendData?.status === "failed" || Boolean(sendData?.error);
-      if (sendRes.ok && !explicitFailure) return { ok: true, to: candidate, error: null, data: sendData };
-      errors.push(`${candidate}: ${sendData?.error || sendData?.message || `gateway ${sendRes.status}`}`);
-    } catch (e: any) {
-      errors.push(`${candidate}: ${e?.message || "gateway unreachable"}`);
-    }
+  // Send ONLY ONCE to a single canonical recipient to prevent duplicate replies.
+  // The gateway accepts plain digits and resolves to @s.whatsapp.net internally.
+  const digits = String(to).replace(/\D/g, "");
+  const candidate = digits || String(to);
+
+  try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+    const sendRes = await fetch(`${gateway}/api/session/${sessionId}/send`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ to: candidate, message }),
+    });
+    const sendData = await sendRes.json().catch(() => ({}));
+    const explicitFailure = sendData?.success === false || sendData?.ok === false || sendData?.sent === false ||
+      sendData?.status === "failed" || Boolean(sendData?.error);
+    if (sendRes.ok && !explicitFailure) return { ok: true, to: candidate, error: null, data: sendData };
+    const err = `${candidate}: ${sendData?.error || sendData?.message || `gateway ${sendRes.status}`}`;
+    return { ok: false, to: candidate, error: err, data: sendData };
+  } catch (e: any) {
+    return { ok: false, to: candidate, error: `${candidate}: ${e?.message || "gateway unreachable"}`, data: null };
   }
-
-  return { ok: false, to, error: errors.join("; ") || "gateway send failed", data: null };
 }
 
 function isInternalAiReplyWebhook(url: string): boolean {
