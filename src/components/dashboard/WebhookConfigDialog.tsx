@@ -139,6 +139,10 @@ const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) =>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button variant="outline" onClick={sendTest} disabled={testing || !enabled}>
+              {testing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
+              Send Test Event
+            </Button>
             <Button onClick={save} disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary-hover">
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Save Changes
