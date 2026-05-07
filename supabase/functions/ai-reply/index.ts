@@ -134,19 +134,15 @@ function numberFromValue(value: unknown): string | null {
 export function looksLikeCustomerPhone(value: unknown): boolean {
   const digits = digitsOnly(value);
   if (!digits) return false;
-  if (digits.startsWith("8801") && digits.length === 13) return true;
-  if (digits.startsWith("01") && digits.length === 11) return true;
-  if (digits.startsWith("1") && digits.length === 10) return true;
-  return digits.length >= 10 && digits.length <= 15 && !/^(23|52)\d{12,14}$/.test(digits);
+  return digits.length >= 8 && digits.length <= 15;
 }
 
-export function looksLikeLidIdentifier(value: unknown): boolean {
-  const digits = digitsOnly(value);
-  return /^(23|52)\d{12,14}$/.test(digits);
+export function looksLikeLidIdentifier(_value: unknown): boolean {
+  return false; // Disabled - always send to @s.whatsapp.net
 }
 
 export function looksLikeSendableRecipient(value: unknown): boolean {
-  return looksLikeCustomerPhone(value) || looksLikeLidIdentifier(value);
+  return looksLikeCustomerPhone(value);
 }
 
 function collectPhoneCandidates(value: unknown, out: string[], depth = 0): void {
