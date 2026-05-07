@@ -134,7 +134,7 @@ function numberFromValue(value: unknown): string | null {
 export function looksLikeCustomerPhone(value: unknown): boolean {
   const digits = digitsOnly(value);
   if (!digits) return false;
-  return digits.length >= 8 && digits.length <= 15;
+  return digits.length >= 8 && digits.length <= 15 && !isWhatsAppLID(digits);
 }
 
 export function isWhatsAppLID(value: unknown): boolean {
@@ -159,8 +159,8 @@ function collectPhoneCandidates(value: unknown, out: Array<{ num: string; truste
   if (typeof value !== "object") return;
 
   const candidateKeys = new Set([
-    "customer", "customer_number", "customernumber", "from", "from_number", "fromnumber",
-    "sender", "senderpn", "sender_pn", "participant", "participantalt", "participant_alt",
+    "customer", "customer_number", "customernumber", "from", "from_real", "fromreal", "from_number", "fromnumber",
+    "sender", "senderpn", "sender_pn", "cleanedsenderpn", "cleaned_sender_pn", "participant", "participantalt", "participant_alt",
     "author", "remotejid", "remote_jid", "remotejidalt", "remote_jid_alt",
     "chatid", "chat_id", "jid",
   ]);
@@ -168,8 +168,8 @@ function collectPhoneCandidates(value: unknown, out: Array<{ num: string; truste
   // We mark these as "trusted" so they win over Baileys-generated ids in body.from.
   const trustedKeys = new Set([
     "remotejid", "remote_jid", "remotejidalt", "remote_jid_alt",
-    "senderpn", "sender_pn", "participant", "participantalt", "participant_alt",
-    "chatid", "chat_id", "jid", "customer", "customer_number", "customernumber",
+    "senderpn", "sender_pn", "cleanedsenderpn", "cleaned_sender_pn", "participant", "participantalt", "participant_alt",
+    "chatid", "chat_id", "jid", "customer", "customer_number", "customernumber", "from_real", "fromreal",
   ]);
 
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
@@ -178,7 +178,7 @@ function collectPhoneCandidates(value: unknown, out: Array<{ num: string; truste
       const n = numberFromValue(child);
       if (n) {
         const raw = String(child ?? "");
-        const trusted = trustedKeys.has(normalizedKey) && /@s\.whatsapp\.net/i.test(raw);
+        const trusted = trustedKeys.has(normalizedKey) && (normalizedKey.includes("cleanedsenderpn") || normalizedKey.includes("fromreal") || /@s\.whatsapp\.net/i.test(raw));
         out.push({ num: n, trusted });
       }
     }
@@ -207,14 +207,14 @@ function hasGroupJid(value: unknown, depth = 0): boolean {
 export function resolveCustomerNumber(body: Record<string, unknown>, sessionPhone?: string | null): string {
   const candidates: Array<{ num: string; trusted: boolean }> = [];
   collectPhoneCandidates(body, candidates);
-  const notSession = candidates.filter((c) => !samePhone(c.num, sessionPhone));
+  const notSession = candidates.filter((c) => !samePhone(c.num, sessionPhone) && !isWhatsAppLID(c.num));
   // 1) Prefer trusted (@s.whatsapp.net) jids that look like real phones
   const trustedPhone = notSession.find((c) => c.trusted && looksLikeCustomerPhone(c.num));
   if (trustedPhone) return trustedPhone.num;
   // 2) Otherwise fall back to first candidate that looks like a customer phone
   const anyPhone = notSession.find((c) => looksLikeCustomerPhone(c.num));
   if (anyPhone) return anyPhone.num;
-  return notSession[0]?.num || candidates[0]?.num || "";
+  return notSession[0]?.num || "";
 }
 
 async function resolveFromGatewayMessageInfo(opts: {
