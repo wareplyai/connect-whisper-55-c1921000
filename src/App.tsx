@@ -51,6 +51,8 @@ import HANotifications from "./pages/headadmin/Notifications";
 import ActivityLogs from "./pages/headadmin/ActivityLogs";
 import HASettings from "./pages/headadmin/Settings";
 import SmsLogs from "./pages/headadmin/SmsLogs";
+import HAFeatureAccess from "./pages/headadmin/FeatureAccess";
+import { FeatureGuard } from "./components/FeatureGuard";
 import DocsLayout from "./layouts/DocsLayout";
 import DocsIndex from "./pages/docs/DocsIndex";
 import DocsPage from "./pages/docs/DocsPage";
@@ -95,8 +97,8 @@ const App = () => (
                 <Route path="subscription" element={<Subscription />} />
                 <Route path="subscription/plans" element={<Plans />} />
                 <Route path="payments" element={<Payments />} />
-                <Route path="auto-replies" element={<AutoReplies />} />
-                <Route path="ai-agent" element={<AIAgent />} />
+                <Route path="auto-replies" element={<FeatureGuard feature="auto_replies"><AutoReplies /></FeatureGuard>} />
+                <Route path="ai-agent" element={<FeatureGuard feature="ai_agent"><AIAgent /></FeatureGuard>} />
                 <Route path="behavior" element={<BehaviorSettings />} />
               </Route>
 
@@ -118,6 +120,7 @@ const App = () => (
                 <Route path="plan-pricing" element={<HAPlanPricing />} />
                 <Route path="settings" element={<HASettings />} />
                 <Route path="sms-logs" element={<SmsLogs />} />
+                <Route path="feature-access" element={<HAFeatureAccess />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

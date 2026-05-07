@@ -3,6 +3,7 @@ import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, L
 import { TrialBanner } from "@/components/TrialBanner";
 import { N8nBanner } from "@/components/N8nBanner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -26,6 +27,12 @@ const resources = [
 
 const DashboardLayout = () => {
   const { profile, isAdmin, signOut } = useAuth();
+  const { access } = useFeatureAccess();
+  const visibleNav = nav.filter((n) => {
+    if (n.to === "/dashboard/ai-agent") return access.ai_agent;
+    if (n.to === "/dashboard/auto-replies") return access.auto_replies;
+    return true;
+  });
   const location = useLocation();
   const navigate = useNavigate();
   const handleSignOut = async () => {
@@ -43,7 +50,7 @@ const DashboardLayout = () => {
         <div className="flex-1 min-h-0 px-3 py-4 flex flex-col overflow-y-auto">
           <p className="px-3 mb-2 text-xs uppercase tracking-wider text-muted-foreground">Platform</p>
           <nav className="space-y-1">
-            {nav.map((n) => (
+            {visibleNav.map((n) => (
               <NavLink
                 key={n.to}
                 to={n.to}
