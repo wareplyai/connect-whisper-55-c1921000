@@ -17,7 +17,7 @@ export default function HeadAdminSettings() {
     const saved = localStorage.getItem("platform_settings");
     return saved ? JSON.parse(saved) : {
       name: "WaAPI", supportEmail: "support@wareplyai.com",
-      backendUrl: import.meta.env.VITE_BACKEND_URL || "",
+      backendUrl: import.meta.env.VITE_GATEWAY_URL || import.meta.env.VITE_BACKEND_URL || "",
       trialDays: 7, trialSessions: 1,
     };
   });

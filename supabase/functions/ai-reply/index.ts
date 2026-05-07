@@ -375,7 +375,7 @@ Deno.serve(async (req) => {
       return jsonResp({ error: "Invalid webhook secret" }, 401);
     }
 
-    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org";
+    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "http://178.156.243.205/waapi";
     const rawPayload = (body?.raw_payload as Record<string, unknown> | undefined) || {};
     const rawKey = (rawPayload?.key as Record<string, unknown> | undefined) || {};
     const pickRealNumber = (...values: unknown[]) => {

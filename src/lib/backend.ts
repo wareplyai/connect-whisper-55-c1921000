@@ -1,5 +1,8 @@
 // Backend API helper for the WhatsApp gateway server
-const BASE_URL = import.meta.env.VITE_BACKEND_URL || "https://alvi-waapi.duckdns.org";
+const BASE_URL =
+  import.meta.env.VITE_GATEWAY_URL ||
+  import.meta.env.VITE_BACKEND_URL ||
+  "http://178.156.243.205/waapi";
 
 async function request<T = any>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {

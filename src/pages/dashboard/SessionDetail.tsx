@@ -18,7 +18,7 @@ import {
   ArrowLeft, Copy, Eye, EyeOff, RefreshCw, Trash2, Edit, Webhook, Loader2, ChevronLeft, ChevronRight, Link2 as LinkIcon2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { backendApi } from "@/lib/backend";
+import { backendApi, BACKEND_URL } from "@/lib/backend";
 import WebhookConfigDialog from "@/components/dashboard/WebhookConfigDialog";
 
 const PAGE_SIZE = 25;
@@ -467,7 +467,7 @@ const SessionDetail = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        const cmd = `curl -X POST "https://alvi-waapi.duckdns.org/api/session/${s.id}/send" \\\n  -H "Authorization: Bearer ${s.api_token}" \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify({ to: to || "+1234567890", message: text || "Hello!" })}'`;
+                        const cmd = `curl -X POST "${BACKEND_URL}/api/session/${s.id}/send" \\\n  -H "Authorization: Bearer ${s.api_token}" \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify({ to: to || "+1234567890", message: text || "Hello!" })}'`;
                         navigator.clipboard.writeText(cmd);
                         toast.success("Copied!");
                       }}
@@ -477,7 +477,7 @@ const SessionDetail = () => {
                     </button>
                   </div>
                   <pre className="rounded-lg bg-[#0d0d0d] text-foreground/90 p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">
-{`curl -X POST "https://alvi-waapi.duckdns.org/api/session/${s.id}/send" \\
+{`curl -X POST "${BACKEND_URL}/api/session/${s.id}/send" \\
   -H "Authorization: Bearer ${s.api_token}" \\
   -H "Content-Type: application/json" \\
   -d '${JSON.stringify({ to: to || "+1234567890", message: text || "Hello!" })}'`}
