@@ -340,6 +340,47 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_reply_settings: {
+        Row: {
+          ai_paused: boolean
+          created_at: string
+          id: string
+          paused_at: string | null
+          phone_number: string
+          session_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_paused?: boolean
+          created_at?: string
+          id?: string
+          paused_at?: string | null
+          phone_number: string
+          session_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_paused?: boolean
+          created_at?: string
+          id?: string
+          paused_at?: string | null
+          phone_number?: string
+          session_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_reply_settings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fixed_qa: {
         Row: {
           created_at: string
