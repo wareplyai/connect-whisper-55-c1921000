@@ -32,6 +32,7 @@ const navGroups = [
   {
     label: "System",
     items: [
+      { to: "/headadmin/feature-access", label: "Feature Access", icon: ToggleRight },
       { to: "/headadmin/notifications", label: "Notifications", icon: Bell },
       { to: "/headadmin/logs", label: "Activity Logs", icon: ScrollText },
       { to: "/headadmin/settings", label: "Settings", icon: Settings },
