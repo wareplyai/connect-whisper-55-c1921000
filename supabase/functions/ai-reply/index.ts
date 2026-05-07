@@ -406,12 +406,24 @@ Deno.serve(async (req) => {
       return "";
     };
 
+    const resolveBody = {
+      ...body,
+      raw_payload: {
+        ...(rawPayload as any),
+        ...(((rawPayload as any).raw_payload && typeof (rawPayload as any).raw_payload === "object") ? (rawPayload as any).raw_payload : {}),
+      },
+    } as Record<string, unknown>;
+
     let fromNumber = pickRealNumber(
       rawKey.cleanedSenderPn,
       (rawPayload as any).cleanedSenderPn,
+      (rawPayload as any)?.raw_payload?.key?.cleanedSenderPn,
+      (rawPayload as any)?.raw_payload?.cleanedSenderPn,
       (body as any).cleanedSenderPn,
       rawKey.senderPn,
       (rawPayload as any).senderPn,
+      (rawPayload as any)?.raw_payload?.key?.senderPn,
+      (rawPayload as any)?.raw_payload?.senderPn,
       (body as any).senderPn,
       (body as any).from_real,
       (body as any).fromReal,
@@ -419,7 +431,7 @@ Deno.serve(async (req) => {
       (body as any).fromNumber,
       (body as any).from,
       !/@lid/i.test(String(rawKey.remoteJid || "")) ? rawKey.remoteJid : "",
-      resolveCustomerNumber(body, session.phone_number),
+      resolveCustomerNumber(resolveBody, session.phone_number),
     );
     if (fromNumber && !looksLikeCustomerPhone(fromNumber)) {
       const recoveredNumber = await resolveFromGatewayMessageInfo({
