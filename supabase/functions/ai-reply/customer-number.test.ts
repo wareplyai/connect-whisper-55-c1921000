@@ -34,6 +34,22 @@ Deno.test("prefers cleanedSenderPn when remoteJid is a WhatsApp LID", () => {
   );
 });
 
+Deno.test("does not treat @lid remoteJid digits as a sendable phone when senderPn is present", () => {
+  assertEquals(
+    resolveCustomerNumber({
+      raw_payload: {
+        key: {
+          remoteJid: "254872603640004@lid",
+          senderPn: "971566652315@s.whatsapp.net",
+          cleanedSenderPn: "971566652315",
+          senderLid: "254872603640004@lid",
+        },
+      },
+    }, null),
+    "971566652315",
+  );
+});
+
 Deno.test("excludes the connected session's own phone from candidates", () => {
   assertEquals(
     resolveCustomerNumber({
