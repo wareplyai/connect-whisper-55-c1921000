@@ -120,11 +120,8 @@ Deno.serve(async (req) => {
     await admin.from("webhook_logs").insert({
       session_id,
       event_type,
-      url,
-      status_code: status || null,
-      success: status >= 200 && status < 300,
-      payload: samplePayload,
-      response_body: responseText || errorMsg,
+      delivered: status >= 200 && status < 300,
+      payload: { ...samplePayload, _delivery: { url, status, response: responseText, error: errorMsg } },
     }).then(() => {}, () => {});
 
     const ok = status >= 200 && status < 300;
