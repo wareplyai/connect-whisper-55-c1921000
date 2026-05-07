@@ -123,12 +123,30 @@ function samePhone(a: unknown, b: unknown): boolean {
   return ac.length >= 10 && bc.length >= 10 && ac === bc;
 }
 
-function numberFromValue(value: unknown): string | null {
+function numberFromValue(value: unknown, allowLid = false): string | null {
   const text = String(value ?? "").trim();
   if (!text || /@g\.us|status@broadcast|@broadcast/i.test(text)) return null;
+  if (!allowLid && /@lid/i.test(text)) return null;
   const beforeAt = text.includes("@") ? text.split("@")[0] : text;
   const digits = beforeAt.replace(/\D/g, "");
   return digits.length >= 8 && digits.length <= 16 ? digits : null;
+}
+
+function collectLidNumbers(value: unknown, out: Set<string>, depth = 0): void {
+  if (depth > 5 || value == null) return;
+  if (typeof value === "string") {
+    if (/@lid/i.test(value)) {
+      const n = numberFromValue(value, true);
+      if (n) out.add(n);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value.slice(0, 20)) collectLidNumbers(item, out, depth + 1);
+    return;
+  }
+  if (typeof value !== "object") return;
+  for (const child of Object.values(value as Record<string, unknown>)) collectLidNumbers(child, out, depth + 1);
 }
 
 export function looksLikeCustomerPhone(value: unknown): boolean {
@@ -206,8 +224,10 @@ function hasGroupJid(value: unknown, depth = 0): boolean {
 
 export function resolveCustomerNumber(body: Record<string, unknown>, sessionPhone?: string | null): string {
   const candidates: Array<{ num: string; trusted: boolean }> = [];
+  const lidNumbers = new Set<string>();
+  collectLidNumbers(body, lidNumbers);
   collectPhoneCandidates(body, candidates);
-  const notSession = candidates.filter((c) => !samePhone(c.num, sessionPhone) && !isWhatsAppLID(c.num));
+  const notSession = candidates.filter((c) => !samePhone(c.num, sessionPhone) && !isWhatsAppLID(c.num) && !lidNumbers.has(c.num));
   // 1) Prefer trusted (@s.whatsapp.net) jids that look like real phones
   const trustedPhone = notSession.find((c) => c.trusted && looksLikeCustomerPhone(c.num));
   if (trustedPhone) return trustedPhone.num;
@@ -386,12 +406,24 @@ Deno.serve(async (req) => {
       return "";
     };
 
+    const resolveBody = {
+      ...body,
+      raw_payload: {
+        ...(rawPayload as any),
+        ...(((rawPayload as any).raw_payload && typeof (rawPayload as any).raw_payload === "object") ? (rawPayload as any).raw_payload : {}),
+      },
+    } as Record<string, unknown>;
+
     let fromNumber = pickRealNumber(
       rawKey.cleanedSenderPn,
       (rawPayload as any).cleanedSenderPn,
+      (rawPayload as any)?.raw_payload?.key?.cleanedSenderPn,
+      (rawPayload as any)?.raw_payload?.cleanedSenderPn,
       (body as any).cleanedSenderPn,
       rawKey.senderPn,
       (rawPayload as any).senderPn,
+      (rawPayload as any)?.raw_payload?.key?.senderPn,
+      (rawPayload as any)?.raw_payload?.senderPn,
       (body as any).senderPn,
       (body as any).from_real,
       (body as any).fromReal,
@@ -399,7 +431,7 @@ Deno.serve(async (req) => {
       (body as any).fromNumber,
       (body as any).from,
       !/@lid/i.test(String(rawKey.remoteJid || "")) ? rawKey.remoteJid : "",
-      resolveCustomerNumber(body, session.phone_number),
+      resolveCustomerNumber(resolveBody, session.phone_number),
     );
     if (fromNumber && !looksLikeCustomerPhone(fromNumber)) {
       const recoveredNumber = await resolveFromGatewayMessageInfo({
