@@ -49,7 +49,7 @@ const Inbox = () => {
   const [incoming, setIncoming] = useState<IncomingRow[]>([]);
   const [outgoing, setOutgoing] = useState<OutgoingRow[]>([]);
   const [blocked, setBlocked] = useState<{ id: string; phone_number: string; session_id: string }[]>([]);
-  const [paused, setPaused] = useState<{ phone_number: string; session_id: string; ai_paused: boolean }[]>([]);
+  const [modes, setModes] = useState<{ phone_number: string; session_id: string; mode: string; ai_paused: boolean }[]>([]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<{ session_id: string; phone_number: string } | null>(null);
   const [draft, setDraft] = useState("");
