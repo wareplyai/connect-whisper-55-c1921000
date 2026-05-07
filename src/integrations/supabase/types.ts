@@ -417,6 +417,24 @@ export type Database = {
         }
         Relationships: []
       }
+      global_feature_settings: {
+        Row: {
+          feature: string
+          show_to_users: boolean
+          updated_at: string
+        }
+        Insert: {
+          feature: string
+          show_to_users?: boolean
+          updated_at?: string
+        }
+        Update: {
+          feature?: string
+          show_to_users?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       headadmin: {
         Row: {
           auth_user_id: string | null
@@ -1080,6 +1098,30 @@ export type Database = {
           },
         ]
       }
+      user_feature_access: {
+        Row: {
+          enabled: boolean
+          feature: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          enabled?: boolean
+          feature: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          enabled?: boolean
+          feature?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1141,6 +1183,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_feature: {
+        Args: { _feature: string; _user_id: string }
+        Returns: boolean
+      }
       expire_own_trial: { Args: never; Returns: boolean }
       extract_real_customer_number_from_payload: {
         Args: { _payload: Json }
