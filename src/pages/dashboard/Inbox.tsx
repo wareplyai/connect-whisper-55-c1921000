@@ -270,7 +270,24 @@ const Inbox = () => {
             </div>
           </div>
           <ScrollArea className="flex-1">
-            {customers.length === 0 ? (
+            {loading ? (
+              <ul className="divide-y divide-border animate-fade-in">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <li key={i} className="px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Skeleton className="h-3.5 w-3.5 rounded-full" />
+                        <Skeleton className="h-3.5 w-28" />
+                      </div>
+                      <Skeleton className="h-4 w-6 rounded-full" />
+                    </div>
+                    <div className="mt-2">
+                      <Skeleton className="h-3 w-3/4" />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : customers.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">No customers yet.</div>
             ) : (
               <ul className="divide-y divide-border">
