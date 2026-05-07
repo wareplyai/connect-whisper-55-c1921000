@@ -118,7 +118,7 @@ const DashboardLayout = () => {
           <ThemeToggle />
         </header>
         <div className="flex-1 p-6 space-y-6">
-          <N8nBanner />
+          {!location.pathname.startsWith("/dashboard/inbox") && <N8nBanner />}
           <TrialBanner />
           <Outlet />
         </div>
