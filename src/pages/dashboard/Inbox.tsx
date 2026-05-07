@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type IncomingRow = {
   id: string;
@@ -45,33 +46,57 @@ const SourceIcon = ({ src, className = "h-3.5 w-3.5" }: { src: string; className
   return <User className={className} />;
 };
 
+const CACHE_KEY = "inbox_cache_v1";
+const readCache = (uid?: string) => {
+  if (!uid) return null;
+  try {
+    const raw = sessionStorage.getItem(`${CACHE_KEY}:${uid}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+};
+const writeCache = (uid: string, payload: any) => {
+  try { sessionStorage.setItem(`${CACHE_KEY}:${uid}`, JSON.stringify(payload)); } catch {}
+};
+
 const Inbox = () => {
   const { user } = useAuth();
-  const [incoming, setIncoming] = useState<IncomingRow[]>([]);
-  const [outgoing, setOutgoing] = useState<OutgoingRow[]>([]);
-  const [blocked, setBlocked] = useState<{ id: string; phone_number: string; session_id: string }[]>([]);
-  const [modes, setModes] = useState<{ phone_number: string; session_id: string; mode: string; ai_paused: boolean }[]>([]);
+  const cached = readCache(user?.id);
+  const [incoming, setIncoming] = useState<IncomingRow[]>(cached?.incoming || []);
+  const [outgoing, setOutgoing] = useState<OutgoingRow[]>(cached?.outgoing || []);
+  const [blocked, setBlocked] = useState<{ id: string; phone_number: string; session_id: string }[]>(cached?.blocked || []);
+  const [modes, setModes] = useState<{ phone_number: string; session_id: string; mode: string; ai_paused: boolean }[]>(cached?.modes || []);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<{ session_id: string; phone_number: string } | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(!cached);
   const channelRef = useRef<any>(null);
 
-  const load = async () => {
+  const load = async (showLoader = false) => {
     if (!user) return;
-    const [{ data: inc }, { data: out }, { data: bl }, { data: pa }] = await Promise.all([
-      supabase.from("incoming_messages").select("*").eq("user_id", user.id).order("received_at", { ascending: false }).limit(500),
-      supabase.from("message_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(500),
-      supabase.from("blocked_customers" as any).select("id, phone_number, session_id").eq("user_id", user.id),
-      supabase.from("customer_reply_settings" as any).select("phone_number, session_id, ai_paused, mode").eq("user_id", user.id),
-    ]);
-    setIncoming((inc as any) || []);
-    setOutgoing((out as any) || []);
-    setBlocked((bl as any) || []);
-    setModes((pa as any) || []);
+    if (showLoader && !cached) setLoading(true);
+    try {
+      const [{ data: inc }, { data: out }, { data: bl }, { data: pa }] = await Promise.all([
+        supabase.from("incoming_messages").select("*").eq("user_id", user.id).order("received_at", { ascending: false }).limit(500),
+        supabase.from("message_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(500),
+        supabase.from("blocked_customers" as any).select("id, phone_number, session_id").eq("user_id", user.id),
+        supabase.from("customer_reply_settings" as any).select("phone_number, session_id, ai_paused, mode").eq("user_id", user.id),
+      ]);
+      const incoming = (inc as any) || [];
+      const outgoing = (out as any) || [];
+      const blocked = (bl as any) || [];
+      const modes = (pa as any) || [];
+      setIncoming(incoming);
+      setOutgoing(outgoing);
+      setBlocked(blocked);
+      setModes(modes);
+      writeCache(user.id, { incoming, outgoing, blocked, modes });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
+  useEffect(() => { load(true); /* eslint-disable-next-line */ }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -245,7 +270,24 @@ const Inbox = () => {
             </div>
           </div>
           <ScrollArea className="flex-1">
-            {customers.length === 0 ? (
+            {loading ? (
+              <ul className="divide-y divide-border animate-fade-in">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <li key={i} className="px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Skeleton className="h-3.5 w-3.5 rounded-full" />
+                        <Skeleton className="h-3.5 w-28" />
+                      </div>
+                      <Skeleton className="h-4 w-6 rounded-full" />
+                    </div>
+                    <div className="mt-2">
+                      <Skeleton className="h-3 w-3/4" />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : customers.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">No customers yet.</div>
             ) : (
               <ul className="divide-y divide-border">
