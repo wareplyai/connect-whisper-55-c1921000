@@ -126,6 +126,7 @@ const Inbox = () => {
         kind: "in" as const,
         text: m.message_text || "(no text)",
         ts: m.received_at,
+        pending: !m.reply_sent && !m.reply_text,
       }));
     const replies = incoming
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number && m.reply_text)
