@@ -52,6 +52,8 @@ const EditSession = () => {
         ignore_broadcasts: data.ignore_broadcasts,
         ignore_channels: data.ignore_channels,
         proxy_url: data.proxy_url || "",
+        show_typing_indicator: (data as any).show_typing_indicator ?? true,
+        auto_replies_enabled: (data as any).auto_replies_enabled ?? true,
       });
       setLoading(false);
     })();
@@ -178,9 +180,11 @@ const EditSession = () => {
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-4 space-y-4">
             {[
-              { k: "read_incoming_messages", label: "Read Incoming Messages", desc: "Mark messages as read automatically." },
-              { k: "auto_reject_calls", label: "Auto Reject Calls", desc: "Incoming calls will be automatically rejected." },
-              { k: "always_online", label: "Always Online", desc: "Your session will always appear online." },
+              { k: "show_typing_indicator", label: "Show Typing Indicator (Webhook users)", desc: "Show 'typing…' on customer's phone before reply is sent. Recommended ON — feels more human." },
+              { k: "auto_replies_enabled", label: "Enable Auto Replies", desc: "Master on/off for keyword auto-replies on this session. Independent from AI Agent panel." },
+              { k: "read_incoming_messages", label: "Read Incoming Messages (Blue Tick)", desc: "Mark customer messages as read on WhatsApp (double blue tick). OFF = stays at delivered (gray)." },
+              { k: "auto_reject_calls", label: "Auto Reject Calls", desc: "Incoming voice/video calls will be automatically rejected." },
+              { k: "always_online", label: "Always Online", desc: "Your session will always appear online to customers." },
             ].map((c) => (
               <label key={c.k} className="flex items-start gap-3 cursor-pointer">
                 <Checkbox checked={form[c.k]} onCheckedChange={(v) => set(c.k, !!v)} className="mt-1" />
