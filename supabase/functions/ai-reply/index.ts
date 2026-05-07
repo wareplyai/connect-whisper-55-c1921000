@@ -295,21 +295,44 @@ async function sendTypingIndicator(opts: {
   console.log(`[typing] all attempts failed for to=${to}`);
 }
 
+async function markAsRead(opts: {
+  gateway: string; sessionId: string; apiToken?: string | null; to: string; messageId?: string;
+}): Promise<void> {
+  const { gateway, sessionId, apiToken, to, messageId } = opts;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+  const attempts = [
+    { path: `/api/session/${sessionId}/read`, body: { to, messageId } },
+    { path: `/api/session/${sessionId}/mark-read`, body: { to, messageId } },
+    { path: `/api/session/${sessionId}/chat/read`, body: { to } },
+  ];
+  for (const a of attempts) {
+    try {
+      const r = await fetch(`${gateway}${a.path}`, { method: "POST", headers, body: JSON.stringify(a.body) });
+      if (r.ok) return;
+    } catch { /* swallow */ }
+  }
+}
+
 async function sendViaGateway(opts: {
   gateway: string; sessionId: string; apiToken?: string | null; to: string; message: string;
+  showTyping?: boolean; accountProtection?: boolean;
 }): Promise<{ ok: boolean; to: string; error: string | null; data: unknown }> {
-  const { gateway, sessionId, apiToken, to, message } = opts;
+  const { gateway, sessionId, apiToken, to, message, showTyping = true, accountProtection = true } = opts;
 
-  // Send ONLY ONCE to a single canonical recipient to prevent duplicate replies.
-  // The gateway accepts plain digits and resolves to @s.whatsapp.net internally.
   const digits = String(to).replace(/\D/g, "");
   const candidate = digits || String(to);
 
-  // Show "typing…" on the customer's phone before sending. Duration scales with message length
-  // (≈ 30ms per char, clamped to 800ms–4000ms) so it feels natural.
-  const typingMs = Math.max(800, Math.min(4000, message.length * 30));
-  await sendTypingIndicator({ gateway, sessionId, apiToken, to: candidate, durationMs: typingMs });
-  await new Promise((res) => setTimeout(res, typingMs));
+  // Show typing indicator (only if enabled)
+  if (showTyping) {
+    const typingMs = Math.max(800, Math.min(4000, message.length * 30));
+    await sendTypingIndicator({ gateway, sessionId, apiToken, to: candidate, durationMs: typingMs });
+    await new Promise((res) => setTimeout(res, typingMs));
+  } else if (accountProtection) {
+    // Even without typing, add small human-like delay for account protection
+    const delay = 1000 + Math.floor(Math.random() * 2000);
+    await new Promise((res) => setTimeout(res, delay));
+  }
 
   try {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -422,7 +445,7 @@ Deno.serve(async (req) => {
     // Load session and validate webhook secret
     const { data: session, error: sErr } = await admin
       .from("sessions")
-      .select("id, user_id, webhook_secret, status, api_token, phone_number, enable_webhook, webhook_url, forward_webhook_url, webhook_events")
+      .select("id, user_id, webhook_secret, status, api_token, phone_number, enable_webhook, webhook_url, forward_webhook_url, webhook_events, show_typing_indicator, auto_replies_enabled, read_incoming_messages, enable_message_logging, enable_account_protection")
       .eq("id", sessionId)
       .maybeSingle();
     if (sErr) throw sErr;
@@ -552,9 +575,25 @@ Deno.serve(async (req) => {
     const replyMode: string = (biz as any)?.active_reply_mode
       ?? (biz?.ai_enabled ? "ai_agent" : "none");
     const aiEnabled = customerMode === "ai" && replyMode === "ai_agent";
-    const autoReplyEnabled = customerMode === "auto_reply" || replyMode === "auto_reply";
+    const autoReplyEnabled = (customerMode === "auto_reply" || replyMode === "auto_reply")
+      && (session.auto_replies_enabled !== false)
+      && ((biz as any)?.ai_auto_replies_enabled !== false);
     const connectedSessions: string[] = (biz?.connected_session_ids ?? []) as string[];
     const sessionConnected = connectedSessions.includes(sessionId);
+
+    // Resolve effective behaviour flags (AI Agent panel overrides session for AI replies)
+    const aiTyping = (biz as any)?.ai_show_typing !== false;
+    const aiReadReceipts = (biz as any)?.ai_read_receipts !== false;
+    const sessionTyping = session.show_typing_indicator !== false;
+    const sessionReadReceipts = session.read_incoming_messages === true;
+    const accountProtection = session.enable_account_protection !== false;
+    const messageLogging = session.enable_message_logging !== false;
+
+    // Mark incoming as read on WhatsApp if enabled (session-level)
+    if (sessionReadReceipts) {
+      // best-effort, fire and forget
+      markAsRead({ gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber }).catch(() => {});
+    }
 
     let messageId: string | undefined;
 
@@ -611,10 +650,10 @@ Deno.serve(async (req) => {
         session_id: sessionId,
         user_id: userId,
         from_number: fromNumber,
-        message_text: messageText,
+        message_text: messageLogging ? messageText : null,
         message_type: messageType,
         is_group: isGroup,
-        raw_payload: body,
+        raw_payload: messageLogging ? body : { logging_disabled: true },
         reply_sent: false,
         delivery_status: "processing" as const,
         received_at: new Date().toISOString(),
@@ -680,6 +719,7 @@ Deno.serve(async (req) => {
         const reply = fixedHit.reply;
         const sendResult = await sendViaGateway({
           gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
+          showTyping: sessionTyping, accountProtection,
         });
         if (messageId) {
           await admin.from("incoming_messages").update({
@@ -723,6 +763,7 @@ Deno.serve(async (req) => {
         const reply = ruleHit.reply_template;
         const sendResult = await sendViaGateway({
           gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
+          showTyping: sessionTyping, accountProtection,
         });
         if (messageId) {
           await admin.from("incoming_messages").update({
@@ -840,7 +881,14 @@ Deno.serve(async (req) => {
       apiToken: session.api_token,
       to: fromNumber,
       message: reply,
+      showTyping: aiTyping,
+      accountProtection,
     });
+
+    // AI-side read receipts (independent from session setting)
+    if (aiReadReceipts) {
+      markAsRead({ gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber }).catch(() => {});
+    }
     const sendOk = sendResult.ok;
     const sendErr = sendResult.error;
 

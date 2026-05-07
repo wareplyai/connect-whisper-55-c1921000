@@ -79,6 +79,9 @@ const defaultBusiness = {
   system_prompt: "",
   ai_enabled: false,
   connected_session_ids: [] as string[],
+  ai_show_typing: true,
+  ai_read_receipts: true,
+  ai_auto_replies_enabled: true,
 };
 
 type SessionRow = { id: string; session_name: string; phone_number: string | null; status: string };
@@ -136,6 +139,9 @@ const AIAgent = () => {
           system_prompt: biz.system_prompt ?? "",
           ai_enabled: (biz as any).ai_enabled ?? false,
           connected_session_ids: ((biz as any).connected_session_ids ?? []) as string[],
+          ai_show_typing: (biz as any).ai_show_typing ?? true,
+          ai_read_receipts: (biz as any).ai_read_receipts ?? true,
+          ai_auto_replies_enabled: (biz as any).ai_auto_replies_enabled ?? true,
         });
       }
       setSessions((sessRows ?? []) as SessionRow[]);
@@ -406,6 +412,32 @@ RULES:
           </div>
         )}
         <p className="text-xs text-muted-foreground">Select which WhatsApp numbers the AI agent should reply on.</p>
+      </section>
+
+      {/* AI BEHAVIOR CONTROLS — independent from session settings */}
+      <section className="rounded-xl border border-border bg-card p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-primary" />
+          <h2 className="font-semibold">AI Reply Behavior</h2>
+        </div>
+        <p className="text-xs text-muted-foreground">These controls only affect AI Agent replies. Webhook/auto-reply users use the session-level toggles.</p>
+
+        {[
+          { k: "ai_show_typing" as const, label: "Show Typing Indicator", desc: "Show 'typing…' on customer's phone before AI sends a reply." },
+          { k: "ai_read_receipts" as const, label: "Mark Messages as Read (Blue Tick)", desc: "When AI replies, mark the customer's message as read on WhatsApp." },
+          { k: "ai_auto_replies_enabled" as const, label: "Enable Auto Replies (AI side)", desc: "Allow keyword/fixed-Q&A auto-replies to fire from the AI Agent flow." },
+        ].map((c) => (
+          <div key={c.k} className="flex items-start justify-between gap-4 py-1">
+            <div>
+              <p className="text-sm font-medium">{c.label}</p>
+              <p className="text-xs text-muted-foreground">{c.desc}</p>
+            </div>
+            <Switch
+              checked={(business as any)[c.k]}
+              onCheckedChange={(v) => persistBusinessPatch({ [c.k]: v } as any)}
+            />
+          </div>
+        ))}
       </section>
 
       {/* API KEY (encrypted server-side) */}

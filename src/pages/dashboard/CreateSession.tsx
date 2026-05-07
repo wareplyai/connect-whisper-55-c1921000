@@ -41,6 +41,8 @@ const CreateSession = () => {
     ignore_broadcasts: true,
     ignore_channels: true,
     proxy_url: "",
+    show_typing_indicator: true,
+    auto_replies_enabled: true,
   });
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -126,6 +128,8 @@ const CreateSession = () => {
       ignore_broadcasts: form.ignore_broadcasts,
       ignore_channels: form.ignore_channels,
       proxy_url: form.proxy_url || null,
+      show_typing_indicator: form.show_typing_indicator,
+      auto_replies_enabled: form.auto_replies_enabled,
       status: "qr_pending",
     }).select().single();
 
@@ -240,7 +244,9 @@ const CreateSession = () => {
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-4 space-y-4">
             {[
-              { k: "read_incoming_messages", label: "Read Incoming Messages", desc: "Mark messages as read automatically." },
+              { k: "show_typing_indicator", label: "Show Typing Indicator (Webhook users)", desc: "Show 'typing…' on customer's phone before reply (only applies to webhook/auto-reply senders, not AI Agent)." },
+              { k: "auto_replies_enabled", label: "Enable Auto Replies", desc: "Master on/off for keyword auto-replies on this session. Independent from AI Agent panel." },
+              { k: "read_incoming_messages", label: "Read Incoming Messages (Blue Tick)", desc: "Mark messages as read on WhatsApp (double blue tick). OFF = stays gray/delivered." },
               { k: "auto_reject_calls", label: "Auto Reject Calls", desc: "Incoming calls will be automatically rejected." },
               { k: "always_online", label: "Always Online", desc: "Your session will always appear online." },
             ].map((c) => (
