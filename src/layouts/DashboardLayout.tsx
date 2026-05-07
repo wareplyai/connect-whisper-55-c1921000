@@ -50,7 +50,7 @@ const DashboardLayout = () => {
         <div className="flex-1 min-h-0 px-3 py-4 flex flex-col overflow-y-auto">
           <p className="px-3 mb-2 text-xs uppercase tracking-wider text-muted-foreground">Platform</p>
           <nav className="space-y-1">
-            {nav.map((n) => (
+            {visibleNav.map((n) => (
               <NavLink
                 key={n.to}
                 to={n.to}
