@@ -124,9 +124,6 @@ const DashboardLayout = () => {
         </div>
       </main>
 
-      <button className="fixed bottom-5 right-5 inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2.5 text-sm font-medium shadow-lg hover:bg-primary-hover">
-        <MessageCircle className="h-4 w-4" /> Support
-      </button>
     </div>
   );
 };
