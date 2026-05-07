@@ -109,10 +109,12 @@ const Inbox = () => {
     if (!selected) return false;
     return blocked.some((b) => b.session_id === selected.session_id && b.phone_number === selected.phone_number);
   }, [blocked, selected]);
-  const isAiPaused = useMemo(() => {
-    if (!selected) return false;
-    return paused.some((p) => p.session_id === selected.session_id && p.phone_number === selected.phone_number && p.ai_paused);
-  }, [paused, selected]);
+  const customerMode: "ai" | "human" | "auto_reply" = useMemo(() => {
+    if (!selected) return "ai";
+    const row = modes.find((p) => p.session_id === selected.session_id && p.phone_number === selected.phone_number);
+    if (row?.mode === "human" || row?.mode === "auto_reply" || row?.mode === "ai") return row.mode as any;
+    return row?.ai_paused ? "human" : "ai";
+  }, [modes, selected]);
 
   const conversation = useMemo(() => {
     if (!selected) return [];
