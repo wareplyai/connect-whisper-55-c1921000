@@ -32,6 +32,7 @@ import Subscription from "./pages/dashboard/Subscription";
 import Plans from "./pages/dashboard/Plans";
 import Payments from "./pages/dashboard/Payments";
 import AutoReplies from "./pages/dashboard/AutoReplies";
+import Inbox from "./pages/dashboard/Inbox";
 import AIAgent from "./pages/dashboard/AIAgent";
 import BehaviorSettings from "./pages/dashboard/BehaviorSettings";
 import AdminPanel from "./pages/admin/AdminPanel";
@@ -90,6 +91,7 @@ const App = () => (
                 <Route path="sessions/:id" element={<SessionDetail />} />
                 <Route path="sessions/:id/edit" element={<EditSession />} />
                 <Route path="sessions/:id/connect" element={<ConnectSession />} />
+                <Route path="inbox" element={<Inbox />} />
                 <Route path="subscription" element={<Subscription />} />
                 <Route path="subscription/plans" element={<Plans />} />
                 <Route path="payments" element={<Payments />} />
