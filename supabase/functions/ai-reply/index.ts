@@ -1014,6 +1014,20 @@ Deno.serve(async (req) => {
       messageId = msgRow?.id;
     }
 
+    // If we have an image (resolved from payload or recovered from gateway), upload it to
+    // chat-media bucket and persist the public URL on the message so it shows in the inbox.
+    if (messageId && imageUrl) {
+      try {
+        const publicUrl = await uploadChatMediaImage(admin, userId, sessionId, imageUrl);
+        if (publicUrl) {
+          await admin.from("incoming_messages").update({ image_url: publicUrl }).eq("id", messageId);
+          imageUrl = publicUrl;
+          console.log("[ai-reply] saved chat-media url for message", messageId);
+        }
+      } catch (e) {
+        console.log("[ai-reply] chat-media save failed:", (e as Error)?.message);
+      }
+    }
     await deliverUserWebhook({
       admin,
       session,
