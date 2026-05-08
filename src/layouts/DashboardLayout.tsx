@@ -15,6 +15,7 @@ const nav = [
   { to: "/dashboard/auto-replies", label: "Auto-Replies", icon: MessageSquareText },
   { to: "/dashboard/ai-agent", label: "AI Agent", icon: Bot },
   { to: "/dashboard/behavior", label: "Behavior & Anti-Ban", icon: ShieldCheck },
+  { to: "/dashboard/products", label: "Products", icon: Package },
   { to: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
   { to: "/dashboard/payments", label: "My Payments", icon: Receipt },
 ];
