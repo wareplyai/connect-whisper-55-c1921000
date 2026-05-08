@@ -1008,14 +1008,93 @@ Deno.serve(async (req) => {
     const systemPrompt = `${baseSystem}${qaContext}`;
 
     let reply = "";
-    try {
+
+    // ---- Image-message branch: vision describe + product match ----
+    if (isImageMessage && imageUrl) {
+      if (keyRow.platform !== "openai") {
+        reply = "Sorry, image search needs an OpenAI API key. Please describe the product in text. ছবি match করতে OpenAI key দরকার, দয়া করে product টি text এ describe করুন।";
+      } else {
+        try {
+          const desc = await describeImageWithOpenAI(apiKey, imageUrl);
+          const { data: productRows } = await admin
+            .from("products")
+            .select("id, name, price, description, category, stock, image_url, ai_tags")
+            .eq("user_id", userId)
+            .eq("is_active", true)
+            .limit(500);
+
+          let best: { score: number; row: any } | null = null;
+          for (const p of productRows || []) {
+            const haystack = [p.name, p.description, p.category, p.ai_tags].filter(Boolean).join(" ");
+            const score = textSimilarity(desc, haystack);
+            if (!best || score > best.score) best = { score, row: p };
+          }
+
+          if (best && best.score >= 0.18) {
+            const p = best.row;
+            const conf = Math.round(best.score * 100);
+            reply = `✅ Match found (${conf}% confidence)\n\n📦 ${p.name}\n💰 Price: ${p.price}\n${p.stock > 0 ? `📊 Stock: ${p.stock}` : "❌ Out of stock"}\n${p.description ? `\n${p.description}` : ""}`;
+          } else {
+            // Log for admin notification
+            await admin.from("unmatched_image_queries").insert({
+              user_id: userId,
+              session_id: sessionId,
+              from_number: fromNumber,
+              image_url: imageUrl,
+              image_description: desc,
+              best_match_score: best?.score ?? 0,
+            });
+            // Notify admin via WhatsApp (their own session)
+            try {
+              if (session.phone_number) {
+                await sendViaGateway({
+                  gateway: GATEWAY,
+                  sessionId,
+                  apiToken: session.api_token,
+                  to: session.phone_number,
+                  message: `🔔 Customer ${fromNumber} sent a product image we couldn't match.\nAI saw: ${desc.slice(0, 200)}`,
+                  showTyping: false,
+                  accountProtection: false,
+                });
+              }
+            } catch (_e) { /* non-fatal */ }
+            reply = "I couldn't find a matching product from your image. Could you please describe the product in text (name/color/size)? দুঃখিত, ছবি থেকে product খুঁজে পাইনি — দয়া করে product টি text এ describe করুন।";
+          }
+        } catch (visErr: any) {
+          console.error("[image-match] error:", visErr?.message);
+          reply = "Sorry, I couldn't read your image right now. Please describe the product in text.";
+        }
+      }
+    } else {
+      try {
+        reply = await callAI({
+          platform: keyRow.platform,
+          model: keyRow.model && keyRow.model !== "default" ? keyRow.model : (
+            keyRow.platform === "openai" ? "gpt-4o-mini" :
+            keyRow.platform === "gemini" ? "gemini-1.5-flash" :
+            "deepseek-chat"
+          ),
+          apiKey,
+          systemPrompt,
+          userMessage: messageText,
+        });
+      } catch (aiErr: any) {
+        if (messageId) {
+          await admin.from("incoming_messages").update({
+            reply_error: aiErr?.message || "AI call failed",
+            delivery_status: "failed",
+            processed_at: new Date().toISOString(),
+          }).eq("id", messageId);
+        }
+        throw aiErr;
+      }
+    }
+
+    // Skip the original try/catch wrapper below (now inlined)
+    if (false) {
       reply = await callAI({
         platform: keyRow.platform,
-        model: keyRow.model && keyRow.model !== "default" ? keyRow.model : (
-          keyRow.platform === "openai" ? "gpt-4o-mini" :
-          keyRow.platform === "gemini" ? "gemini-1.5-flash" :
-          "deepseek-chat"
-        ),
+        model: "x",
         apiKey,
         systemPrompt,
         userMessage: messageText,
