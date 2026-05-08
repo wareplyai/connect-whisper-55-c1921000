@@ -39,15 +39,20 @@ export function useFeatureAccess() {
 
     loadAccess();
 
-    const channel = supabase
-      .channel(`feature-access-${user?.id || "guest"}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "global_feature_settings" }, loadAccess)
-      .on(
+    const channelName = `feature-access-${user?.id || "guest"}-${Math.random().toString(36).slice(2)}`;
+    const ch = supabase.channel(channelName);
+    ch.on("postgres_changes", { event: "*", schema: "public", table: "global_feature_settings" }, loadAccess);
+    if (user?.id) {
+      ch.on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "user_feature_access", filter: user?.id ? `user_id=eq.${user.id}` : undefined },
+        { event: "*", schema: "public", table: "user_feature_access", filter: `user_id=eq.${user.id}` },
         loadAccess,
-      )
-      .subscribe();
+      );
+    } else {
+      ch.on("postgres_changes", { event: "*", schema: "public", table: "user_feature_access" }, loadAccess);
+    }
+    ch.subscribe();
+    const channel = ch;
 
     return () => {
       cancelled = true;
