@@ -184,28 +184,63 @@ const Landing = () => {
         {/* Base layered background */}
         <div aria-hidden="true" className="hero-bg absolute inset-0 z-0" />
 
-        {/* Concentric orbital arcs (like reference image) */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="hero-arcs">
-            <span className="hero-arc" style={{ width: "600px", height: "600px" }} />
-            <span className="hero-arc" style={{ width: "900px", height: "900px" }} />
-            <span className="hero-arc" style={{ width: "1250px", height: "1250px" }} />
-            <span className="hero-arc" style={{ width: "1650px", height: "1650px" }} />
-            <span className="hero-arc" style={{ width: "2100px", height: "2100px" }} />
-            <span className="hero-arc" style={{ width: "2600px", height: "2600px" }} />
-          </div>
-        </div>
+        {/* Silk curves - left */}
+        <svg
+          aria-hidden="true"
+          className="pointer-events-none absolute left-0 top-0 h-full w-[55%] z-0 hero-silk hero-silk-left"
+          viewBox="0 0 600 1000"
+          preserveAspectRatio="none"
+          fill="none"
+        >
+          <defs>
+            <linearGradient id="silkGradL1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.55" />
+              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="silkGradL2" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path d="M0,0 C180,260 -40,520 220,780 C420,940 80,1000 0,1000 Z" fill="url(#silkGradL1)" />
+          <path d="M0,80 C220,300 40,560 260,820 C420,980 60,1000 0,1000 Z" fill="url(#silkGradL2)" opacity="0.7" />
+          <path d="M0,200 C260,380 100,640 320,880 C440,990 40,1000 0,1000 Z" stroke="hsl(var(--primary) / 0.25)" strokeWidth="1" fill="none" />
+          <path d="M0,340 C300,500 160,720 360,920" stroke="hsl(var(--primary) / 0.18)" strokeWidth="1" fill="none" />
+        </svg>
 
-        {/* Soft dotted texture */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hero-dots" />
+        {/* Silk curves - right (mirrored) */}
+        <svg
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 top-0 h-full w-[55%] z-0 hero-silk hero-silk-right"
+          viewBox="0 0 600 1000"
+          preserveAspectRatio="none"
+          fill="none"
+          style={{ transform: "scaleX(-1)" }}
+        >
+          <defs>
+            <linearGradient id="silkGradR1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.55" />
+              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="silkGradR2" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path d="M0,0 C180,260 -40,520 220,780 C420,940 80,1000 0,1000 Z" fill="url(#silkGradR1)" />
+          <path d="M0,80 C220,300 40,560 260,820 C420,980 60,1000 0,1000 Z" fill="url(#silkGradR2)" opacity="0.7" />
+          <path d="M0,200 C260,380 100,640 320,880 C440,990 40,1000 0,1000 Z" stroke="hsl(var(--primary) / 0.25)" strokeWidth="1" fill="none" />
+          <path d="M0,340 C300,500 160,720 360,920" stroke="hsl(var(--primary) / 0.18)" strokeWidth="1" fill="none" />
+        </svg>
 
-        {/* Top spotlight */}
+        {/* Soft center glow */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 -top-40 z-0 h-[680px] w-[1100px] max-w-[140vw] -translate-x-1/2 rounded-full hero-spotlight"
+          className="pointer-events-none absolute left-1/2 top-1/3 z-0 h-[600px] w-[900px] max-w-[120vw] -translate-x-1/2 -translate-y-1/2 rounded-full hero-spotlight"
         />
 
-        {/* Animated vertical beams removed per request */}
+        {/* Subtle dotted texture */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hero-dots" />
 
         {/* Floating chat-bubble accents (WhatsApp vibe) */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hidden md:block">
@@ -219,7 +254,7 @@ const Landing = () => {
         </div>
 
         {/* Noise overlay */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hero-noise mix-blend-overlay opacity-[0.06] dark:opacity-[0.08]" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hero-noise mix-blend-overlay opacity-[0.05] dark:opacity-[0.07]" />
 
         {/* Bottom fade into page */}
         <div
@@ -230,17 +265,32 @@ const Landing = () => {
         <style>{`
           .hero-bg {
             background:
-              radial-gradient(1200px 600px at 50% -10%, hsl(var(--primary) / 0.18), transparent 60%),
-              radial-gradient(800px 500px at 0% 100%, hsl(160 80% 45% / 0.10), transparent 60%),
-              radial-gradient(800px 500px at 100% 100%, hsl(190 90% 50% / 0.08), transparent 60%),
-              linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--card) / 0.6) 100%);
+              radial-gradient(1000px 500px at 50% -5%, hsl(var(--primary) / 0.10), transparent 65%),
+              linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--card) / 0.4) 100%);
           }
           .dark .hero-bg {
             background:
-              radial-gradient(1200px 600px at 50% -10%, hsl(var(--primary) / 0.30), transparent 60%),
-              radial-gradient(900px 600px at 0% 100%, hsl(160 90% 40% / 0.18), transparent 60%),
-              radial-gradient(900px 600px at 100% 100%, hsl(190 90% 45% / 0.14), transparent 60%),
-              linear-gradient(180deg, #050a07 0%, #03070a 60%, #02050a 100%);
+              radial-gradient(1100px 600px at 50% -5%, hsl(var(--primary) / 0.22), transparent 65%),
+              linear-gradient(180deg, #04080b 0%, #03060a 60%, #02040a 100%);
+          }
+
+          /* Silk curve animations */
+          .hero-silk {
+            opacity: 0.85;
+            mix-blend-mode: screen;
+            animation: hero-silk-breathe 14s ease-in-out infinite;
+          }
+          .dark .hero-silk { opacity: 0.7; }
+          .hero-silk-right { animation-delay: -7s; }
+          @keyframes hero-silk-breathe {
+            0%, 100% { transform: translateY(0) scaleY(1); }
+            50% { transform: translateY(-10px) scaleY(1.03); }
+          }
+          .hero-silk-right { transform: scaleX(-1); }
+          .hero-silk-right { animation: hero-silk-breathe-r 14s ease-in-out infinite; }
+          @keyframes hero-silk-breathe-r {
+            0%, 100% { transform: scaleX(-1) translateY(0) scaleY(1); }
+            50% { transform: scaleX(-1) translateY(-10px) scaleY(1.03); }
           }
 
           .hero-aurora {
