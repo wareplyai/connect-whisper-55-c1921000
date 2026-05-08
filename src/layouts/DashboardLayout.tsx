@@ -33,6 +33,7 @@ const DashboardLayout = () => {
   const visibleNav = nav.filter((n) => {
     if (n.to === "/dashboard/ai-agent") return access.ai_agent;
     if (n.to === "/dashboard/auto-replies") return access.auto_replies;
+    if (n.to === "/dashboard/abandoned-cart") return access.abandoned_cart;
     return true;
   });
   const location = useLocation();
