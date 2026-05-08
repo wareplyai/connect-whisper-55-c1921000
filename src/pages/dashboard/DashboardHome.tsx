@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CreditCard, CheckCircle2, MessageSquare, Wifi, Package, ShoppingCart, TrendingUp, Clock, AlertCircle, XCircle } from "lucide-react";
@@ -9,6 +10,7 @@ import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBan
 
 const DashboardHome = () => {
   const { profile } = useAuth();
+  const { access } = useFeatureAccess();
   const [planInfo, setPlanInfo] = useState<{ plan: string; status: string } | null>(null);
   const [sessionCount, setSessionCount] = useState(0);
   const [connectedSessions, setConnectedSessions] = useState(0);
@@ -184,35 +186,36 @@ const DashboardHome = () => {
         </div>
       </div>
 
-      {/* Incomplete Orders (moved up for visibility) */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold flex items-center gap-2 text-orange-600">
-            <AlertCircle className="h-4 w-4" /> Incomplete Orders <span className="text-xs text-muted-foreground font-normal">(WordPress plugin)</span>
-          </h3>
-          <Button asChild size="sm" variant="outline" className="border-orange-400 text-orange-600 hover:bg-orange-500 hover:text-white">
-            <Link to="/dashboard/abandoned-cart">View all</Link>
-          </Button>
+      {access.abandoned_cart && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold flex items-center gap-2 text-orange-600">
+              <AlertCircle className="h-4 w-4" /> Incomplete Orders <span className="text-xs text-muted-foreground font-normal">(WordPress plugin)</span>
+            </h3>
+            <Button asChild size="sm" variant="outline" className="border-orange-400 text-orange-600 hover:bg-orange-500 hover:text-white">
+              <Link to="/dashboard/abandoned-cart">View all</Link>
+            </Button>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
+              <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Total received</span><MessageSquare className="h-4 w-4 text-orange-500" /></div>
+              <p className="text-2xl font-bold">{aStats.received}</p>
+            </div>
+            <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
+              <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Incomplete</span><AlertCircle className="h-4 w-4 text-orange-500" /></div>
+              <p className="text-2xl font-bold text-orange-600">{aStats.incomplete}</p>
+            </div>
+            <div className="rounded-xl border border-green-200 dark:border-green-900/40 bg-card p-5">
+              <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Completed</span><CheckCircle2 className="h-4 w-4 text-green-500" /></div>
+              <p className="text-2xl font-bold text-green-600">{aStats.completed}</p>
+            </div>
+            <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
+              <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">SMS sent</span><CheckCircle2 className="h-4 w-4 text-orange-500" /></div>
+              <p className="text-2xl font-bold text-orange-600">{aStats.sent}</p>
+            </div>
+          </div>
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-          <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
-            <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Total received</span><MessageSquare className="h-4 w-4 text-orange-500" /></div>
-            <p className="text-2xl font-bold">{aStats.received}</p>
-          </div>
-          <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
-            <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Incomplete</span><AlertCircle className="h-4 w-4 text-orange-500" /></div>
-            <p className="text-2xl font-bold text-orange-600">{aStats.incomplete}</p>
-          </div>
-          <div className="rounded-xl border border-green-200 dark:border-green-900/40 bg-card p-5">
-            <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Completed</span><CheckCircle2 className="h-4 w-4 text-green-500" /></div>
-            <p className="text-2xl font-bold text-green-600">{aStats.completed}</p>
-          </div>
-          <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
-            <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">SMS sent</span><CheckCircle2 className="h-4 w-4 text-orange-500" /></div>
-            <p className="text-2xl font-bold text-orange-600">{aStats.sent}</p>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* WooCommerce Stats */}
       <div>
