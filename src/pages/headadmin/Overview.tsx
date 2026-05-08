@@ -66,7 +66,25 @@ export default function HeadAdminOverview() {
   const [planDist, setPlanDist] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
   const [todayStats, setTodayStats] = useState({ newToday: 0, failedToday: 0, activeUsers: 0, msgsToday: 0 });
+  const [aStats, setAStats] = useState({ received: 0, incomplete: 0, completed: 0, sent: 0 });
+  const [aRecent, setARecent] = useState<any[]>([]);
   const [loadingExtra, setLoadingExtra] = useState(true);
+
+  const loadAbandoned = async () => {
+    const [{ data: conns }, { data: rows }] = await Promise.all([
+      (supabase.from("abandoned_connections" as any) as any).select("total_received,total_incomplete,total_completed,total_sent"),
+      (supabase.from("abandoned_orders" as any) as any).select("id,customer_name,customer_phone_full,customer_phone,product_name,status,sms_sent,sms_error,created_at")
+        .eq("status", "incomplete").order("created_at", { ascending: false }).limit(10),
+    ]);
+    const agg = (conns || []).reduce((acc: any, c: any) => ({
+      received: acc.received + (c.total_received || 0),
+      incomplete: acc.incomplete + (c.total_incomplete || 0),
+      completed: acc.completed + (c.total_completed || 0),
+      sent: acc.sent + (c.total_sent || 0),
+    }), { received: 0, incomplete: 0, completed: 0, sent: 0 });
+    setAStats(agg);
+    setARecent((rows as any) || []);
+  };
 
   const loadExtra = async () => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
