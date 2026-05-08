@@ -16,6 +16,8 @@ const DashboardHome = () => {
   const [failed, setFailed] = useState<any[]>([]);
   const [chart, setChart] = useState<{ day: string; sent: number; failed: number; pending: number }[]>([]);
   const [stats, setStats] = useState({ total: 0, sent: 0, failed: 0, pending: 0 });
+  const [wooStats, setWooStats] = useState({ totalProducts: 0, totalOrders: 0, todayOrders: 0, todayRevenue: 0 });
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
   useEffect(() => {
     if (!profile) return;
