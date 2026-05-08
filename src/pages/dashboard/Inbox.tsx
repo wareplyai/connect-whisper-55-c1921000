@@ -481,15 +481,35 @@ const Inbox = () => {
                       <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
                         m.kind === "out" ? "bg-green-500/15 text-foreground" : "bg-muted text-foreground"
                       }`}>
-                        {(m as any).imageUrl && (
-                          <a href={(m as any).imageUrl} target="_blank" rel="noopener noreferrer" className="block mb-1">
+                        {(m as any).imageUrl ? (
+                          <button
+                            type="button"
+                            onClick={() => setLightbox((m as any).imageUrl)}
+                            className="block mb-1 rounded-lg overflow-hidden border border-border hover:opacity-90 transition"
+                            title="Click to view full image"
+                          >
                             <img
                               src={(m as any).imageUrl}
-                              alt="Customer attachment"
-                              className="max-h-56 max-w-full rounded-lg object-cover border border-border"
+                              alt={(m as any).productName || "Customer attachment"}
+                              className="max-h-56 max-w-full object-cover"
                               loading="lazy"
                             />
-                          </a>
+                          </button>
+                        ) : m.kind === "in" && (m.text === "" || m.text?.startsWith("[customer sent an image]")) ? (
+                          <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-md px-2 py-1.5 border border-border">
+                            <ImageIcon className="h-3.5 w-3.5" />
+                            <span>Image (loading…)</span>
+                          </div>
+                        ) : null}
+                        {((m as any).productName || (m as any).orderNumber) && (
+                          <div className="flex flex-wrap gap-1 mb-1">
+                            {(m as any).productName && (
+                              <Badge variant="secondary" className="text-[10px]">📦 {(m as any).productName}</Badge>
+                            )}
+                            {(m as any).orderNumber && (
+                              <Badge variant="secondary" className="text-[10px]">#{(m as any).orderNumber}</Badge>
+                            )}
+                          </div>
                         )}
                         {m.text && <p className="whitespace-pre-wrap break-words">{m.text}</p>}
                         <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
