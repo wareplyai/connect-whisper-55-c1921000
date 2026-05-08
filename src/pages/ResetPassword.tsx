@@ -3,11 +3,10 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Logo } from "@/components/Logo";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock, ArrowRight } from "lucide-react";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { AuthInput } from "@/components/auth/AuthInput";
 
 const ResetPassword = () => {
   const nav = useNavigate();
@@ -17,11 +16,9 @@ const ResetPassword = () => {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Supabase puts the recovery token in the URL hash and emits PASSWORD_RECOVERY
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setReady(true);
     });
-    // Also accept if the user already has a recovery session
     supabase.auth.getSession().then(({ data }) => { if (data.session) setReady(true); });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -39,35 +36,57 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen grid place-items-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <Link to="/" className="flex items-center justify-center mb-6">
-          <Logo size={56} showText={false} />
+    <AuthShell
+      title="Set a new password"
+      subtitle="Choose a strong password you haven't used before"
+      footer={
+        <Link to="/login" className="text-foreground font-medium underline underline-offset-4 hover:text-primary transition-colors">
+          Back to login
         </Link>
-        <h1 className="text-2xl font-bold text-center text-foreground">Set a new password</h1>
-        <p className="text-center text-sm text-muted-foreground mt-1.5">
-          Enter your new password below
-        </p>
-
-        <form onSubmit={onSubmit} className="mt-7 space-y-4">
-          <div>
-            <Label htmlFor="password" className="text-sm font-medium">New password</Label>
-            <Input id="password" type="password" required minLength={6} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1.5 h-11" />
-          </div>
-          <div>
-            <Label htmlFor="confirm" className="text-sm font-medium">Confirm password</Label>
-            <Input id="confirm" type="password" required placeholder="Confirm password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className="mt-1.5 h-11" />
-          </div>
-          <Button type="submit" disabled={loading || !ready} className="w-full h-11 bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : ready ? "Update password" : "Waiting for recovery link..."}
-          </Button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          <Link to="/login" className="text-foreground underline underline-offset-4">Back to login</Link>
-        </p>
-      </div>
-    </div>
+      }
+    >
+      <form onSubmit={onSubmit} className="space-y-5">
+        <AuthInput
+          id="password"
+          label="New password"
+          type="password"
+          required
+          minLength={6}
+          placeholder="At least 6 characters"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          icon={<Lock className="h-4 w-4" />}
+          togglePassword
+        />
+        <AuthInput
+          id="confirm"
+          label="Confirm password"
+          type="password"
+          required
+          placeholder="Re-enter password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          icon={<Lock className="h-4 w-4" />}
+          togglePassword
+        />
+        <Button
+          type="submit"
+          disabled={loading || !ready}
+          className="group w-full h-12 rounded-xl bg-primary text-primary-foreground hover:bg-primary-hover font-medium disabled:opacity-50 shadow-[0_8px_30px_-8px_hsl(var(--primary)/0.6)]"
+        >
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : ready ? (
+            <>
+              Update password
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </>
+          ) : (
+            "Waiting for recovery link..."
+          )}
+        </Button>
+      </form>
+    </AuthShell>
   );
 };
 
