@@ -26,7 +26,7 @@ export function useFeatureAccess() {
           : Promise.resolve({ data: [] as any[] }),
       ]);
       if (cancelled) return;
-      const result: Record<FeatureKey, boolean> = { ai_agent: true, auto_replies: true };
+      const result: Record<FeatureKey, boolean> = { ai_agent: true, auto_replies: true, abandoned_cart: true };
       (globals || []).forEach((g: any) => {
         if (g.feature in result) result[g.feature as FeatureKey] = !!g.show_to_users;
       });
