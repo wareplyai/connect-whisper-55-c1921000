@@ -265,22 +265,22 @@ const Landing = () => {
         <style>{`
           .hero-bg {
             background:
-              radial-gradient(1000px 500px at 50% -5%, hsl(var(--primary) / 0.10), transparent 65%),
-              linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--card) / 0.4) 100%);
+              radial-gradient(900px 450px at 50% -5%, hsl(var(--primary) / 0.05), transparent 65%),
+              linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--card) / 0.3) 100%);
           }
           .dark .hero-bg {
             background:
-              radial-gradient(1100px 600px at 50% -5%, hsl(var(--primary) / 0.22), transparent 65%),
+              radial-gradient(1100px 600px at 50% -5%, hsl(var(--primary) / 0.14), transparent 65%),
               linear-gradient(180deg, #04080b 0%, #03060a 60%, #02040a 100%);
           }
 
           /* Silk curve animations */
           .hero-silk {
-            opacity: 0.85;
+            opacity: 0.7;
             mix-blend-mode: screen;
             animation: hero-silk-breathe 14s ease-in-out infinite;
           }
-          .dark .hero-silk { opacity: 0.7; }
+          .dark .hero-silk { opacity: 0.55; }
           .hero-silk-right { animation-delay: -7s; }
           @keyframes hero-silk-breathe {
             0%, 100% { transform: translateY(0) scaleY(1); }
