@@ -859,9 +859,11 @@ export type Database = {
           is_active: boolean
           name: string
           price: number
+          source: string
           stock: number
           updated_at: string
           user_id: string
+          woo_product_id: number | null
         }
         Insert: {
           ai_tags?: string | null
@@ -875,9 +877,11 @@ export type Database = {
           is_active?: boolean
           name: string
           price?: number
+          source?: string
           stock?: number
           updated_at?: string
           user_id: string
+          woo_product_id?: number | null
         }
         Update: {
           ai_tags?: string | null
@@ -891,9 +895,11 @@ export type Database = {
           is_active?: boolean
           name?: string
           price?: number
+          source?: string
           stock?: number
           updated_at?: string
           user_id?: string
+          woo_product_id?: number | null
         }
         Relationships: []
       }
@@ -1282,6 +1288,114 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      woo_connections: {
+        Row: {
+          consumer_key: string
+          consumer_secret: string
+          created_at: string
+          default_session_id: string | null
+          id: string
+          is_active: boolean
+          last_sync_at: string | null
+          last_sync_error: string | null
+          last_sync_status: string | null
+          store_url: string
+          total_synced: number
+          updated_at: string
+          user_id: string
+          webhook_secret: string
+        }
+        Insert: {
+          consumer_key: string
+          consumer_secret: string
+          created_at?: string
+          default_session_id?: string | null
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          store_url: string
+          total_synced?: number
+          updated_at?: string
+          user_id: string
+          webhook_secret?: string
+        }
+        Update: {
+          consumer_key?: string
+          consumer_secret?: string
+          created_at?: string
+          default_session_id?: string | null
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          store_url?: string
+          total_synced?: number
+          updated_at?: string
+          user_id?: string
+          webhook_secret?: string
+        }
+        Relationships: []
+      }
+      woo_orders: {
+        Row: {
+          confirmation_error: string | null
+          confirmation_sent: boolean
+          confirmation_sent_at: string | null
+          created_at: string
+          currency: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          id: string
+          line_items: Json | null
+          order_number: string | null
+          raw: Json | null
+          status: string | null
+          total: number | null
+          user_id: string
+          woo_order_id: number
+        }
+        Insert: {
+          confirmation_error?: string | null
+          confirmation_sent?: boolean
+          confirmation_sent_at?: string | null
+          created_at?: string
+          currency?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          line_items?: Json | null
+          order_number?: string | null
+          raw?: Json | null
+          status?: string | null
+          total?: number | null
+          user_id: string
+          woo_order_id: number
+        }
+        Update: {
+          confirmation_error?: string | null
+          confirmation_sent?: boolean
+          confirmation_sent_at?: string | null
+          created_at?: string
+          currency?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          line_items?: Json | null
+          order_number?: string | null
+          raw?: Json | null
+          status?: string | null
+          total?: number | null
+          user_id?: string
+          woo_order_id?: number
+        }
+        Relationships: []
       }
     }
     Views: {
