@@ -663,12 +663,6 @@ Deno.serve(async (req) => {
     const accountProtection = session.enable_account_protection !== false;
     const messageLogging = session.enable_message_logging !== false;
 
-    // Mark incoming as read on WhatsApp if enabled (session-level)
-    if (sessionReadReceipts) {
-      // best-effort, fire and forget
-      markAsRead({ gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, messageKey: incomingMessageKey }).catch(() => {});
-    }
-
     let messageId: string | undefined;
 
     if (sourceMessageId) {
@@ -806,6 +800,9 @@ Deno.serve(async (req) => {
           }).eq("id", messageId);
         }
         if (sendResult.ok) {
+          if (sessionReadReceipts || aiReadReceipts) {
+            await markAsRead({ gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, messageId, messageKey: incomingMessageKey });
+          }
           await admin.from("message_logs").insert({
             user_id: userId, session_id: sessionId, to_number: sendResult.to,
             message_type: "text", payload: { text: reply, auto_reply: true, source: "fixed_qa" },
@@ -850,6 +847,9 @@ Deno.serve(async (req) => {
           }).eq("id", messageId);
         }
         if (sendResult.ok) {
+          if (sessionReadReceipts || aiReadReceipts) {
+            await markAsRead({ gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, messageId, messageKey: incomingMessageKey });
+          }
           await admin.from("auto_reply_rules")
             .update({ match_count: (ruleHit.match_count || 0) + 1 })
             .eq("id", ruleHit.id);
@@ -959,12 +959,12 @@ Deno.serve(async (req) => {
       accountProtection,
     });
 
-    // AI-side read receipts (independent from session setting)
-    if (aiReadReceipts) {
-      markAsRead({ gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, messageKey: incomingMessageKey }).catch(() => {});
-    }
     const sendOk = sendResult.ok;
     const sendErr = sendResult.error;
+
+    if (sendOk && (sessionReadReceipts || aiReadReceipts)) {
+      await markAsRead({ gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, messageId, messageKey: incomingMessageKey });
+    }
 
     if (messageId) {
       await admin.from("incoming_messages").update({
