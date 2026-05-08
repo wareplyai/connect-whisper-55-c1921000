@@ -90,6 +90,24 @@ async function callAI(opts: {
   throw new Error(`Unsupported platform: ${platform}`);
 }
 
+// Detect whether the payload looks image-related, even when the binary URL/base64 is stripped.
+// Looks for: imageMessage object key, mimetype starting with image/, message_type/messageType containing "image".
+function payloadLooksLikeImage(value: unknown, depth = 0): boolean {
+  if (depth > 8 || value == null) return false;
+  if (typeof value === "string") return /^image\//i.test(value);
+  if (Array.isArray(value)) return value.slice(0, 50).some((v) => payloadLooksLikeImage(v, depth + 1));
+  if (typeof value !== "object") return false;
+  const obj = value as Record<string, unknown>;
+  for (const k of Object.keys(obj)) {
+    const nk = k.toLowerCase();
+    if (nk === "imagemessage" || nk === "image_message") return true;
+    if ((nk === "mimetype" || nk === "mime_type" || nk === "contenttype" || nk === "content_type") && typeof obj[k] === "string" && /^image\//i.test(obj[k] as string)) return true;
+    if ((nk === "messagetype" || nk === "message_type" || nk === "type") && typeof obj[k] === "string" && /image|photo|picture/i.test(obj[k] as string)) return true;
+  }
+  for (const v of Object.values(obj)) if (payloadLooksLikeImage(v, depth + 1)) return true;
+  return false;
+}
+
 // Walk the payload deeply and return the first usable image source — either:
 //   - a data: URL  (data:image/...;base64,...)
 //   - an http(s) URL that looks like an image
