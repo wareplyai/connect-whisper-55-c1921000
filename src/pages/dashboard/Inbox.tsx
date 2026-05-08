@@ -33,11 +33,13 @@ type OutgoingRow = {
   created_at: string;
 };
 
+// reply_text on incoming_messages is only ever written by the ai-reply edge function
+// (manual replies go to message_logs only). So the default is "ai", not "manual".
 const sourceOf = (m: IncomingRow): "ai" | "keyword_rule" | "manual" => {
   const src = m?.raw_payload?.source;
-  if (src === "ai") return "ai";
   if (src === "keyword_rule" || src === "fixed_qa") return "keyword_rule";
-  return "manual";
+  if (src === "manual") return "manual";
+  return "ai";
 };
 
 const SourceIcon = ({ src, className = "h-3.5 w-3.5" }: { src: string; className?: string }) => {
@@ -168,16 +170,33 @@ const Inbox = () => {
       }));
     const replies = incoming
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number && m.reply_text)
-      .map((m) => ({
-        id: `r-${m.id}`,
-        srcTable: "incoming_messages" as const,
-        srcId: m.id,
-        srcField: "reply" as const,
-        kind: "out" as const,
-        text: m.reply_text!,
-        ts: (m as any).reply_sent_at || m.received_at,
-        source: sourceOf(m),
-      }));
+      .map((m) => {
+        // Match the outgoing message_log to determine the true source (ai / keyword_rule / manual).
+        // The webhook raw_payload doesn't carry the source, so fall back to message_logs.
+        const replyTs = +new Date((m as any).reply_sent_at || m.received_at);
+        const log = outgoing.find((o) =>
+          o.session_id === m.session_id &&
+          (o.to_number || "").replace(/\D/g, "").endsWith(phoneTail) &&
+          (o.payload?.text === m.reply_text) &&
+          Math.abs(+new Date(o.created_at) - replyTs) < 5 * 60_000,
+        );
+        const logSrc = log?.payload?.source;
+        const source: "ai" | "keyword_rule" | "manual" =
+          logSrc === "ai" ? "ai" :
+          (logSrc === "keyword_rule" || logSrc === "fixed_qa") ? "keyword_rule" :
+          logSrc === "manual" ? "manual" :
+          sourceOf(m);
+        return {
+          id: `r-${m.id}`,
+          srcTable: "incoming_messages" as const,
+          srcId: m.id,
+          srcField: "reply" as const,
+          kind: "out" as const,
+          text: m.reply_text!,
+          ts: (m as any).reply_sent_at || m.received_at,
+          source,
+        };
+      });
     const manualOut = outgoing
       .filter((o) => o.session_id === selected.session_id && (o.to_number || "").replace(/\D/g, "").endsWith(phoneTail))
       .map((o) => {
