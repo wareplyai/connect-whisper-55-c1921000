@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Users, Smartphone, MessageSquare, DollarSign, UserPlus, AlertTriangle,
   Zap, Send, ArrowUpRight, ArrowDownRight, MoreHorizontal, Activity,
+  AlertCircle, CheckCircle2, XCircle, Clock,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -65,7 +66,25 @@ export default function HeadAdminOverview() {
   const [planDist, setPlanDist] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
   const [todayStats, setTodayStats] = useState({ newToday: 0, failedToday: 0, activeUsers: 0, msgsToday: 0 });
+  const [aStats, setAStats] = useState({ received: 0, incomplete: 0, completed: 0, sent: 0 });
+  const [aRecent, setARecent] = useState<any[]>([]);
   const [loadingExtra, setLoadingExtra] = useState(true);
+
+  const loadAbandoned = async () => {
+    const [{ data: conns }, { data: rows }] = await Promise.all([
+      (supabase.from("abandoned_connections" as any) as any).select("total_received,total_incomplete,total_completed,total_sent"),
+      (supabase.from("abandoned_orders" as any) as any).select("id,customer_name,customer_phone_full,customer_phone,product_name,status,sms_sent,sms_error,created_at")
+        .eq("status", "incomplete").order("created_at", { ascending: false }).limit(10),
+    ]);
+    const agg = (conns || []).reduce((acc: any, c: any) => ({
+      received: acc.received + (c.total_received || 0),
+      incomplete: acc.incomplete + (c.total_incomplete || 0),
+      completed: acc.completed + (c.total_completed || 0),
+      sent: acc.sent + (c.total_sent || 0),
+    }), { received: 0, incomplete: 0, completed: 0, sent: 0 });
+    setAStats(agg);
+    setARecent((rows as any) || []);
+  };
 
   const loadExtra = async () => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -127,13 +146,16 @@ export default function HeadAdminOverview() {
 
   useEffect(() => {
     loadExtra();
-    const t = setInterval(loadExtra, 30000);
+    loadAbandoned();
+    const t = setInterval(() => { loadExtra(); loadAbandoned(); }, 30000);
     const ch = supabase
       .channel(`ha-overview-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, loadExtra)
       .on("postgres_changes", { event: "*", schema: "public", table: "message_logs" }, loadExtra)
       .on("postgres_changes", { event: "*", schema: "public", table: "activity_logs" }, loadExtra)
       .on("postgres_changes", { event: "*", schema: "public", table: "sessions" }, loadExtra)
+      .on("postgres_changes", { event: "*", schema: "public", table: "abandoned_orders" }, loadAbandoned)
+      .on("postgres_changes", { event: "*", schema: "public", table: "abandoned_connections" }, loadAbandoned)
       .subscribe();
     return () => { clearInterval(t); supabase.removeChannel(ch); };
   }, []);
@@ -189,6 +211,57 @@ export default function HeadAdminOverview() {
           accent={todayStats.failedToday > 0 ? "destructive" : "primary"} />
         <StatCard icon={Zap} label="Active (24h)" value={todayStats.activeUsers} accent="warning" />
         <StatCard icon={Send} label="Messages Today" value={todayStats.msgsToday} accent="primary" />
+      </div>
+
+      {/* Incomplete Orders (global, all users) */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold flex items-center gap-2 text-orange-500">
+            <AlertCircle className="h-4 w-4" /> Incomplete Orders <span className="text-xs text-muted-foreground font-normal">(all users · WordPress plugin)</span>
+          </h3>
+          <a href="/headadmin/users" className="text-xs text-primary hover:underline">View users</a>
+        </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div className="rounded-2xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
+            <div className="flex items-center justify-between mb-3"><span className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground font-medium">Total received</span><MessageSquare className="h-4 w-4 text-orange-500" /></div>
+            <p className="text-[26px] font-bold leading-tight">{aStats.received}</p>
+          </div>
+          <div className="rounded-2xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
+            <div className="flex items-center justify-between mb-3"><span className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground font-medium">Incomplete</span><AlertCircle className="h-4 w-4 text-orange-500" /></div>
+            <p className="text-[26px] font-bold text-orange-500 leading-tight">{aStats.incomplete}</p>
+          </div>
+          <div className="rounded-2xl border border-green-200 dark:border-green-900/40 bg-card p-5">
+            <div className="flex items-center justify-between mb-3"><span className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground font-medium">Completed</span><CheckCircle2 className="h-4 w-4 text-success" /></div>
+            <p className="text-[26px] font-bold text-success leading-tight">{aStats.completed}</p>
+          </div>
+          <div className="rounded-2xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
+            <div className="flex items-center justify-between mb-3"><span className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground font-medium">SMS sent</span><CheckCircle2 className="h-4 w-4 text-orange-500" /></div>
+            <p className="text-[26px] font-bold text-orange-500 leading-tight">{aStats.sent}</p>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
+          <h4 className="font-semibold mb-3 text-orange-500 text-xs uppercase tracking-[0.08em]">Latest incomplete (all users)</h4>
+          {aRecent.length === 0 ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">No incomplete orders yet.</div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {aRecent.map((o) => (
+                <li key={o.id} className="py-2 flex items-center gap-3 text-sm">
+                  <span className="flex-1 truncate"><span className="font-medium">{o.customer_name || "Unknown"}</span> <span className="text-muted-foreground">· {o.customer_phone_full || o.customer_phone || "—"}</span></span>
+                  <span className="hidden md:inline text-xs text-muted-foreground truncate max-w-[220px]">{o.product_name || "—"}</span>
+                  {o.sms_sent ? (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-success text-success-foreground font-bold uppercase flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />SMS</span>
+                  ) : o.sms_error ? (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-destructive text-destructive-foreground font-bold uppercase flex items-center gap-1"><XCircle className="h-3 w-3" />SMS</span>
+                  ) : (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-bold uppercase flex items-center gap-1"><Clock className="h-3 w-3" />Pending</span>
+                  )}
+                  <span className="text-xs text-muted-foreground hidden sm:inline">{new Date(o.created_at).toLocaleTimeString()}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
       {/* Charts row */}
