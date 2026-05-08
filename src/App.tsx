@@ -37,6 +37,7 @@ import AIAgent from "./pages/dashboard/AIAgent";
 import BehaviorSettings from "./pages/dashboard/BehaviorSettings";
 import Products from "./pages/dashboard/Products";
 import WooCommerce from "./pages/dashboard/WooCommerce";
+import AbandonedCart from "./pages/dashboard/AbandonedCart";
 import AdminPanel from "./pages/admin/AdminPanel";
 import HAPayments from "./pages/headadmin/Payments";
 import HAPaymentMethods from "./pages/headadmin/PaymentMethods";
@@ -104,6 +105,7 @@ const App = () => (
                 <Route path="behavior" element={<BehaviorSettings />} />
                 <Route path="products" element={<Products />} />
                 <Route path="woocommerce" element={<WooCommerce />} />
+                <Route path="abandoned-cart" element={<AbandonedCart />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>
