@@ -194,11 +194,11 @@ const Landing = () => {
         >
           <defs>
             <linearGradient id="silkGradL1" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.55" />
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.75" />
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
             </linearGradient>
             <linearGradient id="silkGradL2" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.35" />
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.55" />
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
             </linearGradient>
           </defs>
@@ -219,11 +219,11 @@ const Landing = () => {
         >
           <defs>
             <linearGradient id="silkGradR1" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.55" />
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.75" />
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
             </linearGradient>
             <linearGradient id="silkGradR2" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.35" />
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.55" />
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
             </linearGradient>
           </defs>
@@ -265,22 +265,22 @@ const Landing = () => {
         <style>{`
           .hero-bg {
             background:
-              radial-gradient(1000px 500px at 50% -5%, hsl(var(--primary) / 0.10), transparent 65%),
-              linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--card) / 0.4) 100%);
+              radial-gradient(1000px 500px at 50% -5%, hsl(var(--primary) / 0.18), transparent 65%),
+              linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--card) / 0.6) 100%);
           }
           .dark .hero-bg {
             background:
-              radial-gradient(1100px 600px at 50% -5%, hsl(var(--primary) / 0.22), transparent 65%),
+              radial-gradient(1100px 600px at 50% -5%, hsl(var(--primary) / 0.32), transparent 65%),
               linear-gradient(180deg, #04080b 0%, #03060a 60%, #02040a 100%);
           }
 
           /* Silk curve animations */
           .hero-silk {
-            opacity: 0.85;
-            mix-blend-mode: screen;
+            opacity: 0.95;
+            mix-blend-mode: multiply;
             animation: hero-silk-breathe 14s ease-in-out infinite;
           }
-          .dark .hero-silk { opacity: 0.7; }
+          .dark .hero-silk { opacity: 0.9; mix-blend-mode: screen; }
           .hero-silk-right { animation-delay: -7s; }
           @keyframes hero-silk-breathe {
             0%, 100% { transform: translateY(0) scaleY(1); }
