@@ -279,6 +279,43 @@ const Inbox = () => {
     }
   };
 
+  const deleteMessage = async (m: any) => {
+    if (!user) return;
+    if (!confirm("Delete this message? This cannot be undone.")) return;
+    try {
+      if (m.srcTable === "incoming_messages") {
+        if (m.srcField === "reply") {
+          const { error } = await supabase
+            .from("incoming_messages")
+            .update({ reply_text: null } as any)
+            .eq("id", m.srcId)
+            .eq("user_id", user.id);
+          if (error) throw error;
+          setIncoming((prev) => prev.map((r) => r.id === m.srcId ? { ...r, reply_text: null } as any : r));
+        } else {
+          const { error } = await supabase
+            .from("incoming_messages")
+            .delete()
+            .eq("id", m.srcId)
+            .eq("user_id", user.id);
+          if (error) throw error;
+          setIncoming((prev) => prev.filter((r) => r.id !== m.srcId));
+        }
+      } else if (m.srcTable === "message_logs") {
+        const { error } = await supabase
+          .from("message_logs")
+          .delete()
+          .eq("id", m.srcId)
+          .eq("user_id", user.id);
+        if (error) throw error;
+        setOutgoing((prev) => prev.filter((r) => r.id !== m.srcId));
+      }
+      toast.success("Message deleted");
+    } catch (e: any) {
+      toast.error(friendlyError(e) || "Delete failed");
+    }
+  };
+
   const isActive = (iso: string) => Date.now() - +new Date(iso) < 5 * 60 * 1000;
 
   return (
