@@ -90,6 +90,79 @@ async function callAI(opts: {
   throw new Error(`Unsupported platform: ${platform}`);
 }
 
+// Walk the payload deeply and return the first http(s) URL that looks like an image,
+// or a plausible WhatsApp media URL (jpg/jpeg/png/webp or mediaUrl/imageMessage.url field).
+function findImageUrl(value: unknown, depth = 0): string | null {
+  if (depth > 8 || value == null) return null;
+  if (typeof value === "string") {
+    const v = value.trim();
+    if (/^https?:\/\//i.test(v) && /\.(jpe?g|png|webp|gif)(\?|$)/i.test(v)) return v;
+    return null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value.slice(0, 50)) {
+      const r = findImageUrl(item, depth + 1);
+      if (r) return r;
+    }
+    return null;
+  }
+  if (typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  // Prefer common keys first
+  const preferred = ["image_url", "imageUrl", "mediaUrl", "media_url", "url", "directPath", "fileUrl"];
+  for (const k of preferred) {
+    const v = obj[k];
+    if (typeof v === "string" && /^https?:\/\//i.test(v)) {
+      if (/\.(jpe?g|png|webp|gif)(\?|$)/i.test(v) || /image|media/i.test(k)) return v;
+    }
+  }
+  for (const v of Object.values(obj)) {
+    const r = findImageUrl(v, depth + 1);
+    if (r) return r;
+  }
+  return null;
+}
+
+// Simple Jaccard-ish keyword overlap score in 0..1
+function textSimilarity(a: string, b: string): number {
+  const tokenize = (s: string) =>
+    new Set(
+      s.toLowerCase()
+        .replace(/[^\p{L}\p{N}\s,]/gu, " ")
+        .split(/[\s,]+/)
+        .filter((t) => t.length >= 3),
+    );
+  const A = tokenize(a);
+  const B = tokenize(b);
+  if (A.size === 0 || B.size === 0) return 0;
+  let inter = 0;
+  for (const t of A) if (B.has(t)) inter++;
+  const union = A.size + B.size - inter;
+  return union === 0 ? 0 : inter / union;
+}
+
+async function describeImageWithOpenAI(apiKey: string, imageUrl: string): Promise<string> {
+  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You describe a product photo. Reply with a comma-separated list of 8-15 short keywords (English): object, color, material, style, pattern, brand if visible. Keywords only.",
+        },
+        { role: "user", content: [{ type: "image_url", image_url: { url: imageUrl } }] },
+      ],
+      max_tokens: 200,
+    }),
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data?.error?.message || `Vision error ${r.status}`);
+  return (data.choices?.[0]?.message?.content || "").trim();
+}
+
 function recipientVariants(input: string): string[] {
   const raw = String(input ?? "").trim();
   // Strip any @lid / @s.whatsapp.net suffix and use digits only
