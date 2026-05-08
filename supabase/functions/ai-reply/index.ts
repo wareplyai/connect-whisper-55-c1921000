@@ -677,9 +677,11 @@ Deno.serve(async (req) => {
     const sourceMessageId = String(body.source_message_id || "").trim();
 
     // ---- Image detection: scan body deeply for any image source (URL/dataURL/base64) ----
-    const imageUrl = findImageUrl(body);
+    let imageUrl = findImageUrl(body);
     const looksImageType = /image|photo|picture|media/i.test(messageType);
-    const isImageMessage = !!imageUrl && (looksImageType || !rawText);
+    const payloadHasImage = looksImageType || payloadLooksLikeImage(body);
+    // Tentatively flag as image — we may resolve the actual binary from the gateway below.
+    let isImageMessage = (!!imageUrl && (looksImageType || !rawText)) || (payloadHasImage && !rawText);
     const messageText = rawText || (isImageMessage ? "[customer sent an image]" : "");
 
     console.log("[ai-reply] incoming", {
@@ -687,11 +689,12 @@ Deno.serve(async (req) => {
       messageType,
       hasText: !!rawText,
       hasImage: !!imageUrl,
+      payloadHasImage,
       imageKind: imageUrl ? (imageUrl.startsWith("data:") ? "data-url" : "http") : "none",
       bodyKeys: Object.keys(body || {}),
     });
 
-    if (!sessionId || (!messageText && !imageUrl)) {
+    if (!sessionId || (!messageText && !imageUrl && !payloadHasImage)) {
       return jsonResp({ error: "session_id and message or image required" }, 400);
     }
 
