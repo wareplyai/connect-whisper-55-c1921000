@@ -28,7 +28,7 @@ export default function FeatureAccess() {
       supabase.from("profiles").select("id, full_name, email, plan").order("created_at", { ascending: false }),
       supabase.from("user_feature_access" as any).select("user_id, feature, enabled"),
     ]);
-    const gMap: any = { ai_agent: true, auto_replies: true };
+    const gMap: any = { ai_agent: true, auto_replies: true, abandoned_cart: true };
     (g || []).forEach((r: any) => { gMap[r.feature] = !!r.show_to_users; });
     setGlobals(gMap);
     setUsers(u || []);
