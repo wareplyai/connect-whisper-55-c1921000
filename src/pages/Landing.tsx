@@ -194,18 +194,18 @@ const Landing = () => {
         >
           <defs>
             <linearGradient id="silkGradL1" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.55" />
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.28" />
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
             </linearGradient>
             <linearGradient id="silkGradL2" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.35" />
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.16" />
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
             </linearGradient>
           </defs>
           <path d="M0,0 C180,260 -40,520 220,780 C420,940 80,1000 0,1000 Z" fill="url(#silkGradL1)" />
-          <path d="M0,80 C220,300 40,560 260,820 C420,980 60,1000 0,1000 Z" fill="url(#silkGradL2)" opacity="0.7" />
-          <path d="M0,200 C260,380 100,640 320,880 C440,990 40,1000 0,1000 Z" stroke="hsl(var(--primary) / 0.25)" strokeWidth="1" fill="none" />
-          <path d="M0,340 C300,500 160,720 360,920" stroke="hsl(var(--primary) / 0.18)" strokeWidth="1" fill="none" />
+          <path d="M0,80 C220,300 40,560 260,820 C420,980 60,1000 0,1000 Z" fill="url(#silkGradL2)" opacity="0.6" />
+          <path d="M0,200 C260,380 100,640 320,880 C440,990 40,1000 0,1000 Z" stroke="hsl(var(--primary) / 0.14)" strokeWidth="1" fill="none" />
+          <path d="M0,340 C300,500 160,720 360,920" stroke="hsl(var(--primary) / 0.10)" strokeWidth="1" fill="none" />
         </svg>
 
         {/* Silk curves - right (mirrored) */}
@@ -219,18 +219,18 @@ const Landing = () => {
         >
           <defs>
             <linearGradient id="silkGradR1" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.55" />
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.28" />
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
             </linearGradient>
             <linearGradient id="silkGradR2" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.35" />
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.16" />
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
             </linearGradient>
           </defs>
           <path d="M0,0 C180,260 -40,520 220,780 C420,940 80,1000 0,1000 Z" fill="url(#silkGradR1)" />
-          <path d="M0,80 C220,300 40,560 260,820 C420,980 60,1000 0,1000 Z" fill="url(#silkGradR2)" opacity="0.7" />
-          <path d="M0,200 C260,380 100,640 320,880 C440,990 40,1000 0,1000 Z" stroke="hsl(var(--primary) / 0.25)" strokeWidth="1" fill="none" />
-          <path d="M0,340 C300,500 160,720 360,920" stroke="hsl(var(--primary) / 0.18)" strokeWidth="1" fill="none" />
+          <path d="M0,80 C220,300 40,560 260,820 C420,980 60,1000 0,1000 Z" fill="url(#silkGradR2)" opacity="0.6" />
+          <path d="M0,200 C260,380 100,640 320,880 C440,990 40,1000 0,1000 Z" stroke="hsl(var(--primary) / 0.14)" strokeWidth="1" fill="none" />
+          <path d="M0,340 C300,500 160,720 360,920" stroke="hsl(var(--primary) / 0.10)" strokeWidth="1" fill="none" />
         </svg>
 
         {/* Soft center glow */}
@@ -265,22 +265,22 @@ const Landing = () => {
         <style>{`
           .hero-bg {
             background:
-              radial-gradient(1000px 500px at 50% -5%, hsl(var(--primary) / 0.10), transparent 65%),
-              linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--card) / 0.4) 100%);
+              radial-gradient(900px 450px at 50% -5%, hsl(var(--primary) / 0.05), transparent 65%),
+              linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--card) / 0.3) 100%);
           }
           .dark .hero-bg {
             background:
-              radial-gradient(1100px 600px at 50% -5%, hsl(var(--primary) / 0.22), transparent 65%),
+              radial-gradient(1100px 600px at 50% -5%, hsl(var(--primary) / 0.14), transparent 65%),
               linear-gradient(180deg, #04080b 0%, #03060a 60%, #02040a 100%);
           }
 
           /* Silk curve animations */
           .hero-silk {
-            opacity: 0.85;
+            opacity: 0.7;
             mix-blend-mode: screen;
             animation: hero-silk-breathe 14s ease-in-out infinite;
           }
-          .dark .hero-silk { opacity: 0.7; }
+          .dark .hero-silk { opacity: 0.55; }
           .hero-silk-right { animation-delay: -7s; }
           @keyframes hero-silk-breathe {
             0%, 100% { transform: translateY(0) scaleY(1); }
