@@ -114,7 +114,7 @@ const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) =>
     const { error } = await supabase.from("sessions").update({
       enable_webhook: enabled,
       webhook_url: url || null,
-      forward_webhook_url: forwardUrl.trim() || null,
+      forward_webhook_url: null,
       webhook_secret: secret,
       webhook_events: events,
       ignore_groups: ignoreGroups,
