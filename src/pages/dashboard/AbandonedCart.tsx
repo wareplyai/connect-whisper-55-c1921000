@@ -8,8 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Copy, Loader2, ShoppingBag, Save, RefreshCw, ExternalLink, CheckCircle2, XCircle, Clock } from "lucide-react";
+import {
+  Copy, Loader2, ShoppingBag, Save, RefreshCw, ExternalLink,
+  CheckCircle2, XCircle, Clock, Eye, AlertCircle,
+} from "lucide-react";
 
 interface Conn {
   id: string;
@@ -53,6 +58,7 @@ export default function AbandonedCart() {
   const [orders, setOrders] = useState<AOrder[]>([]);
   const [sessionId, setSessionId] = useState("");
   const [country, setCountry] = useState("88");
+  const [viewing, setViewing] = useState<AOrder | null>(null);
 
   const load = async () => {
     if (!user) return;
@@ -60,7 +66,6 @@ export default function AbandonedCart() {
     let { data: c } = await supabase.from("abandoned_connections" as any)
       .select("*").eq("user_id", user.id).maybeSingle();
 
-    // Auto-create connection if missing
     if (!c) {
       const { data: created } = await supabase.from("abandoned_connections" as any)
         .insert({ user_id: user.id }).select().maybeSingle();
@@ -69,7 +74,7 @@ export default function AbandonedCart() {
 
     const [{ data: s }, { data: o }] = await Promise.all([
       supabase.from("sessions").select("id, session_name, status").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("abandoned_orders" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(100),
+      supabase.from("abandoned_orders" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(200),
     ]);
     setConn(c as any);
     setSessions((s as any) || []);
@@ -107,12 +112,12 @@ export default function AbandonedCart() {
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-6xl">
       <div className="flex items-center gap-3">
-        <ShoppingBag className="h-7 w-7 text-primary" />
+        <ShoppingBag className="h-7 w-7 text-orange-500" />
         <div>
-          <h1 className="text-2xl font-bold">Abandoned Cart Recovery</h1>
-          <p className="text-sm text-muted-foreground">WordPress plugin → WhatsApp recovery message for incomplete orders</p>
+          <h1 className="text-2xl font-bold">Incomplete Orders</h1>
+          <p className="text-sm text-muted-foreground">WordPress plugin → WhatsApp recovery for incomplete checkouts</p>
         </div>
       </div>
 
@@ -120,7 +125,7 @@ export default function AbandonedCart() {
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total received</p><p className="text-2xl font-bold">{conn?.total_received || 0}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Incomplete</p><p className="text-2xl font-bold text-orange-500">{conn?.total_incomplete || 0}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Completed</p><p className="text-2xl font-bold text-green-500">{conn?.total_completed || 0}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">SMS sent</p><p className="text-2xl font-bold text-primary">{conn?.total_sent || 0}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">SMS sent</p><p className="text-2xl font-bold text-orange-500">{conn?.total_sent || 0}</p></CardContent></Card>
       </div>
 
       <Card>
@@ -148,78 +153,168 @@ export default function AbandonedCart() {
               <Input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="88" />
             </div>
           </div>
-          <Button onClick={save} disabled={saving}>
+          <Button onClick={save} disabled={saving} className="bg-orange-500 hover:bg-orange-600 text-white">
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />} Save settings
           </Button>
-          <div className="text-sm text-muted-foreground bg-muted p-4 rounded-md space-y-1">
-            <p className="font-semibold text-foreground">How it works:</p>
-            <ul className="list-disc list-inside space-y-1">
-              <li>Plugin sends every order (status: <b>incomplete</b> or <b>completed</b>) to your webhook URL.</li>
-              <li>Only <b>incomplete</b> orders trigger a WhatsApp message — completed orders are stored for record only.</li>
-              <li>The plugin's <code>whatsapp_message</code> field is sent to <code>customer_phone</code> (with country code <b>{country}</b> auto-prefixed).</li>
-            </ul>
-          </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
+      <Card className="border-orange-200 dark:border-orange-900/40">
+        <CardHeader className="bg-orange-50 dark:bg-orange-950/20 rounded-t-lg">
           <CardTitle className="flex items-center justify-between">
-            <span>Incoming orders</span>
-            <Button size="sm" variant="outline" onClick={load}><RefreshCw className="h-4 w-4 mr-2" />Refresh</Button>
+            <span className="text-orange-700 dark:text-orange-300">Incoming orders</span>
+            <Button size="sm" variant="outline" onClick={load} className="border-orange-300 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-950/40">
+              <RefreshCw className="h-4 w-4 mr-2" />Refresh
+            </Button>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <Tabs defaultValue="incomplete">
-            <TabsList>
-              <TabsTrigger value="incomplete">Incomplete ({incomplete.length})</TabsTrigger>
+            <TabsList className="m-4">
+              <TabsTrigger value="incomplete" className="data-[state=active]:bg-orange-500 data-[state=active]:text-white">
+                Incomplete ({incomplete.length})
+              </TabsTrigger>
               <TabsTrigger value="completed">Completed ({completed.length})</TabsTrigger>
             </TabsList>
-            <TabsContent value="incomplete" className="space-y-3 mt-4">
-              {incomplete.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-8 text-center">No incomplete orders yet.</p>
-              ) : incomplete.map((o) => <OrderCard key={o.id} o={o} />)}
+            <TabsContent value="incomplete" className="m-0">
+              <OrdersTable rows={incomplete} onView={setViewing} theme="orange" />
             </TabsContent>
-            <TabsContent value="completed" className="space-y-3 mt-4">
-              {completed.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-8 text-center">No completed orders yet.</p>
-              ) : completed.map((o) => <OrderCard key={o.id} o={o} />)}
+            <TabsContent value="completed" className="m-0">
+              <OrdersTable rows={completed} onView={setViewing} theme="green" />
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
+
+      <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Order details</DialogTitle></DialogHeader>
+          {viewing && <OrderDetails o={viewing} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function OrderCard({ o }: { o: AOrder }) {
-  const isIncomplete = o.status === "incomplete";
+function OrdersTable({ rows, onView, theme }: { rows: AOrder[]; onView: (o: AOrder) => void; theme: "orange" | "green" }) {
+  if (rows.length === 0) {
+    return <p className="text-sm text-muted-foreground py-12 text-center">No orders yet.</p>;
+  }
+  const headBg = theme === "orange" ? "bg-orange-100/70 dark:bg-orange-950/30" : "bg-green-100/70 dark:bg-green-950/30";
+  const headText = theme === "orange" ? "text-orange-700 dark:text-orange-300" : "text-green-700 dark:text-green-300";
+
   return (
-    <div className="border rounded-lg p-4 space-y-2">
-      <div className="flex items-start justify-between flex-wrap gap-2">
-        <div>
-          <p className="font-semibold">{o.customer_name || "Unknown"} <span className="text-xs text-muted-foreground font-normal">{new Date(o.created_at).toLocaleString()}</span></p>
-          <p className="text-xs text-muted-foreground">{o.site_name || "—"}</p>
-        </div>
-        <div className="flex gap-2">
-          <Badge variant={isIncomplete ? "destructive" : "default"}>{o.status}</Badge>
-          {isIncomplete && (
-            o.sms_sent ? <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" />SMS sent</Badge>
-            : o.sms_error ? <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />SMS failed</Badge>
-            : <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />pending</Badge>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow className={`${headBg} hover:${headBg}`}>
+            <TableHead className={`${headText} font-bold uppercase text-xs w-12`}>#</TableHead>
+            <TableHead className={`${headText} font-bold uppercase text-xs`}>Customer</TableHead>
+            <TableHead className={`${headText} font-bold uppercase text-xs`}>Contact</TableHead>
+            <TableHead className={`${headText} font-bold uppercase text-xs`}>Address</TableHead>
+            <TableHead className={`${headText} font-bold uppercase text-xs`}>Product</TableHead>
+            <TableHead className={`${headText} font-bold uppercase text-xs text-center`}>Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((o, i) => {
+            const isIncomplete = o.status === "incomplete";
+            return (
+              <TableRow key={o.id} className="hover:bg-orange-50/40 dark:hover:bg-orange-950/10">
+                <TableCell className="text-orange-500 font-medium">{i + 1}</TableCell>
+                <TableCell>
+                  <div className="font-semibold">{o.customer_name || "Unknown"}</div>
+                  <div className="text-xs text-muted-foreground">{o.customer_email || "—"}</div>
+                </TableCell>
+                <TableCell className="text-orange-600 font-medium">
+                  {o.customer_phone_full || o.customer_phone || "—"}
+                </TableCell>
+                <TableCell className="max-w-[220px] truncate" title={o.customer_address || ""}>
+                  {o.customer_address || "—"}
+                </TableCell>
+                <TableCell className="max-w-[200px] truncate" title={o.product_name || ""}>
+                  {o.product_name || "—"}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-center gap-2 flex-wrap">
+                    <Button size="sm" variant="outline" onClick={() => onView(o)}
+                      className="h-7 px-3 rounded-full border-orange-300 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-950/40 uppercase text-[10px] font-bold">
+                      <Eye className="h-3 w-3 mr-1" />View
+                    </Button>
+                    {isIncomplete ? (
+                      <Badge className="rounded-full bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-300 hover:bg-orange-100 gap-1 uppercase text-[10px] font-bold">
+                        <AlertCircle className="h-3 w-3" /> Incomplete
+                      </Badge>
+                    ) : (
+                      <Badge className="rounded-full bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300 border border-green-300 hover:bg-green-100 gap-1 uppercase text-[10px] font-bold">
+                        <CheckCircle2 className="h-3 w-3" /> Completed
+                      </Badge>
+                    )}
+                    {isIncomplete && o.sms_sent && (
+                      <Badge className="rounded-full bg-orange-500 text-white gap-1 uppercase text-[10px] font-bold">
+                        <CheckCircle2 className="h-3 w-3" />SMS
+                      </Badge>
+                    )}
+                    {isIncomplete && !o.sms_sent && o.sms_error && (
+                      <Badge variant="destructive" className="rounded-full gap-1 uppercase text-[10px] font-bold">
+                        <XCircle className="h-3 w-3" />SMS
+                      </Badge>
+                    )}
+                    {isIncomplete && !o.sms_sent && !o.sms_error && (
+                      <Badge variant="secondary" className="rounded-full gap-1 uppercase text-[10px] font-bold">
+                        <Clock className="h-3 w-3" />Pending
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function OrderDetails({ o }: { o: AOrder }) {
+  return (
+    <div className="space-y-3 text-sm">
+      <div className="grid gap-2 md:grid-cols-2">
+        <Info label="Customer" value={o.customer_name} />
+        <Info label="Email" value={o.customer_email} />
+        <Info label="Phone" value={o.customer_phone_full || o.customer_phone} />
+        <Info label="Site" value={o.site_name} />
+        <Info label="Order date" value={o.order_date || new Date(o.created_at).toLocaleString()} />
+        <Info label="Status" value={o.status} />
+      </div>
+      <Info label="Address" value={o.customer_address} />
+      <div>
+        <div className="text-xs text-muted-foreground mb-1">Product</div>
+        <div className="font-medium">{o.product_name || "—"}
+          {o.product_link && (
+            <a href={o.product_link} target="_blank" rel="noreferrer" className="ml-2 inline-flex items-center text-orange-600 hover:underline text-xs">
+              <ExternalLink className="h-3 w-3 mr-1" />open
+            </a>
           )}
         </div>
       </div>
-      <div className="grid gap-1 text-sm md:grid-cols-2">
-        <p><span className="text-muted-foreground">Phone:</span> {o.customer_phone || "—"}{o.customer_phone_full && o.customer_phone_full !== o.customer_phone ? ` → ${o.customer_phone_full}` : ""}</p>
-        <p><span className="text-muted-foreground">Email:</span> {o.customer_email || "—"}</p>
-        <p className="md:col-span-2"><span className="text-muted-foreground">Address:</span> {o.customer_address || "—"}</p>
-        <p className="md:col-span-2"><span className="text-muted-foreground">Product:</span> {o.product_name || "—"}{o.product_link && (<a href={o.product_link} target="_blank" rel="noreferrer" className="ml-2 inline-flex items-center text-primary hover:underline"><ExternalLink className="h-3 w-3 mr-1" />open</a>)}</p>
-      </div>
       {o.whatsapp_message && (
-        <div className="bg-muted p-2 rounded text-xs whitespace-pre-wrap font-mono">{o.whatsapp_message}</div>
+        <div>
+          <div className="text-xs text-muted-foreground mb-1">WhatsApp message</div>
+          <div className="bg-muted p-3 rounded text-xs whitespace-pre-wrap font-mono">{o.whatsapp_message}</div>
+        </div>
       )}
-      {o.sms_error && <p className="text-xs text-destructive">Error: {o.sms_error}</p>}
+      {o.sms_error && <p className="text-xs text-destructive">SMS error: {o.sms_error}</p>}
+      {o.sms_sent_at && <p className="text-xs text-orange-600">SMS sent at {new Date(o.sms_sent_at).toLocaleString()}</p>}
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string | null | undefined }) {
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="font-medium">{value || "—"}</div>
     </div>
   );
 }
