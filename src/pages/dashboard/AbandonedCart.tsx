@@ -96,7 +96,7 @@ export default function AbandonedCart() {
     if (!conn) return;
     setSaving(true);
     const { error } = await supabase.from("abandoned_connections" as any)
-      .update({ default_session_id: sessionId || null, country_code: country || "88" })
+      .update({ default_session_id: sessionId || null, country_code: country.code.replace("+", "") })
       .eq("id", conn.id);
     setSaving(false);
     if (error) { toast({ title: "Save failed", description: error.message, variant: "destructive" }); return; }
