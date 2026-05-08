@@ -24,6 +24,44 @@ function normalizeStoreUrl(input: string): string {
   return u.replace(/\/+$/, "");
 }
 
+function pe(s: string): string {
+  return encodeURIComponent(s).replace(/[!*'()]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
+}
+async function hmacSha1Base64(key: string, msg: string): Promise<string> {
+  const enc = new TextEncoder();
+  const ck = await crypto.subtle.importKey("raw", enc.encode(key), { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", ck, enc.encode(msg));
+  let bin = ""; const bytes = new Uint8Array(sig);
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+async function signedWooUrl(baseUrl: string, method: string, ck: string, cs: string, extra: Record<string,string> = {}): Promise<string> {
+  const oauth: Record<string,string> = {
+    oauth_consumer_key: ck,
+    oauth_nonce: crypto.randomUUID().replace(/-/g, ""),
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_timestamp: Math.floor(Date.now()/1000).toString(),
+    oauth_version: "1.0",
+  };
+  const all = { ...extra, ...oauth };
+  const paramStr = Object.keys(all).sort().map(k => `${pe(k)}=${pe(all[k])}`).join("&");
+  const baseStr = [method.toUpperCase(), pe(baseUrl), pe(paramStr)].join("&");
+  const sig = await hmacSha1Base64(`${pe(cs)}&`, baseStr);
+  (all as any).oauth_signature = sig;
+  const qs = Object.keys(all).sort().map(k => `${pe(k)}=${pe((all as any)[k])}`).join("&");
+  return `${baseUrl}?${qs}`;
+}
+async function wooFetch(storeUrl: string, path: string, ck: string, cs: string, params: Record<string,string> = {}) {
+  const isHttps = /^https:\/\//i.test(storeUrl);
+  const baseUrl = `${storeUrl}${path}`;
+  if (isHttps) {
+    const url = Object.keys(params).length ? `${baseUrl}?${new URLSearchParams(params)}` : baseUrl;
+    return await fetch(url, { headers: { Authorization: "Basic " + btoa(`${ck}:${cs}`) } });
+  }
+  const url = await signedWooUrl(baseUrl, "GET", ck, cs, params);
+  return await fetch(url);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -55,19 +93,20 @@ Deno.serve(async (req) => {
     }
 
     // Verify credentials by calling /wp-json/wc/v3/products?per_page=1
-    const basic = "Basic " + btoa(`${consumer_key}:${consumer_secret}`);
-    const verifyUrl = `${store_url}/wp-json/wc/v3/products?per_page=1`;
     let storeName = "";
     try {
-      const r = await fetch(verifyUrl, { headers: { Authorization: basic } });
+      const r = await wooFetch(store_url, "/wp-json/wc/v3/products", consumer_key, consumer_secret, { per_page: "1" });
       const text = await r.text();
       if (!r.ok) {
         return json({ error: `WooCommerce verify failed (${r.status}): ${text.slice(0, 300)}` }, 400);
       }
+      try { JSON.parse(text); } catch {
+        return json({ error: "WooCommerce returned HTML instead of JSON. Check store URL, REST API permalinks, or security plugins." }, 400);
+      }
       try {
-        const sysR = await fetch(`${store_url}/wp-json/wc/v3/system_status`, { headers: { Authorization: basic } });
+        const sysR = await wooFetch(store_url, "/wp-json/wc/v3/system_status", consumer_key, consumer_secret);
         if (sysR.ok) {
-          const sys: any = await sysR.json();
+          const sys: any = await sysR.json().catch(() => ({}));
           storeName = sys?.environment?.site_url || "";
         }
       } catch {}
