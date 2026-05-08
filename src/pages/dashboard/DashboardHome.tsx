@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CreditCard, CheckCircle2, MessageSquare, Wifi } from "lucide-react";
 import { CartesianGrid, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const DashboardHome = () => {
   const { profile } = useAuth();
