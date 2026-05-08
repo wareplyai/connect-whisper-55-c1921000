@@ -251,7 +251,7 @@ function OrdersTable({ rows, onView, theme }: { rows: AOrder[]; onView: (o: AOrd
                       </Badge>
                     )}
                     {isIncomplete && o.sms_sent && (
-                      <Badge className="rounded-full bg-orange-500 text-white gap-1 uppercase text-[10px] font-bold">
+                      <Badge className="rounded-full bg-green-500 hover:bg-green-500 text-white gap-1 uppercase text-[10px] font-bold">
                         <CheckCircle2 className="h-3 w-3" />SMS
                       </Badge>
                     )}
