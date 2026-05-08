@@ -311,56 +311,68 @@ async function sendTypingIndicator(opts: {
   console.log(`[typing] all attempts failed for to=${to}`);
 }
 
-async function markAsRead(opts: {
+async function tryMarkAsReadOnce(opts: {
   gateway: string; sessionId: string; apiToken?: string | null; to: string; messageId?: string; messageKey?: Record<string, unknown> | null;
-}): Promise<boolean> {
+}): Promise<{ ok: boolean; endpoint?: string }> {
   const { gateway, sessionId, apiToken, to, messageId, messageKey } = opts;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
   const digits = String(to).replace(/\D/g, "");
   const jid = String(to).includes("@") ? String(to) : `${digits || to}@s.whatsapp.net`;
-  const actualMessageId = messageId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(messageId)
-    ? messageId
-    : undefined;
+  const isUuid = (s?: string) => !!s && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+  const actualMessageId = messageId && !isUuid(messageId) ? messageId : undefined;
+  // Build a fallback messageKey when an external one wasn't provided but we do have a real id
+  const effectiveKey: Record<string, unknown> | null = messageKey && (messageKey as any).id && !isUuid(String((messageKey as any).id))
+    ? messageKey
+    : (actualMessageId ? { id: actualMessageId, remoteJid: jid, fromMe: false } : null);
   const chatBody = compactBody({ to: digits || to, jid, remoteJid: jid, chatId: jid, id: actualMessageId, messageId: actualMessageId });
-  const jidBody = compactBody({ to: jid, jid, remoteJid: jid, chatId: jid, id: actualMessageId, messageId: actualMessageId });
   const attempts = [
-    ...(messageKey ? [
-      { path: `/api/session/${sessionId}/sendSeen`, body: { messageKey } },
-      { path: `/api/session/${sessionId}/sendSeen`, body: { key: messageKey } },
-      { path: `/api/session/${sessionId}/sendSeen`, body: { messages: [messageKey] } },
-      { path: `/api/session/${sessionId}/seen`, body: { messageKey } },
-      { path: `/api/messages/read`, body: { messageKey } },
-      { path: `/api/messages/read`, body: { key: messageKey } },
-      { path: `/api/messages/read`, body: { messages: [messageKey] } },
+    // Prefer endpoints that include a real messageKey (true blue-tick on WhatsApp)
+    ...(effectiveKey ? [
+      { path: `/api/session/${sessionId}/sendSeen`, body: { messageKey: effectiveKey } },
+      { path: `/api/session/${sessionId}/sendSeen`, body: { key: effectiveKey, chatId: jid } },
+      { path: `/api/session/${sessionId}/sendSeen`, body: { messages: [effectiveKey], chatId: jid } },
+      { path: `/api/sendSeen`, body: { session: sessionId, messageKey: effectiveKey } },
+      { path: `/api/messages/read`, body: { session: sessionId, messageKey: effectiveKey } },
     ] : []),
-    // Baileys-style gateway endpoints (matching the working /typing pattern)
-    { path: `/api/session/${sessionId}/sendSeen`, body: jidBody },
-    { path: `/api/session/${sessionId}/seen`, body: jidBody },
-    { path: `/api/session/${sessionId}/read`, body: jidBody },
+    // Fallbacks: chat-level seen (works without a messageKey on many gateways)
     { path: `/api/session/${sessionId}/sendSeen`, body: chatBody },
-    { path: `/api/session/${sessionId}/seen`, body: chatBody },
-    { path: `/api/session/${sessionId}/read`, body: chatBody },
-    { path: `/api/session/${sessionId}/mark-read`, body: chatBody },
-    { path: `/api/session/${sessionId}/markAsRead`, body: chatBody },
-    { path: `/api/session/${sessionId}/chat/read`, body: chatBody },
-    { path: `/api/session/${sessionId}/chats/read`, body: chatBody },
-    { path: `/api/session/${sessionId}/presence`, body: { to: digits || to, jid, presence: "available" } },
-    { path: `/api/messages/read`, body: chatBody },
+    { path: `/api/${sessionId}/sendSeen`, body: chatBody },
+    { path: `/api/${sessionId}/chats/${encodeURIComponent(jid)}/read`, body: {} },
+    { path: `/api/${sessionId}/chat/${encodeURIComponent(jid)}/seen`, body: {} },
+    { path: `/api/markChatRead`, body: { session: sessionId, chatId: jid } },
+    { path: `/api/sendReadAck`, body: { session: sessionId, chatId: jid } },
   ];
   for (const base of gatewayBaseVariants(gateway)) {
     for (const a of attempts) {
       try {
         const r = await fetch(`${base}${a.path}`, { method: "POST", headers, body: JSON.stringify(a.body) });
         const txt = await r.text().catch(() => "");
-        console.log(`[markAsRead] ${base}${a.path} -> ${r.status} ${txt.slice(0, 200)}`);
-        if (r.ok) return true;
+        console.log(`[markAsRead] ${base}${a.path} key=${effectiveKey ? "yes" : "no"} -> ${r.status} ${txt.slice(0, 160)}`);
+        if (r.ok) return { ok: true, endpoint: `${base}${a.path}` };
       } catch (e) {
         console.log(`[markAsRead] ${base}${a.path} failed: ${(e as Error)?.message}`);
       }
     }
   }
-  console.log(`[markAsRead] all attempts failed for to=${to}`);
+  return { ok: false };
+}
+
+async function markAsRead(opts: {
+  gateway: string; sessionId: string; apiToken?: string | null; to: string; messageId?: string; messageKey?: Record<string, unknown> | null;
+}): Promise<boolean> {
+  // Retry up to 3 times with exponential backoff (1s, 2s, 4s) until at least one endpoint succeeds.
+  const delays = [0, 1000, 2000, 4000];
+  for (let i = 0; i < delays.length; i++) {
+    if (delays[i] > 0) await new Promise((r) => setTimeout(r, delays[i]));
+    const res = await tryMarkAsReadOnce(opts);
+    if (res.ok) {
+      if (i > 0) console.log(`[markAsRead] succeeded after ${i} retries via ${res.endpoint}`);
+      return true;
+    }
+    console.log(`[markAsRead] attempt ${i + 1}/${delays.length} failed for to=${opts.to}`);
+  }
+  console.log(`[markAsRead] all retry attempts exhausted for to=${opts.to}`);
   return false;
 }
 
