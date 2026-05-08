@@ -22,6 +22,7 @@ type IncomingRow = {
   delivery_status: string;
   received_at: string;
   raw_payload: any;
+  image_url?: string | null;
 };
 
 type OutgoingRow = {
@@ -164,7 +165,8 @@ const Inbox = () => {
         srcId: m.id,
         srcField: "message" as const,
         kind: "in" as const,
-        text: m.message_text || "(no text)",
+        text: m.message_text || (m.image_url ? "" : "(no text)"),
+        imageUrl: (m as any).image_url as string | null,
         ts: m.received_at,
         pending: !m.reply_sent && !m.reply_text,
       }));
@@ -470,7 +472,17 @@ const Inbox = () => {
                       <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
                         m.kind === "out" ? "bg-green-500/15 text-foreground" : "bg-muted text-foreground"
                       }`}>
-                        <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                        {(m as any).imageUrl && (
+                          <a href={(m as any).imageUrl} target="_blank" rel="noopener noreferrer" className="block mb-1">
+                            <img
+                              src={(m as any).imageUrl}
+                              alt="Customer attachment"
+                              className="max-h-56 max-w-full rounded-lg object-cover border border-border"
+                              loading="lazy"
+                            />
+                          </a>
+                        )}
+                        {m.text && <p className="whitespace-pre-wrap break-words">{m.text}</p>}
                         <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
                           <span>{new Date(m.ts).toLocaleString()}</span>
                           {m.kind === "out" && (

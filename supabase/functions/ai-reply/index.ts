@@ -258,6 +258,49 @@ async function fetchGatewayMediaDataUrl(opts: {
   return null;
 }
 
+// Upload an image (data URL or http URL) to the chat-media storage bucket and return its public URL.
+async function uploadChatMediaImage(
+  admin: any,
+  userId: string,
+  sessionId: string,
+  source: string,
+): Promise<string | null> {
+  try {
+    let bytes: Uint8Array | null = null;
+    let mime = "image/jpeg";
+    if (source.startsWith("data:")) {
+      const m = source.match(/^data:([^;]+);base64,(.+)$/);
+      if (!m) return null;
+      mime = m[1] || "image/jpeg";
+      const bin = atob(m[2]);
+      bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    } else if (/^https?:\/\//i.test(source)) {
+      const r = await fetch(source);
+      if (!r.ok) return null;
+      mime = (r.headers.get("content-type") || "image/jpeg").split(";")[0];
+      bytes = new Uint8Array(await r.arrayBuffer());
+    } else {
+      return null;
+    }
+    const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : mime.includes("gif") ? "gif" : "jpg";
+    const path = `${userId}/${sessionId}/${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await admin.storage.from("chat-media").upload(path, bytes, {
+      contentType: mime,
+      upsert: false,
+    });
+    if (upErr) {
+      console.log("[chat-media] upload failed:", upErr.message);
+      return null;
+    }
+    const { data } = admin.storage.from("chat-media").getPublicUrl(path);
+    return data?.publicUrl || null;
+  } catch (e) {
+    console.log("[chat-media] error:", (e as Error)?.message);
+    return null;
+  }
+}
+
 function recipientVariants(input: string): string[] {
   const raw = String(input ?? "").trim();
   // Strip any @lid / @s.whatsapp.net suffix and use digits only
@@ -971,6 +1014,20 @@ Deno.serve(async (req) => {
       messageId = msgRow?.id;
     }
 
+    // If we have an image (resolved from payload or recovered from gateway), upload it to
+    // chat-media bucket and persist the public URL on the message so it shows in the inbox.
+    if (messageId && imageUrl) {
+      try {
+        const publicUrl = await uploadChatMediaImage(admin, userId, sessionId, imageUrl);
+        if (publicUrl) {
+          await admin.from("incoming_messages").update({ image_url: publicUrl }).eq("id", messageId);
+          imageUrl = publicUrl;
+          console.log("[ai-reply] saved chat-media url for message", messageId);
+        }
+      } catch (e) {
+        console.log("[ai-reply] chat-media save failed:", (e as Error)?.message);
+      }
+    }
     await deliverUserWebhook({
       admin,
       session,
