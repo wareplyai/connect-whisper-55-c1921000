@@ -150,6 +150,7 @@ const Inbox = () => {
     return row?.ai_paused ? "human" : "ai";
   }, [modes, selected]);
 
+  const bottomRef = useRef<HTMLDivElement | null>(null);
   const conversation = useMemo(() => {
     if (!selected) return [];
     const phoneTail = selected.phone_number.replace(/\D/g, "").slice(-9);
@@ -191,6 +192,18 @@ const Inbox = () => {
       .filter(Boolean) as any[];
     return [...inc, ...replies, ...manualOut].sort((a, b) => +new Date(a.ts) - +new Date(b.ts));
   }, [incoming, outgoing, selected]);
+
+  useEffect(() => {
+    if (!selected) return;
+    const id = requestAnimationFrame(() => {
+      const el = bottomRef.current;
+      if (!el) return;
+      const viewport = el.closest("[data-radix-scroll-area-viewport]") as HTMLElement | null;
+      if (viewport) viewport.scrollTop = viewport.scrollHeight;
+      else el.scrollIntoView({ block: "end" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [selectedKey, conversation.length]);
 
   const toggleBlock = async (next: boolean) => {
     if (!user || !selected) return;
@@ -406,6 +419,7 @@ const Inbox = () => {
                   {conversation.length === 0 && (
                     <p className="text-center text-sm text-muted-foreground py-8">No messages.</p>
                   )}
+                  <div ref={bottomRef} />
                 </div>
               </ScrollArea>
               <div className="p-3 border-t border-border">
