@@ -83,7 +83,9 @@ export default function AbandonedCart() {
     setOrders((o as any) || []);
     if (c) {
       setSessionId((c as any).default_session_id || "");
-      setCountry((c as any).country_code || "88");
+      const cc = String((c as any).country_code || "880").replace(/\D/g, "");
+      const found = ALL_COUNTRIES.find((x) => x.code.replace("+", "") === cc);
+      setCountry(found || DEFAULT_COUNTRY);
     }
     setLoading(false);
   };
