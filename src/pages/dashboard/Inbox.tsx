@@ -437,7 +437,17 @@ const Inbox = () => {
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-2">
                   {conversation.map((m) => (
-                    <div key={m.id} className={`flex ${m.kind === "out" ? "justify-end" : "justify-start"}`}>
+                    <div key={m.id} className={`group flex items-center gap-1 ${m.kind === "out" ? "justify-end" : "justify-start"}`}>
+                      {m.kind === "out" && (
+                        <button
+                          onClick={() => deleteMessage(m)}
+                          className="opacity-0 group-hover:opacity-100 transition p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                          title="Delete message"
+                          aria-label="Delete message"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                       <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
                         m.kind === "out" ? "bg-green-500/15 text-foreground" : "bg-muted text-foreground"
                       }`}>
@@ -458,6 +468,16 @@ const Inbox = () => {
                           )}
                         </div>
                       </div>
+                      {m.kind === "in" && (
+                        <button
+                          onClick={() => deleteMessage(m)}
+                          className="opacity-0 group-hover:opacity-100 transition p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                          title="Delete message"
+                          aria-label="Delete message"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   ))}
                   {conversation.length === 0 && (
