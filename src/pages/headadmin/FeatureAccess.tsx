@@ -15,7 +15,7 @@ const FEATURES: { key: FeatureKey; label: string; icon: any }[] = [
 ];
 
 export default function FeatureAccess() {
-  const [globals, setGlobals] = useState<Record<FeatureKey, boolean>>({ ai_agent: true, auto_replies: true });
+  const [globals, setGlobals] = useState<Record<FeatureKey, boolean>>({ ai_agent: true, auto_replies: true, abandoned_cart: true });
   const [users, setUsers] = useState<any[]>([]);
   const [overrides, setOverrides] = useState<Record<string, Partial<Record<FeatureKey, boolean>>>>({});
   const [search, setSearch] = useState("");
