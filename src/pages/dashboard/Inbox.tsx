@@ -33,11 +33,13 @@ type OutgoingRow = {
   created_at: string;
 };
 
+// reply_text on incoming_messages is only ever written by the ai-reply edge function
+// (manual replies go to message_logs only). So the default is "ai", not "manual".
 const sourceOf = (m: IncomingRow): "ai" | "keyword_rule" | "manual" => {
   const src = m?.raw_payload?.source;
-  if (src === "ai") return "ai";
   if (src === "keyword_rule" || src === "fixed_qa") return "keyword_rule";
-  return "manual";
+  if (src === "manual") return "manual";
+  return "ai";
 };
 
 const SourceIcon = ({ src, className = "h-3.5 w-3.5" }: { src: string; className?: string }) => {
