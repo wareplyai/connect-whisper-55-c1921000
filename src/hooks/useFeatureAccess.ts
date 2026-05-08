@@ -15,7 +15,7 @@ export function useFeatureAccess() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const loadAccess = async () => {
       const [{ data: globals }, { data: overrides }] = await Promise.all([
         supabase.from("global_feature_settings" as any).select("feature, show_to_users"),
         user
@@ -35,9 +35,23 @@ export function useFeatureAccess() {
       });
       setAccess(result);
       setLoading(false);
-    })();
+    };
+
+    loadAccess();
+
+    const channel = supabase
+      .channel(`feature-access-${user?.id || "guest"}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "global_feature_settings" }, loadAccess)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_feature_access", filter: user?.id ? `user_id=eq.${user.id}` : undefined },
+        loadAccess,
+      )
+      .subscribe();
+
     return () => {
       cancelled = true;
+      supabase.removeChannel(channel);
     };
   }, [user?.id]);
 
