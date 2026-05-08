@@ -245,7 +245,9 @@ const DashboardHome = () => {
           </div>
         )}
       </div>
-
+      <div className="grid lg:grid-cols-2 gap-4">
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h3 className="font-semibold mb-4">Messages by Status (last 7 days)</h3>
           {stats.total === 0 ? (
             <div className="h-56 grid place-items-center text-sm text-muted-foreground">0 messages in the last 7 days</div>
           ) : (
