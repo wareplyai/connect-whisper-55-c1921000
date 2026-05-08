@@ -72,6 +72,7 @@ const DashboardHome = () => {
         });
       }
       setChart(days);
+      setLoading(false);
     })();
   }, [profile]);
 
