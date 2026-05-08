@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type FeatureKey = "ai_agent" | "auto_replies";
+export type FeatureKey = "ai_agent" | "auto_replies" | "abandoned_cart";
 
 export function useFeatureAccess() {
   const { user } = useAuth();
   const [access, setAccess] = useState<Record<FeatureKey, boolean>>({
     ai_agent: true,
     auto_replies: true,
+    abandoned_cart: true,
   });
   const [loading, setLoading] = useState(true);
 
