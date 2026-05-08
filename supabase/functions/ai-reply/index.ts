@@ -320,6 +320,7 @@ async function markAsRead(opts: {
   const digits = String(to).replace(/\D/g, "");
   const jid = String(to).includes("@") ? String(to) : `${digits || to}@s.whatsapp.net`;
   const chatBody = compactBody({ to: digits || to, jid, remoteJid: jid, chatId: jid, id: messageId, messageId });
+  const jidBody = compactBody({ to: jid, jid, remoteJid: jid, chatId: jid, id: messageId, messageId });
   const attempts = [
     ...(messageKey ? [
       { path: `/api/session/${sessionId}/sendSeen`, body: { messageKey } },
@@ -331,6 +332,9 @@ async function markAsRead(opts: {
       { path: `/api/messages/read`, body: { messages: [messageKey] } },
     ] : []),
     // Baileys-style gateway endpoints (matching the working /typing pattern)
+    { path: `/api/session/${sessionId}/sendSeen`, body: jidBody },
+    { path: `/api/session/${sessionId}/seen`, body: jidBody },
+    { path: `/api/session/${sessionId}/read`, body: jidBody },
     { path: `/api/session/${sessionId}/sendSeen`, body: chatBody },
     { path: `/api/session/${sessionId}/seen`, body: chatBody },
     { path: `/api/session/${sessionId}/read`, body: chatBody },
