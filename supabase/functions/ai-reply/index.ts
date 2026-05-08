@@ -1341,6 +1341,20 @@ Deno.serve(async (req) => {
       } else {
         try {
           const desc = await describeImageWithOpenAI(apiKey, imageUrl);
+
+          // Extract structured fields (product name + order number) and persist them.
+          const structured = await extractStructuredFromImage({
+            apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption,
+          });
+          if (messageId) {
+            await admin.from("incoming_messages").update({
+              extracted_product_name: structured.product_name,
+              extracted_order_number: structured.order_number,
+              image_analysis: { description: desc, ...structured },
+              image_analyzed_at: new Date().toISOString(),
+            }).eq("id", messageId);
+          }
+
           const { data: productRows } = await admin
             .from("products")
             .select("id, name, price, description, category, stock, image_url, ai_tags")
@@ -1349,9 +1363,10 @@ Deno.serve(async (req) => {
             .limit(500);
 
           let best: { score: number; row: any } | null = null;
+          const haystackQuery = [desc, structured.product_name, imageCaption].filter(Boolean).join(" ");
           for (const p of productRows || []) {
             const haystack = [p.name, p.description, p.category, p.ai_tags].filter(Boolean).join(" ");
-            const score = textSimilarity(desc, haystack);
+            const score = textSimilarity(haystackQuery, haystack);
             if (!best || score > best.score) best = { score, row: p };
           }
 
