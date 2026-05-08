@@ -479,6 +479,7 @@ export type Database = {
           delivery_status: string
           from_number: string
           id: string
+          image_url: string | null
           is_group: boolean
           match_log: Json | null
           matched_rule_id: string | null
@@ -499,6 +500,7 @@ export type Database = {
           delivery_status?: string
           from_number: string
           id?: string
+          image_url?: string | null
           is_group?: boolean
           match_log?: Json | null
           matched_rule_id?: string | null
@@ -519,6 +521,7 @@ export type Database = {
           delivery_status?: string
           from_number?: string
           id?: string
+          image_url?: string | null
           is_group?: boolean
           match_log?: Json | null
           matched_rule_id?: string | null
@@ -1443,6 +1446,7 @@ export type Database = {
           delivery_status: string
           from_number: string
           id: string
+          image_url: string | null
           is_group: boolean
           match_log: Json | null
           matched_rule_id: string | null
