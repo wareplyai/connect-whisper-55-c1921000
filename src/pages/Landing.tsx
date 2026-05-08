@@ -518,7 +518,7 @@ const Landing = () => {
               asChild
               size="lg"
               variant="outline"
-              className="h-12 px-7 rounded-full border-foreground/15 bg-transparent backdrop-blur hover:bg-card/60 hover:border-primary/40 text-sm font-medium transition-all"
+              className="h-12 px-7 rounded-full border-foreground/15 bg-transparent backdrop-blur text-foreground hover:bg-card/60 hover:text-foreground hover:border-primary/40 text-sm font-medium transition-all"
             >
               <a href="#features">{t("hero.cta.docs")}</a>
             </Button>
