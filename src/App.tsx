@@ -36,6 +36,7 @@ import Inbox from "./pages/dashboard/Inbox";
 import AIAgent from "./pages/dashboard/AIAgent";
 import BehaviorSettings from "./pages/dashboard/BehaviorSettings";
 import Products from "./pages/dashboard/Products";
+import WooCommerce from "./pages/dashboard/WooCommerce";
 import AdminPanel from "./pages/admin/AdminPanel";
 import HAPayments from "./pages/headadmin/Payments";
 import HAPaymentMethods from "./pages/headadmin/PaymentMethods";
