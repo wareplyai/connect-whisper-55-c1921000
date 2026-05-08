@@ -1091,24 +1091,7 @@ Deno.serve(async (req) => {
     }
 
     // Skip the original try/catch wrapper below (now inlined)
-    if (false) {
-      reply = await callAI({
-        platform: keyRow.platform,
-        model: "x",
-        apiKey,
-        systemPrompt,
-        userMessage: messageText,
-      });
-    } catch (aiErr: any) {
-      if (messageId) {
-        await admin.from("incoming_messages").update({
-          reply_error: aiErr?.message || "AI call failed",
-          delivery_status: "failed",
-          processed_at: new Date().toISOString(),
-        }).eq("id", messageId);
-      }
-      throw aiErr;
-    }
+    // (legacy duplicated block removed)
 
     if (!reply) {
       if (messageId) {
