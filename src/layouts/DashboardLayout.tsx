@@ -16,7 +16,7 @@ const nav = [
   { to: "/dashboard/behavior", label: "Behavior & Anti-Ban", icon: ShieldCheck },
   { to: "/dashboard/products", label: "Products", icon: Package },
   { to: "/dashboard/woocommerce", label: "WooCommerce", icon: ShoppingCart },
-  { to: "/dashboard/abandoned-cart", label: "Abandoned Cart", icon: ShoppingBag },
+  { to: "/dashboard/abandoned-cart", label: "Incomplete", icon: ShoppingBag },
   { to: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
   { to: "/dashboard/payments", label: "My Payments", icon: Receipt },
 ];
