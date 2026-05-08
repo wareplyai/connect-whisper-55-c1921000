@@ -97,8 +97,10 @@ export default function WooCommerce() {
     setSyncing(true);
     const { data, error } = await supabase.functions.invoke("woo-sync-products", { body: {} });
     setSyncing(false);
-    if (error || (data as any)?.error) {
-      toast({ title: "Sync failed", description: (data as any)?.error || error?.message, variant: "destructive" });
+    const message = (data as any)?.error || (Array.isArray((data as any)?.errors) ? (data as any).errors.join(" | ") : "") || error?.message;
+    if (error || (data as any)?.error || (data as any)?.ok === false) {
+      toast({ title: "Sync failed", description: message || "WooCommerce sync failed", variant: "destructive" });
+      await load();
       return;
     }
     toast({ title: "✅ Sync complete", description: `${(data as any)?.total || 0} products synced` });
