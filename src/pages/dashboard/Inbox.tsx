@@ -171,8 +171,11 @@ const Inbox = () => {
         srcId: m.id,
         srcField: "message" as const,
         kind: "in" as const,
-        text: m.message_text || (m.image_url ? "" : "(no text)"),
+        text: m.message_text || m.image_caption || (m.image_url ? "" : "(no text)"),
         imageUrl: (m as any).image_url as string | null,
+        mimetype: (m as any).mimetype as string | null,
+        productName: (m as any).extracted_product_name as string | null,
+        orderNumber: (m as any).extracted_order_number as string | null,
         ts: m.received_at,
         pending: !m.reply_sent && !m.reply_text,
       }));
