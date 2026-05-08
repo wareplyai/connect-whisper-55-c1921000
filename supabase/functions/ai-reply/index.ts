@@ -266,6 +266,22 @@ async function resolveFromGatewayMessageInfo(opts: {
   return "";
 }
 
+export function gatewayBaseVariants(gateway: string): string[] {
+  const clean = String(gateway || "https://alvi-waapi.duckdns.org/waapi").replace(/\/+$/, "");
+  const variants = [clean];
+  try {
+    const url = new URL(clean);
+    if (url.pathname.replace(/\/+$/, "") === "/waapi") variants.push(url.origin);
+  } catch {
+    // Keep the original gateway when it is not a fully-qualified URL.
+  }
+  return [...new Set(variants.filter(Boolean))];
+}
+
+function compactBody(body: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(body).filter(([, value]) => value !== undefined && value !== null && value !== ""));
+}
+
 async function sendTypingIndicator(opts: {
   gateway: string; sessionId: string; apiToken?: string | null; to: string; durationMs: number;
 }): Promise<void> {
@@ -297,45 +313,48 @@ async function sendTypingIndicator(opts: {
 
 async function markAsRead(opts: {
   gateway: string; sessionId: string; apiToken?: string | null; to: string; messageId?: string; messageKey?: Record<string, unknown> | null;
-}): Promise<void> {
+}): Promise<boolean> {
   const { gateway, sessionId, apiToken, to, messageId, messageKey } = opts;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
   const digits = String(to).replace(/\D/g, "");
   const jid = String(to).includes("@") ? String(to) : `${digits || to}@s.whatsapp.net`;
+  const chatBody = compactBody({ to: digits || to, jid, remoteJid: jid, chatId: jid, id: messageId, messageId });
   const attempts = [
     ...(messageKey ? [
       { path: `/api/session/${sessionId}/sendSeen`, body: { messageKey } },
       { path: `/api/session/${sessionId}/sendSeen`, body: { key: messageKey } },
+      { path: `/api/session/${sessionId}/sendSeen`, body: { messages: [messageKey] } },
       { path: `/api/session/${sessionId}/seen`, body: { messageKey } },
       { path: `/api/messages/read`, body: { messageKey } },
       { path: `/api/messages/read`, body: { key: messageKey } },
       { path: `/api/messages/read`, body: { messages: [messageKey] } },
     ] : []),
     // Baileys-style gateway endpoints (matching the working /typing pattern)
-    { path: `/api/session/${sessionId}/sendSeen`, body: { to, jid, messageId } },
-    { path: `/api/session/${sessionId}/sendSeen`, body: { remoteJid: jid, id: messageId } },
-    { path: `/api/session/${sessionId}/seen`, body: { to, jid, messageId } },
-    { path: `/api/session/${sessionId}/read`, body: { to, jid, messageId } },
-    { path: `/api/session/${sessionId}/mark-read`, body: { to, jid, messageId } },
-    { path: `/api/session/${sessionId}/markAsRead`, body: { to, jid, messageId } },
-    { path: `/api/session/${sessionId}/chat/read`, body: { to, jid } },
-    { path: `/api/session/${sessionId}/chats/read`, body: { to, jid } },
-    { path: `/api/session/${sessionId}/presence`, body: { to, presence: "available" } },
-    { path: `/api/messages/read`, body: { jid, to: jid, messageId } },
+    { path: `/api/session/${sessionId}/sendSeen`, body: chatBody },
+    { path: `/api/session/${sessionId}/seen`, body: chatBody },
+    { path: `/api/session/${sessionId}/read`, body: chatBody },
+    { path: `/api/session/${sessionId}/mark-read`, body: chatBody },
+    { path: `/api/session/${sessionId}/markAsRead`, body: chatBody },
+    { path: `/api/session/${sessionId}/chat/read`, body: chatBody },
+    { path: `/api/session/${sessionId}/chats/read`, body: chatBody },
+    { path: `/api/session/${sessionId}/presence`, body: { to: digits || to, jid, presence: "available" } },
+    { path: `/api/messages/read`, body: chatBody },
   ];
-  let success = false;
-  for (const a of attempts) {
-    try {
-      const r = await fetch(`${gateway}${a.path}`, { method: "POST", headers, body: JSON.stringify(a.body) });
-      const txt = await r.text().catch(() => "");
-      console.log(`[markAsRead] ${a.path} -> ${r.status} ${txt.slice(0, 200)}`);
-      if (r.ok) { success = true; break; }
-    } catch (e) {
-      console.log(`[markAsRead] ${a.path} failed: ${(e as Error)?.message}`);
+  for (const base of gatewayBaseVariants(gateway)) {
+    for (const a of attempts) {
+      try {
+        const r = await fetch(`${base}${a.path}`, { method: "POST", headers, body: JSON.stringify(a.body) });
+        const txt = await r.text().catch(() => "");
+        console.log(`[markAsRead] ${base}${a.path} -> ${r.status} ${txt.slice(0, 200)}`);
+        if (r.ok) return true;
+      } catch (e) {
+        console.log(`[markAsRead] ${base}${a.path} failed: ${(e as Error)?.message}`);
+      }
     }
   }
-  if (!success) console.log(`[markAsRead] all attempts failed for to=${to}`);
+  console.log(`[markAsRead] all attempts failed for to=${to}`);
+  return false;
 }
 
 function normalizeIncomingMessageKey(candidate: unknown, fallbackJid: string): Record<string, unknown> | null {
