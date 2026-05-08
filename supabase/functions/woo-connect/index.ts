@@ -17,11 +17,22 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function normalizeStoreUrl(input: string): string {
+function normalizeStoreUrl(input: string, fallbackProtocol = "https"): string {
   let u = String(input || "").trim();
   if (!u) return "";
-  if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+  if (!/^https?:\/\//i.test(u)) u = `${fallbackProtocol}://` + u;
   return u.replace(/\/+$/, "");
+}
+
+function htmlToMessage(text: string): string {
+  const title = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+  const cleaned = (title || text)
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned.slice(0, 300) || "WooCommerce returned an HTML page instead of API JSON";
 }
 
 function pe(s: string): string {
@@ -60,6 +71,28 @@ async function wooFetch(storeUrl: string, path: string, ck: string, cs: string, 
   }
   const url = await signedWooUrl(baseUrl, "GET", ck, cs, params);
   return await fetch(url);
+}
+
+async function verifyWooConnection(storeUrl: string, ck: string, cs: string): Promise<string> {
+  const r = await wooFetch(storeUrl, "/wp-json/wc/v3/products", ck, cs, { per_page: "1" });
+  const text = await r.text();
+  if (!r.ok) {
+    throw new Error(`WooCommerce verify failed (${r.status}): ${htmlToMessage(text)}`);
+  }
+  try {
+    JSON.parse(text);
+  } catch {
+    throw new Error(`${htmlToMessage(text)}. REST API JSON was not returned; if your site has no SSL, use http:// or keep the domain only so HTTP OAuth can be used.`);
+  }
+
+  try {
+    const sysR = await wooFetch(storeUrl, "/wp-json/wc/v3/system_status", ck, cs);
+    if (sysR.ok) {
+      const sys: any = await sysR.json().catch(() => ({}));
+      return sys?.environment?.site_url || "";
+    }
+  } catch {}
+  return "";
 }
 
 Deno.serve(async (req) => {
