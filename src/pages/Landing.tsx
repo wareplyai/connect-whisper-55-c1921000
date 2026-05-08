@@ -187,7 +187,7 @@ const Landing = () => {
         {/* Silk curves - left */}
         <svg
           aria-hidden="true"
-          className="pointer-events-none absolute left-0 top-0 h-full w-[55%] z-0 hero-silk hero-silk-left"
+          className="pointer-events-none absolute left-0 top-20 h-[calc(100%-5rem)] w-[55%] z-0 hero-silk hero-silk-left"
           viewBox="0 0 600 1000"
           preserveAspectRatio="none"
           fill="none"
