@@ -59,7 +59,7 @@ export default function AbandonedCart() {
   const [sessions, setSessions] = useState<Array<{ id: string; session_name: string; status: string }>>([]);
   const [orders, setOrders] = useState<AOrder[]>([]);
   const [sessionId, setSessionId] = useState("");
-  const [country, setCountry] = useState("88");
+  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [viewing, setViewing] = useState<AOrder | null>(null);
 
   const load = async () => {
