@@ -51,6 +51,7 @@ export default function Products() {
     stock: "",
   });
   const [file, setFile] = useState<File | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
   const [edit, setEdit] = useState<EditState>({
     open: false, product: null, name: "", price: "", description: "", category: "", stock: "", file: null,
   });
