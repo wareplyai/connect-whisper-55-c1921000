@@ -17,7 +17,7 @@ const DashboardHome = () => {
   const [failed, setFailed] = useState<any[]>([]);
   const [chart, setChart] = useState<{ day: string; sent: number; failed: number; pending: number }[]>([]);
   const [stats, setStats] = useState({ total: 0, sent: 0, failed: 0, pending: 0 });
-
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (!profile) return;
     (async () => {
