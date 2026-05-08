@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { looksLikeCustomerPhone, looksLikeSendableRecipient, resolveCustomerNumber } from "./index.ts";
+import { gatewayBaseVariants, looksLikeCustomerPhone, looksLikeSendableRecipient, resolveCustomerNumber } from "./index.ts";
 
 Deno.test("accepts any 8-15 digit string as a possible customer phone", () => {
   // WhatsApp 15-digit LID ids that start with 23/13 are not sendable customer phones.
@@ -75,5 +75,12 @@ Deno.test("falls back to body.from when no trusted jid present", () => {
   assertEquals(
     resolveCustomerNumber({ from: "8801739049039" }, "8801948695672"),
     "8801739049039",
+  );
+});
+
+Deno.test("read receipt gateway base also tries root when WHATSAPP_GATEWAY_URL contains /waapi", () => {
+  assertEquals(
+    gatewayBaseVariants("https://alvi-waapi.duckdns.org/waapi"),
+    ["https://alvi-waapi.duckdns.org/waapi", "https://alvi-waapi.duckdns.org"],
   );
 });
