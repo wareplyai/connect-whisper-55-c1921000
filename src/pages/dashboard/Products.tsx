@@ -115,6 +115,7 @@ export default function Products() {
 
       toast.success("Product added — AI tagging in background");
       reset();
+      setAddOpen(false);
       load();
     } catch (e: any) {
       toast.error(e.message || "Failed");
