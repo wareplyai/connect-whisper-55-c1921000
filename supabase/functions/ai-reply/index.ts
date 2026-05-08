@@ -90,12 +90,15 @@ async function callAI(opts: {
   throw new Error(`Unsupported platform: ${platform}`);
 }
 
-// Walk the payload deeply and return the first http(s) URL that looks like an image,
-// or a plausible WhatsApp media URL (jpg/jpeg/png/webp or mediaUrl/imageMessage.url field).
+// Walk the payload deeply and return the first usable image source — either:
+//   - a data: URL  (data:image/...;base64,...)
+//   - an http(s) URL that looks like an image
+//   - a base64 string we can wrap as a data URL (when paired with a mimetype field)
 function findImageUrl(value: unknown, depth = 0): string | null {
   if (depth > 8 || value == null) return null;
   if (typeof value === "string") {
     const v = value.trim();
+    if (/^data:image\/[a-z+.-]+;base64,/i.test(v)) return v;
     if (/^https?:\/\//i.test(v) && /\.(jpe?g|png|webp|gif)(\?|$)/i.test(v)) return v;
     return null;
   }
@@ -108,12 +111,26 @@ function findImageUrl(value: unknown, depth = 0): string | null {
   }
   if (typeof value !== "object") return null;
   const obj = value as Record<string, unknown>;
-  // Prefer common keys first
+
+  // Base64 fields paired with optional mimetype → wrap as data URL
+  const b64Keys = ["image_base64", "imageBase64", "image_data", "imageData", "media_base64", "mediaBase64", "base64", "data"];
+  for (const k of b64Keys) {
+    const v = obj[k];
+    if (typeof v === "string" && v.length > 100 && /^[A-Za-z0-9+/=\s]+$/.test(v.slice(0, 200))) {
+      const mime = (obj.mimetype || obj.mime_type || obj.contentType || "image/jpeg") as string;
+      return `data:${mime};base64,${v.replace(/\s+/g, "")}`;
+    }
+  }
+
+  // Prefer common URL keys first
   const preferred = ["image_url", "imageUrl", "mediaUrl", "media_url", "url", "directPath", "fileUrl"];
   for (const k of preferred) {
     const v = obj[k];
-    if (typeof v === "string" && /^https?:\/\//i.test(v)) {
-      if (/\.(jpe?g|png|webp|gif)(\?|$)/i.test(v) || /image|media/i.test(k)) return v;
+    if (typeof v === "string") {
+      if (/^data:image\//i.test(v)) return v;
+      if (/^https?:\/\//i.test(v)) {
+        if (/\.(jpe?g|png|webp|gif)(\?|$)/i.test(v) || /image|media/i.test(k)) return v;
+      }
     }
   }
   for (const v of Object.values(obj)) {
