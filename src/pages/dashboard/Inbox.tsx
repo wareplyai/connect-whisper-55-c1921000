@@ -158,6 +158,9 @@ const Inbox = () => {
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number)
       .map((m) => ({
         id: `i-${m.id}`,
+        srcTable: "incoming_messages" as const,
+        srcId: m.id,
+        srcField: "message" as const,
         kind: "in" as const,
         text: m.message_text || "(no text)",
         ts: m.received_at,
@@ -167,6 +170,9 @@ const Inbox = () => {
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number && m.reply_text)
       .map((m) => ({
         id: `r-${m.id}`,
+        srcTable: "incoming_messages" as const,
+        srcId: m.id,
+        srcField: "reply" as const,
         kind: "out" as const,
         text: m.reply_text!,
         ts: (m as any).reply_sent_at || m.received_at,
@@ -178,11 +184,12 @@ const Inbox = () => {
         const src = o.payload?.source;
         const source: "ai" | "keyword_rule" | "manual" =
           src === "ai" ? "ai" : (src === "keyword_rule" || src === "fixed_qa") ? "keyword_rule" : "manual";
-        // Gateway-created AI delivery logs can arrive with only { text } and no source.
-        // Only dashboard manual sends are tagged source:"manual"; everything else is already shown via incoming.reply_text.
         if (src !== "manual") return null;
         return {
           id: `o-${o.id}`,
+          srcTable: "message_logs" as const,
+          srcId: o.id,
+          srcField: "row" as const,
           kind: "out" as const,
           text: typeof o.payload === "object" ? (o.payload?.text || JSON.stringify(o.payload)) : String(o.payload || ""),
           ts: o.created_at,
