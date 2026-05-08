@@ -558,6 +558,7 @@ Deno.serve(async (req) => {
     if (samePhone(fromNumber, session.phone_number)) {
       return jsonResp({ ok: true, skipped: "own_session_number", from: fromNumber });
     }
+    const incomingMessageKey = resolveIncomingMessageKey(body, fromNumber);
 
     // Per-customer mode: ai (default) | human (manual only) | auto_reply (keyword rules only)
     const { data: customerSetting } = await admin
@@ -626,7 +627,7 @@ Deno.serve(async (req) => {
     // Mark incoming as read on WhatsApp if enabled (session-level)
     if (sessionReadReceipts) {
       // best-effort, fire and forget
-      markAsRead({ gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber }).catch(() => {});
+      markAsRead({ gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, messageKey: incomingMessageKey }).catch(() => {});
     }
 
     let messageId: string | undefined;
@@ -921,7 +922,7 @@ Deno.serve(async (req) => {
 
     // AI-side read receipts (independent from session setting)
     if (aiReadReceipts) {
-      markAsRead({ gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber }).catch(() => {});
+      markAsRead({ gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, messageKey: incomingMessageKey }).catch(() => {});
     }
     const sendOk = sendResult.ok;
     const sendErr = sendResult.error;
