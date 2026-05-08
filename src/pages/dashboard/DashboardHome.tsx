@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { CreditCard, CheckCircle2, MessageSquare, Wifi } from "lucide-react";
+import { CreditCard, CheckCircle2, MessageSquare, Wifi, Package, ShoppingCart, TrendingUp, Clock } from "lucide-react";
 import { CartesianGrid, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
 
