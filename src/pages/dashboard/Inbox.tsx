@@ -24,6 +24,10 @@ type IncomingRow = {
   received_at: string;
   raw_payload: any;
   image_url?: string | null;
+  mimetype?: string | null;
+  image_caption?: string | null;
+  extracted_product_name?: string | null;
+  extracted_order_number?: string | null;
 };
 
 type OutgoingRow = {
