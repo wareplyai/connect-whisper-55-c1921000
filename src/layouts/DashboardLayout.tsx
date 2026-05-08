@@ -15,6 +15,7 @@ const nav = [
   { to: "/dashboard/ai-agent", label: "AI Agent", icon: Bot },
   { to: "/dashboard/behavior", label: "Behavior & Anti-Ban", icon: ShieldCheck },
   { to: "/dashboard/products", label: "Products", icon: Package },
+  { to: "/dashboard/woocommerce", label: "WooCommerce", icon: ShoppingCart },
   { to: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
   { to: "/dashboard/payments", label: "My Payments", icon: Receipt },
 ];
