@@ -296,12 +296,20 @@ async function sendTypingIndicator(opts: {
 }
 
 async function markAsRead(opts: {
-  gateway: string; sessionId: string; apiToken?: string | null; to: string; messageId?: string;
+  gateway: string; sessionId: string; apiToken?: string | null; to: string; messageId?: string; messageKey?: Record<string, unknown> | null;
 }): Promise<void> {
-  const { gateway, sessionId, apiToken, to, messageId } = opts;
+  const { gateway, sessionId, apiToken, to, messageId, messageKey } = opts;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+  const digits = String(to).replace(/\D/g, "");
+  const jid = String(to).includes("@") ? String(to) : `${digits || to}@s.whatsapp.net`;
   const attempts = [
+    ...(messageKey ? [
+      { path: `/api/messages/read`, body: { messageKey } },
+      { path: `/api/messages/read`, body: { key: messageKey } },
+      { path: `/api/messages/read`, body: { messages: [messageKey] } },
+    ] : []),
+    { path: `/api/messages/read`, body: { jid, to: jid, messageId } },
     { path: `/api/session/${sessionId}/read`, body: { to, messageId } },
     { path: `/api/session/${sessionId}/mark-read`, body: { to, messageId } },
     { path: `/api/session/${sessionId}/chat/read`, body: { to } },
@@ -312,6 +320,32 @@ async function markAsRead(opts: {
       if (r.ok) return;
     } catch { /* swallow */ }
   }
+}
+
+function normalizeIncomingMessageKey(candidate: unknown, fallbackJid: string): Record<string, unknown> | null {
+  if (!candidate || typeof candidate !== "object") return null;
+  const key = candidate as Record<string, unknown>;
+  const id = String(key.id || key.messageId || key.message_id || key.msgId || key.msg_id || "").trim();
+  if (!id || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+  const remoteJid = String(key.remoteJid || key.remote_jid || key.chatId || key.chat_id || key.jid || fallbackJid || "").trim();
+  if (!remoteJid) return null;
+  const messageKey: Record<string, unknown> = { id, remoteJid, fromMe: key.fromMe === true ? true : false };
+  if (key.participant) messageKey.participant = key.participant;
+  return messageKey;
+}
+
+function resolveIncomingMessageKey(body: Record<string, unknown>, fromNumber: string): Record<string, unknown> | null {
+  const raw = (body.raw_payload && typeof body.raw_payload === "object" ? body.raw_payload : {}) as Record<string, unknown>;
+  const nestedRaw = (raw.raw_payload && typeof raw.raw_payload === "object" ? raw.raw_payload : {}) as Record<string, unknown>;
+  const fallbackJid = String(
+    body.target_jid || body.remoteJid || raw.target_jid || raw.remoteJid || nestedRaw.target_jid || `${fromNumber}@s.whatsapp.net`,
+  );
+  const candidates = [body.messageKey, body.message_key, body.key, raw.messageKey, raw.message_key, raw.key, nestedRaw.messageKey, nestedRaw.message_key, nestedRaw.key];
+  for (const candidate of candidates) {
+    const messageKey = normalizeIncomingMessageKey(candidate, fallbackJid);
+    if (messageKey) return messageKey;
+  }
+  return null;
 }
 
 async function sendViaGateway(opts: {
