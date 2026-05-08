@@ -501,15 +501,20 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const sessionId = String(body.session_id || body.sessionId || "").trim();
-    const messageText = String(body.message || body.text || body.message_text || "").trim();
+    const rawText = String(body.message || body.text || body.message_text || "").trim();
     const isGroup = Boolean(body.is_group ?? body.isGroup ?? false) || hasGroupJid(body);
     const messageType = String(body.message_type || "text");
     const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false) ||
       hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
 
-    if (!sessionId || !messageText) {
-      return jsonResp({ error: "session_id and message required" }, 400);
+    // ---- Image detection: scan body deeply for an http(s) image url ----
+    const imageUrl = findImageUrl(body);
+    const isImageMessage = !!imageUrl && (messageType === "image" || !rawText);
+    const messageText = rawText || (isImageMessage ? "[customer sent an image]" : "");
+
+    if (!sessionId || (!messageText && !imageUrl)) {
+      return jsonResp({ error: "session_id and message or image required" }, 400);
     }
 
     // Skip messages sent BY the bot itself (prevents infinite loop)
