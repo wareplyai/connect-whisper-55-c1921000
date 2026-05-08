@@ -113,7 +113,9 @@ Deno.serve(async (req) => {
     const userId = u.user.id;
 
     const body = await req.json().catch(() => ({}));
-    const store_url = normalizeStoreUrl(body.store_url);
+    const rawStoreUrl = String(body.store_url || "").trim();
+    const explicitProtocol = /^https?:\/\//i.test(rawStoreUrl);
+    let store_url = normalizeStoreUrl(rawStoreUrl);
     const consumer_key = String(body.consumer_key || "").trim();
     const consumer_secret = String(body.consumer_secret || "").trim();
     const default_session_id = body.default_session_id ? String(body.default_session_id) : null;
@@ -128,23 +130,19 @@ Deno.serve(async (req) => {
     // Verify credentials by calling /wp-json/wc/v3/products?per_page=1
     let storeName = "";
     try {
-      const r = await wooFetch(store_url, "/wp-json/wc/v3/products", consumer_key, consumer_secret, { per_page: "1" });
-      const text = await r.text();
-      if (!r.ok) {
-        return json({ error: `WooCommerce verify failed (${r.status}): ${text.slice(0, 300)}` }, 400);
-      }
-      try { JSON.parse(text); } catch {
-        return json({ error: "WooCommerce returned HTML instead of JSON. Check store URL, REST API permalinks, or security plugins." }, 400);
-      }
-      try {
-        const sysR = await wooFetch(store_url, "/wp-json/wc/v3/system_status", consumer_key, consumer_secret);
-        if (sysR.ok) {
-          const sys: any = await sysR.json().catch(() => ({}));
-          storeName = sys?.environment?.site_url || "";
-        }
-      } catch {}
+      storeName = await verifyWooConnection(store_url, consumer_key, consumer_secret);
     } catch (e: any) {
-      return json({ error: `Cannot reach store: ${e?.message || e}` }, 400);
+      if (!explicitProtocol && /^https:\/\//i.test(store_url)) {
+        const httpUrl = normalizeStoreUrl(rawStoreUrl, "http");
+        try {
+          storeName = await verifyWooConnection(httpUrl, consumer_key, consumer_secret);
+          store_url = httpUrl;
+        } catch (httpErr: any) {
+          return json({ error: `Cannot verify store. HTTPS failed: ${e?.message || e}. HTTP failed: ${httpErr?.message || httpErr}` }, 400);
+        }
+      } else {
+        return json({ error: `Cannot verify store: ${e?.message || e}` }, 400);
+      }
     }
 
     const admin = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
