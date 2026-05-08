@@ -15,6 +15,8 @@ import {
   Copy, Loader2, ShoppingBag, Save, RefreshCw, ExternalLink,
   CheckCircle2, XCircle, Clock, Eye, AlertCircle,
 } from "lucide-react";
+import { CountryCodeSelect } from "@/components/CountryCodeSelect";
+import { ALL_COUNTRIES, DEFAULT_COUNTRY, type Country } from "@/lib/countries";
 
 interface Conn {
   id: string;
@@ -57,7 +59,7 @@ export default function AbandonedCart() {
   const [sessions, setSessions] = useState<Array<{ id: string; session_name: string; status: string }>>([]);
   const [orders, setOrders] = useState<AOrder[]>([]);
   const [sessionId, setSessionId] = useState("");
-  const [country, setCountry] = useState("88");
+  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [viewing, setViewing] = useState<AOrder | null>(null);
 
   const load = async () => {
@@ -81,7 +83,9 @@ export default function AbandonedCart() {
     setOrders((o as any) || []);
     if (c) {
       setSessionId((c as any).default_session_id || "");
-      setCountry((c as any).country_code || "88");
+      const cc = String((c as any).country_code || "880").replace(/\D/g, "");
+      const found = ALL_COUNTRIES.find((x) => x.code.replace("+", "") === cc);
+      setCountry(found || DEFAULT_COUNTRY);
     }
     setLoading(false);
   };
@@ -92,7 +96,7 @@ export default function AbandonedCart() {
     if (!conn) return;
     setSaving(true);
     const { error } = await supabase.from("abandoned_connections" as any)
-      .update({ default_session_id: sessionId || null, country_code: country || "88" })
+      .update({ default_session_id: sessionId || null, country_code: country.code.replace("+", "") })
       .eq("id", conn.id);
     setSaving(false);
     if (error) { toast({ title: "Save failed", description: error.message, variant: "destructive" }); return; }
@@ -149,8 +153,11 @@ export default function AbandonedCart() {
               </Select>
             </div>
             <div>
-              <Label>Country code (digits only, e.g. 88 or 880)</Label>
-              <Input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="88" />
+              <Label>Customer country (auto-prefixed to incoming phone numbers)</Label>
+              <div className="flex items-center gap-2">
+                <CountryCodeSelect value={country} onChange={setCountry} />
+                <span className="text-sm text-muted-foreground truncate">{country.name} ({country.code})</span>
+              </div>
             </div>
           </div>
           <Button onClick={save} disabled={saving} className="bg-orange-500 hover:bg-orange-600 text-white">
