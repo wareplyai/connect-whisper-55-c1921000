@@ -71,8 +71,12 @@ Deno.serve(async (req) => {
       event: event_type,
       test: true,
       session_id,
+      sessionId: session_id,
       from: "8801739049039",
+      from_number: "8801739049039",
       message: "🧪 This is a test event from WaReply",
+      message_text: "🧪 This is a test event from WaReply",
+      message_type: "text",
       timestamp: new Date().toISOString(),
       raw_payload: {
         key: {
