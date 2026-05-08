@@ -35,6 +35,7 @@ import AutoReplies from "./pages/dashboard/AutoReplies";
 import Inbox from "./pages/dashboard/Inbox";
 import AIAgent from "./pages/dashboard/AIAgent";
 import BehaviorSettings from "./pages/dashboard/BehaviorSettings";
+import Products from "./pages/dashboard/Products";
 import AdminPanel from "./pages/admin/AdminPanel";
 import HAPayments from "./pages/headadmin/Payments";
 import HAPaymentMethods from "./pages/headadmin/PaymentMethods";
