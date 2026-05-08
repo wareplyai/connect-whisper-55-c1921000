@@ -104,9 +104,9 @@ const DashboardHome = () => {
             <span className="text-sm text-muted-foreground">Success Rate</span>
             <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
           </div>
-          <p className="text-2xl font-bold">{successRate}%</p>
+          {loading ? <Skeleton className="h-8 w-16" /> : <p className="text-2xl font-bold">{successRate}%</p>}
           <div className="mt-2 h-2 w-full rounded-full bg-muted overflow-hidden">
-            <div className="h-full bg-primary" style={{ width: `${successRate}%` }} />
+            {!loading && <div className="h-full bg-primary" style={{ width: `${successRate}%` }} />}
           </div>
         </div>
 
