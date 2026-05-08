@@ -1154,7 +1154,9 @@ Deno.serve(async (req) => {
     let reply = "";
 
     // ---- Image-message branch: vision describe + product match ----
-    if (isImageMessage && imageUrl) {
+    if (isImageMessage && !imageUrl) {
+      reply = "ছবি receive করেছি ✅ কিন্তু এই মুহূর্তে ছবিটা analyze করা সম্ভব হচ্ছে না। দয়া করে product টির নাম / রঙ / size text এ লিখে পাঠান, আমি match করে details দিচ্ছি।\n\nGot your image but couldn't open it right now — please describe the product in text (name / color / size).";
+    } else if (isImageMessage && imageUrl) {
       if (keyRow.platform !== "openai") {
         reply = "Sorry, image search needs an OpenAI API key. Please describe the product in text. ছবি match করতে OpenAI key দরকার, দয়া করে product টি text এ describe করুন।";
       } else {
