@@ -731,6 +731,42 @@ Deno.serve(async (req) => {
     const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org/waapi";
     const rawPayload = (body?.raw_payload as Record<string, unknown> | undefined) || {};
     const rawKey = (rawPayload?.key as Record<string, unknown> | undefined) || {};
+
+    // If gateway stripped the image bytes but the payload hints image, try to download media from gateway.
+    if (!imageUrl && payloadHasImage) {
+      const candidateMessageId = String(
+        (body as any).message_id ||
+        (body as any).messageId ||
+        (rawKey as any)?.id ||
+        (rawPayload as any)?.messageId ||
+        (rawPayload as any)?.id ||
+        ""
+      ).trim();
+      const candidateJid = String(
+        (body as any).target_jid ||
+        (body as any).remoteJid ||
+        (rawKey as any)?.remoteJid ||
+        (rawPayload as any)?.remoteJid ||
+        ""
+      ).trim();
+      if (candidateMessageId) {
+        const fetched = await fetchGatewayMediaDataUrl({
+          gateway: GATEWAY,
+          sessionId,
+          apiToken: session.api_token,
+          messageId: candidateMessageId,
+          remoteJid: candidateJid || undefined,
+        });
+        if (fetched) {
+          imageUrl = fetched;
+          isImageMessage = true;
+          console.log("[ai-reply] gateway-media recovered image for messageId=", candidateMessageId);
+        } else {
+          console.log("[ai-reply] gateway-media unavailable, replying with image-help fallback");
+        }
+      }
+    }
+
     const pickRealNumber = (...values: unknown[]) => {
       for (const value of values) {
         const digits = digitsOnly(value);
