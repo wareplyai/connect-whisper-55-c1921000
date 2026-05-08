@@ -68,7 +68,33 @@ export default function HeadAdminOverview() {
   const [todayStats, setTodayStats] = useState({ newToday: 0, failedToday: 0, activeUsers: 0, msgsToday: 0 });
   const [aStats, setAStats] = useState({ received: 0, incomplete: 0, completed: 0, sent: 0 });
   const [aRecent, setARecent] = useState<any[]>([]);
+  const [featurePerms, setFeaturePerms] = useState<{ key: string; label: string; icon: any; enabled: number; total: number; globalOn: boolean }[]>([]);
   const [loadingExtra, setLoadingExtra] = useState(true);
+
+  const loadFeaturePerms = async () => {
+    const [{ data: globals }, { data: overrides }, { count: totalUsers }] = await Promise.all([
+      supabase.from("global_feature_settings" as any).select("feature, show_to_users"),
+      supabase.from("user_feature_access" as any).select("user_id, feature, enabled"),
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+    ]);
+    const total = totalUsers || 0;
+    const gMap: Record<string, boolean> = { ai_agent: true, auto_replies: true, abandoned_cart: true };
+    (globals || []).forEach((g: any) => { gMap[g.feature] = !!g.show_to_users; });
+    const features = [
+      { key: "ai_agent", label: "AI Agent", icon: Bot },
+      { key: "auto_replies", label: "Auto-Replies", icon: MessageSquareText },
+      { key: "abandoned_cart", label: "Incomplete (Abandoned)", icon: ShoppingBag },
+    ];
+    const result = features.map((f) => {
+      const ovs = (overrides || []).filter((o: any) => o.feature === f.key);
+      const overrideUserIds = new Set(ovs.map((o: any) => o.user_id));
+      const overrideEnabled = ovs.filter((o: any) => o.enabled).length;
+      const nonOverridden = Math.max(0, total - overrideUserIds.size);
+      const enabled = overrideEnabled + (gMap[f.key] ? nonOverridden : 0);
+      return { ...f, enabled, total, globalOn: gMap[f.key] };
+    });
+    setFeaturePerms(result);
+  };
 
   const loadAbandoned = async () => {
     const [{ data: conns }, { data: rows }] = await Promise.all([
