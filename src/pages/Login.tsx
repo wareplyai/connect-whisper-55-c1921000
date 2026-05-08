@@ -3,12 +3,11 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Logo } from "@/components/Logo";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { AuthInput } from "@/components/auth/AuthInput";
 
 const Login = () => {
   const nav = useNavigate();
@@ -26,7 +25,6 @@ const Login = () => {
       return toast.error(friendlyError(error));
     }
 
-    // Check if user is active before allowing login
     const { data: prof } = await supabase
       .from("profiles")
       .select("is_active")
@@ -45,65 +43,67 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen grid place-items-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <Link to="/" className="flex items-center justify-center mb-6">
-          <Logo size={56} showText={false} />
-        </Link>
-        <h1 className="text-2xl font-bold text-center text-foreground">Log in to your account</h1>
-        <p className="text-center text-sm text-muted-foreground mt-1.5">
-          Enter your email and password below to log in
-        </p>
-
-        <form onSubmit={onSubmit} className="mt-7 space-y-4">
-          <div>
-            <Label htmlFor="email" className="text-sm font-medium">Email address</Label>
-            <Input
-              id="email"
-              type="email"
-              required
-              placeholder="email@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1.5 h-11"
-            />
-          </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-              <Link to="/forgot-password" className="text-sm text-foreground underline-offset-4 hover:underline">
-                Forgot password?
-              </Link>
-            </div>
-            <Input
-              id="password"
-              type="password"
-              required
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1.5 h-11"
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-            <Checkbox checked={remember} onCheckedChange={(v) => setRemember(!!v)} />
-            Remember me
-          </label>
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full h-11 bg-foreground text-background hover:bg-foreground/90"
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Log in"}
-          </Button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+    <AuthShell
+      title="Welcome back"
+      subtitle="Sign in to continue to your dashboard"
+      footer={
+        <>
           Don't have an account?{" "}
-          <Link to="/register" className="text-foreground underline underline-offset-4">Sign up</Link>
-        </p>
-      </div>
-    </div>
+          <Link to="/register" className="text-foreground font-medium underline underline-offset-4 hover:text-primary transition-colors">
+            Sign up
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={onSubmit} className="space-y-5">
+        <AuthInput
+          id="email"
+          label="Email address"
+          type="email"
+          required
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          icon={<Mail className="h-4 w-4" />}
+        />
+        <AuthInput
+          id="password"
+          label="Password"
+          type="password"
+          required
+          placeholder="Enter your password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          icon={<Lock className="h-4 w-4" />}
+          togglePassword
+          rightSlot={
+            <Link to="/forgot-password" className="text-xs text-primary hover:underline underline-offset-4">
+              Forgot password?
+            </Link>
+          }
+        />
+
+        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+          <Checkbox checked={remember} onCheckedChange={(v) => setRemember(!!v)} />
+          Keep me signed in
+        </label>
+
+        <Button
+          type="submit"
+          disabled={loading}
+          className="group w-full h-12 rounded-xl bg-primary text-primary-foreground hover:bg-primary-hover font-medium shadow-[0_8px_30px_-8px_hsl(var(--primary)/0.6)]"
+        >
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <>
+              Sign in
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </>
+          )}
+        </Button>
+      </form>
+    </AuthShell>
   );
 };
 
