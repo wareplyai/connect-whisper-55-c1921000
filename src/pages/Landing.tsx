@@ -219,11 +219,11 @@ const Landing = () => {
         >
           <defs>
             <linearGradient id="silkGradR1" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.55" />
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.75" />
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
             </linearGradient>
             <linearGradient id="silkGradR2" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.35" />
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.55" />
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
             </linearGradient>
           </defs>
