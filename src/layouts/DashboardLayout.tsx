@@ -58,7 +58,7 @@ const DashboardLayout = () => {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors border-l-[3px] ${
                     isActive
-                      ? "border-green-500 bg-green-500/15 text-green-400"
+                      ? "border-primary bg-primary text-primary-foreground"
                       : "border-transparent text-muted-foreground hover:text-foreground hover:bg-card-elevated"
                   }`
                 }
@@ -71,7 +71,7 @@ const DashboardLayout = () => {
                 to="/admin"
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors border-l-[3px] ${
-                    isActive ? "border-green-500 bg-green-500/15 text-green-400" : "border-transparent text-muted-foreground hover:text-foreground hover:bg-card-elevated"
+                    isActive ? "border-primary bg-primary text-primary-foreground" : "border-transparent text-muted-foreground hover:text-foreground hover:bg-card-elevated"
                   }`
                 }
               >
