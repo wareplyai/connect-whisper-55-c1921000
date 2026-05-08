@@ -146,13 +146,16 @@ export default function HeadAdminOverview() {
 
   useEffect(() => {
     loadExtra();
-    const t = setInterval(loadExtra, 30000);
+    loadAbandoned();
+    const t = setInterval(() => { loadExtra(); loadAbandoned(); }, 30000);
     const ch = supabase
       .channel(`ha-overview-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, loadExtra)
       .on("postgres_changes", { event: "*", schema: "public", table: "message_logs" }, loadExtra)
       .on("postgres_changes", { event: "*", schema: "public", table: "activity_logs" }, loadExtra)
       .on("postgres_changes", { event: "*", schema: "public", table: "sessions" }, loadExtra)
+      .on("postgres_changes", { event: "*", schema: "public", table: "abandoned_orders" }, loadAbandoned)
+      .on("postgres_changes", { event: "*", schema: "public", table: "abandoned_connections" }, loadAbandoned)
       .subscribe();
     return () => { clearInterval(t); supabase.removeChannel(ch); };
   }, []);
