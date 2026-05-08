@@ -76,21 +76,25 @@ const Inbox = () => {
     if (!user) return;
     if (showLoader && !cached) setLoading(true);
     try {
-      const [{ data: inc }, { data: out }, { data: bl }, { data: pa }] = await Promise.all([
+      const [incRes, outRes, blRes, paRes] = await Promise.all([
         supabase.from("incoming_messages").select("*").eq("user_id", user.id).order("received_at", { ascending: false }).limit(500),
         supabase.from("message_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(500),
         supabase.from("blocked_customers" as any).select("id, phone_number, session_id").eq("user_id", user.id),
         supabase.from("customer_reply_settings" as any).select("phone_number, session_id, ai_paused, mode").eq("user_id", user.id),
       ]);
-      const incoming = (inc as any) || [];
-      const outgoing = (out as any) || [];
-      const blocked = (bl as any) || [];
-      const modes = (pa as any) || [];
-      setIncoming(incoming);
-      setOutgoing(outgoing);
-      setBlocked(blocked);
-      setModes(modes);
-      writeCache(user.id, { incoming, outgoing, blocked, modes });
+      // Never blank the UI on a transient error — keep previous state.
+      if (!incRes.error && incRes.data) setIncoming(incRes.data as any);
+      if (!outRes.error && outRes.data) setOutgoing(outRes.data as any);
+      if (!blRes.error && blRes.data) setBlocked(blRes.data as any);
+      if (!paRes.error && paRes.data) setModes(paRes.data as any);
+      if (!incRes.error && !outRes.error) {
+        writeCache(user.id, {
+          incoming: incRes.data || [],
+          outgoing: outRes.data || [],
+          blocked: blRes.data || [],
+          modes: paRes.data || [],
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -100,14 +104,17 @@ const Inbox = () => {
 
   useEffect(() => {
     if (!user) return;
+    let t: any = null;
+    const schedule = () => { if (t) clearTimeout(t); t = setTimeout(() => load(false), 250); };
     const ch = supabase
       .channel(`inbox:${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "incoming_messages", filter: `user_id=eq.${user.id}` }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "message_logs", filter: `user_id=eq.${user.id}` }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "incoming_messages", filter: `user_id=eq.${user.id}` }, schedule)
+      .on("postgres_changes", { event: "*", schema: "public", table: "message_logs", filter: `user_id=eq.${user.id}` }, schedule)
       .subscribe();
     channelRef.current = ch;
-    const i = setInterval(load, 10000);
-    return () => { supabase.removeChannel(ch); clearInterval(i); };
+    // Safety-net poll: 30s instead of 10s so the UI doesn't churn / blank.
+    const i = setInterval(() => load(false), 30000);
+    return () => { supabase.removeChannel(ch); clearInterval(i); if (t) clearTimeout(t); };
     // eslint-disable-next-line
   }, [user?.id]);
 
