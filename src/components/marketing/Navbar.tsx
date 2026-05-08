@@ -106,7 +106,7 @@ export const Navbar = () => {
 
       {/* Mobile menu panel */}
       <div
-        className={`md:hidden overflow-hidden border-t border-border/60 bg-background/95 backdrop-blur-xl transition-[max-height,opacity] duration-300 ease-out ${
+        className={`md:hidden mt-2 overflow-hidden rounded-2xl border border-border/60 bg-background/95 backdrop-blur-xl transition-[max-height,opacity] duration-300 ease-out ${
           open ? "max-h-[80vh] opacity-100" : "max-h-0 opacity-0"
         }`}
       >
