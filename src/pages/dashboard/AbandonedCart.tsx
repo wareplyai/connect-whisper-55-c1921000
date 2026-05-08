@@ -163,7 +163,7 @@ export default function AbandonedCart() {
         <CardHeader className="bg-orange-50 dark:bg-orange-950/20 rounded-t-lg">
           <CardTitle className="flex items-center justify-between">
             <span className="text-orange-700 dark:text-orange-300">Incoming orders</span>
-            <Button size="sm" variant="outline" onClick={load} className="border-orange-300 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-950/40">
+            <Button size="sm" variant="outline" onClick={load} className="border-orange-300 text-orange-600 hover:bg-orange-100 hover:text-orange-700 dark:hover:bg-orange-950/40 dark:hover:text-orange-200">
               <RefreshCw className="h-4 w-4 mr-2" />Refresh
             </Button>
           </CardTitle>
@@ -238,7 +238,7 @@ function OrdersTable({ rows, onView, theme }: { rows: AOrder[]; onView: (o: AOrd
                 <TableCell>
                   <div className="flex items-center justify-center gap-2 flex-wrap">
                     <Button size="sm" variant="outline" onClick={() => onView(o)}
-                      className="h-7 px-3 rounded-full border-orange-300 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-950/40 uppercase text-[10px] font-bold">
+                      className="h-7 px-3 rounded-full border-orange-300 text-orange-600 hover:bg-orange-100 hover:text-orange-700 dark:hover:bg-orange-950/40 dark:hover:text-orange-200 uppercase text-[10px] font-bold">
                       <Eye className="h-3 w-3 mr-1" />View
                     </Button>
                     {isIncomplete ? (
