@@ -90,6 +90,79 @@ async function callAI(opts: {
   throw new Error(`Unsupported platform: ${platform}`);
 }
 
+// Walk the payload deeply and return the first http(s) URL that looks like an image,
+// or a plausible WhatsApp media URL (jpg/jpeg/png/webp or mediaUrl/imageMessage.url field).
+function findImageUrl(value: unknown, depth = 0): string | null {
+  if (depth > 8 || value == null) return null;
+  if (typeof value === "string") {
+    const v = value.trim();
+    if (/^https?:\/\//i.test(v) && /\.(jpe?g|png|webp|gif)(\?|$)/i.test(v)) return v;
+    return null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value.slice(0, 50)) {
+      const r = findImageUrl(item, depth + 1);
+      if (r) return r;
+    }
+    return null;
+  }
+  if (typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  // Prefer common keys first
+  const preferred = ["image_url", "imageUrl", "mediaUrl", "media_url", "url", "directPath", "fileUrl"];
+  for (const k of preferred) {
+    const v = obj[k];
+    if (typeof v === "string" && /^https?:\/\//i.test(v)) {
+      if (/\.(jpe?g|png|webp|gif)(\?|$)/i.test(v) || /image|media/i.test(k)) return v;
+    }
+  }
+  for (const v of Object.values(obj)) {
+    const r = findImageUrl(v, depth + 1);
+    if (r) return r;
+  }
+  return null;
+}
+
+// Simple Jaccard-ish keyword overlap score in 0..1
+function textSimilarity(a: string, b: string): number {
+  const tokenize = (s: string) =>
+    new Set(
+      s.toLowerCase()
+        .replace(/[^\p{L}\p{N}\s,]/gu, " ")
+        .split(/[\s,]+/)
+        .filter((t) => t.length >= 3),
+    );
+  const A = tokenize(a);
+  const B = tokenize(b);
+  if (A.size === 0 || B.size === 0) return 0;
+  let inter = 0;
+  for (const t of A) if (B.has(t)) inter++;
+  const union = A.size + B.size - inter;
+  return union === 0 ? 0 : inter / union;
+}
+
+async function describeImageWithOpenAI(apiKey: string, imageUrl: string): Promise<string> {
+  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You describe a product photo. Reply with a comma-separated list of 8-15 short keywords (English): object, color, material, style, pattern, brand if visible. Keywords only.",
+        },
+        { role: "user", content: [{ type: "image_url", image_url: { url: imageUrl } }] },
+      ],
+      max_tokens: 200,
+    }),
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data?.error?.message || `Vision error ${r.status}`);
+  return (data.choices?.[0]?.message?.content || "").trim();
+}
+
 function recipientVariants(input: string): string[] {
   const raw = String(input ?? "").trim();
   // Strip any @lid / @s.whatsapp.net suffix and use digits only
@@ -501,15 +574,20 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const sessionId = String(body.session_id || body.sessionId || "").trim();
-    const messageText = String(body.message || body.text || body.message_text || "").trim();
+    const rawText = String(body.message || body.text || body.message_text || "").trim();
     const isGroup = Boolean(body.is_group ?? body.isGroup ?? false) || hasGroupJid(body);
     const messageType = String(body.message_type || "text");
     const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false) ||
       hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
 
-    if (!sessionId || !messageText) {
-      return jsonResp({ error: "session_id and message required" }, 400);
+    // ---- Image detection: scan body deeply for an http(s) image url ----
+    const imageUrl = findImageUrl(body);
+    const isImageMessage = !!imageUrl && (messageType === "image" || !rawText);
+    const messageText = rawText || (isImageMessage ? "[customer sent an image]" : "");
+
+    if (!sessionId || (!messageText && !imageUrl)) {
+      return jsonResp({ error: "session_id and message or image required" }, 400);
     }
 
     // Skip messages sent BY the bot itself (prevents infinite loop)
@@ -663,7 +741,7 @@ Deno.serve(async (req) => {
 
     const replyMode: string = (biz as any)?.active_reply_mode
       ?? (biz?.ai_enabled ? "ai_agent" : "none");
-    const aiEnabled = customerMode === "ai" && replyMode === "ai_agent";
+    const aiEnabled = (customerMode === "ai" && replyMode === "ai_agent") || isImageMessage;
     const autoReplyEnabled = (customerMode === "auto_reply" || replyMode === "auto_reply")
       && (session.auto_replies_enabled !== false)
       && ((biz as any)?.ai_auto_replies_enabled !== false);
@@ -786,7 +864,7 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, skipped: "reply_mode_none", message_id: messageId });
     }
 
-    if (autoReplyEnabled) {
+    if (autoReplyEnabled && !isImageMessage) {
       // Fixed Q&A
       const { data: fixed } = await admin
         .from("fixed_qa")
@@ -930,28 +1008,90 @@ Deno.serve(async (req) => {
     const systemPrompt = `${baseSystem}${qaContext}`;
 
     let reply = "";
-    try {
-      reply = await callAI({
-        platform: keyRow.platform,
-        model: keyRow.model && keyRow.model !== "default" ? keyRow.model : (
-          keyRow.platform === "openai" ? "gpt-4o-mini" :
-          keyRow.platform === "gemini" ? "gemini-1.5-flash" :
-          "deepseek-chat"
-        ),
-        apiKey,
-        systemPrompt,
-        userMessage: messageText,
-      });
-    } catch (aiErr: any) {
-      if (messageId) {
-        await admin.from("incoming_messages").update({
-          reply_error: aiErr?.message || "AI call failed",
-          delivery_status: "failed",
-          processed_at: new Date().toISOString(),
-        }).eq("id", messageId);
+
+    // ---- Image-message branch: vision describe + product match ----
+    if (isImageMessage && imageUrl) {
+      if (keyRow.platform !== "openai") {
+        reply = "Sorry, image search needs an OpenAI API key. Please describe the product in text. ছবি match করতে OpenAI key দরকার, দয়া করে product টি text এ describe করুন।";
+      } else {
+        try {
+          const desc = await describeImageWithOpenAI(apiKey, imageUrl);
+          const { data: productRows } = await admin
+            .from("products")
+            .select("id, name, price, description, category, stock, image_url, ai_tags")
+            .eq("user_id", userId)
+            .eq("is_active", true)
+            .limit(500);
+
+          let best: { score: number; row: any } | null = null;
+          for (const p of productRows || []) {
+            const haystack = [p.name, p.description, p.category, p.ai_tags].filter(Boolean).join(" ");
+            const score = textSimilarity(desc, haystack);
+            if (!best || score > best.score) best = { score, row: p };
+          }
+
+          if (best && best.score >= 0.18) {
+            const p = best.row;
+            const conf = Math.round(best.score * 100);
+            reply = `✅ Match found (${conf}% confidence)\n\n📦 ${p.name}\n💰 Price: ${p.price}\n${p.stock > 0 ? `📊 Stock: ${p.stock}` : "❌ Out of stock"}\n${p.description ? `\n${p.description}` : ""}`;
+          } else {
+            // Log for admin notification
+            await admin.from("unmatched_image_queries").insert({
+              user_id: userId,
+              session_id: sessionId,
+              from_number: fromNumber,
+              image_url: imageUrl,
+              image_description: desc,
+              best_match_score: best?.score ?? 0,
+            });
+            // Notify admin via WhatsApp (their own session)
+            try {
+              if (session.phone_number) {
+                await sendViaGateway({
+                  gateway: GATEWAY,
+                  sessionId,
+                  apiToken: session.api_token,
+                  to: session.phone_number,
+                  message: `🔔 Customer ${fromNumber} sent a product image we couldn't match.\nAI saw: ${desc.slice(0, 200)}`,
+                  showTyping: false,
+                  accountProtection: false,
+                });
+              }
+            } catch (_e) { /* non-fatal */ }
+            reply = "I couldn't find a matching product from your image. Could you please describe the product in text (name/color/size)? দুঃখিত, ছবি থেকে product খুঁজে পাইনি — দয়া করে product টি text এ describe করুন।";
+          }
+        } catch (visErr: any) {
+          console.error("[image-match] error:", visErr?.message);
+          reply = "Sorry, I couldn't read your image right now. Please describe the product in text.";
+        }
       }
-      throw aiErr;
+    } else {
+      try {
+        reply = await callAI({
+          platform: keyRow.platform,
+          model: keyRow.model && keyRow.model !== "default" ? keyRow.model : (
+            keyRow.platform === "openai" ? "gpt-4o-mini" :
+            keyRow.platform === "gemini" ? "gemini-1.5-flash" :
+            "deepseek-chat"
+          ),
+          apiKey,
+          systemPrompt,
+          userMessage: messageText,
+        });
+      } catch (aiErr: any) {
+        if (messageId) {
+          await admin.from("incoming_messages").update({
+            reply_error: aiErr?.message || "AI call failed",
+            delivery_status: "failed",
+            processed_at: new Date().toISOString(),
+          }).eq("id", messageId);
+        }
+        throw aiErr;
+      }
     }
+
+    // Skip the original try/catch wrapper below (now inlined)
+    // (legacy duplicated block removed)
 
     if (!reply) {
       if (messageId) {

@@ -846,6 +846,57 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          ai_tags: string | null
+          ai_tags_status: string
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_path: string | null
+          image_url: string | null
+          is_active: boolean
+          name: string
+          price: number
+          stock: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_tags?: string | null
+          ai_tags_status?: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_path?: string | null
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          price?: number
+          stock?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_tags?: string | null
+          ai_tags_status?: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_path?: string | null
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          price?: number
+          stock?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1112,6 +1163,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      unmatched_image_queries: {
+        Row: {
+          best_match_score: number | null
+          created_at: string
+          from_number: string
+          id: string
+          image_description: string | null
+          image_url: string | null
+          notified: boolean
+          resolved: boolean
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          best_match_score?: number | null
+          created_at?: string
+          from_number: string
+          id?: string
+          image_description?: string | null
+          image_url?: string | null
+          notified?: boolean
+          resolved?: boolean
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          best_match_score?: number | null
+          created_at?: string
+          from_number?: string
+          id?: string
+          image_description?: string | null
+          image_url?: string | null
+          notified?: boolean
+          resolved?: boolean
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_feature_access: {
         Row: {
