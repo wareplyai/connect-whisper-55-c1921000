@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.tag-product-image]
 verify_jwt = false
+
+[functions.woo-webhook]
+verify_jwt = false
