@@ -19,6 +19,25 @@ const DashboardHome = () => {
   const [wooStats, setWooStats] = useState({ totalProducts: 0, totalOrders: 0, todayOrders: 0, todayRevenue: 0 });
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
+  const loadWoo = async (uid: string) => {
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+    const [{ count: productCount }, { count: orderCount }, { data: todayRows }, { data: recent }] = await Promise.all([
+      supabase.from("products").select("id", { count: "exact", head: true }).eq("user_id", uid),
+      supabase.from("woo_orders").select("id", { count: "exact", head: true }).eq("user_id", uid),
+      supabase.from("woo_orders").select("total").eq("user_id", uid).gte("created_at", startOfDay.toISOString()),
+      supabase.from("woo_orders").select("id,order_number,status,total,currency,customer_name,customer_phone,created_at,confirmation_sent")
+        .eq("user_id", uid).order("created_at", { ascending: false }).limit(8),
+    ]);
+    const todayRevenue = (todayRows || []).reduce((s: number, r: any) => s + (Number(r.total) || 0), 0);
+    setWooStats({
+      totalProducts: productCount || 0,
+      totalOrders: orderCount || 0,
+      todayOrders: (todayRows || []).length,
+      todayRevenue,
+    });
+    setRecentOrders(recent || []);
+  };
+
   useEffect(() => {
     if (!profile) return;
     (async () => {
@@ -73,7 +92,22 @@ const DashboardHome = () => {
         });
       }
       setChart(days);
+
+      await loadWoo(profile.id);
     })();
+
+    if (!profile?.id) return;
+    const channel = supabase
+      .channel(`woo-orders-${profile.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "woo_orders", filter: `user_id=eq.${profile.id}` }, () => {
+        loadWoo(profile.id);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "products", filter: `user_id=eq.${profile.id}` }, () => {
+        loadWoo(profile.id);
+      })
+      .subscribe();
+    const interval = setInterval(() => loadWoo(profile.id), 30000);
+    return () => { supabase.removeChannel(channel); clearInterval(interval); };
   }, [profile]);
 
   const currentPlan = planInfo?.plan || profile?.plan || "free";
