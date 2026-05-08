@@ -115,7 +115,7 @@ const DashboardHome = () => {
             <span className="text-sm text-muted-foreground">Sessions Connected</span>
             <Wifi className="h-4 w-4 text-muted-foreground" />
           </div>
-          <p className="text-2xl font-bold">{connectedSessions}<span className="text-sm text-muted-foreground font-normal"> / {sessionCount}</span></p>
+          {loading ? <Skeleton className="h-8 w-24" /> : <p className="text-2xl font-bold">{connectedSessions}<span className="text-sm text-muted-foreground font-normal"> / {sessionCount}</span></p>}
           <Button asChild size="sm" variant="outline" className="mt-3 w-full">
             <Link to="/dashboard/sessions">Manage</Link>
           </Button>
