@@ -173,15 +173,18 @@ export default function HeadAdminOverview() {
   useEffect(() => {
     loadExtra();
     loadAbandoned();
-    const t = setInterval(() => { loadExtra(); loadAbandoned(); }, 30000);
+    loadFeaturePerms();
+    const t = setInterval(() => { loadExtra(); loadAbandoned(); loadFeaturePerms(); }, 30000);
     const ch = supabase
       .channel(`ha-overview-${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, loadExtra)
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => { loadExtra(); loadFeaturePerms(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "message_logs" }, loadExtra)
       .on("postgres_changes", { event: "*", schema: "public", table: "activity_logs" }, loadExtra)
       .on("postgres_changes", { event: "*", schema: "public", table: "sessions" }, loadExtra)
       .on("postgres_changes", { event: "*", schema: "public", table: "abandoned_orders" }, loadAbandoned)
       .on("postgres_changes", { event: "*", schema: "public", table: "abandoned_connections" }, loadAbandoned)
+      .on("postgres_changes", { event: "*", schema: "public", table: "global_feature_settings" }, loadFeaturePerms)
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_feature_access" }, loadFeaturePerms)
       .subscribe();
     return () => { clearInterval(t); supabase.removeChannel(ch); };
   }, []);
