@@ -305,21 +305,37 @@ async function markAsRead(opts: {
   const jid = String(to).includes("@") ? String(to) : `${digits || to}@s.whatsapp.net`;
   const attempts = [
     ...(messageKey ? [
+      { path: `/api/session/${sessionId}/sendSeen`, body: { messageKey } },
+      { path: `/api/session/${sessionId}/sendSeen`, body: { key: messageKey } },
+      { path: `/api/session/${sessionId}/seen`, body: { messageKey } },
       { path: `/api/messages/read`, body: { messageKey } },
       { path: `/api/messages/read`, body: { key: messageKey } },
       { path: `/api/messages/read`, body: { messages: [messageKey] } },
     ] : []),
+    // Baileys-style gateway endpoints (matching the working /typing pattern)
+    { path: `/api/session/${sessionId}/sendSeen`, body: { to, jid, messageId } },
+    { path: `/api/session/${sessionId}/sendSeen`, body: { remoteJid: jid, id: messageId } },
+    { path: `/api/session/${sessionId}/seen`, body: { to, jid, messageId } },
+    { path: `/api/session/${sessionId}/read`, body: { to, jid, messageId } },
+    { path: `/api/session/${sessionId}/mark-read`, body: { to, jid, messageId } },
+    { path: `/api/session/${sessionId}/markAsRead`, body: { to, jid, messageId } },
+    { path: `/api/session/${sessionId}/chat/read`, body: { to, jid } },
+    { path: `/api/session/${sessionId}/chats/read`, body: { to, jid } },
+    { path: `/api/session/${sessionId}/presence`, body: { to, presence: "available" } },
     { path: `/api/messages/read`, body: { jid, to: jid, messageId } },
-    { path: `/api/session/${sessionId}/read`, body: { to, messageId } },
-    { path: `/api/session/${sessionId}/mark-read`, body: { to, messageId } },
-    { path: `/api/session/${sessionId}/chat/read`, body: { to } },
   ];
+  let success = false;
   for (const a of attempts) {
     try {
       const r = await fetch(`${gateway}${a.path}`, { method: "POST", headers, body: JSON.stringify(a.body) });
-      if (r.ok) return;
-    } catch { /* swallow */ }
+      const txt = await r.text().catch(() => "");
+      console.log(`[markAsRead] ${a.path} -> ${r.status} ${txt.slice(0, 200)}`);
+      if (r.ok) { success = true; break; }
+    } catch (e) {
+      console.log(`[markAsRead] ${a.path} failed: ${(e as Error)?.message}`);
+    }
   }
+  if (!success) console.log(`[markAsRead] all attempts failed for to=${to}`);
 }
 
 function normalizeIncomingMessageKey(candidate: unknown, fallbackJid: string): Record<string, unknown> | null {
