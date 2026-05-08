@@ -126,10 +126,19 @@ const DashboardHome = () => {
             <span className="text-sm text-muted-foreground">Subscription</span>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </div>
-          <p className="text-2xl font-bold capitalize">{currentPlan}</p>
-          <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full ${hasActivePlan ? "bg-primary/10 text-primary" : "bg-warning/10 text-warning"}`}>
-            {hasActivePlan ? "Active plan" : "No active plan"}
-          </span>
+          {loading ? (
+            <>
+              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-4 w-24 mt-2 rounded-full" />
+            </>
+          ) : (
+            <>
+              <p className="text-2xl font-bold capitalize">{currentPlan}</p>
+              <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full ${hasActivePlan ? "bg-primary/10 text-primary" : "bg-warning/10 text-warning"}`}>
+                {hasActivePlan ? "Active plan" : "No active plan"}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
