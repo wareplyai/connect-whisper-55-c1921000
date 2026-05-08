@@ -345,13 +345,13 @@ async function fetchGatewayMediaDataUrl(opts: {
   return null;
 }
 
-// Upload an image (data URL or http URL) to the chat-media storage bucket and return its public URL.
+// Upload an image (data URL or http URL) to the chat-media storage bucket and return its public URL + mimetype.
 async function uploadChatMediaImage(
   admin: any,
   userId: string,
   sessionId: string,
   source: string,
-): Promise<string | null> {
+): Promise<{ url: string; mime: string } | null> {
   try {
     let bytes: Uint8Array | null = null;
     let mime = "image/jpeg";
@@ -381,7 +381,7 @@ async function uploadChatMediaImage(
       return null;
     }
     const { data } = admin.storage.from("chat-media").getPublicUrl(path);
-    return data?.publicUrl || null;
+    return data?.publicUrl ? { url: data.publicUrl, mime } : null;
   } catch (e) {
     console.log("[chat-media] error:", (e as Error)?.message);
     return null;
