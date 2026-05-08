@@ -319,8 +319,11 @@ async function markAsRead(opts: {
   if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
   const digits = String(to).replace(/\D/g, "");
   const jid = String(to).includes("@") ? String(to) : `${digits || to}@s.whatsapp.net`;
-  const chatBody = compactBody({ to: digits || to, jid, remoteJid: jid, chatId: jid, id: messageId, messageId });
-  const jidBody = compactBody({ to: jid, jid, remoteJid: jid, chatId: jid, id: messageId, messageId });
+  const actualMessageId = messageId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(messageId)
+    ? messageId
+    : undefined;
+  const chatBody = compactBody({ to: digits || to, jid, remoteJid: jid, chatId: jid, id: actualMessageId, messageId: actualMessageId });
+  const jidBody = compactBody({ to: jid, jid, remoteJid: jid, chatId: jid, id: actualMessageId, messageId: actualMessageId });
   const attempts = [
     ...(messageKey ? [
       { path: `/api/session/${sessionId}/sendSeen`, body: { messageKey } },
