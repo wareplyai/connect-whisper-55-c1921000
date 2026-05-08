@@ -150,6 +150,7 @@ const Inbox = () => {
     return row?.ai_paused ? "human" : "ai";
   }, [modes, selected]);
 
+  const bottomRef = useRef<HTMLDivElement | null>(null);
   const conversation = useMemo(() => {
     if (!selected) return [];
     const phoneTail = selected.phone_number.replace(/\D/g, "").slice(-9);
