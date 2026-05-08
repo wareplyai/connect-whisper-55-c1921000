@@ -198,6 +198,66 @@ async function describeImageWithOpenAI(apiKey: string, imageUrl: string): Promis
   return (data.choices?.[0]?.message?.content || "").trim();
 }
 
+// Best-effort: ask the Baileys gateway for the media bytes of a given message id.
+// Returns a data: URL we can pass to the vision model, or null if every endpoint fails.
+async function fetchGatewayMediaDataUrl(opts: {
+  gateway: string; sessionId: string; apiToken?: string | null;
+  messageId?: string; remoteJid?: string;
+}): Promise<string | null> {
+  const { gateway, sessionId, apiToken, messageId, remoteJid } = opts;
+  if (!messageId) return null;
+  const headers: Record<string, string> = {};
+  if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+  const mid = encodeURIComponent(messageId);
+  const jid = remoteJid ? encodeURIComponent(remoteJid) : "";
+
+  const candidates: Array<{ url: string; method: "GET" | "POST"; body?: unknown }> = [];
+  for (const base of gatewayBaseVariants(gateway)) {
+    candidates.push(
+      { url: `${base}/api/session/${sessionId}/messages/${mid}/media`, method: "GET" },
+      { url: `${base}/api/session/${sessionId}/messages/${mid}/download`, method: "GET" },
+      { url: `${base}/api/session/${sessionId}/media/${mid}`, method: "GET" },
+      { url: `${base}/api/session/${sessionId}/download`, method: "POST", body: { messageId, id: messageId, remoteJid } },
+      { url: `${base}/api/session/${sessionId}/downloadMedia`, method: "POST", body: { messageId, id: messageId, remoteJid } },
+      { url: `${base}/api/${sessionId}/media/${mid}`, method: "GET" },
+    );
+    if (jid) candidates.push({ url: `${base}/api/session/${sessionId}/chats/${jid}/messages/${mid}/media`, method: "GET" });
+  }
+
+  for (const c of candidates) {
+    try {
+      const init: RequestInit = { method: c.method, headers: { ...headers } };
+      if (c.method === "POST") {
+        (init.headers as Record<string, string>)["Content-Type"] = "application/json";
+        init.body = JSON.stringify(c.body || {});
+      }
+      const res = await fetch(c.url, init);
+      if (!res.ok) continue;
+      const ctype = (res.headers.get("content-type") || "").toLowerCase();
+
+      if (ctype.startsWith("image/")) {
+        const buf = new Uint8Array(await res.arrayBuffer());
+        const b64 = btoa(String.fromCharCode(...buf));
+        console.log(`[gateway-media] got binary ${ctype} from ${c.url} (${buf.length} bytes)`);
+        return `data:${ctype};base64,${b64}`;
+      }
+      if (ctype.includes("json")) {
+        const j = await res.json().catch(() => null);
+        if (!j) continue;
+        const found = findImageUrl(j);
+        if (found) {
+          console.log(`[gateway-media] found image url in JSON from ${c.url}`);
+          return found;
+        }
+      }
+    } catch (e) {
+      console.log(`[gateway-media] ${c.url} failed: ${(e as Error)?.message}`);
+    }
+  }
+  console.log(`[gateway-media] no media endpoint succeeded for messageId=${messageId}`);
+  return null;
+}
+
 function recipientVariants(input: string): string[] {
   const raw = String(input ?? "").trim();
   // Strip any @lid / @s.whatsapp.net suffix and use digits only
