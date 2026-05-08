@@ -477,14 +477,20 @@ export type Database = {
       incoming_messages: {
         Row: {
           delivery_status: string
+          extracted_order_number: string | null
+          extracted_product_name: string | null
           from_number: string
           id: string
+          image_analysis: Json | null
+          image_analyzed_at: string | null
+          image_caption: string | null
           image_url: string | null
           is_group: boolean
           match_log: Json | null
           matched_rule_id: string | null
           message_text: string | null
           message_type: string
+          mimetype: string | null
           processed_at: string | null
           raw_payload: Json | null
           received_at: string
@@ -498,14 +504,20 @@ export type Database = {
         }
         Insert: {
           delivery_status?: string
+          extracted_order_number?: string | null
+          extracted_product_name?: string | null
           from_number: string
           id?: string
+          image_analysis?: Json | null
+          image_analyzed_at?: string | null
+          image_caption?: string | null
           image_url?: string | null
           is_group?: boolean
           match_log?: Json | null
           matched_rule_id?: string | null
           message_text?: string | null
           message_type?: string
+          mimetype?: string | null
           processed_at?: string | null
           raw_payload?: Json | null
           received_at?: string
@@ -519,14 +531,20 @@ export type Database = {
         }
         Update: {
           delivery_status?: string
+          extracted_order_number?: string | null
+          extracted_product_name?: string | null
           from_number?: string
           id?: string
+          image_analysis?: Json | null
+          image_analyzed_at?: string | null
+          image_caption?: string | null
           image_url?: string | null
           is_group?: boolean
           match_log?: Json | null
           matched_rule_id?: string | null
           message_text?: string | null
           message_type?: string
+          mimetype?: string | null
           processed_at?: string | null
           raw_payload?: Json | null
           received_at?: string
@@ -580,8 +598,15 @@ export type Database = {
         Row: {
           created_at: string
           error_message: string | null
+          extracted_order_number: string | null
+          extracted_product_name: string | null
           id: string
+          image_analysis: Json | null
+          image_caption: string | null
+          image_url: string | null
+          incoming_message_id: string | null
           message_type: string
+          mimetype: string | null
           payload: Json | null
           session_id: string
           status: string
@@ -591,8 +616,15 @@ export type Database = {
         Insert: {
           created_at?: string
           error_message?: string | null
+          extracted_order_number?: string | null
+          extracted_product_name?: string | null
           id?: string
+          image_analysis?: Json | null
+          image_caption?: string | null
+          image_url?: string | null
+          incoming_message_id?: string | null
           message_type?: string
+          mimetype?: string | null
           payload?: Json | null
           session_id: string
           status?: string
@@ -602,8 +634,15 @@ export type Database = {
         Update: {
           created_at?: string
           error_message?: string | null
+          extracted_order_number?: string | null
+          extracted_product_name?: string | null
           id?: string
+          image_analysis?: Json | null
+          image_caption?: string | null
+          image_url?: string | null
+          incoming_message_id?: string | null
           message_type?: string
+          mimetype?: string | null
           payload?: Json | null
           session_id?: string
           status?: string
@@ -611,6 +650,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "message_logs_incoming_message_id_fkey"
+            columns: ["incoming_message_id"]
+            isOneToOne: false
+            referencedRelation: "incoming_messages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "message_logs_session_id_fkey"
             columns: ["session_id"]
@@ -1444,14 +1490,20 @@ export type Database = {
         Args: { p_error?: string; p_message_id: string; p_sent: boolean }
         Returns: {
           delivery_status: string
+          extracted_order_number: string | null
+          extracted_product_name: string | null
           from_number: string
           id: string
+          image_analysis: Json | null
+          image_analyzed_at: string | null
+          image_caption: string | null
           image_url: string | null
           is_group: boolean
           match_log: Json | null
           matched_rule_id: string | null
           message_text: string | null
           message_type: string
+          mimetype: string | null
           processed_at: string | null
           raw_payload: Json | null
           received_at: string

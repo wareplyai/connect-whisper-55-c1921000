@@ -6,7 +6,8 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Clock, Trash2 } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Clock, Trash2, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,6 +24,10 @@ type IncomingRow = {
   received_at: string;
   raw_payload: any;
   image_url?: string | null;
+  mimetype?: string | null;
+  image_caption?: string | null;
+  extracted_product_name?: string | null;
+  extracted_order_number?: string | null;
 };
 
 type OutgoingRow = {
@@ -73,6 +78,7 @@ const Inbox = () => {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(!cached);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const channelRef = useRef<any>(null);
 
   const load = async (showLoader = false) => {
@@ -165,8 +171,11 @@ const Inbox = () => {
         srcId: m.id,
         srcField: "message" as const,
         kind: "in" as const,
-        text: m.message_text || (m.image_url ? "" : "(no text)"),
+        text: m.message_text || m.image_caption || (m.image_url ? "" : "(no text)"),
         imageUrl: (m as any).image_url as string | null,
+        mimetype: (m as any).mimetype as string | null,
+        productName: (m as any).extracted_product_name as string | null,
+        orderNumber: (m as any).extracted_order_number as string | null,
         ts: m.received_at,
         pending: !m.reply_sent && !m.reply_text,
       }));
@@ -472,15 +481,35 @@ const Inbox = () => {
                       <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
                         m.kind === "out" ? "bg-green-500/15 text-foreground" : "bg-muted text-foreground"
                       }`}>
-                        {(m as any).imageUrl && (
-                          <a href={(m as any).imageUrl} target="_blank" rel="noopener noreferrer" className="block mb-1">
+                        {(m as any).imageUrl ? (
+                          <button
+                            type="button"
+                            onClick={() => setLightbox((m as any).imageUrl)}
+                            className="block mb-1 rounded-lg overflow-hidden border border-border hover:opacity-90 transition"
+                            title="Click to view full image"
+                          >
                             <img
                               src={(m as any).imageUrl}
-                              alt="Customer attachment"
-                              className="max-h-56 max-w-full rounded-lg object-cover border border-border"
+                              alt={(m as any).productName || "Customer attachment"}
+                              className="max-h-56 max-w-full object-cover"
                               loading="lazy"
                             />
-                          </a>
+                          </button>
+                        ) : m.kind === "in" && (m.text === "" || m.text?.startsWith("[customer sent an image]")) ? (
+                          <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-md px-2 py-1.5 border border-border">
+                            <ImageIcon className="h-3.5 w-3.5" />
+                            <span>Image (loading…)</span>
+                          </div>
+                        ) : null}
+                        {((m as any).productName || (m as any).orderNumber) && (
+                          <div className="flex flex-wrap gap-1 mb-1">
+                            {(m as any).productName && (
+                              <Badge variant="secondary" className="text-[10px]">📦 {(m as any).productName}</Badge>
+                            )}
+                            {(m as any).orderNumber && (
+                              <Badge variant="secondary" className="text-[10px]">#{(m as any).orderNumber}</Badge>
+                            )}
+                          </div>
                         )}
                         {m.text && <p className="whitespace-pre-wrap break-words">{m.text}</p>}
                         <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
@@ -536,6 +565,14 @@ const Inbox = () => {
           )}
         </div>
       </div>
+
+      <Dialog open={!!lightbox} onOpenChange={(open) => !open && setLightbox(null)}>
+        <DialogContent className="max-w-4xl p-2 bg-background">
+          {lightbox && (
+            <img src={lightbox} alt="Full size" className="max-h-[85vh] w-auto mx-auto rounded-lg object-contain" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

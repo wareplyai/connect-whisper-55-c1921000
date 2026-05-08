@@ -198,6 +198,93 @@ async function describeImageWithOpenAI(apiKey: string, imageUrl: string): Promis
   return (data.choices?.[0]?.message?.content || "").trim();
 }
 
+// Extracts structured fields (product_name, order_number) from optional image + caption.
+// Uses OpenAI vision when available; falls back to regex on the caption text.
+async function extractStructuredFromImage(opts: {
+  apiKey?: string | null; platform?: string | null; imageUrl?: string | null; caption?: string | null;
+}): Promise<{ product_name: string | null; order_number: string | null }> {
+  const caption = (opts.caption || "").trim();
+  // Regex fallback for order number
+  const orderRegex = /(?:order|invoice|inv|#)\s*[:#-]?\s*([A-Z0-9-]{4,20})/i;
+  const fallbackOrder = caption.match(orderRegex)?.[1] || null;
+
+  if (opts.platform !== "openai" || !opts.apiKey || !opts.imageUrl) {
+    return { product_name: null, order_number: fallbackOrder };
+  }
+  try {
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${opts.apiKey}` },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "Read the image (and caption if provided). Return STRICT JSON: {\"product_name\": string|null, \"order_number\": string|null}. product_name is the visible product/title; order_number is any visible order/invoice id. Use null if not present.",
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: `Caption: ${caption || "(none)"}\nReturn JSON only.` },
+              { type: "image_url", image_url: { url: opts.imageUrl } },
+            ],
+          },
+        ],
+        max_tokens: 200,
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data?.error?.message || `extract error ${r.status}`);
+    const txt = data.choices?.[0]?.message?.content || "{}";
+    const parsed = JSON.parse(txt);
+    return {
+      product_name: parsed.product_name ? String(parsed.product_name).slice(0, 200) : null,
+      order_number: (parsed.order_number ? String(parsed.order_number).slice(0, 60) : null) || fallbackOrder,
+    };
+  } catch (e) {
+    console.log("[extract-structured] failed:", (e as Error)?.message);
+    return { product_name: null, order_number: fallbackOrder };
+  }
+}
+
+// Walk the raw webhook payload to find a caption + mimetype for image messages.
+function findCaption(value: unknown, depth = 0): string | null {
+  if (depth > 8 || value == null) return null;
+  if (typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  for (const k of ["caption", "image_caption", "imageCaption", "text", "body"]) {
+    const v = obj[k];
+    if (typeof v === "string" && v.trim() && k !== "text" && k !== "body") return v.trim();
+  }
+  // imageMessage.caption is the canonical Baileys path
+  if (obj.imageMessage && typeof obj.imageMessage === "object") {
+    const c = (obj.imageMessage as any).caption;
+    if (typeof c === "string" && c.trim()) return c.trim();
+  }
+  for (const v of Object.values(obj)) {
+    const r = findCaption(v, depth + 1);
+    if (r) return r;
+  }
+  return null;
+}
+
+function findMimetype(value: unknown, depth = 0): string | null {
+  if (depth > 8 || value == null) return null;
+  if (typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  for (const k of ["mimetype", "mime_type", "contentType", "content_type"]) {
+    const v = obj[k];
+    if (typeof v === "string" && /^image\//i.test(v)) return v;
+  }
+  for (const v of Object.values(obj)) {
+    const r = findMimetype(v, depth + 1);
+    if (r) return r;
+  }
+  return null;
+}
+
 // Best-effort: ask the Baileys gateway for the media bytes of a given message id.
 // Returns a data: URL we can pass to the vision model, or null if every endpoint fails.
 async function fetchGatewayMediaDataUrl(opts: {
@@ -258,13 +345,13 @@ async function fetchGatewayMediaDataUrl(opts: {
   return null;
 }
 
-// Upload an image (data URL or http URL) to the chat-media storage bucket and return its public URL.
+// Upload an image (data URL or http URL) to the chat-media storage bucket and return its public URL + mimetype.
 async function uploadChatMediaImage(
   admin: any,
   userId: string,
   sessionId: string,
   source: string,
-): Promise<string | null> {
+): Promise<{ url: string; mime: string } | null> {
   try {
     let bytes: Uint8Array | null = null;
     let mime = "image/jpeg";
@@ -294,7 +381,7 @@ async function uploadChatMediaImage(
       return null;
     }
     const { data } = admin.storage.from("chat-media").getPublicUrl(path);
-    return data?.publicUrl || null;
+    return data?.publicUrl ? { url: data.publicUrl, mime } : null;
   } catch (e) {
     console.log("[chat-media] error:", (e as Error)?.message);
     return null;
@@ -1014,19 +1101,38 @@ Deno.serve(async (req) => {
       messageId = msgRow?.id;
     }
 
+    // Capture caption + mimetype from the raw payload (Baileys imageMessage.caption etc.)
+    const imageCaption = isImageMessage ? findCaption(body) : null;
+    let imageMimetype: string | null = isImageMessage ? findMimetype(body) : null;
+
     // If we have an image (resolved from payload or recovered from gateway), upload it to
-    // chat-media bucket and persist the public URL on the message so it shows in the inbox.
+    // chat-media bucket and persist the public URL + mimetype on the message so it shows in the inbox.
     if (messageId && imageUrl) {
       try {
-        const publicUrl = await uploadChatMediaImage(admin, userId, sessionId, imageUrl);
-        if (publicUrl) {
-          await admin.from("incoming_messages").update({ image_url: publicUrl }).eq("id", messageId);
-          imageUrl = publicUrl;
+        const uploaded = await uploadChatMediaImage(admin, userId, sessionId, imageUrl);
+        if (uploaded) {
+          imageMimetype = imageMimetype || uploaded.mime;
+          await admin.from("incoming_messages").update({
+            image_url: uploaded.url,
+            mimetype: imageMimetype,
+            image_caption: imageCaption,
+          }).eq("id", messageId);
+          imageUrl = uploaded.url;
           console.log("[ai-reply] saved chat-media url for message", messageId);
+        } else if (imageCaption || imageMimetype) {
+          await admin.from("incoming_messages").update({
+            mimetype: imageMimetype,
+            image_caption: imageCaption,
+          }).eq("id", messageId);
         }
       } catch (e) {
         console.log("[ai-reply] chat-media save failed:", (e as Error)?.message);
       }
+    } else if (messageId && (imageCaption || imageMimetype)) {
+      await admin.from("incoming_messages").update({
+        mimetype: imageMimetype,
+        image_caption: imageCaption,
+      }).eq("id", messageId);
     }
     await deliverUserWebhook({
       admin,
@@ -1235,6 +1341,20 @@ Deno.serve(async (req) => {
       } else {
         try {
           const desc = await describeImageWithOpenAI(apiKey, imageUrl);
+
+          // Extract structured fields (product name + order number) and persist them.
+          const structured = await extractStructuredFromImage({
+            apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption,
+          });
+          if (messageId) {
+            await admin.from("incoming_messages").update({
+              extracted_product_name: structured.product_name,
+              extracted_order_number: structured.order_number,
+              image_analysis: { description: desc, ...structured },
+              image_analyzed_at: new Date().toISOString(),
+            }).eq("id", messageId);
+          }
+
           const { data: productRows } = await admin
             .from("products")
             .select("id, name, price, description, category, stock, image_url, ai_tags")
@@ -1243,9 +1363,10 @@ Deno.serve(async (req) => {
             .limit(500);
 
           let best: { score: number; row: any } | null = null;
+          const haystackQuery = [desc, structured.product_name, imageCaption].filter(Boolean).join(" ");
           for (const p of productRows || []) {
             const haystack = [p.name, p.description, p.category, p.ai_tags].filter(Boolean).join(" ");
-            const score = textSimilarity(desc, haystack);
+            const score = textSimilarity(haystackQuery, haystack);
             if (!best || score > best.score) best = { score, row: p };
           }
 
