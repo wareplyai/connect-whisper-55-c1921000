@@ -741,7 +741,7 @@ Deno.serve(async (req) => {
 
     const replyMode: string = (biz as any)?.active_reply_mode
       ?? (biz?.ai_enabled ? "ai_agent" : "none");
-    const aiEnabled = customerMode === "ai" && replyMode === "ai_agent";
+    const aiEnabled = (customerMode === "ai" && replyMode === "ai_agent") || isImageMessage;
     const autoReplyEnabled = (customerMode === "auto_reply" || replyMode === "auto_reply")
       && (session.auto_replies_enabled !== false)
       && ((biz as any)?.ai_auto_replies_enabled !== false);
