@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CreditCard, CheckCircle2, MessageSquare, Wifi } from "lucide-react";
 import { CartesianGrid, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const DashboardHome = () => {
   const { profile } = useAuth();
@@ -16,7 +17,7 @@ const DashboardHome = () => {
   const [failed, setFailed] = useState<any[]>([]);
   const [chart, setChart] = useState<{ day: string; sent: number; failed: number; pending: number }[]>([]);
   const [stats, setStats] = useState({ total: 0, sent: 0, failed: 0, pending: 0 });
-
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (!profile) return;
     (async () => {
@@ -71,6 +72,7 @@ const DashboardHome = () => {
         });
       }
       setChart(days);
+      setLoading(false);
     })();
   }, [profile]);
 
@@ -93,8 +95,8 @@ const DashboardHome = () => {
             <span className="text-sm text-muted-foreground">Total Messages (7d)</span>
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </div>
-          <p className="text-2xl font-bold">{stats.total}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{stats.sent} sent · {stats.failed} failed · {stats.pending} pending</p>
+          {loading ? <Skeleton className="h-8 w-20" /> : <p className="text-2xl font-bold">{stats.total}</p>}
+          {loading ? <Skeleton className="h-3 w-40 mt-2" /> : <p className="mt-1 text-xs text-muted-foreground">{stats.sent} sent · {stats.failed} failed · {stats.pending} pending</p>}
         </div>
 
         <div className="rounded-xl border border-border bg-card p-5">
@@ -102,9 +104,9 @@ const DashboardHome = () => {
             <span className="text-sm text-muted-foreground">Success Rate</span>
             <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
           </div>
-          <p className="text-2xl font-bold">{successRate}%</p>
+          {loading ? <Skeleton className="h-8 w-16" /> : <p className="text-2xl font-bold">{successRate}%</p>}
           <div className="mt-2 h-2 w-full rounded-full bg-muted overflow-hidden">
-            <div className="h-full bg-primary" style={{ width: `${successRate}%` }} />
+            {!loading && <div className="h-full bg-primary" style={{ width: `${successRate}%` }} />}
           </div>
         </div>
 
@@ -113,7 +115,7 @@ const DashboardHome = () => {
             <span className="text-sm text-muted-foreground">Sessions Connected</span>
             <Wifi className="h-4 w-4 text-muted-foreground" />
           </div>
-          <p className="text-2xl font-bold">{connectedSessions}<span className="text-sm text-muted-foreground font-normal"> / {sessionCount}</span></p>
+          {loading ? <Skeleton className="h-8 w-24" /> : <p className="text-2xl font-bold">{connectedSessions}<span className="text-sm text-muted-foreground font-normal"> / {sessionCount}</span></p>}
           <Button asChild size="sm" variant="outline" className="mt-3 w-full">
             <Link to="/dashboard/sessions">Manage</Link>
           </Button>
@@ -124,10 +126,19 @@ const DashboardHome = () => {
             <span className="text-sm text-muted-foreground">Subscription</span>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </div>
-          <p className="text-2xl font-bold capitalize">{currentPlan}</p>
-          <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full ${hasActivePlan ? "bg-primary/10 text-primary" : "bg-warning/10 text-warning"}`}>
-            {hasActivePlan ? "Active plan" : "No active plan"}
-          </span>
+          {loading ? (
+            <>
+              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-4 w-24 mt-2 rounded-full" />
+            </>
+          ) : (
+            <>
+              <p className="text-2xl font-bold capitalize">{currentPlan}</p>
+              <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full ${hasActivePlan ? "bg-primary/10 text-primary" : "bg-warning/10 text-warning"}`}>
+                {hasActivePlan ? "Active plan" : "No active plan"}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
