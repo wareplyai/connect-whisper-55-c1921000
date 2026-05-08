@@ -252,47 +252,6 @@ const DashboardHome = () => {
         </div>
       </div>
 
-      {/* Recent WooCommerce Orders */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="font-semibold mb-4 flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> Recent Orders</h3>
-        {recentOrders.length === 0 ? (
-          <div className="py-8 grid place-items-center text-sm text-muted-foreground">No orders yet. Connect your WooCommerce store to start receiving orders.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="text-left py-2">Order #</th>
-                  <th className="text-left">Customer</th>
-                  <th className="text-left">Phone</th>
-                  <th className="text-left">Status</th>
-                  <th className="text-right">Total</th>
-                  <th className="text-center">WhatsApp</th>
-                  <th className="text-right">When</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentOrders.map((o) => (
-                  <tr key={o.id} className="border-t border-border">
-                    <td className="py-2 font-medium">#{o.order_number || o.id.slice(0, 8)}</td>
-                    <td>{o.customer_name || "—"}</td>
-                    <td className="text-muted-foreground">{o.customer_phone || "—"}</td>
-                    <td><span className="text-xs px-2 py-0.5 rounded-full bg-muted">{o.status || "—"}</span></td>
-                    <td className="text-right">{o.currency || ""} {Number(o.total || 0).toFixed(2)}</td>
-                    <td className="text-center">
-                      {o.confirmation_sent
-                        ? <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">Sent</span>
-                        : <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">—</span>}
-                    </td>
-                    <td className="text-right text-muted-foreground text-xs">{new Date(o.created_at).toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
       <div className="grid lg:grid-cols-2 gap-4">
         <div className="rounded-xl border border-border bg-card p-5">
           <h3 className="font-semibold mb-4">Messages by Status (last 7 days)</h3>
