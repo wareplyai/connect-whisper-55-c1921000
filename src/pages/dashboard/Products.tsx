@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List } from "lucide-react";
+import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List, Plus } from "lucide-react";
 
 type Product = {
   id: string;
@@ -51,6 +51,7 @@ export default function Products() {
     stock: "",
   });
   const [file, setFile] = useState<File | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
   const [edit, setEdit] = useState<EditState>({
     open: false, product: null, name: "", price: "", description: "", category: "", stock: "", file: null,
   });
@@ -114,6 +115,7 @@ export default function Products() {
 
       toast.success("Product added — AI tagging in background");
       reset();
+      setAddOpen(false);
       load();
     } catch (e: any) {
       toast.error(e.message || "Failed");
@@ -226,46 +228,58 @@ export default function Products() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Products</h1>
-        <p className="text-sm text-muted-foreground">
-          Upload product images. AI will auto-tag them so customers can find them by sending a photo on WhatsApp.
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold">Products</h1>
+          <p className="text-sm text-muted-foreground">
+            Upload product images. AI will auto-tag them so customers can find them by sending a photo on WhatsApp.
+          </p>
+        </div>
+        <Button onClick={() => { reset(); setAddOpen(true); }}>
+          <Plus className="size-4 mr-2" /> New product
+        </Button>
       </div>
 
-      <Card className="p-4 space-y-3">
-        <h2 className="font-semibold">Add product</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <Label>Name *</Label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+      <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) reset(); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add product</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="md:col-span-2">
+              <Label>Name *</Label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div>
+              <Label>Price</Label>
+              <Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+            </div>
+            <div>
+              <Label>Stock</Label>
+              <Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>Category</Label>
+              <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>Description</Label>
+              <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>Image *</Label>
+              <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            </div>
           </div>
-          <div>
-            <Label>Price</Label>
-            <Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-          </div>
-          <div>
-            <Label>Category</Label>
-            <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
-          </div>
-          <div>
-            <Label>Stock</Label>
-            <Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} />
-          </div>
-          <div className="md:col-span-2">
-            <Label>Description</Label>
-            <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          </div>
-          <div className="md:col-span-2">
-            <Label>Image *</Label>
-            <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-          </div>
-        </div>
-        <Button onClick={handleCreate} disabled={saving}>
-          {saving ? <Loader2 className="size-4 animate-spin mr-2" /> : <Upload className="size-4 mr-2" />}
-          Add product
-        </Button>
-      </Card>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)} disabled={saving}>Cancel</Button>
+            <Button onClick={handleCreate} disabled={saving}>
+              {saving ? <Loader2 className="size-4 animate-spin mr-2" /> : <Upload className="size-4 mr-2" />}
+              Add product
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
