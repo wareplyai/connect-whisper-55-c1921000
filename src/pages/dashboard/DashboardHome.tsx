@@ -95,8 +95,8 @@ const DashboardHome = () => {
             <span className="text-sm text-muted-foreground">Total Messages (7d)</span>
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </div>
-          <p className="text-2xl font-bold">{stats.total}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{stats.sent} sent · {stats.failed} failed · {stats.pending} pending</p>
+          {loading ? <Skeleton className="h-8 w-20" /> : <p className="text-2xl font-bold">{stats.total}</p>}
+          {loading ? <Skeleton className="h-3 w-40 mt-2" /> : <p className="mt-1 text-xs text-muted-foreground">{stats.sent} sent · {stats.failed} failed · {stats.pending} pending</p>}
         </div>
 
         <div className="rounded-xl border border-border bg-card p-5">
