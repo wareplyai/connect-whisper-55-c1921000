@@ -598,10 +598,20 @@ Deno.serve(async (req) => {
       hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
 
-    // ---- Image detection: scan body deeply for an http(s) image url ----
+    // ---- Image detection: scan body deeply for any image source (URL/dataURL/base64) ----
     const imageUrl = findImageUrl(body);
-    const isImageMessage = !!imageUrl && (messageType === "image" || !rawText);
+    const looksImageType = /image|photo|picture|media/i.test(messageType);
+    const isImageMessage = !!imageUrl && (looksImageType || !rawText);
     const messageText = rawText || (isImageMessage ? "[customer sent an image]" : "");
+
+    console.log("[ai-reply] incoming", {
+      sessionId,
+      messageType,
+      hasText: !!rawText,
+      hasImage: !!imageUrl,
+      imageKind: imageUrl ? (imageUrl.startsWith("data:") ? "data-url" : "http") : "none",
+      bodyKeys: Object.keys(body || {}),
+    });
 
     if (!sessionId || (!messageText && !imageUrl)) {
       return jsonResp({ error: "session_id and message or image required" }, 400);
