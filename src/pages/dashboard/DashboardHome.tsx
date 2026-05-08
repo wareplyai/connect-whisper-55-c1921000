@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { CreditCard, CheckCircle2, MessageSquare, Wifi, Package, ShoppingCart, TrendingUp, Clock } from "lucide-react";
+import { CreditCard, CheckCircle2, MessageSquare, Wifi, Package, ShoppingCart, TrendingUp, Clock, AlertCircle, XCircle } from "lucide-react";
 import { CartesianGrid, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
 
@@ -18,6 +18,19 @@ const DashboardHome = () => {
   const [stats, setStats] = useState({ total: 0, sent: 0, failed: 0, pending: 0 });
   const [wooStats, setWooStats] = useState({ totalProducts: 0, totalOrders: 0, todayOrders: 0, todayRevenue: 0 });
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [aStats, setAStats] = useState({ received: 0, incomplete: 0, completed: 0, sent: 0 });
+  const [aRecent, setARecent] = useState<any[]>([]);
+
+  const loadAbandoned = async (uid: string) => {
+    const [{ data: conn }, { data: rows }] = await Promise.all([
+      supabase.from("abandoned_connections" as any).select("total_received,total_incomplete,total_completed,total_sent").eq("user_id", uid).maybeSingle(),
+      supabase.from("abandoned_orders" as any).select("id,customer_name,customer_phone_full,customer_phone,product_name,status,sms_sent,sms_error,created_at")
+        .eq("user_id", uid).eq("status", "incomplete").order("created_at", { ascending: false }).limit(8),
+    ]);
+    const c: any = conn || {};
+    setAStats({ received: c.total_received || 0, incomplete: c.total_incomplete || 0, completed: c.total_completed || 0, sent: c.total_sent || 0 });
+    setARecent((rows as any) || []);
+  };
 
   const loadWoo = async (uid: string) => {
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
@@ -94,6 +107,7 @@ const DashboardHome = () => {
       setChart(days);
 
       await loadWoo(profile.id);
+      await loadAbandoned(profile.id);
     })();
 
     if (!profile?.id) return;
@@ -105,8 +119,11 @@ const DashboardHome = () => {
       .on("postgres_changes", { event: "*", schema: "public", table: "products", filter: `user_id=eq.${profile.id}` }, () => {
         loadWoo(profile.id);
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "abandoned_orders", filter: `user_id=eq.${profile.id}` }, () => {
+        loadAbandoned(profile.id);
+      })
       .subscribe();
-    const interval = setInterval(() => loadWoo(profile.id), 30000);
+    const interval = setInterval(() => { loadWoo(profile.id); loadAbandoned(profile.id); }, 30000);
     return () => { supabase.removeChannel(channel); clearInterval(interval); };
   }, [profile]);
 
