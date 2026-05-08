@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List } from "lucide-react";
+import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List, Plus } from "lucide-react";
 
 type Product = {
   id: string;
