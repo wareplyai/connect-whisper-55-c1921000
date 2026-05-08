@@ -32,14 +32,14 @@ type Session = { id: string; session_name: string };
 type GatewaySession = { id: string; status?: string; phone?: string };
 
 const parseKeywords = (value: string) =>
-  Array.from(
-    new Set(
-      value
-        .split(/[\s,\n]+/)
-        .map((k) => k.trim().toLowerCase())
-        .filter(Boolean)
-    )
-  );
+    Array.from(
+      new Set(
+        value
+          .split(",")
+          .map((k) => k.trim().toLowerCase())
+          .filter(Boolean)
+      )
+    );
 
 const empty: Partial<Rule> = {
   rule_name: "",
