@@ -153,8 +153,11 @@ export default function AbandonedCart() {
               </Select>
             </div>
             <div>
-              <Label>Country code (digits only, e.g. 88 or 880)</Label>
-              <Input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="88" />
+              <Label>Customer country (auto-prefixed to incoming phone numbers)</Label>
+              <div className="flex items-center gap-2">
+                <CountryCodeSelect value={country} onChange={setCountry} />
+                <span className="text-sm text-muted-foreground truncate">{country.name} ({country.code})</span>
+              </div>
             </div>
           </div>
           <Button onClick={save} disabled={saving} className="bg-orange-500 hover:bg-orange-600 text-white">
