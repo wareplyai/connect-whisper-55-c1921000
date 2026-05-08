@@ -14,6 +14,136 @@ export type Database = {
   }
   public: {
     Tables: {
+      abandoned_connections: {
+        Row: {
+          country_code: string
+          created_at: string
+          default_session_id: string | null
+          id: string
+          is_active: boolean
+          total_completed: number
+          total_incomplete: number
+          total_received: number
+          total_sent: number
+          updated_at: string
+          user_id: string
+          webhook_secret: string
+        }
+        Insert: {
+          country_code?: string
+          created_at?: string
+          default_session_id?: string | null
+          id?: string
+          is_active?: boolean
+          total_completed?: number
+          total_incomplete?: number
+          total_received?: number
+          total_sent?: number
+          updated_at?: string
+          user_id: string
+          webhook_secret?: string
+        }
+        Update: {
+          country_code?: string
+          created_at?: string
+          default_session_id?: string | null
+          id?: string
+          is_active?: boolean
+          total_completed?: number
+          total_incomplete?: number
+          total_received?: number
+          total_sent?: number
+          updated_at?: string
+          user_id?: string
+          webhook_secret?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abandoned_connections_default_session_id_fkey"
+            columns: ["default_session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      abandoned_orders: {
+        Row: {
+          created_at: string
+          customer_address: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          customer_phone_full: string | null
+          id: string
+          order_date: string | null
+          product_link: string | null
+          product_name: string | null
+          raw: Json | null
+          session_id: string | null
+          site_name: string | null
+          site_url: string | null
+          sms_error: string | null
+          sms_sent: boolean
+          sms_sent_at: string | null
+          status: string
+          user_id: string
+          whatsapp_message: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_phone_full?: string | null
+          id?: string
+          order_date?: string | null
+          product_link?: string | null
+          product_name?: string | null
+          raw?: Json | null
+          session_id?: string | null
+          site_name?: string | null
+          site_url?: string | null
+          sms_error?: string | null
+          sms_sent?: boolean
+          sms_sent_at?: string | null
+          status: string
+          user_id: string
+          whatsapp_message?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_phone_full?: string | null
+          id?: string
+          order_date?: string | null
+          product_link?: string | null
+          product_name?: string | null
+          raw?: Json | null
+          session_id?: string | null
+          site_name?: string | null
+          site_url?: string | null
+          sms_error?: string | null
+          sms_sent?: boolean
+          sms_sent_at?: string | null
+          status?: string
+          user_id?: string
+          whatsapp_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abandoned_orders_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_logs: {
         Row: {
           action: string
