@@ -12,6 +12,21 @@ const corsHeaders = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+function normalizeStoreUrl(input: string): string {
+  let u = String(input || "").trim();
+  if (!u) return "";
+  if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+  return u.replace(/\/+$/, "");
+}
+
+function htmlToMessage(text: string): string {
+  const title = text.match(/<title[^>]*>(.*?)<\/title>/is)?.[1]
+    ?.replace(/\s+/g, " ")
+    .trim();
+  if (title) return title;
+  return text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 240) || "HTML response";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -37,6 +52,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!conn) return json({ error: "WooCommerce not connected" }, 400);
 
+    const storeUrl = normalizeStoreUrl(conn.store_url);
     const basic = "Basic " + btoa(`${conn.consumer_key}:${conn.consumer_secret}`);
     let page = 1;
     const perPage = 100;
@@ -44,13 +60,25 @@ Deno.serve(async (req) => {
     const errors: string[] = [];
 
     while (page <= 50) {
-      const url = `${conn.store_url}/wp-json/wc/v3/products?per_page=${perPage}&page=${page}&status=publish`;
+      const url = `${storeUrl}/wp-json/wc/v3/products?per_page=${perPage}&page=${page}&status=publish`;
       const r = await fetch(url, { headers: { Authorization: basic } });
+      const text = await r.text();
       if (!r.ok) {
-        errors.push(`page ${page}: ${r.status} ${(await r.text()).slice(0, 200)}`);
+        errors.push(`page ${page}: WooCommerce returned ${r.status} — ${htmlToMessage(text)}`);
         break;
       }
-      const items: any[] = await r.json();
+      let items: any[];
+      try {
+        const parsed = JSON.parse(text);
+        if (!Array.isArray(parsed)) {
+          errors.push(`page ${page}: WooCommerce returned an unexpected response instead of a products list`);
+          break;
+        }
+        items = parsed;
+      } catch {
+        errors.push(`page ${page}: WooCommerce returned HTML instead of JSON — ${htmlToMessage(text)}. Check store URL, REST API availability, permalink settings, or security/Cloudflare rules.`);
+        break;
+      }
       if (!Array.isArray(items) || items.length === 0) break;
 
       const rows = items.map((p) => ({
@@ -103,7 +131,7 @@ Deno.serve(async (req) => {
       }
     } catch {}
 
-    return json({ ok: true, total, errors });
+    return json({ ok: errors.length === 0, total, errors, error: errors.length ? errors.join(" | ").slice(0, 1000) : undefined });
   } catch (e: any) {
     return json({ error: e?.message || "Internal error" }, 500);
   }
