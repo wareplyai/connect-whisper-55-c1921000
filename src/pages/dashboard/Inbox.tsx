@@ -170,8 +170,9 @@ const Inbox = () => {
         const src = o.payload?.source;
         const source: "ai" | "keyword_rule" | "manual" =
           src === "ai" ? "ai" : (src === "keyword_rule" || src === "fixed_qa") ? "keyword_rule" : "manual";
-        // Skip auto replies that already came from incoming.reply_text to avoid duplicates
-        if (o.payload?.auto_reply && source !== "manual") return null;
+        // Skip AI / auto-reply outgoing logs — they already appear via incoming.reply_text.
+        // Only keep manual sends here to avoid duplicates in the conversation view.
+        if (source !== "manual") return null;
         return {
           id: `o-${o.id}`,
           kind: "out" as const,
