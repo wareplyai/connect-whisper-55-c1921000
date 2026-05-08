@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { CreditCard, CheckCircle2, MessageSquare, Wifi } from "lucide-react";
+import { CreditCard, CheckCircle2, MessageSquare, Wifi, Package, ShoppingCart, TrendingUp, Clock } from "lucide-react";
 import { CartesianGrid, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
 
@@ -16,6 +16,27 @@ const DashboardHome = () => {
   const [failed, setFailed] = useState<any[]>([]);
   const [chart, setChart] = useState<{ day: string; sent: number; failed: number; pending: number }[]>([]);
   const [stats, setStats] = useState({ total: 0, sent: 0, failed: 0, pending: 0 });
+  const [wooStats, setWooStats] = useState({ totalProducts: 0, totalOrders: 0, todayOrders: 0, todayRevenue: 0 });
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+
+  const loadWoo = async (uid: string) => {
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+    const [{ count: productCount }, { count: orderCount }, { data: todayRows }, { data: recent }] = await Promise.all([
+      supabase.from("products").select("id", { count: "exact", head: true }).eq("user_id", uid),
+      supabase.from("woo_orders").select("id", { count: "exact", head: true }).eq("user_id", uid),
+      supabase.from("woo_orders").select("total").eq("user_id", uid).gte("created_at", startOfDay.toISOString()),
+      supabase.from("woo_orders").select("id,order_number,status,total,currency,customer_name,customer_phone,created_at,confirmation_sent")
+        .eq("user_id", uid).order("created_at", { ascending: false }).limit(8),
+    ]);
+    const todayRevenue = (todayRows || []).reduce((s: number, r: any) => s + (Number(r.total) || 0), 0);
+    setWooStats({
+      totalProducts: productCount || 0,
+      totalOrders: orderCount || 0,
+      todayOrders: (todayRows || []).length,
+      todayRevenue,
+    });
+    setRecentOrders(recent || []);
+  };
 
   useEffect(() => {
     if (!profile) return;
@@ -71,7 +92,22 @@ const DashboardHome = () => {
         });
       }
       setChart(days);
+
+      await loadWoo(profile.id);
     })();
+
+    if (!profile?.id) return;
+    const channel = supabase
+      .channel(`woo-orders-${profile.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "woo_orders", filter: `user_id=eq.${profile.id}` }, () => {
+        loadWoo(profile.id);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "products", filter: `user_id=eq.${profile.id}` }, () => {
+        loadWoo(profile.id);
+      })
+      .subscribe();
+    const interval = setInterval(() => loadWoo(profile.id), 30000);
+    return () => { supabase.removeChannel(channel); clearInterval(interval); };
   }, [profile]);
 
   const currentPlan = planInfo?.plan || profile?.plan || "free";
@@ -131,6 +167,84 @@ const DashboardHome = () => {
         </div>
       </div>
 
+      {/* WooCommerce Stats */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> WooCommerce <span className="text-xs text-muted-foreground font-normal">(live)</span></h3>
+          <Button asChild size="sm" variant="outline"><Link to="/dashboard/woocommerce">Manage</Link></Button>
+        </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="rounded-xl border border-border bg-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-muted-foreground">Total Products</span>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="text-2xl font-bold">{wooStats.totalProducts}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-muted-foreground">Total Orders</span>
+              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="text-2xl font-bold">{wooStats.totalOrders}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-muted-foreground">Today's Orders</span>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="text-2xl font-bold">{wooStats.todayOrders}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-muted-foreground">Today's Revenue</span>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="text-2xl font-bold">{wooStats.todayRevenue.toFixed(2)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent WooCommerce Orders */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h3 className="font-semibold mb-4 flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> Recent Orders</h3>
+        {recentOrders.length === 0 ? (
+          <div className="py-8 grid place-items-center text-sm text-muted-foreground">No orders yet. Connect your WooCommerce store to start receiving orders.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="text-left py-2">Order #</th>
+                  <th className="text-left">Customer</th>
+                  <th className="text-left">Phone</th>
+                  <th className="text-left">Status</th>
+                  <th className="text-right">Total</th>
+                  <th className="text-center">WhatsApp</th>
+                  <th className="text-right">When</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentOrders.map((o) => (
+                  <tr key={o.id} className="border-t border-border">
+                    <td className="py-2 font-medium">#{o.order_number || o.id.slice(0, 8)}</td>
+                    <td>{o.customer_name || "—"}</td>
+                    <td className="text-muted-foreground">{o.customer_phone || "—"}</td>
+                    <td><span className="text-xs px-2 py-0.5 rounded-full bg-muted">{o.status || "—"}</span></td>
+                    <td className="text-right">{o.currency || ""} {Number(o.total || 0).toFixed(2)}</td>
+                    <td className="text-center">
+                      {o.confirmation_sent
+                        ? <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">Sent</span>
+                        : <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">—</span>}
+                    </td>
+                    <td className="text-right text-muted-foreground text-xs">{new Date(o.created_at).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
       <div className="grid lg:grid-cols-2 gap-4">
         <div className="rounded-xl border border-border bg-card p-5">
           <h3 className="font-semibold mb-4">Messages by Status (last 7 days)</h3>
