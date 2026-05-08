@@ -193,6 +193,18 @@ const Inbox = () => {
     return [...inc, ...replies, ...manualOut].sort((a, b) => +new Date(a.ts) - +new Date(b.ts));
   }, [incoming, outgoing, selected]);
 
+  useEffect(() => {
+    if (!selected) return;
+    const id = requestAnimationFrame(() => {
+      const el = bottomRef.current;
+      if (!el) return;
+      const viewport = el.closest("[data-radix-scroll-area-viewport]") as HTMLElement | null;
+      if (viewport) viewport.scrollTop = viewport.scrollHeight;
+      else el.scrollIntoView({ block: "end" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [selectedKey, conversation.length]);
+
   const toggleBlock = async (next: boolean) => {
     if (!user || !selected) return;
     if (next) {
