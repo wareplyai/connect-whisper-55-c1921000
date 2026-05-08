@@ -1101,19 +1101,38 @@ Deno.serve(async (req) => {
       messageId = msgRow?.id;
     }
 
+    // Capture caption + mimetype from the raw payload (Baileys imageMessage.caption etc.)
+    const imageCaption = isImageMessage ? findCaption(body) : null;
+    let imageMimetype: string | null = isImageMessage ? findMimetype(body) : null;
+
     // If we have an image (resolved from payload or recovered from gateway), upload it to
-    // chat-media bucket and persist the public URL on the message so it shows in the inbox.
+    // chat-media bucket and persist the public URL + mimetype on the message so it shows in the inbox.
     if (messageId && imageUrl) {
       try {
-        const publicUrl = await uploadChatMediaImage(admin, userId, sessionId, imageUrl);
-        if (publicUrl) {
-          await admin.from("incoming_messages").update({ image_url: publicUrl }).eq("id", messageId);
-          imageUrl = publicUrl;
+        const uploaded = await uploadChatMediaImage(admin, userId, sessionId, imageUrl);
+        if (uploaded) {
+          imageMimetype = imageMimetype || uploaded.mime;
+          await admin.from("incoming_messages").update({
+            image_url: uploaded.url,
+            mimetype: imageMimetype,
+            image_caption: imageCaption,
+          }).eq("id", messageId);
+          imageUrl = uploaded.url;
           console.log("[ai-reply] saved chat-media url for message", messageId);
+        } else if (imageCaption || imageMimetype) {
+          await admin.from("incoming_messages").update({
+            mimetype: imageMimetype,
+            image_caption: imageCaption,
+          }).eq("id", messageId);
         }
       } catch (e) {
         console.log("[ai-reply] chat-media save failed:", (e as Error)?.message);
       }
+    } else if (messageId && (imageCaption || imageMimetype)) {
+      await admin.from("incoming_messages").update({
+        mimetype: imageMimetype,
+        image_caption: imageCaption,
+      }).eq("id", messageId);
     }
     await deliverUserWebhook({
       admin,
