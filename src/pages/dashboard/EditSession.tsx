@@ -180,7 +180,7 @@ const EditSession = () => {
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-4 space-y-4">
             {[
-              { k: "show_typing_indicator", label: "Show Typing Indicator (Webhook users)", desc: "Show 'typing…' on customer's phone before reply is sent. Recommended ON — feels more human." },
+              { k: "show_typing_indicator", label: "Show Typing Indicator", desc: "Show 'typing…' on customer's phone before reply is sent. Recommended ON — feels more human." },
               { k: "auto_replies_enabled", label: "Enable Auto Replies", desc: "Master on/off for keyword auto-replies on this session. Independent from AI Agent panel." },
               { k: "read_incoming_messages", label: "Read Incoming Messages (Blue Tick)", desc: "Mark customer messages as read on WhatsApp (double blue tick). OFF = stays at delivered (gray)." },
               { k: "auto_reject_calls", label: "Auto Reject Calls", desc: "Incoming voice/video calls will be automatically rejected." },

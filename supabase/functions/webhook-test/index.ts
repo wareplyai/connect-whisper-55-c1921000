@@ -57,15 +57,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Prefer external forwarding URL (n8n etc.) over the internal ai-reply endpoint.
-    const isInternal = /\.supabase\.co\/functions\/v1\/ai-reply\/?$/i.test(String(session.webhook_url || "").trim());
-    const url = String(session.forward_webhook_url || (isInternal ? "" : session.webhook_url) || "").trim();
-    if (!url) {
-      return new Response(JSON.stringify({ error: "No external webhook URL configured. Add an n8n/forwarding URL in Webhook settings." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // We test the internal ai-reply endpoint directly (no external forwarding/n8n).
+    const SUPABASE_PROJECT_URL = Deno.env.get("SUPABASE_URL")!;
+    const url = `${SUPABASE_PROJECT_URL}/functions/v1/ai-reply`;
     if (!session.enable_webhook) {
       return new Response(JSON.stringify({ error: "Webhook is disabled. Enable it first." }), {
         status: 400,
@@ -77,8 +71,12 @@ Deno.serve(async (req) => {
       event: event_type,
       test: true,
       session_id,
+      sessionId: session_id,
       from: "8801739049039",
+      from_number: "8801739049039",
       message: "🧪 This is a test event from WaReply",
+      message_text: "🧪 This is a test event from WaReply",
+      message_type: "text",
       timestamp: new Date().toISOString(),
       raw_payload: {
         key: {
@@ -106,7 +104,10 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
           "X-WaReply-Event": event_type,
           "X-WaReply-Test": "true",
-          ...(session.webhook_secret ? { "X-Webhook-Signature": session.webhook_secret } : {}),
+          ...(session.webhook_secret ? {
+            "X-Webhook-Signature": session.webhook_secret,
+            "x-webhook-secret": session.webhook_secret,
+          } : {}),
         },
         body: JSON.stringify(samplePayload),
         signal: controller.signal,

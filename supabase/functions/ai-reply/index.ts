@@ -90,6 +90,24 @@ async function callAI(opts: {
   throw new Error(`Unsupported platform: ${platform}`);
 }
 
+// Detect whether the payload looks image-related, even when the binary URL/base64 is stripped.
+// Looks for: imageMessage object key, mimetype starting with image/, message_type/messageType containing "image".
+function payloadLooksLikeImage(value: unknown, depth = 0): boolean {
+  if (depth > 8 || value == null) return false;
+  if (typeof value === "string") return /^image\//i.test(value);
+  if (Array.isArray(value)) return value.slice(0, 50).some((v) => payloadLooksLikeImage(v, depth + 1));
+  if (typeof value !== "object") return false;
+  const obj = value as Record<string, unknown>;
+  for (const k of Object.keys(obj)) {
+    const nk = k.toLowerCase();
+    if (nk === "imagemessage" || nk === "image_message") return true;
+    if ((nk === "mimetype" || nk === "mime_type" || nk === "contenttype" || nk === "content_type") && typeof obj[k] === "string" && /^image\//i.test(obj[k] as string)) return true;
+    if ((nk === "messagetype" || nk === "message_type" || nk === "type") && typeof obj[k] === "string" && /image|photo|picture/i.test(obj[k] as string)) return true;
+  }
+  for (const v of Object.values(obj)) if (payloadLooksLikeImage(v, depth + 1)) return true;
+  return false;
+}
+
 // Walk the payload deeply and return the first usable image source — either:
 //   - a data: URL  (data:image/...;base64,...)
 //   - an http(s) URL that looks like an image
@@ -178,6 +196,66 @@ async function describeImageWithOpenAI(apiKey: string, imageUrl: string): Promis
   const data = await r.json();
   if (!r.ok) throw new Error(data?.error?.message || `Vision error ${r.status}`);
   return (data.choices?.[0]?.message?.content || "").trim();
+}
+
+// Best-effort: ask the Baileys gateway for the media bytes of a given message id.
+// Returns a data: URL we can pass to the vision model, or null if every endpoint fails.
+async function fetchGatewayMediaDataUrl(opts: {
+  gateway: string; sessionId: string; apiToken?: string | null;
+  messageId?: string; remoteJid?: string;
+}): Promise<string | null> {
+  const { gateway, sessionId, apiToken, messageId, remoteJid } = opts;
+  if (!messageId) return null;
+  const headers: Record<string, string> = {};
+  if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+  const mid = encodeURIComponent(messageId);
+  const jid = remoteJid ? encodeURIComponent(remoteJid) : "";
+
+  const candidates: Array<{ url: string; method: "GET" | "POST"; body?: unknown }> = [];
+  for (const base of gatewayBaseVariants(gateway)) {
+    candidates.push(
+      { url: `${base}/api/session/${sessionId}/messages/${mid}/media`, method: "GET" },
+      { url: `${base}/api/session/${sessionId}/messages/${mid}/download`, method: "GET" },
+      { url: `${base}/api/session/${sessionId}/media/${mid}`, method: "GET" },
+      { url: `${base}/api/session/${sessionId}/download`, method: "POST", body: { messageId, id: messageId, remoteJid } },
+      { url: `${base}/api/session/${sessionId}/downloadMedia`, method: "POST", body: { messageId, id: messageId, remoteJid } },
+      { url: `${base}/api/${sessionId}/media/${mid}`, method: "GET" },
+    );
+    if (jid) candidates.push({ url: `${base}/api/session/${sessionId}/chats/${jid}/messages/${mid}/media`, method: "GET" });
+  }
+
+  for (const c of candidates) {
+    try {
+      const init: RequestInit = { method: c.method, headers: { ...headers } };
+      if (c.method === "POST") {
+        (init.headers as Record<string, string>)["Content-Type"] = "application/json";
+        init.body = JSON.stringify(c.body || {});
+      }
+      const res = await fetch(c.url, init);
+      if (!res.ok) continue;
+      const ctype = (res.headers.get("content-type") || "").toLowerCase();
+
+      if (ctype.startsWith("image/")) {
+        const buf = new Uint8Array(await res.arrayBuffer());
+        const b64 = btoa(String.fromCharCode(...buf));
+        console.log(`[gateway-media] got binary ${ctype} from ${c.url} (${buf.length} bytes)`);
+        return `data:${ctype};base64,${b64}`;
+      }
+      if (ctype.includes("json")) {
+        const j = await res.json().catch(() => null);
+        if (!j) continue;
+        const found = findImageUrl(j);
+        if (found) {
+          console.log(`[gateway-media] found image url in JSON from ${c.url}`);
+          return found;
+        }
+      }
+    } catch (e) {
+      console.log(`[gateway-media] ${c.url} failed: ${(e as Error)?.message}`);
+    }
+  }
+  console.log(`[gateway-media] no media endpoint succeeded for messageId=${messageId}`);
+  return null;
 }
 
 function recipientVariants(input: string): string[] {
@@ -599,9 +677,11 @@ Deno.serve(async (req) => {
     const sourceMessageId = String(body.source_message_id || "").trim();
 
     // ---- Image detection: scan body deeply for any image source (URL/dataURL/base64) ----
-    const imageUrl = findImageUrl(body);
+    let imageUrl = findImageUrl(body);
     const looksImageType = /image|photo|picture|media/i.test(messageType);
-    const isImageMessage = !!imageUrl && (looksImageType || !rawText);
+    const payloadHasImage = looksImageType || payloadLooksLikeImage(body);
+    // Tentatively flag as image — we may resolve the actual binary from the gateway below.
+    let isImageMessage = (!!imageUrl && (looksImageType || !rawText)) || (payloadHasImage && !rawText);
     const messageText = rawText || (isImageMessage ? "[customer sent an image]" : "");
 
     console.log("[ai-reply] incoming", {
@@ -609,11 +689,12 @@ Deno.serve(async (req) => {
       messageType,
       hasText: !!rawText,
       hasImage: !!imageUrl,
+      payloadHasImage,
       imageKind: imageUrl ? (imageUrl.startsWith("data:") ? "data-url" : "http") : "none",
       bodyKeys: Object.keys(body || {}),
     });
 
-    if (!sessionId || (!messageText && !imageUrl)) {
+    if (!sessionId || (!messageText && !imageUrl && !payloadHasImage)) {
       return jsonResp({ error: "session_id and message or image required" }, 400);
     }
 
@@ -650,6 +731,42 @@ Deno.serve(async (req) => {
     const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org/waapi";
     const rawPayload = (body?.raw_payload as Record<string, unknown> | undefined) || {};
     const rawKey = (rawPayload?.key as Record<string, unknown> | undefined) || {};
+
+    // If gateway stripped the image bytes but the payload hints image, try to download media from gateway.
+    if (!imageUrl && payloadHasImage) {
+      const candidateMessageId = String(
+        (body as any).message_id ||
+        (body as any).messageId ||
+        (rawKey as any)?.id ||
+        (rawPayload as any)?.messageId ||
+        (rawPayload as any)?.id ||
+        ""
+      ).trim();
+      const candidateJid = String(
+        (body as any).target_jid ||
+        (body as any).remoteJid ||
+        (rawKey as any)?.remoteJid ||
+        (rawPayload as any)?.remoteJid ||
+        ""
+      ).trim();
+      if (candidateMessageId) {
+        const fetched = await fetchGatewayMediaDataUrl({
+          gateway: GATEWAY,
+          sessionId,
+          apiToken: session.api_token,
+          messageId: candidateMessageId,
+          remoteJid: candidateJid || undefined,
+        });
+        if (fetched) {
+          imageUrl = fetched;
+          isImageMessage = true;
+          console.log("[ai-reply] gateway-media recovered image for messageId=", candidateMessageId);
+        } else {
+          console.log("[ai-reply] gateway-media unavailable, replying with image-help fallback");
+        }
+      }
+    }
+
     const pickRealNumber = (...values: unknown[]) => {
       for (const value of values) {
         const digits = digitsOnly(value);
@@ -1037,7 +1154,9 @@ Deno.serve(async (req) => {
     let reply = "";
 
     // ---- Image-message branch: vision describe + product match ----
-    if (isImageMessage && imageUrl) {
+    if (isImageMessage && !imageUrl) {
+      reply = "ছবি receive করেছি ✅ কিন্তু এই মুহূর্তে ছবিটা analyze করা সম্ভব হচ্ছে না। দয়া করে product টির নাম / রঙ / size text এ লিখে পাঠান, আমি match করে details দিচ্ছি।\n\nGot your image but couldn't open it right now — please describe the product in text (name / color / size).";
+    } else if (isImageMessage && imageUrl) {
       if (keyRow.platform !== "openai") {
         reply = "Sorry, image search needs an OpenAI API key. Please describe the product in text. ছবি match করতে OpenAI key দরকার, দয়া করে product টি text এ describe করুন।";
       } else {

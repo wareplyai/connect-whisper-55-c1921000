@@ -1,7 +1,6 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, MessageCircle, Receipt, MessageSquareText, Bot, ShieldCheck, MessageSquare, Package } from "lucide-react";
 import { TrialBanner } from "@/components/TrialBanner";
-import { N8nBanner } from "@/components/N8nBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { Button } from "@/components/ui/button";
@@ -126,7 +125,6 @@ const DashboardLayout = () => {
           <ThemeToggle />
         </header>
         <div className="flex-1 p-6 space-y-6">
-          {!location.pathname.startsWith("/dashboard/inbox") && <N8nBanner />}
           <TrialBanner />
           <Outlet />
         </div>

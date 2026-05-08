@@ -114,7 +114,7 @@ const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) =>
     const { error } = await supabase.from("sessions").update({
       enable_webhook: enabled,
       webhook_url: url || null,
-      forward_webhook_url: forwardUrl.trim() || null,
+      forward_webhook_url: null,
       webhook_secret: secret,
       webhook_events: events,
       ignore_groups: ignoreGroups,
@@ -185,21 +185,7 @@ const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) =>
                     className="border-0 bg-transparent p-0 h-auto text-xs font-mono focus-visible:ring-0"
                   />
                 </div>
-                <p className="text-[11px] text-muted-foreground">WhatsApp gateway sends incoming messages here. Keep this as the ai-reply endpoint.</p>
-              </div>
-
-              <div className="space-y-2 mt-5">
-                <p className="text-[11px] font-semibold tracking-wider text-muted-foreground">FORWARDING URL (n8n / external)</p>
-                <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
-                  <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <Input
-                    value={forwardUrl}
-                    onChange={(e) => setForwardUrl(e.target.value)}
-                    placeholder="https://your-n8n.example.com/webhook/xxxx"
-                    className="border-0 bg-transparent p-0 h-auto text-xs font-mono focus-visible:ring-0"
-                  />
-                </div>
-                <p className="text-[11px] text-muted-foreground">Real customer messages are forwarded here after ai-reply receives them. For n8n production, activate the workflow first (test URLs only fire once per "Execute workflow" click).</p>
+                <p className="text-[11px] text-muted-foreground">WhatsApp gateway sends incoming messages directly to this endpoint. AI reply, product image match, and auto-replies are all handled here. No external service (n8n etc.) is needed.</p>
               </div>
 
               <div className="space-y-2 mt-5">
