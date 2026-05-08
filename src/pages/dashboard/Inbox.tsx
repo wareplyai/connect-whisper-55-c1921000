@@ -22,6 +22,7 @@ type IncomingRow = {
   delivery_status: string;
   received_at: string;
   raw_payload: any;
+  image_url?: string | null;
 };
 
 type OutgoingRow = {
