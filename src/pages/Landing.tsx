@@ -474,9 +474,8 @@ const Landing = () => {
             </Button>
           </div>
 
-          {/* Trust check row */}
           <div
-            className="hero-rise mt-5 flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-xs text-muted-foreground"
+            className="hero-rise flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-xs text-muted-foreground mt-[28px]"
             style={{ animationDelay: "0.45s" }}
           >
             <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> {t("hero.trust.noCard")}</span>
