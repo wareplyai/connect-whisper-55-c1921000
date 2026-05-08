@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Users, Smartphone, MessageSquare, DollarSign, UserPlus, AlertTriangle,
   Zap, Send, ArrowUpRight, ArrowDownRight, MoreHorizontal, Activity,
-  AlertCircle, CheckCircle2, XCircle, Clock,
+  AlertCircle, CheckCircle2, XCircle, Clock, Bot, MessageSquareText, ShoppingBag,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
