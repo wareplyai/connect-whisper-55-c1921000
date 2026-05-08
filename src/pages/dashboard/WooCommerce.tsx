@@ -38,6 +38,22 @@ interface WooOrder {
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
+const getFunctionErrorMessage = async (error: any, fallback = "Request failed") => {
+  const context = error?.context;
+  if (context && typeof context.json === "function") {
+    try {
+      const body = await context.json();
+      return body?.error || body?.message || fallback;
+    } catch {}
+  }
+  if (context && typeof context.text === "function") {
+    try {
+      return (await context.text()) || error?.message || fallback;
+    } catch {}
+  }
+  return error?.message || fallback;
+};
+
 export default function WooCommerce() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -86,7 +102,7 @@ export default function WooCommerce() {
     });
     setConnecting(false);
     if (error || (data as any)?.error) {
-      toast({ title: "Connect failed", description: (data as any)?.error || error?.message, variant: "destructive" });
+      toast({ title: "Connect failed", description: (data as any)?.error || await getFunctionErrorMessage(error, "Connection failed"), variant: "destructive" });
       return;
     }
     toast({ title: "✅ Connected", description: "WooCommerce store verified successfully" });
