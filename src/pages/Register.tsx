@@ -58,7 +58,7 @@ const Register = () => {
           id="name"
           label="Full name"
           required
-          placeholder="John Doe"
+          placeholder="Alvi AI"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           icon={<User className="h-4 w-4" />}
