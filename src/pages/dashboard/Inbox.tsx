@@ -407,6 +407,7 @@ const Inbox = () => {
                   {conversation.length === 0 && (
                     <p className="text-center text-sm text-muted-foreground py-8">No messages.</p>
                   )}
+                  <div ref={bottomRef} />
                 </div>
               </ScrollArea>
               <div className="p-3 border-t border-border">
