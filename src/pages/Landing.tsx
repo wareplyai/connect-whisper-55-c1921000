@@ -187,7 +187,7 @@ const Landing = () => {
         {/* Silk curves - left */}
         <svg
           aria-hidden="true"
-          className="pointer-events-none absolute left-0 top-0 h-full w-[55%] z-0 hero-silk hero-silk-left"
+          className="pointer-events-none absolute left-0 top-20 h-[calc(100%-5rem)] w-[55%] z-0 hero-silk hero-silk-left"
           viewBox="0 0 600 1000"
           preserveAspectRatio="none"
           fill="none"
@@ -211,7 +211,7 @@ const Landing = () => {
         {/* Silk curves - right (mirrored) */}
         <svg
           aria-hidden="true"
-          className="pointer-events-none absolute right-0 top-0 h-full w-[55%] z-0 hero-silk hero-silk-right"
+          className="pointer-events-none absolute right-0 top-20 h-[calc(100%-5rem)] w-[55%] z-0 hero-silk hero-silk-right"
           viewBox="0 0 600 1000"
           preserveAspectRatio="none"
           fill="none"
@@ -518,7 +518,7 @@ const Landing = () => {
               asChild
               size="lg"
               variant="outline"
-              className="h-12 px-7 rounded-full border-foreground/15 bg-transparent backdrop-blur hover:bg-card/60 hover:border-primary/40 text-sm font-medium transition-all"
+              className="h-12 px-7 rounded-full border-foreground/15 bg-transparent backdrop-blur text-foreground hover:bg-card/60 hover:text-foreground hover:border-primary/40 text-sm font-medium transition-all"
             >
               <a href="#features">{t("hero.cta.docs")}</a>
             </Button>
