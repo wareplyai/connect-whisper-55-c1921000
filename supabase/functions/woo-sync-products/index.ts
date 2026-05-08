@@ -96,6 +96,7 @@ Deno.serve(async (req) => {
     if (!conn) return json({ error: "WooCommerce not connected" }, 400);
 
     const storeUrl = normalizeStoreUrl(conn.store_url);
+    const isHttps = /^https:\/\//i.test(storeUrl);
     const basic = "Basic " + btoa(`${conn.consumer_key}:${conn.consumer_secret}`);
     let page = 1;
     const perPage = 100;
@@ -103,8 +104,18 @@ Deno.serve(async (req) => {
     const errors: string[] = [];
 
     while (page <= 50) {
-      const url = `${storeUrl}/wp-json/wc/v3/products?per_page=${perPage}&page=${page}&status=publish`;
-      const r = await fetch(url, { headers: { Authorization: basic } });
+      const baseUrl = `${storeUrl}/wp-json/wc/v3/products`;
+      const params = { per_page: String(perPage), page: String(page), status: "publish" };
+      let url: string;
+      let headers: Record<string, string> = {};
+      if (isHttps) {
+        url = `${baseUrl}?${new URLSearchParams(params).toString()}`;
+        headers = { Authorization: basic };
+      } else {
+        // HTTP store — use OAuth 1.0a signed request (Basic Auth not allowed without SSL)
+        url = await signedWooUrl(baseUrl, "GET", conn.consumer_key, conn.consumer_secret, params);
+      }
+      const r = await fetch(url, { headers });
       const text = await r.text();
       if (!r.ok) {
         errors.push(`page ${page}: WooCommerce returned ${r.status} — ${htmlToMessage(text)}`);
