@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Trash2, RefreshCw, Upload } from "lucide-react";
+import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List } from "lucide-react";
 
 type Product = {
   id: string;
@@ -25,11 +26,23 @@ type Product = {
   created_at: string;
 };
 
+type EditState = {
+  open: boolean;
+  product: Product | null;
+  name: string;
+  price: string;
+  description: string;
+  category: string;
+  stock: string;
+  file: File | null;
+};
+
 export default function Products() {
   const { user } = useAuth();
   const [items, setItems] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [view, setView] = useState<"list" | "grid">("list");
   const [form, setForm] = useState({
     name: "",
     price: "",
@@ -38,6 +51,10 @@ export default function Products() {
     stock: "",
   });
   const [file, setFile] = useState<File | null>(null);
+  const [edit, setEdit] = useState<EditState>({
+    open: false, product: null, name: "", price: "", description: "", category: "", stock: "", file: null,
+  });
+  const [editSaving, setEditSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -87,7 +104,6 @@ export default function Products() {
         .single();
       if (insErr) throw insErr;
 
-      // Trigger auto-tagging (non-blocking)
       const productId = (inserted as any)?.id;
       if (productId) {
         supabase.functions.invoke("tag-product-image", { body: { productId } }).then(({ error }) => {
@@ -121,6 +137,92 @@ export default function Products() {
     if (error) toast.error(error.message);
     else { toast.success("Re-tagged"); load(); }
   };
+
+  const openEdit = (p: Product) => {
+    setEdit({
+      open: true,
+      product: p,
+      name: p.name,
+      price: String(p.price ?? ""),
+      description: p.description ?? "",
+      category: p.category ?? "",
+      stock: String(p.stock ?? ""),
+      file: null,
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!user || !edit.product) return;
+    if (!edit.name.trim()) return toast.error("Name required");
+    setEditSaving(true);
+    try {
+      let image_url = edit.product.image_url;
+      let image_path = edit.product.image_path;
+      let imageChanged = false;
+
+      if (edit.file) {
+        const ext = edit.file.name.split(".").pop()?.toLowerCase() || "jpg";
+        const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("product-images").upload(path, edit.file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
+        // remove old
+        if (image_path) {
+          await supabase.storage.from("product-images").remove([image_path]);
+        }
+        image_url = pub.publicUrl;
+        image_path = path;
+        imageChanged = true;
+      }
+
+      const { error: updErr } = await supabase
+        .from("products" as any)
+        .update({
+          name: edit.name.trim(),
+          price: Number(edit.price) || 0,
+          description: edit.description.trim() || null,
+          category: edit.category.trim() || null,
+          stock: Number(edit.stock) || 0,
+          image_url,
+          image_path,
+          ...(imageChanged ? { ai_tags_status: "pending", ai_tags: null } : {}),
+        })
+        .eq("id", edit.product.id);
+      if (updErr) throw updErr;
+
+      if (imageChanged) {
+        supabase.functions.invoke("tag-product-image", { body: { productId: edit.product.id } }).then(({ error }) => {
+          if (error) toast.error("Auto-tag failed: " + error.message);
+          else { toast.success("AI tags regenerated"); load(); }
+        });
+      }
+
+      toast.success("Product updated");
+      setEdit({ ...edit, open: false });
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Failed");
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const ProductActions = ({ p }: { p: Product }) => (
+    <div className="flex gap-2 flex-wrap">
+      <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
+        <Pencil className="size-3 mr-1" /> Edit
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => retag(p)}>
+        <RefreshCw className="size-3 mr-1" /> Re-tag
+      </Button>
+      <Button size="sm" variant="destructive" onClick={() => handleDelete(p)}>
+        <Trash2 className="size-3 mr-1" /> Delete
+      </Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -166,11 +268,69 @@ export default function Products() {
       </Card>
 
       <div className="space-y-3">
-        <h2 className="font-semibold">Your products ({items.length})</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-semibold">Your products ({items.length})</h2>
+          <div className="inline-flex rounded-md border bg-background p-0.5">
+            <Button
+              size="sm"
+              variant={view === "list" ? "secondary" : "ghost"}
+              onClick={() => setView("list")}
+              className="h-8"
+            >
+              <List className="size-4 mr-1" /> List
+            </Button>
+            <Button
+              size="sm"
+              variant={view === "grid" ? "secondary" : "ghost"}
+              onClick={() => setView("grid")}
+              className="h-8"
+            >
+              <LayoutGrid className="size-4 mr-1" /> Grid
+            </Button>
+          </div>
+        </div>
+
         {loading ? (
           <Loader2 className="animate-spin" />
         ) : items.length === 0 ? (
           <p className="text-sm text-muted-foreground">No products yet.</p>
+        ) : view === "list" ? (
+          <div className="space-y-2">
+            {items.map((p) => (
+              <Card key={p.id} className="p-3">
+                <div className="flex items-center gap-3">
+                  {p.image_url && (
+                    <img src={p.image_url} alt={p.name} className="w-20 h-20 rounded object-cover flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-semibold truncate">{p.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {p.category || "—"} · Stock: {p.stock}
+                        </div>
+                        {p.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{p.description}</p>
+                        )}
+                        <div className="flex items-center gap-2 flex-wrap mt-1">
+                          <Badge variant={p.ai_tags_status === "ready" ? "default" : "secondary"} className="text-[10px]">
+                            AI: {p.ai_tags_status}
+                          </Badge>
+                          {p.ai_tags && p.ai_tags_status === "ready" && (
+                            <span className="text-[10px] text-muted-foreground line-clamp-1">{p.ai_tags}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="font-bold whitespace-nowrap">{p.price}</div>
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <ProductActions p={p} />
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.map((p) => (
@@ -197,13 +357,8 @@ export default function Products() {
                   {p.ai_tags && p.ai_tags_status === "ready" && (
                     <p className="text-xs text-muted-foreground line-clamp-2"><b>Tags:</b> {p.ai_tags}</p>
                   )}
-                  <div className="flex gap-2 pt-2">
-                    <Button size="sm" variant="outline" onClick={() => retag(p)}>
-                      <RefreshCw className="size-3 mr-1" /> Re-tag
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleDelete(p)}>
-                      <Trash2 className="size-3 mr-1" /> Delete
-                    </Button>
+                  <div className="pt-2">
+                    <ProductActions p={p} />
                   </div>
                 </div>
               </Card>
@@ -211,6 +366,53 @@ export default function Products() {
           </div>
         )}
       </div>
+
+      <Dialog open={edit.open} onOpenChange={(o) => setEdit({ ...edit, open: o })}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit product</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="md:col-span-2">
+              <Label>Name *</Label>
+              <Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+            </div>
+            <div>
+              <Label>Price</Label>
+              <Input type="number" value={edit.price} onChange={(e) => setEdit({ ...edit, price: e.target.value })} />
+            </div>
+            <div>
+              <Label>Stock</Label>
+              <Input type="number" value={edit.stock} onChange={(e) => setEdit({ ...edit, stock: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>Category</Label>
+              <Input value={edit.category} onChange={(e) => setEdit({ ...edit, category: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>Description</Label>
+              <Textarea rows={2} value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>Replace image (optional)</Label>
+              <Input type="file" accept="image/*" onChange={(e) => setEdit({ ...edit, file: e.target.files?.[0] || null })} />
+              {edit.product?.image_url && !edit.file && (
+                <img src={edit.product.image_url} alt="current" className="mt-2 w-24 h-24 object-cover rounded border" />
+              )}
+              {edit.file && (
+                <p className="text-xs text-muted-foreground mt-1">New image will replace current and AI tags will regenerate.</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEdit({ ...edit, open: false })} disabled={editSaving}>Cancel</Button>
+            <Button onClick={saveEdit} disabled={editSaving}>
+              {editSaving && <Loader2 className="size-4 animate-spin mr-2" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
