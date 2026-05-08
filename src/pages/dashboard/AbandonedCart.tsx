@@ -15,6 +15,8 @@ import {
   Copy, Loader2, ShoppingBag, Save, RefreshCw, ExternalLink,
   CheckCircle2, XCircle, Clock, Eye, AlertCircle,
 } from "lucide-react";
+import { CountryCodeSelect } from "@/components/CountryCodeSelect";
+import { ALL_COUNTRIES, DEFAULT_COUNTRY, type Country } from "@/lib/countries";
 
 interface Conn {
   id: string;
