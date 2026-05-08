@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Clock } from "lucide-react";
+import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Clock, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
 import { Skeleton } from "@/components/ui/skeleton";
