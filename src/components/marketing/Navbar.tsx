@@ -50,10 +50,10 @@ export const Navbar = () => {
   const displayName = profile?.full_name || profile?.email?.split("@")[0] || "Account";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-      <nav className="container flex h-16 items-center justify-between gap-2">
+    <header className="sticky top-3 z-50 px-3 sm:px-6">
+      <nav className="container flex h-14 items-center justify-between gap-2 rounded-full border border-border/60 bg-background/80 px-4 sm:px-6 shadow-[0_8px_30px_-10px_hsl(var(--primary)/0.25)] backdrop-blur-xl">
         <Link to="/" className="flex items-center" onClick={goHome}>
-          <Logo size={32} textClassName="text-base" />
+          <Logo size={30} textClassName="text-base" />
         </Link>
 
         {/* Desktop nav */}
@@ -70,7 +70,7 @@ export const Navbar = () => {
           <LanguageToggle />
           <ThemeToggle />
           {user ? (
-            <Button asChild size="sm" variant="outline" className="gap-1.5">
+            <Button asChild size="sm" className="gap-1.5 rounded-full bg-foreground text-background hover:bg-foreground/90">
               <Link to="/dashboard">
                 <ArrowLeft className="h-3.5 w-3.5" />
                 <span className="max-w-[140px] truncate">{displayName}</span>
@@ -78,10 +78,10 @@ export const Navbar = () => {
             </Button>
           ) : (
             <>
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="ghost" size="sm" className="rounded-full">
                 <Link to="/login">{t("nav.login")}</Link>
               </Button>
-              <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary-hover">
+              <Button asChild size="sm" className="rounded-full bg-foreground text-background hover:bg-foreground/90 px-5">
                 <Link to="/register">{t("nav.getStarted")}</Link>
               </Button>
             </>
@@ -97,7 +97,7 @@ export const Navbar = () => {
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
-            className="p-2 rounded-lg hover:bg-foreground/5 text-foreground transition-colors"
+            className="p-2 rounded-full hover:bg-foreground/5 text-foreground transition-colors"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -106,7 +106,7 @@ export const Navbar = () => {
 
       {/* Mobile menu panel */}
       <div
-        className={`md:hidden overflow-hidden border-t border-border/60 bg-background/95 backdrop-blur-xl transition-[max-height,opacity] duration-300 ease-out ${
+        className={`md:hidden mt-2 overflow-hidden rounded-2xl border border-border/60 bg-background/95 backdrop-blur-xl transition-[max-height,opacity] duration-300 ease-out ${
           open ? "max-h-[80vh] opacity-100" : "max-h-0 opacity-0"
         }`}
       >
