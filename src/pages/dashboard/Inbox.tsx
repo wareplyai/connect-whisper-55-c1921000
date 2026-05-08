@@ -170,9 +170,9 @@ const Inbox = () => {
         const src = o.payload?.source;
         const source: "ai" | "keyword_rule" | "manual" =
           src === "ai" ? "ai" : (src === "keyword_rule" || src === "fixed_qa") ? "keyword_rule" : "manual";
-        // Skip AI / auto-reply outgoing logs — they already appear via incoming.reply_text.
-        // Only keep manual sends here to avoid duplicates in the conversation view.
-        if (source !== "manual") return null;
+        // Gateway-created AI delivery logs can arrive with only { text } and no source.
+        // Only dashboard manual sends are tagged source:"manual"; everything else is already shown via incoming.reply_text.
+        if (src !== "manual") return null;
         return {
           id: `o-${o.id}`,
           kind: "out" as const,
