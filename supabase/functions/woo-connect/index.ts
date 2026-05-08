@@ -93,19 +93,20 @@ Deno.serve(async (req) => {
     }
 
     // Verify credentials by calling /wp-json/wc/v3/products?per_page=1
-    const basic = "Basic " + btoa(`${consumer_key}:${consumer_secret}`);
-    const verifyUrl = `${store_url}/wp-json/wc/v3/products?per_page=1`;
     let storeName = "";
     try {
-      const r = await fetch(verifyUrl, { headers: { Authorization: basic } });
+      const r = await wooFetch(store_url, "/wp-json/wc/v3/products", consumer_key, consumer_secret, { per_page: "1" });
       const text = await r.text();
       if (!r.ok) {
         return json({ error: `WooCommerce verify failed (${r.status}): ${text.slice(0, 300)}` }, 400);
       }
+      try { JSON.parse(text); } catch {
+        return json({ error: "WooCommerce returned HTML instead of JSON. Check store URL, REST API permalinks, or security plugins." }, 400);
+      }
       try {
-        const sysR = await fetch(`${store_url}/wp-json/wc/v3/system_status`, { headers: { Authorization: basic } });
+        const sysR = await wooFetch(store_url, "/wp-json/wc/v3/system_status", consumer_key, consumer_secret);
         if (sysR.ok) {
-          const sys: any = await sysR.json();
+          const sys: any = await sysR.json().catch(() => ({}));
           storeName = sys?.environment?.site_url || "";
         }
       } catch {}
