@@ -78,6 +78,7 @@ const Inbox = () => {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(!cached);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const channelRef = useRef<any>(null);
 
   const load = async (showLoader = false) => {
