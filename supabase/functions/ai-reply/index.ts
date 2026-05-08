@@ -864,7 +864,7 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, skipped: "reply_mode_none", message_id: messageId });
     }
 
-    if (autoReplyEnabled) {
+    if (autoReplyEnabled && !isImageMessage) {
       // Fixed Q&A
       const { data: fixed } = await admin
         .from("fixed_qa")
