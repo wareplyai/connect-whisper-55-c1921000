@@ -105,7 +105,7 @@ const App = () => (
                 <Route path="behavior" element={<BehaviorSettings />} />
                 <Route path="products" element={<Products />} />
                 <Route path="woocommerce" element={<WooCommerce />} />
-                <Route path="abandoned-cart" element={<AbandonedCart />} />
+                <Route path="abandoned-cart" element={<FeatureGuard feature="abandoned_cart"><AbandonedCart /></FeatureGuard>} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>
