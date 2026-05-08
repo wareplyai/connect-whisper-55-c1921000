@@ -565,6 +565,14 @@ const Inbox = () => {
           )}
         </div>
       </div>
+
+      <Dialog open={!!lightbox} onOpenChange={(open) => !open && setLightbox(null)}>
+        <DialogContent className="max-w-4xl p-2 bg-background">
+          {lightbox && (
+            <img src={lightbox} alt="Full size" className="max-h-[85vh] w-auto mx-auto rounded-lg object-contain" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
