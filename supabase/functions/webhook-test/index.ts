@@ -100,7 +100,10 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
           "X-WaReply-Event": event_type,
           "X-WaReply-Test": "true",
-          ...(session.webhook_secret ? { "X-Webhook-Signature": session.webhook_secret } : {}),
+          ...(session.webhook_secret ? {
+            "X-Webhook-Signature": session.webhook_secret,
+            "x-webhook-secret": session.webhook_secret,
+          } : {}),
         },
         body: JSON.stringify(samplePayload),
         signal: controller.signal,
