@@ -184,59 +184,6 @@ const DashboardHome = () => {
         </div>
       </div>
 
-      {/* Incomplete Orders (moved up for visibility) */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold flex items-center gap-2 text-orange-600">
-            <AlertCircle className="h-4 w-4" /> Incomplete Orders <span className="text-xs text-muted-foreground font-normal">(WordPress plugin)</span>
-          </h3>
-          <Button asChild size="sm" variant="outline" className="border-orange-400 text-orange-600 hover:bg-orange-500 hover:text-white">
-            <Link to="/dashboard/abandoned-cart">View all</Link>
-          </Button>
-        </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-          <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
-            <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Total received</span><MessageSquare className="h-4 w-4 text-orange-500" /></div>
-            <p className="text-2xl font-bold">{aStats.received}</p>
-          </div>
-          <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
-            <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Incomplete</span><AlertCircle className="h-4 w-4 text-orange-500" /></div>
-            <p className="text-2xl font-bold text-orange-600">{aStats.incomplete}</p>
-          </div>
-          <div className="rounded-xl border border-green-200 dark:border-green-900/40 bg-card p-5">
-            <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Completed</span><CheckCircle2 className="h-4 w-4 text-green-500" /></div>
-            <p className="text-2xl font-bold text-green-600">{aStats.completed}</p>
-          </div>
-          <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
-            <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">SMS sent</span><CheckCircle2 className="h-4 w-4 text-orange-500" /></div>
-            <p className="text-2xl font-bold text-orange-600">{aStats.sent}</p>
-          </div>
-        </div>
-        <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
-          <h4 className="font-semibold mb-3 text-orange-700 dark:text-orange-300 text-sm uppercase tracking-wide">Latest incomplete</h4>
-          {aRecent.length === 0 ? (
-            <div className="py-6 text-center text-sm text-muted-foreground">No incomplete orders yet.</div>
-          ) : (
-            <ul className="divide-y divide-border">
-              {aRecent.map((o) => (
-                <li key={o.id} className="py-2 flex items-center gap-3 text-sm">
-                  <span className="flex-1 truncate"><span className="font-medium">{o.customer_name || "Unknown"}</span> <span className="text-muted-foreground">· {o.customer_phone_full || o.customer_phone || "—"}</span></span>
-                  <span className="hidden md:inline text-xs text-muted-foreground truncate max-w-[200px]">{o.product_name || "—"}</span>
-                  {o.sms_sent ? (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500 text-white font-bold uppercase flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />SMS</span>
-                  ) : o.sms_error ? (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-destructive text-destructive-foreground font-bold uppercase flex items-center gap-1"><XCircle className="h-3 w-3" />SMS</span>
-                  ) : (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-bold uppercase flex items-center gap-1"><Clock className="h-3 w-3" />Pending</span>
-                  )}
-                  <span className="text-xs text-muted-foreground hidden sm:inline">{new Date(o.created_at).toLocaleTimeString()}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-
       {/* WooCommerce Stats */}
       <div>
         <div className="flex items-center justify-between mb-3">
