@@ -928,7 +928,7 @@ Deno.serve(async (req) => {
 
     const replyMode: string = (biz as any)?.active_reply_mode
       ?? (biz?.ai_enabled ? "ai_agent" : "none");
-    const aiEnabled = (customerMode === "ai" && replyMode === "ai_agent") || isImageMessage;
+    const aiEnabled = customerMode === "ai" && replyMode === "ai_agent";
     const autoReplyEnabled = (customerMode === "auto_reply" || replyMode === "auto_reply")
       && (session.auto_replies_enabled !== false)
       && ((biz as any)?.ai_auto_replies_enabled !== false);
@@ -1165,6 +1165,22 @@ Deno.serve(async (req) => {
         }).eq("id", messageId);
       }
       return jsonResp({ ok: true, skipped: "no_keyword_match", message_id: messageId });
+    }
+
+    // From here on: AI Agent must be explicitly ON. Image messages must not bypass
+    // the master AI Agent switch, otherwise customers can receive AI fallback replies
+    // while the dashboard says "AI Agent is OFF".
+    if (!aiEnabled) {
+      if (messageId) {
+        await admin.from("incoming_messages").update({
+          delivery_status: "skipped",
+          reply_error: isImageMessage
+            ? "Image received, but AI Agent is off"
+            : "AI Agent is off",
+          processed_at: new Date().toISOString(),
+        }).eq("id", messageId);
+      }
+      return jsonResp({ ok: true, skipped: "ai_agent_off", message_id: messageId });
     }
 
     // From here on: aiEnabled === true
