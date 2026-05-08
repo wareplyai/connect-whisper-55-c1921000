@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Clock } from "lucide-react";
+import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Clock, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -158,6 +158,9 @@ const Inbox = () => {
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number)
       .map((m) => ({
         id: `i-${m.id}`,
+        srcTable: "incoming_messages" as const,
+        srcId: m.id,
+        srcField: "message" as const,
         kind: "in" as const,
         text: m.message_text || "(no text)",
         ts: m.received_at,
@@ -167,6 +170,9 @@ const Inbox = () => {
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number && m.reply_text)
       .map((m) => ({
         id: `r-${m.id}`,
+        srcTable: "incoming_messages" as const,
+        srcId: m.id,
+        srcField: "reply" as const,
         kind: "out" as const,
         text: m.reply_text!,
         ts: (m as any).reply_sent_at || m.received_at,
@@ -178,11 +184,12 @@ const Inbox = () => {
         const src = o.payload?.source;
         const source: "ai" | "keyword_rule" | "manual" =
           src === "ai" ? "ai" : (src === "keyword_rule" || src === "fixed_qa") ? "keyword_rule" : "manual";
-        // Gateway-created AI delivery logs can arrive with only { text } and no source.
-        // Only dashboard manual sends are tagged source:"manual"; everything else is already shown via incoming.reply_text.
         if (src !== "manual") return null;
         return {
           id: `o-${o.id}`,
+          srcTable: "message_logs" as const,
+          srcId: o.id,
+          srcField: "row" as const,
           kind: "out" as const,
           text: typeof o.payload === "object" ? (o.payload?.text || JSON.stringify(o.payload)) : String(o.payload || ""),
           ts: o.created_at,
@@ -269,6 +276,43 @@ const Inbox = () => {
       toast.error(e?.message || "Send failed");
     } finally {
       setSending(false);
+    }
+  };
+
+  const deleteMessage = async (m: any) => {
+    if (!user) return;
+    if (!confirm("Delete this message? This cannot be undone.")) return;
+    try {
+      if (m.srcTable === "incoming_messages") {
+        if (m.srcField === "reply") {
+          const { error } = await supabase
+            .from("incoming_messages")
+            .update({ reply_text: null } as any)
+            .eq("id", m.srcId)
+            .eq("user_id", user.id);
+          if (error) throw error;
+          setIncoming((prev) => prev.map((r) => r.id === m.srcId ? { ...r, reply_text: null } as any : r));
+        } else {
+          const { error } = await supabase
+            .from("incoming_messages")
+            .delete()
+            .eq("id", m.srcId)
+            .eq("user_id", user.id);
+          if (error) throw error;
+          setIncoming((prev) => prev.filter((r) => r.id !== m.srcId));
+        }
+      } else if (m.srcTable === "message_logs") {
+        const { error } = await supabase
+          .from("message_logs")
+          .delete()
+          .eq("id", m.srcId)
+          .eq("user_id", user.id);
+        if (error) throw error;
+        setOutgoing((prev) => prev.filter((r) => r.id !== m.srcId));
+      }
+      toast.success("Message deleted");
+    } catch (e: any) {
+      toast.error(friendlyError(e) || "Delete failed");
     }
   };
 
@@ -393,7 +437,17 @@ const Inbox = () => {
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-2">
                   {conversation.map((m) => (
-                    <div key={m.id} className={`flex ${m.kind === "out" ? "justify-end" : "justify-start"}`}>
+                    <div key={m.id} className={`group flex items-center gap-1 ${m.kind === "out" ? "justify-end" : "justify-start"}`}>
+                      {m.kind === "out" && (
+                        <button
+                          onClick={() => deleteMessage(m)}
+                          className="opacity-0 group-hover:opacity-100 transition p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                          title="Delete message"
+                          aria-label="Delete message"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                       <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
                         m.kind === "out" ? "bg-green-500/15 text-foreground" : "bg-muted text-foreground"
                       }`}>
@@ -414,6 +468,16 @@ const Inbox = () => {
                           )}
                         </div>
                       </div>
+                      {m.kind === "in" && (
+                        <button
+                          onClick={() => deleteMessage(m)}
+                          className="opacity-0 group-hover:opacity-100 transition p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                          title="Delete message"
+                          aria-label="Delete message"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   ))}
                   {conversation.length === 0 && (
