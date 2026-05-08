@@ -4,13 +4,14 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Bot, MessageSquareText, Search } from "lucide-react";
+import { Bot, MessageSquareText, Search, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 
-type FeatureKey = "ai_agent" | "auto_replies";
+type FeatureKey = "ai_agent" | "auto_replies" | "abandoned_cart";
 const FEATURES: { key: FeatureKey; label: string; icon: any }[] = [
   { key: "ai_agent", label: "AI Agent", icon: Bot },
   { key: "auto_replies", label: "Auto-Replies", icon: MessageSquareText },
+  { key: "abandoned_cart", label: "Incomplete (Abandoned Cart)", icon: ShoppingBag },
 ];
 
 export default function FeatureAccess() {
