@@ -219,18 +219,18 @@ const Landing = () => {
         >
           <defs>
             <linearGradient id="silkGradR1" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.55" />
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.28" />
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
             </linearGradient>
             <linearGradient id="silkGradR2" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.35" />
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.16" />
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
             </linearGradient>
           </defs>
           <path d="M0,0 C180,260 -40,520 220,780 C420,940 80,1000 0,1000 Z" fill="url(#silkGradR1)" />
-          <path d="M0,80 C220,300 40,560 260,820 C420,980 60,1000 0,1000 Z" fill="url(#silkGradR2)" opacity="0.7" />
-          <path d="M0,200 C260,380 100,640 320,880 C440,990 40,1000 0,1000 Z" stroke="hsl(var(--primary) / 0.25)" strokeWidth="1" fill="none" />
-          <path d="M0,340 C300,500 160,720 360,920" stroke="hsl(var(--primary) / 0.18)" strokeWidth="1" fill="none" />
+          <path d="M0,80 C220,300 40,560 260,820 C420,980 60,1000 0,1000 Z" fill="url(#silkGradR2)" opacity="0.6" />
+          <path d="M0,200 C260,380 100,640 320,880 C440,990 40,1000 0,1000 Z" stroke="hsl(var(--primary) / 0.14)" strokeWidth="1" fill="none" />
+          <path d="M0,340 C300,500 160,720 360,920" stroke="hsl(var(--primary) / 0.10)" strokeWidth="1" fill="none" />
         </svg>
 
         {/* Soft center glow */}
