@@ -474,19 +474,6 @@ const Landing = () => {
             </Button>
           </div>
 
-          {/* Star rating row */}
-          <div
-            className="hero-rise mt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground"
-            style={{ animationDelay: "0.4s" }}
-          >
-            <div className="flex items-center gap-0.5">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-              ))}
-            </div>
-            <span>Trusted by 10,000+ businesses</span>
-          </div>
-
           {/* Trust check row */}
           <div
             className="hero-rise mt-5 flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-xs text-muted-foreground"
