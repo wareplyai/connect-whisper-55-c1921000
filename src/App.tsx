@@ -103,6 +103,7 @@ const App = () => (
                 <Route path="ai-agent" element={<FeatureGuard feature="ai_agent"><AIAgent /></FeatureGuard>} />
                 <Route path="behavior" element={<BehaviorSettings />} />
                 <Route path="products" element={<Products />} />
+                <Route path="woocommerce" element={<WooCommerce />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>
