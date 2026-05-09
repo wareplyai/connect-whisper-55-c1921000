@@ -319,13 +319,13 @@ const DashboardHome = () => {
                   ? "bg-primary/10 text-primary border-primary/20"
                   : "bg-muted text-muted-foreground border-border";
                 return (
-                  <li key={l.id} className="group flex items-center gap-3 rounded-lg p-2.5 -mx-1 hover:bg-card-elevated transition-colors">
-                    <div className="grid place-items-center h-8 w-8 rounded-lg bg-primary/10 text-primary shrink-0">
+                  <li key={l.id} className="group flex items-center gap-3 rounded-lg p-2.5 -mx-1 hover:bg-white/[0.06] transition-colors">
+                    <div className="grid place-items-center h-8 w-8 rounded-lg bg-emerald-400/15 text-emerald-300 shrink-0">
                       <ArrowUpRight className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="truncate font-medium text-foreground/90">{l.to_number}</p>
-                      <p className="text-[11px] text-muted-foreground">{new Date(l.created_at).toLocaleTimeString()}</p>
+                      <p className="truncate font-medium text-white">{l.to_number}</p>
+                      <p className="text-[11px] text-emerald-200/70">{new Date(l.created_at).toLocaleTimeString()}</p>
                     </div>
                     <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full border ${tone}`}>
                       {l.status}
