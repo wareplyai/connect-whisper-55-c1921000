@@ -124,7 +124,7 @@ const App = () => (
                 <Route path="abandoned-cart" element={<FeatureGuard feature="abandoned_cart"><AbandonedCart /></FeatureGuard>} />
                 <Route path="crm" element={<CRMDashboard />} />
                 <Route path="crm/orders" element={<CRMOrders />} />
-                <Route path="crm/inbox" element={<CRMInbox />} />
+                
                 <Route path="crm/leads" element={<CRMLeads />} />
                 <Route path="crm/courier" element={<CRMCourier />} />
                 <Route path="crm/returns" element={<CRMReturns />} />
