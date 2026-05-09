@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, MessageCircle, Receipt, MessageSquareText, Bot, ShieldCheck, MessageSquare, Package, ShoppingCart, ShoppingBag, Briefcase, Users, Inbox as InboxIcon, ClipboardList, Truck, RotateCcw, BadgeDollarSign, Sparkles, Megaphone, Settings as SettingsIcon } from "lucide-react";
+import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, MessageCircle, Receipt, MessageSquareText, Bot, ShieldCheck, MessageSquare, Package, ShoppingCart, ShoppingBag, Briefcase, Users, Inbox as InboxIcon, ClipboardList, Truck, RotateCcw, BadgeDollarSign, Sparkles, Megaphone, Settings as SettingsIcon, ChevronDown, ShoppingBasket } from "lucide-react";
+import { useState } from "react";
 import { TrialBanner } from "@/components/TrialBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
@@ -18,6 +19,11 @@ const nav = [
   { to: "/dashboard/products", label: "Products", icon: Package },
   { to: "/dashboard/woocommerce", label: "WooCommerce", icon: ShoppingCart },
   { to: "/dashboard/abandoned-cart", label: "Incomplete", icon: ShoppingBag },
+  { to: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
+  { to: "/dashboard/payments", label: "My Payments", icon: Receipt },
+];
+
+const ecommerceNav = [
   { to: "/dashboard/crm", label: "CRM Dashboard", icon: Briefcase, end: true },
   { to: "/dashboard/crm/orders", label: "CRM Orders", icon: ClipboardList },
   { to: "/dashboard/crm/inbox", label: "CRM Inbox", icon: InboxIcon },
@@ -28,8 +34,6 @@ const nav = [
   { to: "/dashboard/crm/nurturing", label: "CRM AI Nurturing", icon: Sparkles },
   { to: "/dashboard/crm/broadcast", label: "CRM Broadcast", icon: Megaphone },
   { to: "/dashboard/crm/settings", label: "CRM Settings", icon: SettingsIcon },
-  { to: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
-  { to: "/dashboard/payments", label: "My Payments", icon: Receipt },
 ];
 
 const resources = [
@@ -50,6 +54,18 @@ const DashboardLayout = () => {
   });
   const location = useLocation();
   const navigate = useNavigate();
+  const [ecomOpen, setEcomOpen] = useState<boolean>(() => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("sidebar:ecommerce-open") : null;
+    if (stored !== null) return stored === "1";
+    return true;
+  });
+  const ecomActive = ecommerceNav.some((n) => location.pathname === n.to || (!n.end && location.pathname.startsWith(n.to)));
+  const ecomExpanded = ecomOpen || ecomActive;
+  const toggleEcom = () => {
+    const next = !ecomOpen;
+    setEcomOpen(next);
+    try { localStorage.setItem("sidebar:ecommerce-open", next ? "1" : "0"); } catch {}
+  };
   const handleSignOut = async () => {
     await signOut();
     navigate("/", { replace: true });
@@ -87,6 +103,48 @@ const DashboardLayout = () => {
                 )}
               </NavLink>
             ))}
+
+            <button
+              type="button"
+              onClick={toggleEcom}
+              aria-expanded={ecomExpanded}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors border-l-[3px] ${
+                ecomActive
+                  ? "border-primary text-foreground bg-card-elevated"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-card-elevated"
+              }`}
+            >
+              <ShoppingBasket className="h-4 w-4" />
+              <span className="flex-1 text-left">🛒 E-Commerce</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${ecomExpanded ? "rotate-0" : "-rotate-90"}`} />
+            </button>
+            {ecomExpanded && (
+              <div className="ml-4 pl-2 border-l border-border space-y-1">
+                {ecommerceNav.map((n) => (
+                  <NavLink
+                    key={n.to}
+                    to={n.to}
+                    end={n.end}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors border-l-[3px] ${
+                        isActive
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-transparent text-muted-foreground hover:text-foreground hover:bg-card-elevated"
+                      }`
+                    }
+                  >
+                    <n.icon className="h-4 w-4" />
+                    <span className="flex-1">{n.label}</span>
+                    {n.to === "/dashboard/crm/inbox" && crmUnread > 0 && (
+                      <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-destructive text-destructive-foreground min-w-[18px] text-center">
+                        {crmUnread > 99 ? "99+" : crmUnread}
+                      </span>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+
             {isAdmin && (
               <NavLink
                 to="/admin"
