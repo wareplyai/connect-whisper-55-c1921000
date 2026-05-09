@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Users, Smartphone, MessageSquare, DollarSign, UserPlus, AlertTriangle,
   Zap, Send, ArrowUpRight, ArrowDownRight, MoreHorizontal, Activity,
-  AlertCircle, CheckCircle2, XCircle, Clock,
+  AlertCircle, CheckCircle2, XCircle, Clock, Bot, MessageSquareText, ShoppingBag,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -68,7 +68,33 @@ export default function HeadAdminOverview() {
   const [todayStats, setTodayStats] = useState({ newToday: 0, failedToday: 0, activeUsers: 0, msgsToday: 0 });
   const [aStats, setAStats] = useState({ received: 0, incomplete: 0, completed: 0, sent: 0 });
   const [aRecent, setARecent] = useState<any[]>([]);
+  const [featurePerms, setFeaturePerms] = useState<{ key: string; label: string; icon: any; enabled: number; total: number; globalOn: boolean }[]>([]);
   const [loadingExtra, setLoadingExtra] = useState(true);
+
+  const loadFeaturePerms = async () => {
+    const [{ data: globals }, { data: overrides }, { count: totalUsers }] = await Promise.all([
+      supabase.from("global_feature_settings" as any).select("feature, show_to_users"),
+      supabase.from("user_feature_access" as any).select("user_id, feature, enabled"),
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+    ]);
+    const total = totalUsers || 0;
+    const gMap: Record<string, boolean> = { ai_agent: true, auto_replies: true, abandoned_cart: true };
+    (globals || []).forEach((g: any) => { gMap[g.feature] = !!g.show_to_users; });
+    const features = [
+      { key: "ai_agent", label: "AI Agent", icon: Bot },
+      { key: "auto_replies", label: "Auto-Replies", icon: MessageSquareText },
+      { key: "abandoned_cart", label: "Incomplete (Abandoned)", icon: ShoppingBag },
+    ];
+    const result = features.map((f) => {
+      const ovs = (overrides || []).filter((o: any) => o.feature === f.key);
+      const overrideUserIds = new Set(ovs.map((o: any) => o.user_id));
+      const overrideEnabled = ovs.filter((o: any) => o.enabled).length;
+      const nonOverridden = Math.max(0, total - overrideUserIds.size);
+      const enabled = overrideEnabled + (gMap[f.key] ? nonOverridden : 0);
+      return { ...f, enabled, total, globalOn: gMap[f.key] };
+    });
+    setFeaturePerms(result);
+  };
 
   const loadAbandoned = async () => {
     const [{ data: conns }, { data: rows }] = await Promise.all([
@@ -147,15 +173,18 @@ export default function HeadAdminOverview() {
   useEffect(() => {
     loadExtra();
     loadAbandoned();
-    const t = setInterval(() => { loadExtra(); loadAbandoned(); }, 30000);
+    loadFeaturePerms();
+    const t = setInterval(() => { loadExtra(); loadAbandoned(); loadFeaturePerms(); }, 30000);
     const ch = supabase
       .channel(`ha-overview-${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, loadExtra)
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => { loadExtra(); loadFeaturePerms(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "message_logs" }, loadExtra)
       .on("postgres_changes", { event: "*", schema: "public", table: "activity_logs" }, loadExtra)
       .on("postgres_changes", { event: "*", schema: "public", table: "sessions" }, loadExtra)
       .on("postgres_changes", { event: "*", schema: "public", table: "abandoned_orders" }, loadAbandoned)
       .on("postgres_changes", { event: "*", schema: "public", table: "abandoned_connections" }, loadAbandoned)
+      .on("postgres_changes", { event: "*", schema: "public", table: "global_feature_settings" }, loadFeaturePerms)
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_feature_access" }, loadFeaturePerms)
       .subscribe();
     return () => { clearInterval(t); supabase.removeChannel(ch); };
   }, []);
@@ -212,6 +241,50 @@ export default function HeadAdminOverview() {
         <StatCard icon={Zap} label="Active (24h)" value={todayStats.activeUsers} accent="warning" />
         <StatCard icon={Send} label="Messages Today" value={todayStats.msgsToday} accent="primary" />
       </div>
+
+      {/* Feature permissions row */}
+      <ChartCard
+        title="Feature Permissions"
+        subtitle={`How many users currently have access to each feature · ${featurePerms[0]?.total || 0} total users`}
+        action={<a href="/headadmin/feature-access" className="text-xs text-primary hover:underline">Manage</a>}
+      >
+        <div className="grid gap-4 md:grid-cols-3">
+          {featurePerms.map((f) => {
+            const pct = f.total > 0 ? Math.round((f.enabled / f.total) * 100) : 0;
+            const disabled = f.total - f.enabled;
+            return (
+              <div key={f.key} className="rounded-xl border border-border bg-card-elevated p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-9 w-9 grid place-items-center rounded-lg bg-primary/10 text-primary">
+                      <f.icon className="h-[18px] w-[18px]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">{f.label}</p>
+                      <p className="text-[11px] text-muted-foreground">Global: {f.globalOn ? "ON" : "OFF"}</p>
+                    </div>
+                  </div>
+                  <span className={`text-[11px] font-semibold px-2 py-1 rounded-full border ${
+                    f.globalOn ? "text-success bg-success/10 border-success/30"
+                               : "text-destructive bg-destructive/10 border-destructive/30"
+                  }`}>{pct}%</span>
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold tracking-tight">{f.enabled}</span>
+                  <span className="text-xs text-muted-foreground">/ {f.total} users</span>
+                </div>
+                <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                </div>
+                <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-success" /> {f.enabled} enabled</span>
+                  <span className="inline-flex items-center gap-1"><XCircle className="h-3 w-3 text-destructive" /> {disabled} disabled</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </ChartCard>
 
       {/* Charts row */}
       <div className="grid gap-4 lg:grid-cols-3">
