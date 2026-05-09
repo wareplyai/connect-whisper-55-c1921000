@@ -105,6 +105,11 @@ const AutoReplies = () => {
       return;
     }
     const keywords = parseKeywords(keywordsText);
+    const rawImageUrl = (editing.image_url || "").trim();
+    if (rawImageUrl && !/^https?:\/\//i.test(rawImageUrl)) {
+      toast.error("Image URL must start with http:// or https://");
+      return;
+    }
     const payload = {
       rule_name: editing.rule_name!,
       keywords,
@@ -115,6 +120,7 @@ const AutoReplies = () => {
       session_id: editing.session_id || null,
       category: editing.category || null,
       description: editing.description || null,
+      image_url: rawImageUrl || null,
       user_id: profile.id,
     };
 
