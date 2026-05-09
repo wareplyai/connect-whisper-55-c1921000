@@ -54,6 +54,18 @@ const DashboardLayout = () => {
   });
   const location = useLocation();
   const navigate = useNavigate();
+  const [ecomOpen, setEcomOpen] = useState<boolean>(() => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("sidebar:ecommerce-open") : null;
+    if (stored !== null) return stored === "1";
+    return true;
+  });
+  const ecomActive = ecommerceNav.some((n) => location.pathname === n.to || (!n.end && location.pathname.startsWith(n.to)));
+  const ecomExpanded = ecomOpen || ecomActive;
+  const toggleEcom = () => {
+    const next = !ecomOpen;
+    setEcomOpen(next);
+    try { localStorage.setItem("sidebar:ecommerce-open", next ? "1" : "0"); } catch {}
+  };
   const handleSignOut = async () => {
     await signOut();
     navigate("/", { replace: true });
