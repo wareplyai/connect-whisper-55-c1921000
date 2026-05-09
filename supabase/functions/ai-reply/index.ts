@@ -1467,6 +1467,7 @@ Deno.serve(async (req) => {
           apiKey,
           systemPrompt,
           userMessage: messageText,
+          maxTokens: Number((biz as any)?.max_tokens) || 500,
         });
       } catch (aiErr: any) {
         if (messageId) {
