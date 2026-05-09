@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export const VAPID_PUBLIC_KEY =
-  "BP5E0qoON11Ee4KcHCfO4vklmRpIVdlJxVdS0PNx3pIiR5oBXy1vgDFYizexIX-_9CEJjUJQwwTIPDnc5c3vLtc";
+  "BHF9qJpggWDbLbpCAp3wCGliRljAPL7f4ME1aVAyN48-OTHqHjvcpTAJpyEqypyfZjOe5o0aaBKz8wTEsX_YxcM";
 
 export function isPushSupported() {
   return (
