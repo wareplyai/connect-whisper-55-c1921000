@@ -122,6 +122,9 @@ const App = () => (
                 <Route path="crm/orders" element={<CRMOrders />} />
                 <Route path="crm/inbox" element={<CRMInbox />} />
                 <Route path="crm/leads" element={<CRMLeads />} />
+                <Route path="crm/courier" element={<CRMCourier />} />
+                <Route path="crm/returns" element={<CRMReturns />} />
+                <Route path="crm/cod" element={<CRMCod />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>
