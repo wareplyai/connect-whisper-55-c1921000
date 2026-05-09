@@ -4,18 +4,19 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Bot, MessageSquareText, Search, ShoppingBag } from "lucide-react";
+import { Bot, MessageSquareText, Search, ShoppingBag, ShoppingBasket } from "lucide-react";
 import { toast } from "sonner";
 
-type FeatureKey = "ai_agent" | "auto_replies" | "abandoned_cart";
+type FeatureKey = "ai_agent" | "auto_replies" | "abandoned_cart" | "ecommerce";
 const FEATURES: { key: FeatureKey; label: string; icon: any }[] = [
   { key: "ai_agent", label: "AI Agent", icon: Bot },
   { key: "auto_replies", label: "Auto-Replies", icon: MessageSquareText },
   { key: "abandoned_cart", label: "Incomplete (Abandoned Cart)", icon: ShoppingBag },
+  { key: "ecommerce", label: "E-Commerce (CRM Suite)", icon: ShoppingBasket },
 ];
 
 export default function FeatureAccess() {
-  const [globals, setGlobals] = useState<Record<FeatureKey, boolean>>({ ai_agent: true, auto_replies: true, abandoned_cart: true });
+  const [globals, setGlobals] = useState<Record<FeatureKey, boolean>>({ ai_agent: true, auto_replies: true, abandoned_cart: true, ecommerce: true });
   const [users, setUsers] = useState<any[]>([]);
   const [overrides, setOverrides] = useState<Record<string, Partial<Record<FeatureKey, boolean>>>>({});
   const [search, setSearch] = useState("");
@@ -28,7 +29,7 @@ export default function FeatureAccess() {
       supabase.from("profiles").select("id, full_name, email, plan").order("created_at", { ascending: false }),
       supabase.from("user_feature_access" as any).select("user_id, feature, enabled"),
     ]);
-    const gMap: any = { ai_agent: true, auto_replies: true, abandoned_cart: true };
+    const gMap: any = { ai_agent: true, auto_replies: true, abandoned_cart: true, ecommerce: true };
     (g || []).forEach((r: any) => { gMap[r.feature] = !!r.show_to_users; });
     setGlobals(gMap);
     setUsers(u || []);

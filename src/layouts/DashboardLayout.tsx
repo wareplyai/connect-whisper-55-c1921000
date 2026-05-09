@@ -104,40 +104,44 @@ const DashboardLayout = () => {
               </NavLink>
             ))}
 
-            <button
-              type="button"
-              onClick={toggleEcom}
-              aria-expanded={ecomExpanded}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors border-l-[3px] ${
-                ecomActive
-                  ? "border-primary text-foreground bg-card-elevated"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-card-elevated"
-              }`}
-            >
-              <ShoppingBasket className="h-4 w-4" />
-              <span className="flex-1 text-left">🛒 E-Commerce</span>
-              <ChevronDown className={`h-4 w-4 transition-transform ${ecomExpanded ? "rotate-0" : "-rotate-90"}`} />
-            </button>
-            {ecomExpanded && (
-              <div className="ml-4 pl-2 border-l border-border space-y-1">
-                {ecommerceNav.map((n) => (
-                  <NavLink
-                    key={n.to}
-                    to={n.to}
-                    end={n.end}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors border-l-[3px] ${
-                        isActive
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-transparent text-muted-foreground hover:text-foreground hover:bg-card-elevated"
-                      }`
-                    }
-                  >
-                    <n.icon className="h-4 w-4" />
-                    <span className="flex-1">{n.label}</span>
-                  </NavLink>
-                ))}
-              </div>
+            {access.ecommerce && (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleEcom}
+                  aria-expanded={ecomExpanded}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors border-l-[3px] ${
+                    ecomActive
+                      ? "border-primary text-foreground bg-card-elevated"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-card-elevated"
+                  }`}
+                >
+                  <ShoppingBasket className="h-4 w-4" />
+                  <span className="flex-1 text-left">🛒 E-Commerce</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${ecomExpanded ? "rotate-0" : "-rotate-90"}`} />
+                </button>
+                {ecomExpanded && (
+                  <div className="ml-4 pl-2 border-l border-border space-y-1">
+                    {ecommerceNav.map((n) => (
+                      <NavLink
+                        key={n.to}
+                        to={n.to}
+                        end={n.end}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors border-l-[3px] ${
+                            isActive
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-transparent text-muted-foreground hover:text-foreground hover:bg-card-elevated"
+                          }`
+                        }
+                      >
+                        <n.icon className="h-4 w-4" />
+                        <span className="flex-1">{n.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
 
             {isAdmin && (
