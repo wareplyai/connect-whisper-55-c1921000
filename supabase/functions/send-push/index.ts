@@ -63,8 +63,15 @@ Deno.serve(async (req) => {
 
     const sent = results.filter((r) => r.status === "fulfilled").length;
     const failed = results.length - sent;
+    const errors = results
+      .filter((r) => r.status === "rejected")
+      .map((r: any) => ({
+        statusCode: r.reason?.statusCode,
+        body: r.reason?.body,
+        message: r.reason?.message,
+      }));
 
-    return new Response(JSON.stringify({ sent, failed, total: results.length }), {
+    return new Response(JSON.stringify({ sent, failed, total: results.length, errors }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
