@@ -479,6 +479,221 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_conversations: {
+        Row: {
+          assigned_agent: string | null
+          created_at: string
+          customer_name: string | null
+          id: string
+          last_message: string | null
+          last_message_time: string | null
+          lead_id: string | null
+          order_id: string | null
+          phone: string
+          status: string
+          unread_count: number
+          user_id: string
+        }
+        Insert: {
+          assigned_agent?: string | null
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          last_message?: string | null
+          last_message_time?: string | null
+          lead_id?: string | null
+          order_id?: string | null
+          phone: string
+          status?: string
+          unread_count?: number
+          user_id: string
+        }
+        Update: {
+          assigned_agent?: string | null
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          last_message?: string | null
+          last_message_time?: string | null
+          lead_id?: string | null
+          order_id?: string | null
+          phone?: string
+          status?: string
+          unread_count?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_conversations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "crm_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_leads: {
+        Row: {
+          assigned_agent: string | null
+          budget: string | null
+          business_type: string | null
+          created_at: string
+          follow_up_date: string | null
+          group_size: string | null
+          id: string
+          intent: string | null
+          name: string | null
+          notes: string | null
+          phone: string | null
+          source: string | null
+          status: string
+          travel_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_agent?: string | null
+          budget?: string | null
+          business_type?: string | null
+          created_at?: string
+          follow_up_date?: string | null
+          group_size?: string | null
+          id?: string
+          intent?: string | null
+          name?: string | null
+          notes?: string | null
+          phone?: string | null
+          source?: string | null
+          status?: string
+          travel_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_agent?: string | null
+          budget?: string | null
+          business_type?: string | null
+          created_at?: string
+          follow_up_date?: string | null
+          group_size?: string | null
+          id?: string
+          intent?: string | null
+          name?: string | null
+          notes?: string | null
+          phone?: string | null
+          source?: string | null
+          status?: string
+          travel_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      crm_messages: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          media_url: string | null
+          message_text: string | null
+          message_type: string
+          sender: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          media_url?: string | null
+          message_text?: string | null
+          message_type?: string
+          sender?: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          media_url?: string | null
+          message_text?: string | null
+          message_type?: string
+          sender?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "crm_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_orders: {
+        Row: {
+          cod_confirmed: boolean
+          courier_name: string | null
+          courier_status: string | null
+          created_at: string
+          customer_address: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          id: string
+          notes: string | null
+          order_status: string
+          payment_method: string | null
+          total_amount: number
+          tracking_id: string | null
+          updated_at: string
+          user_id: string
+          woo_order_id: string | null
+        }
+        Insert: {
+          cod_confirmed?: boolean
+          courier_name?: string | null
+          courier_status?: string | null
+          created_at?: string
+          customer_address?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          notes?: string | null
+          order_status?: string
+          payment_method?: string | null
+          total_amount?: number
+          tracking_id?: string | null
+          updated_at?: string
+          user_id: string
+          woo_order_id?: string | null
+        }
+        Update: {
+          cod_confirmed?: boolean
+          courier_name?: string | null
+          courier_status?: string | null
+          created_at?: string
+          customer_address?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          notes?: string | null
+          order_status?: string
+          payment_method?: string | null
+          total_amount?: number
+          tracking_id?: string | null
+          updated_at?: string
+          user_id?: string
+          woo_order_id?: string | null
+        }
+        Relationships: []
+      }
       customer_reply_settings: {
         Row: {
           ai_paused: boolean
