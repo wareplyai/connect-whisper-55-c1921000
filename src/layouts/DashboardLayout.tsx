@@ -24,6 +24,9 @@ const nav = [
   { to: "/dashboard/crm/courier", label: "CRM Courier", icon: Truck },
   { to: "/dashboard/crm/returns", label: "CRM Returns", icon: RotateCcw },
   { to: "/dashboard/crm/cod", label: "CRM COD", icon: BadgeDollarSign },
+  { to: "/dashboard/crm/nurturing", label: "CRM AI Nurturing", icon: Sparkles },
+  { to: "/dashboard/crm/broadcast", label: "CRM Broadcast", icon: Megaphone },
+  { to: "/dashboard/crm/settings", label: "CRM Settings", icon: SettingsIcon },
   { to: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
   { to: "/dashboard/payments", label: "My Payments", icon: Receipt },
 ];
