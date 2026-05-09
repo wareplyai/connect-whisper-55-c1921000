@@ -42,6 +42,9 @@ import CRMDashboard from "./pages/dashboard/crm/CRMDashboard";
 import CRMOrders from "./pages/dashboard/crm/CRMOrders";
 import CRMInbox from "./pages/dashboard/crm/CRMInbox";
 import CRMLeads from "./pages/dashboard/crm/CRMLeads";
+import CRMCourier from "./pages/dashboard/crm/CRMCourier";
+import CRMReturns from "./pages/dashboard/crm/CRMReturns";
+import CRMCod from "./pages/dashboard/crm/CRMCod";
 import AdminPanel from "./pages/admin/AdminPanel";
 import HAPayments from "./pages/headadmin/Payments";
 import HAPaymentMethods from "./pages/headadmin/PaymentMethods";
@@ -119,6 +122,9 @@ const App = () => (
                 <Route path="crm/orders" element={<CRMOrders />} />
                 <Route path="crm/inbox" element={<CRMInbox />} />
                 <Route path="crm/leads" element={<CRMLeads />} />
+                <Route path="crm/courier" element={<CRMCourier />} />
+                <Route path="crm/returns" element={<CRMReturns />} />
+                <Route path="crm/cod" element={<CRMCod />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>
