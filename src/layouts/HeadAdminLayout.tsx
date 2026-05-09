@@ -2,7 +2,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Smartphone, DollarSign, MessageSquare,
   Bell, ScrollText, Settings, LogOut, CreditCard, Receipt, Tags, Search,
-  ChevronDown, Zap, ToggleRight, SmartphoneCharging,
+  ChevronDown, Zap, ToggleRight, SmartphoneCharging, Megaphone,
 } from "lucide-react";
 import { useHeadAdmin } from "@/contexts/HeadAdminContext";
 import { Logo } from "@/components/Logo";
@@ -34,6 +34,7 @@ const navGroups = [
     label: "System",
     items: [
       { to: "/headadmin/feature-access", label: "Feature Access", icon: ToggleRight },
+      { to: "/headadmin/dashboard-ads", label: "Dashboard Ads", icon: Megaphone },
       { to: "/headadmin/notifications", label: "Notifications", icon: Bell },
       { to: "/headadmin/logs", label: "Activity Logs", icon: ScrollText },
       { to: "/headadmin/settings", label: "Settings", icon: Settings },
@@ -52,6 +53,7 @@ const allItems = [
   { to: "/headadmin/sms-logs", label: "SMS Auto-Verify" },
   { to: "/headadmin/plan-pricing", label: "Plan Pricing" },
   { to: "/headadmin/feature-access", label: "Feature Access" },
+  { to: "/headadmin/dashboard-ads", label: "Dashboard Ads" },
   { to: "/headadmin/notifications", label: "Notifications" },
   { to: "/headadmin/logs", label: "Activity Logs" },
   { to: "/headadmin/settings", label: "Settings" },

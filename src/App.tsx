@@ -65,6 +65,7 @@ import ActivityLogs from "./pages/headadmin/ActivityLogs";
 import HASettings from "./pages/headadmin/Settings";
 import SmsLogs from "./pages/headadmin/SmsLogs";
 import HAFeatureAccess from "./pages/headadmin/FeatureAccess";
+import HADashboardAds from "./pages/headadmin/DashboardAds";
 import HeadAdminMobileLayout from "./layouts/HeadAdminMobileLayout";
 import MobileHome from "./pages/headadmin/mobile/MobileHome";
 import MobileNotifications from "./pages/headadmin/mobile/MobileNotifications";
@@ -158,6 +159,7 @@ const App = () => (
                 <Route path="settings" element={<HASettings />} />
                 <Route path="sms-logs" element={<SmsLogs />} />
                 <Route path="feature-access" element={<HAFeatureAccess />} />
+                <Route path="dashboard-ads" element={<HADashboardAds />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

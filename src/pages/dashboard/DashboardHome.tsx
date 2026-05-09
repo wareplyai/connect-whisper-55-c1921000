@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { CartesianGrid, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
+import { DashboardAdsCarousel } from "@/components/DashboardAdsCarousel";
 
 const DashboardHome = () => {
   const { profile } = useAuth();
@@ -167,6 +168,8 @@ const DashboardHome = () => {
               </p>
             </div>
           </div>
+
+          <DashboardAdsCarousel />
 
           <div className="flex flex-wrap gap-2">
             <Button asChild size="sm" className="bg-primary hover:bg-primary-hover text-primary-foreground shadow-[0_0_30px_-8px_hsl(var(--primary))]">
