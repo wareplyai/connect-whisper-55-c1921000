@@ -26,7 +26,6 @@ const nav = [
 const ecommerceNav = [
   { to: "/dashboard/crm", label: "CRM Dashboard", icon: Briefcase, end: true },
   { to: "/dashboard/crm/orders", label: "CRM Orders", icon: ClipboardList },
-  { to: "/dashboard/crm/inbox", label: "CRM Inbox", icon: InboxIcon },
   { to: "/dashboard/crm/leads", label: "CRM Leads", icon: Users },
   { to: "/dashboard/crm/courier", label: "CRM Courier", icon: Truck },
   { to: "/dashboard/crm/returns", label: "CRM Returns", icon: RotateCcw },
