@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.crm-whatsapp-webhook]
 verify_jwt = false
+
+[functions.crm-book-courier]
+verify_jwt = false

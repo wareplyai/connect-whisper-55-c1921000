@@ -63,15 +63,41 @@ Deno.serve(async (req) => {
       .from("crm_orders").select("id")
       .eq("user_id", conn.user_id).eq("woo_order_id", row.woo_order_id).maybeSingle();
 
+    let orderId: string | null = null;
     if (existing) {
       await admin.from("crm_orders").update(row).eq("id", existing.id);
+      orderId = existing.id;
     } else {
-      const { error } = await admin.from("crm_orders").insert(row);
+      const { data: ins, error } = await admin.from("crm_orders").insert(row).select("id").single();
       if (error) {
         console.error("insert error", error);
         return json({ error: error.message }, 500);
       }
+      orderId = ins?.id || null;
     }
+
+    // Auto-book courier if enabled and order is "processing"
+    try {
+      if (orderId && row.order_status.toLowerCase() === "processing") {
+        const { data: cs } = await admin
+          .from("crm_courier_settings").select("auto_book").eq("user_id", conn.user_id).maybeSingle();
+        if (cs?.auto_book) {
+          const fnUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/crm-book-courier`;
+          fetch(fnUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-internal-secret": Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+            },
+            body: JSON.stringify({ order_id: orderId, user_id: conn.user_id }),
+          }).catch((e) => console.error("auto-book invoke error", e));
+          console.log("[auto-book] triggered for order", orderId);
+        }
+      }
+    } catch (e) {
+      console.error("auto-book check error", e);
+    }
+
     return json({ ok: true, woo_order_id: row.woo_order_id });
   } catch (e: any) {
     console.error("crm-woo-order-webhook error", e);
