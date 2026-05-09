@@ -41,6 +41,8 @@ export default function CRMInbox() {
     const { data } = await supabase.from("crm_messages").select("*").eq("conversation_id", cid).order("created_at");
     setMessages(data || []);
     setTimeout(() => scrollRef.current?.scrollTo({ top: 999999 }), 50);
+    // mark as read
+    await supabase.from("crm_conversations").update({ unread_count: 0 }).eq("id", cid);
   };
 
   useEffect(() => { loadConvs(); }, [user]);
@@ -61,9 +63,12 @@ export default function CRMInbox() {
     if (!text.trim() || !active || !user) return;
     const t = text.trim();
     setText("");
-    await supabase.from("crm_messages").insert({ user_id: user.id, conversation_id: active.id, sender: "agent", message_text: t });
-    await supabase.from("crm_conversations").update({ last_message: t, last_message_time: new Date().toISOString() }).eq("id", active.id);
-    console.log("[stub] WhatsApp send →", active.phone, t);
+    const { data, error } = await supabase.functions.invoke("crm-send-message", {
+      body: { conversation_id: active.id, text: t },
+    });
+    if (error || (data as any)?.ok === false) {
+      toast.error((data as any)?.error || error?.message || "Failed to send");
+    }
     loadMessages(active.id); loadConvs();
   };
 
