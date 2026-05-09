@@ -15,6 +15,8 @@ type Plan = {
   display_name: string;
   price_monthly: number;
   price_yearly: number;
+  price_monthly_bdt: number;
+  price_yearly_bdt: number;
   max_sessions: number;
   features: string[] | null;
   is_active: boolean;
@@ -32,12 +34,13 @@ const FAQS = [
 const Plans = () => {
   const { user } = useAuth();
   const [yearly, setYearly] = useState(false);
-  const [currency, setCurrency] = useState<"USD" | "BDT">("USD");
+  // Default to BDT. User can switch to USD manually.
+  const [currency, setCurrency] = useState<"USD" | "BDT">("BDT");
   const USD_TO_BDT = 122;
-  const fmt = (usd: number) => {
-    if (usd === 0) return "Free";
-    if (currency === "BDT") return `৳${Math.round(usd * USD_TO_BDT).toLocaleString()}`;
-    return `$${Number(usd).toFixed(2)}`;
+  const fmt = (n: number) => {
+    if (!n || n === 0) return "Free";
+    if (currency === "BDT") return `৳${Math.round(n).toLocaleString()}`;
+    return `$${Number(n).toFixed(n % 1 === 0 ? 0 : 2)}`;
   };
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
