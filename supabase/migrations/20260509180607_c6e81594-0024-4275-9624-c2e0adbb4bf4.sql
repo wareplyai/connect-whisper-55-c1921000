@@ -1,0 +1,1 @@
+ALTER TABLE public.auto_reply_rules ADD COLUMN IF NOT EXISTS image_url text;
