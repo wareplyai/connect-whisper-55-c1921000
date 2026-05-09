@@ -1,0 +1,1 @@
+DROP TRIGGER IF EXISTS trg_queue_crm_customer_bot ON public.incoming_messages;
