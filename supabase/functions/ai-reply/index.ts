@@ -1225,9 +1225,13 @@ Deno.serve(async (req) => {
         .eq("user_id", userId)
         .eq("is_active", true);
       const fixedHit = (fixed || []).find((f: any) => {
-        const k = (f.keyword || "").toLowerCase().trim();
-        if (!k) return false;
-        return f.match_type === "contains" ? lowerMsg.includes(k) : lowerMsg === k;
+        const raw = (f.keyword || "").toLowerCase();
+        // Split on commas → multiple keywords per row. Any one match wins.
+        const keywords = raw.split(",").map((k: string) => k.trim()).filter(Boolean);
+        if (keywords.length === 0) return false;
+        return keywords.some((k: string) =>
+          f.match_type === "contains" ? lowerMsg.includes(k) : lowerMsg === k
+        );
       });
       if (fixedHit) {
         const reply = fixedHit.reply;
