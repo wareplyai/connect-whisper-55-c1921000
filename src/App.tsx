@@ -128,6 +128,9 @@ const App = () => (
                 <Route path="crm/courier" element={<CRMCourier />} />
                 <Route path="crm/returns" element={<CRMReturns />} />
                 <Route path="crm/cod" element={<CRMCod />} />
+                <Route path="crm/nurturing" element={<CRMNurturing />} />
+                <Route path="crm/broadcast" element={<CRMBroadcast />} />
+                <Route path="crm/settings" element={<CRMSettings />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>
