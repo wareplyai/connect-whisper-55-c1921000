@@ -389,7 +389,7 @@ function KpiCard({
 }) {
   const t = toneStyles[accent];
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] p-5 transition-all hover:border-primary/50 hover:shadow-[0_15px_50px_-15px_hsl(142_90%_50%/0.5)]">
+    <div className="group relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] p-5 text-foreground transition-all hover:border-primary/50 hover:shadow-[0_15px_50px_-15px_hsl(142_90%_50%/0.5)]">
       <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-[hsl(142_90%_50%/0.18)] blur-2xl opacity-80 group-hover:opacity-100 transition-opacity" />
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
       <div className="relative flex items-center justify-between mb-3">
@@ -444,7 +444,7 @@ function SectionWrap({
           </div>
         </div>
         {action && (
-        <Button asChild size="sm" variant="outline" className="border-[hsl(var(--crm-shell-muted)/0.35)] text-[hsl(var(--crm-shell-foreground))] hover:border-primary/40 hover:bg-primary/10">
+        <Button asChild size="sm" variant="outline" className="border-[hsl(var(--crm-shell-muted)/0.35)] bg-background/50 text-[hsl(var(--crm-shell-foreground))] hover:border-primary/40 hover:bg-primary/10 hover:text-[hsl(var(--crm-shell-foreground))]">
             {action}
           </Button>
         )}
@@ -465,7 +465,7 @@ function MiniStat({
 }) {
   const t = toneStyles[tone];
   return (
-    <div className={`group relative overflow-hidden rounded-2xl border p-5 transition-all hover:shadow-[0_15px_40px_-15px_hsl(142_90%_50%/0.5)] ${
+    <div className={`group relative overflow-hidden rounded-2xl border p-5 text-foreground transition-all hover:shadow-[0_15px_40px_-15px_hsl(142_90%_50%/0.5)] ${
       highlight
         ? "border-primary/40 bg-gradient-to-br from-[hsl(142_70%_18%)] via-[hsl(145_65%_22%)] to-[hsl(140_75%_28%)] shadow-[0_10px_30px_-10px_hsl(142_90%_50%/0.4)]"
         : "border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] hover:border-primary/40"
