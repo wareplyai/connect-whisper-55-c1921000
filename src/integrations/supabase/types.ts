@@ -590,6 +590,60 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_courier_settings: {
+        Row: {
+          auto_book: boolean
+          created_at: string
+          default_courier: string
+          id: string
+          pathao_client_id: string | null
+          pathao_client_secret: string | null
+          pathao_enabled: boolean
+          pathao_store_id: string | null
+          redx_api_key: string | null
+          redx_enabled: boolean
+          steadfast_api_key: string | null
+          steadfast_enabled: boolean
+          steadfast_secret: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_book?: boolean
+          created_at?: string
+          default_courier?: string
+          id?: string
+          pathao_client_id?: string | null
+          pathao_client_secret?: string | null
+          pathao_enabled?: boolean
+          pathao_store_id?: string | null
+          redx_api_key?: string | null
+          redx_enabled?: boolean
+          steadfast_api_key?: string | null
+          steadfast_enabled?: boolean
+          steadfast_secret?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_book?: boolean
+          created_at?: string
+          default_courier?: string
+          id?: string
+          pathao_client_id?: string | null
+          pathao_client_secret?: string | null
+          pathao_enabled?: boolean
+          pathao_store_id?: string | null
+          redx_api_key?: string | null
+          redx_enabled?: boolean
+          steadfast_api_key?: string | null
+          steadfast_enabled?: boolean
+          steadfast_secret?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       crm_follow_ups: {
         Row: {
           conversation_id: string | null
