@@ -156,7 +156,7 @@ export default function MobileHome() {
         </div>
         <div className="rounded-3xl bg-white/5 border border-white/10 overflow-hidden backdrop-blur">
           {activity.length === 0 && (
-            <p className="text-center text-sm text-muted-foreground py-8">No activity yet</p>
+            <p className="text-center text-sm text-white/60 py-8">No activity yet</p>
           )}
           {activity.map((a, idx) => {
             const Icon = a.kind === "payment" ? CreditCard : UserPlus;
@@ -180,7 +180,7 @@ export default function MobileHome() {
                       ? `${a.title} • ৳${a.amount}`
                       : `${a.title} registered`}
                   </p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-[11px] text-white/60">
                     {a.kind === "payment" ? a.status : "New user"} • {timeAgo(a.created_at)} ago
                   </p>
                 </div>
@@ -205,8 +205,8 @@ function StatTile({
   return (
     <div className={`rounded-2xl border p-3.5 bg-gradient-to-br ${tones[accent]}`}>
       <Icon className="h-5 w-5 mb-2" />
-      <p className="text-[11px] text-muted-foreground font-medium">{label}</p>
-      <p className="text-xl font-bold text-foreground">{value}</p>
+      <p className="text-[11px] text-white/60 font-medium">{label}</p>
+      <p className="text-xl font-bold text-white">{value}</p>
     </div>
   );
 }
@@ -222,7 +222,7 @@ function QuickAction({
       <div className="h-9 w-9 rounded-xl bg-emerald-500/20 text-emerald-400 grid place-items-center">
         <Icon className="h-4 w-4" />
       </div>
-      <span className="text-[10px] font-semibold text-foreground">{label}</span>
+      <span className="text-[10px] font-semibold text-white">{label}</span>
     </Link>
   );
 }

@@ -140,7 +140,7 @@ export default function MobilePayments() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold">Payments</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p className="text-xs text-white/60 mt-0.5">
           Approve or reject pending transactions
         </p>
       </div>
@@ -153,7 +153,7 @@ export default function MobilePayments() {
             className={`p-3 rounded-2xl text-left transition-colors ${
               tab === t
                 ? "bg-emerald-500 text-black"
-                : "bg-white/5 border border-white/10 text-muted-foreground"
+                : "bg-white/5 border border-white/10 text-white/60"
             }`}
           >
             <p className="text-[10px] font-bold uppercase tracking-wide">{t}</p>
@@ -164,7 +164,7 @@ export default function MobilePayments() {
 
       <div className="space-y-2.5">
         {filtered.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground text-sm">
+          <div className="text-center py-12 text-white/60 text-sm">
             <Receipt className="h-8 w-8 mx-auto mb-2 opacity-30" />
             No {tab} payments
           </div>
@@ -179,13 +179,13 @@ export default function MobilePayments() {
                 <p className="text-sm font-semibold truncate">
                   {tx.profile?.full_name || tx.profile?.email || "User"}
                 </p>
-                <p className="text-[11px] text-muted-foreground truncate">
+                <p className="text-[11px] text-white/60 truncate">
                   {tx.profile?.email}
                 </p>
               </div>
               <div className="text-right shrink-0">
                 <p className="text-lg font-bold text-emerald-400">৳{tx.amount}</p>
-                <p className="text-[10px] text-muted-foreground uppercase font-semibold">
+                <p className="text-[10px] text-white/60 uppercase font-semibold">
                   {tx.plan}
                 </p>
               </div>
@@ -193,15 +193,15 @@ export default function MobilePayments() {
 
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div className="rounded-lg bg-black/30 px-2.5 py-1.5">
-                <p className="text-muted-foreground">Method</p>
+                <p className="text-white/60">Method</p>
                 <p className="font-semibold uppercase">{tx.payment_method}</p>
               </div>
               <div className="rounded-lg bg-black/30 px-2.5 py-1.5">
-                <p className="text-muted-foreground">From</p>
+                <p className="text-white/60">From</p>
                 <p className="font-semibold truncate">{tx.sender_number || "-"}</p>
               </div>
               <div className="rounded-lg bg-black/30 px-2.5 py-1.5 col-span-2">
-                <p className="text-muted-foreground">Trx ID</p>
+                <p className="text-white/60">Trx ID</p>
                 <p className="font-semibold truncate font-mono">
                   {tx.transaction_id || "-"}
                 </p>
@@ -211,13 +211,13 @@ export default function MobilePayments() {
             {tx.screenshot_url && (
               <button
                 onClick={() => setViewImage(tx.screenshot_url)}
-                className="w-full py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold flex items-center justify-center gap-1.5 text-muted-foreground"
+                className="w-full py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold flex items-center justify-center gap-1.5 text-white/60"
               >
                 <Eye className="h-3.5 w-3.5" /> View screenshot
               </button>
             )}
 
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+            <div className="flex items-center gap-2 text-[10px] text-white/60">
               <Clock className="h-3 w-3" />
               {new Date(tx.created_at).toLocaleString()}
             </div>
@@ -256,7 +256,7 @@ export default function MobilePayments() {
           onClick={() => setRejectFor(null)}
         >
           <div
-            className="w-full max-w-sm rounded-3xl bg-card border border-white/10 p-5 space-y-4"
+            className="w-full max-w-sm rounded-3xl bg-white/5 border border-white/10 p-5 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-bold">Reject Payment</h3>

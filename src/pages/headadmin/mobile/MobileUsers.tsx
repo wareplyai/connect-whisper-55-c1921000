@@ -56,13 +56,13 @@ export default function MobileUsers() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold">Users</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p className="text-xs text-white/60 mt-0.5">
           {users.length} total users
         </p>
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -79,7 +79,7 @@ export default function MobileUsers() {
             className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap uppercase ${
               planFilter === p
                 ? "bg-emerald-500 text-black"
-                : "bg-white/5 border border-white/10 text-muted-foreground"
+                : "bg-white/5 border border-white/10 text-white/60"
             }`}
           >
             {p}
@@ -89,7 +89,7 @@ export default function MobileUsers() {
 
       <div className="space-y-2">
         {filtered.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground text-sm">
+          <div className="text-center py-12 text-white/60 text-sm">
             <User className="h-8 w-8 mx-auto mb-2 opacity-30" />
             No users found
           </div>
@@ -106,8 +106,8 @@ export default function MobileUsers() {
               <p className="text-sm font-semibold truncate">
                 {u.full_name || "Unnamed"}
               </p>
-              <p className="text-[11px] text-muted-foreground truncate">{u.email}</p>
-              <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
+              <p className="text-[11px] text-white/60 truncate">{u.email}</p>
+              <div className="flex items-center gap-3 mt-1 text-[10px] text-white/60">
                 <span className="flex items-center gap-1">
                   <Smartphone className="h-3 w-3" />
                   {u.max_sessions || 0}
@@ -124,7 +124,7 @@ export default function MobileUsers() {
                   ? "bg-amber-500/15 text-amber-400"
                   : u.plan
                   ? "bg-emerald-500/15 text-emerald-400"
-                  : "bg-white/5 text-muted-foreground"
+                  : "bg-white/5 text-white/60"
               }`}
             >
               {u.plan || "free"}

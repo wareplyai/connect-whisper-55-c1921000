@@ -128,7 +128,7 @@ export default function MobileNotifications() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold">Notifications</h1>
-        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+        <p className="text-xs text-white/60 mt-0.5 flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
           Live updates from your platform
         </p>
@@ -146,7 +146,7 @@ export default function MobileNotifications() {
             className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
               filter === f.k
                 ? "bg-emerald-500 text-black"
-                : "bg-white/5 border border-white/10 text-muted-foreground"
+                : "bg-white/5 border border-white/10 text-white/60"
             }`}
           >
             {f.label}
@@ -162,7 +162,7 @@ export default function MobileNotifications() {
         }}
       >
         {filtered.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground text-sm">
+          <div className="text-center py-12 text-white/60 text-sm">
             <Filter className="h-8 w-8 mx-auto mb-2 opacity-30" />
             No notifications
           </div>
@@ -184,9 +184,9 @@ export default function MobileNotifications() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold leading-snug">{it.title}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <p className="text-[11px] text-muted-foreground">{timeAgo(it.created_at)}</p>
+                  <p className="text-[11px] text-white/60">{timeAgo(it.created_at)}</p>
                   {it.subtitle && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/5 text-muted-foreground uppercase">
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/5 text-white/60 uppercase">
                       {it.subtitle}
                     </span>
                   )}
@@ -199,7 +199,7 @@ export default function MobileNotifications() {
           <button
             onClick={loadMore}
             disabled={loadingMore}
-            className="w-full py-3 rounded-2xl bg-white/5 border border-white/10 text-xs font-semibold text-muted-foreground flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-2xl bg-white/5 border border-white/10 text-xs font-semibold text-white/60 flex items-center justify-center gap-2"
           >
             {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load more"}
           </button>
