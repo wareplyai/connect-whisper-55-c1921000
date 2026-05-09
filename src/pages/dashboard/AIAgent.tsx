@@ -657,11 +657,13 @@ RULES:
           </TabsContent>
 
           <TabsContent value="fixed" className="space-y-3 pt-3">
-            <p className="text-xs text-muted-foreground">Exact keyword matches — bypass AI and send the fixed reply.</p>
+            <p className="text-xs text-muted-foreground">
+              Keyword match হলে AI bypass হয়ে এই fixed reply যাবে। একই reply-এর জন্য একাধিক keyword দিতে চাইলে <b>comma (,)</b> দিয়ে আলাদা করো — যেমন <code>price, দাম, rate, cost</code>। যেকোনো একটা match করলেই reply যাবে।
+            </p>
             <Button onClick={addFixed} variant="outline"><Plus className="h-4 w-4 mr-1.5" />Add Fixed Reply</Button>
             {fixed.map((row) => (
               <div key={row.id} className="rounded-lg border border-border bg-background/40 p-3 grid md:grid-cols-[200px_1fr_auto] gap-2 items-start">
-                <Input placeholder="keyword e.g. price" value={row.keyword} onChange={(e) => updateFixed(row.id, { keyword: e.target.value })} onBlur={() => saveFixed(row)} />
+                <Input placeholder="price, দাম, rate" value={row.keyword} onChange={(e) => updateFixed(row.id, { keyword: e.target.value })} onBlur={() => saveFixed(row)} />
                 <Textarea rows={2} placeholder="Exact reply to send" value={row.reply} onChange={(e) => updateFixed(row.id, { reply: e.target.value })} onBlur={() => saveFixed(row)} />
                 <Button variant="ghost" size="sm" onClick={() => deleteFixed(row.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
               </div>
