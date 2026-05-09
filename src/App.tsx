@@ -38,6 +38,10 @@ import BehaviorSettings from "./pages/dashboard/BehaviorSettings";
 import Products from "./pages/dashboard/Products";
 import WooCommerce from "./pages/dashboard/WooCommerce";
 import AbandonedCart from "./pages/dashboard/AbandonedCart";
+import CRMDashboard from "./pages/dashboard/crm/CRMDashboard";
+import CRMOrders from "./pages/dashboard/crm/CRMOrders";
+import CRMInbox from "./pages/dashboard/crm/CRMInbox";
+import CRMLeads from "./pages/dashboard/crm/CRMLeads";
 import AdminPanel from "./pages/admin/AdminPanel";
 import HAPayments from "./pages/headadmin/Payments";
 import HAPaymentMethods from "./pages/headadmin/PaymentMethods";
@@ -111,6 +115,10 @@ const App = () => (
                 <Route path="products" element={<Products />} />
                 <Route path="woocommerce" element={<WooCommerce />} />
                 <Route path="abandoned-cart" element={<FeatureGuard feature="abandoned_cart"><AbandonedCart /></FeatureGuard>} />
+                <Route path="crm" element={<CRMDashboard />} />
+                <Route path="crm/orders" element={<CRMOrders />} />
+                <Route path="crm/inbox" element={<CRMInbox />} />
+                <Route path="crm/leads" element={<CRMLeads />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>
