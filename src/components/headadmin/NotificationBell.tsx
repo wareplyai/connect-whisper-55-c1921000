@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { Bell, UserPlus, CreditCard, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Bell, UserPlus, CreditCard, X, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
-import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 type Item = {
   id: string;
@@ -10,10 +10,10 @@ type Item = {
   title: string;
   subtitle?: string;
   created_at: string;
-  href: string;
 };
 
-const LS_KEY = "headadmin_notifications_last_seen";
+const LS_SEEN = "headadmin_notifications_last_seen";
+const PAGE = 20;
 
 function timeAgo(iso: string) {
   const d = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -23,69 +23,118 @@ function timeAgo(iso: string) {
   return `${Math.floor(d / 86400)} day ago`;
 }
 
+async function fetchPage(beforeIso: string | null, limit: number): Promise<Item[]> {
+  const regQ = supabase
+    .from("profiles")
+    .select("id,full_name,email,created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  const payQ = supabase
+    .from("payment_transactions")
+    .select("id,amount,status,created_at,user_id,profiles:user_id(full_name,email)")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (beforeIso) {
+    regQ.lt("created_at", beforeIso);
+    payQ.lt("created_at", beforeIso);
+  }
+  const [{ data: regs }, { data: pays }] = await Promise.all([regQ, payQ]);
+  const merged: Item[] = [
+    ...((regs || []).map((r: any) => ({
+      id: `reg-${r.id}`,
+      kind: "registration" as const,
+      title: `New user ${r.full_name || r.email || "registered"} registered`,
+      created_at: r.created_at,
+    }))),
+    ...((pays || []).map((p: any) => {
+      const name = p.profiles?.full_name || p.profiles?.email || "User";
+      return {
+        id: `pay-${p.id}`,
+        kind: "payment" as const,
+        title: `${name} submitted ৳${Number(p.amount || 0)} payment`,
+        subtitle: p.status,
+        created_at: p.created_at,
+      };
+    })),
+  ].sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+  return merged.slice(0, limit);
+}
+
 export function NotificationBell() {
   const [items, setItems] = useState<Item[]>([]);
   const [open, setOpen] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const openRef = useRef(open);
+  const knownIdsRef = useRef<Set<string>>(new Set());
+  const initialLoadedRef = useRef(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const [lastSeen, setLastSeen] = useState<number>(() => {
-    const v = localStorage.getItem(LS_KEY);
-    return v ? Number(v) : 0;
+    const v = localStorage.getItem(LS_SEEN);
+    return v ? Number(v) : Date.now();
   });
 
-  const load = async () => {
-    const since = new Date(Date.now() - 7 * 86400000).toISOString();
-    const [{ data: regs }, { data: pays }] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id,full_name,email,created_at")
-        .gte("created_at", since)
-        .order("created_at", { ascending: false })
-        .limit(15),
-      supabase
-        .from("payment_transactions")
-        .select("id,amount,status,created_at,user_id,profiles:user_id(full_name,email)")
-        .gte("created_at", since)
-        .order("created_at", { ascending: false })
-        .limit(15),
-    ]);
+  useEffect(() => { openRef.current = open; }, [open]);
 
-    const merged: Item[] = [
-      ...((regs || []).map((r: any) => ({
-        id: `reg-${r.id}`,
-        kind: "registration" as const,
-        title: `New user ${r.full_name || r.email || "registered"} registered`,
-        created_at: r.created_at,
-        href: "/headadmin/users",
-      }))),
-      ...((pays || []).map((p: any) => {
-        const name = p.profiles?.full_name || p.profiles?.email || "User";
-        return {
-          id: `pay-${p.id}`,
-          kind: "payment" as const,
-          title: `${name} submitted ৳${Number(p.amount || 0)} payment`,
-          subtitle: p.status,
-          created_at: p.created_at,
-          href: "/headadmin/payments",
-        };
-      })),
-    ]
-      .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
-      .slice(0, 20);
+  const refreshTop = async () => {
+    const fresh = await fetchPage(null, PAGE);
+    setItems((prev) => {
+      const map = new Map<string, Item>();
+      [...fresh, ...prev].forEach((i) => map.set(i.id, i));
+      const arr = Array.from(map.values()).sort(
+        (a, b) => +new Date(b.created_at) - +new Date(a.created_at)
+      );
+      return arr;
+    });
 
-    setItems(merged);
+    if (!initialLoadedRef.current) {
+      fresh.forEach((i) => knownIdsRef.current.add(i.id));
+      initialLoadedRef.current = true;
+      return;
+    }
+
+    const newOnes = fresh.filter((i) => !knownIdsRef.current.has(i.id));
+    newOnes.forEach((i) => knownIdsRef.current.add(i.id));
+
+    if (!openRef.current && newOnes.length > 0) {
+      newOnes.slice(0, 3).forEach((n) => {
+        if (n.kind === "payment") toast.success(n.title);
+        else toast(n.title, { description: "New registration" });
+      });
+    }
+  };
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore || items.length === 0) return;
+    setLoadingMore(true);
+    const oldest = items[items.length - 1].created_at;
+    const more = await fetchPage(oldest, PAGE);
+    if (more.length === 0) setHasMore(false);
+    setItems((prev) => {
+      const map = new Map<string, Item>();
+      [...prev, ...more].forEach((i) => map.set(i.id, i));
+      return Array.from(map.values()).sort(
+        (a, b) => +new Date(b.created_at) - +new Date(a.created_at)
+      );
+    });
+    more.forEach((i) => knownIdsRef.current.add(i.id));
+    setLoadingMore(false);
   };
 
   useEffect(() => {
-    load();
-    const t = setInterval(load, 30000);
+    refreshTop();
+    const t = setInterval(refreshTop, 30000);
     const ch = supabase
       .channel("headadmin-notif")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "profiles" }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "payment_transactions" }, load)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "profiles" }, refreshTop)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_transactions" }, refreshTop)
       .subscribe();
     return () => {
       clearInterval(t);
       supabase.removeChannel(ch);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const unread = useMemo(
@@ -93,10 +142,11 @@ export function NotificationBell() {
     [items, lastSeen]
   );
 
-  const markSeen = () => {
-    const now = Date.now();
-    localStorage.setItem(LS_KEY, String(now));
-    setLastSeen(now);
+  const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 60) {
+      loadMore();
+    }
   };
 
   return (
@@ -104,7 +154,11 @@ export function NotificationBell() {
       open={open}
       onOpenChange={(o) => {
         setOpen(o);
-        if (o) markSeen();
+        if (o) {
+          const now = Date.now();
+          localStorage.setItem(LS_SEEN, String(now));
+          setLastSeen(now);
+        }
       }}
     >
       <PopoverTrigger asChild>
@@ -135,10 +189,14 @@ export function NotificationBell() {
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="max-h-[420px] overflow-y-auto">
+        <div
+          ref={scrollRef}
+          onScroll={onScroll}
+          className="max-h-[420px] overflow-y-auto"
+        >
           {items.length === 0 && (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-              No new notifications
+              No notifications
             </div>
           )}
           {items.map((it) => {
@@ -149,10 +207,8 @@ export function NotificationBell() {
                 ? "text-success bg-success/10"
                 : "text-primary bg-primary/10";
             return (
-              <Link
+              <div
                 key={it.id}
-                to={it.href}
-                onClick={() => setOpen(false)}
                 className="flex gap-3 px-4 py-3 border-b border-border/60 hover:bg-foreground/5 transition-colors"
               >
                 <div className={`shrink-0 h-9 w-9 rounded-full grid place-items-center ${tone}`}>
@@ -167,17 +223,20 @@ export function NotificationBell() {
                 {isNew && (
                   <span className="self-center h-2 w-2 rounded-full bg-primary shrink-0" />
                 )}
-              </Link>
+              </div>
             );
           })}
+          {loadingMore && (
+            <div className="flex justify-center py-3 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+            </div>
+          )}
+          {!hasMore && items.length > 0 && (
+            <div className="text-center text-[11px] text-muted-foreground py-2.5">
+              No more notifications
+            </div>
+          )}
         </div>
-        <Link
-          to="/headadmin/notifications"
-          onClick={() => setOpen(false)}
-          className="block text-center text-xs text-primary hover:underline py-2.5 border-t border-border"
-        >
-          View all
-        </Link>
       </PopoverContent>
     </Popover>
   );
