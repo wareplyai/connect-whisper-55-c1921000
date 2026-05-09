@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type FeatureKey = "ai_agent" | "auto_replies" | "abandoned_cart";
+export type FeatureKey = "ai_agent" | "auto_replies" | "abandoned_cart" | "ecommerce";
 
 export function useFeatureAccess() {
   const { user } = useAuth();
@@ -10,6 +10,7 @@ export function useFeatureAccess() {
     ai_agent: true,
     auto_replies: true,
     abandoned_cart: true,
+    ecommerce: true,
   });
   const [loading, setLoading] = useState(true);
 
