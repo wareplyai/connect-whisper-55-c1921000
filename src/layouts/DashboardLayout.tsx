@@ -19,6 +19,11 @@ const nav = [
   { to: "/dashboard/products", label: "Products", icon: Package },
   { to: "/dashboard/woocommerce", label: "WooCommerce", icon: ShoppingCart },
   { to: "/dashboard/abandoned-cart", label: "Incomplete", icon: ShoppingBag },
+  { to: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
+  { to: "/dashboard/payments", label: "My Payments", icon: Receipt },
+];
+
+const ecommerceNav = [
   { to: "/dashboard/crm", label: "CRM Dashboard", icon: Briefcase, end: true },
   { to: "/dashboard/crm/orders", label: "CRM Orders", icon: ClipboardList },
   { to: "/dashboard/crm/inbox", label: "CRM Inbox", icon: InboxIcon },
@@ -29,8 +34,6 @@ const nav = [
   { to: "/dashboard/crm/nurturing", label: "CRM AI Nurturing", icon: Sparkles },
   { to: "/dashboard/crm/broadcast", label: "CRM Broadcast", icon: Megaphone },
   { to: "/dashboard/crm/settings", label: "CRM Settings", icon: SettingsIcon },
-  { to: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
-  { to: "/dashboard/payments", label: "My Payments", icon: Receipt },
 ];
 
 const resources = [
