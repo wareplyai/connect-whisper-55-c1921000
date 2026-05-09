@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.crm-book-courier]
 verify_jwt = false
+
+[functions.crm-customer-bot]
+verify_jwt = false
+
+[functions.crm-cod-send]
+verify_jwt = false
