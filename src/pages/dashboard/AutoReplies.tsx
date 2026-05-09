@@ -338,6 +338,27 @@ const AutoReplies = () => {
               <Label>Reply Message</Label>
               <Textarea rows={4} value={editing.reply_template || ""} onChange={(e) => setEditing({ ...editing, reply_template: e.target.value })} placeholder="Hi! Thanks for messaging. We'll get back to you soon." />
             </div>
+            <div>
+              <Label>Image URL <span className="text-xs text-muted-foreground font-normal">(optional — sent with the reply)</span></Label>
+              <Input
+                value={editing.image_url || ""}
+                onChange={(e) => setEditing({ ...editing, image_url: e.target.value })}
+                placeholder="https://example.com/photo.jpg"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Paste any public image URL (Imgur, Cloudinary, your website, etc.). Leave empty to send text only.
+              </p>
+              {editing.image_url && /^https?:\/\//i.test(editing.image_url) && (
+                <div className="mt-2 rounded-lg border border-border bg-muted/30 p-2 inline-block">
+                  <img
+                    src={editing.image_url}
+                    alt="Preview"
+                    className="max-h-32 rounded object-contain"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  />
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <Switch checked={editing.is_active ?? true} onCheckedChange={(v) => setEditing({ ...editing, is_active: v })} />
               <Label>Active</Label>
