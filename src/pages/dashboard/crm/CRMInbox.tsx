@@ -217,6 +217,30 @@ export default function CRMInbox() {
     }
   };
 
+  const upsertSettings = async (phone: string, patch: Partial<ReplySettings>) => {
+    if (!user) return;
+    const cur = settingsByPhone[phone] || { mode: "ai", assigned_agent: null };
+    const next = { ...cur, ...patch };
+    setSettingsByPhone(p => ({ ...p, [phone]: next }));
+    // Need a session_id (NOT NULL) — pull most recent for this phone
+    const inc = incoming.find(m => m.from_number === phone);
+    const session_id = inc?.session_id;
+    if (!session_id) { toast.error("No session for this conversation"); return; }
+    const { error } = await supabase.from("customer_reply_settings").upsert({
+      user_id: user.id, session_id, phone_number: phone,
+      mode: next.mode, assigned_agent: next.assigned_agent,
+    } as any, { onConflict: "user_id,session_id,phone_number" });
+    if (error) {
+      // fallback: insert if no unique constraint
+      await supabase.from("customer_reply_settings").insert({
+        user_id: user.id, session_id, phone_number: phone,
+        mode: next.mode, assigned_agent: next.assigned_agent,
+      } as any);
+    }
+  };
+
+  const activeSettings = activePhone ? (settingsByPhone[activePhone] || { mode: "ai", assigned_agent: null }) : null;
+
   return (
     <div className="space-y-4">
       <div>
