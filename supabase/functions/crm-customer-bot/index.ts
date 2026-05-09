@@ -72,6 +72,13 @@ Deno.serve(async (req) => {
     const msg = String(text || "").trim();
     const lower = msg.toLowerCase();
 
+    // 0) Per-conversation Bot/Human mode — Human disables all auto-replies
+    const { data: crs } = await admin.from("customer_reply_settings")
+      .select("mode, ai_paused").eq("user_id", user_id).eq("phone_number", phone).maybeSingle();
+    if (crs && (crs.mode === "human" || crs.ai_paused)) {
+      return json({ ok: true, skipped: "human_mode" });
+    }
+
     // 1) Check active flows for this customer
     const { data: states } = await admin.from("crm_bot_state")
       .select("*").eq("user_id", user_id).eq("phone", phone).neq("step", "done");
