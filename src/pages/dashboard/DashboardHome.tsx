@@ -389,15 +389,16 @@ function KpiCard({
 }) {
   const t = toneStyles[accent];
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:border-primary/40 hover:shadow-[0_10px_40px_-15px_hsl(var(--primary)/0.4)]">
-      <div className={`absolute -top-10 -right-10 h-28 w-28 rounded-full ${t.bg} blur-2xl opacity-70 group-hover:opacity-100 transition-opacity`} />
+    <div className="group relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] p-5 transition-all hover:border-primary/50 hover:shadow-[0_15px_50px_-15px_hsl(142_90%_50%/0.5)]">
+      <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-[hsl(142_90%_50%/0.18)] blur-2xl opacity-80 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
       <div className="relative flex items-center justify-between mb-3">
-        <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</span>
-        <div className={`grid place-items-center h-8 w-8 rounded-lg ${t.bg} ${t.text} ring-1 ${t.ring}`}>
+        <span className="text-[11px] uppercase tracking-wider text-primary/70 font-semibold">{label}</span>
+        <div className={`grid place-items-center h-9 w-9 rounded-xl bg-[hsl(142_90%_50%/0.15)] text-primary ring-1 ring-primary/30 shadow-[0_0_20px_-4px_hsl(142_90%_50%/0.5)]`}>
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className="relative text-2xl md:text-[26px] font-bold tracking-tight">{value}</p>
+      <p className="relative text-2xl md:text-[28px] font-bold tracking-tight text-[hsl(120_100%_85%)] [text-shadow:0_0_30px_hsl(142_90%_50%/0.4)]">{value}</p>
       {progress != null && (
         <div className="relative mt-3 h-1.5 w-full rounded-full bg-muted overflow-hidden">
           <div
