@@ -465,15 +465,20 @@ function MiniStat({
 }) {
   const t = toneStyles[tone];
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:border-primary/40">
-      <div className={`absolute -top-8 -right-8 h-24 w-24 rounded-full ${t.bg} blur-2xl opacity-60`} />
+    <div className={`group relative overflow-hidden rounded-2xl border p-5 transition-all hover:shadow-[0_15px_40px_-15px_hsl(142_90%_50%/0.5)] ${
+      highlight
+        ? "border-primary/40 bg-gradient-to-br from-[hsl(142_70%_18%)] via-[hsl(145_65%_22%)] to-[hsl(140_75%_28%)] shadow-[0_10px_30px_-10px_hsl(142_90%_50%/0.4)]"
+        : "border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] hover:border-primary/40"
+    }`}>
+      <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-[hsl(142_90%_55%/0.2)] blur-2xl opacity-70" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
       <div className="relative flex items-center justify-between mb-3">
-        <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</span>
-        <div className={`grid place-items-center h-8 w-8 rounded-lg ${t.bg} ${t.text} ring-1 ${t.ring}`}>
+        <span className={`text-[11px] uppercase tracking-wider font-semibold ${highlight ? "text-[hsl(120_100%_88%)]" : "text-primary/70"}`}>{label}</span>
+        <div className="grid place-items-center h-9 w-9 rounded-xl bg-[hsl(142_90%_50%/0.18)] text-primary ring-1 ring-primary/30 shadow-[0_0_18px_-4px_hsl(142_90%_50%/0.5)]">
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className={`relative text-2xl font-bold tracking-tight ${highlight ? t.text : ""}`}>{value}</p>
+      <p className={`relative text-2xl font-bold tracking-tight ${highlight ? "text-white [text-shadow:0_0_30px_hsl(142_90%_50%/0.6)]" : "text-[hsl(120_100%_85%)] [text-shadow:0_0_25px_hsl(142_90%_50%/0.35)]"}`}>{value}</p>
     </div>
   );
 }
