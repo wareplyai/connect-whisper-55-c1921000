@@ -972,6 +972,36 @@ export type Database = {
           },
         ]
       }
+      dashboard_ads: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          is_active: boolean
+          link_url: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          is_active?: boolean
+          link_url?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          link_url?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       fixed_qa: {
         Row: {
           created_at: string
