@@ -78,7 +78,13 @@ const DashboardLayout = () => {
                   }`
                 }
               >
-                <n.icon className="h-4 w-4" /> {n.label}
+                <n.icon className="h-4 w-4" />
+                <span className="flex-1">{n.label}</span>
+                {n.to === "/dashboard/crm/inbox" && crmUnread > 0 && (
+                  <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-destructive text-destructive-foreground min-w-[18px] text-center">
+                    {crmUnread > 99 ? "99+" : crmUnread}
+                  </span>
+                )}
               </NavLink>
             ))}
             {isAdmin && (
