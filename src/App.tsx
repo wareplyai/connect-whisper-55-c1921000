@@ -118,6 +118,12 @@ const App = () => (
               </Route>
 
               <Route path="/headadmin/login" element={<HeadAdminLogin />} />
+              <Route path="/headadmin/m" element={<HeadAdminRoute><HeadAdminMobileLayout /></HeadAdminRoute>}>
+                <Route index element={<MobileHome />} />
+                <Route path="notifications" element={<MobileNotifications />} />
+                <Route path="payments" element={<MobilePayments />} />
+                <Route path="users" element={<MobileUsers />} />
+              </Route>
               <Route path="/headadmin" element={<HeadAdminRoute><HeadAdminLayout /></HeadAdminRoute>}>
                 <Route index element={<HeadAdminOverview />} />
                 <Route path="users" element={<AllUsers />} />
