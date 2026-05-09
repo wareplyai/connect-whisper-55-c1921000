@@ -264,6 +264,7 @@ export type Database = {
           description: string | null
           enabled: boolean | null
           id: string
+          image_url: string | null
           is_active: boolean
           keywords: string[]
           match_count: number
@@ -281,6 +282,7 @@ export type Database = {
           description?: string | null
           enabled?: boolean | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           keywords?: string[]
           match_count?: number
@@ -298,6 +300,7 @@ export type Database = {
           description?: string | null
           enabled?: boolean | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           keywords?: string[]
           match_count?: number

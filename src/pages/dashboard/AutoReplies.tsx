@@ -25,6 +25,7 @@ type Rule = {
   session_id: string | null;
   category: string | null;
   description: string | null;
+  image_url: string | null;
 };
 
 type Session = { id: string; session_name: string };
@@ -51,6 +52,7 @@ const empty: Partial<Rule> = {
   session_id: null,
   category: "",
   description: "",
+  image_url: "",
 };
 
 const AutoReplies = () => {
@@ -103,6 +105,11 @@ const AutoReplies = () => {
       return;
     }
     const keywords = parseKeywords(keywordsText);
+    const rawImageUrl = (editing.image_url || "").trim();
+    if (rawImageUrl && !/^https?:\/\//i.test(rawImageUrl)) {
+      toast.error("Image URL must start with http:// or https://");
+      return;
+    }
     const payload = {
       rule_name: editing.rule_name!,
       keywords,
@@ -113,6 +120,7 @@ const AutoReplies = () => {
       session_id: editing.session_id || null,
       category: editing.category || null,
       description: editing.description || null,
+      image_url: rawImageUrl || null,
       user_id: profile.id,
     };
 
@@ -329,6 +337,27 @@ const AutoReplies = () => {
             <div>
               <Label>Reply Message</Label>
               <Textarea rows={4} value={editing.reply_template || ""} onChange={(e) => setEditing({ ...editing, reply_template: e.target.value })} placeholder="Hi! Thanks for messaging. We'll get back to you soon." />
+            </div>
+            <div>
+              <Label>Image URL <span className="text-xs text-muted-foreground font-normal">(optional — sent with the reply)</span></Label>
+              <Input
+                value={editing.image_url || ""}
+                onChange={(e) => setEditing({ ...editing, image_url: e.target.value })}
+                placeholder="https://example.com/photo.jpg"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Paste any public image URL (Imgur, Cloudinary, your website, etc.). Leave empty to send text only.
+              </p>
+              {editing.image_url && /^https?:\/\//i.test(editing.image_url) && (
+                <div className="mt-2 rounded-lg border border-border bg-muted/30 p-2 inline-block">
+                  <img
+                    src={editing.image_url}
+                    alt="Preview"
+                    className="max-h-32 rounded object-contain"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  />
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={editing.is_active ?? true} onCheckedChange={(v) => setEditing({ ...editing, is_active: v })} />

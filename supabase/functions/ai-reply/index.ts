@@ -702,9 +702,10 @@ function resolveIncomingMessageKey(body: Record<string, unknown>, fromNumber: st
 
 async function sendViaGateway(opts: {
   gateway: string; sessionId: string; apiToken?: string | null; to: string; message: string;
+  imageUrl?: string;
   showTyping?: boolean; accountProtection?: boolean;
 }): Promise<{ ok: boolean; to: string; error: string | null; data: unknown }> {
-  const { gateway, sessionId, apiToken, to, message, showTyping = true, accountProtection = true } = opts;
+  const { gateway, sessionId, apiToken, to, message, imageUrl, showTyping = true, accountProtection = true } = opts;
 
   const digits = String(to).replace(/\D/g, "");
   const candidate = digits || String(to);
@@ -720,20 +721,61 @@ async function sendViaGateway(opts: {
     await new Promise((res) => setTimeout(res, delay));
   }
 
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+
+  // Helper to interpret a gateway response as success or failure
+  const interpret = async (res: Response) => {
+    const data = await res.json().catch(() => ({} as any));
+    const explicitFailure = data?.success === false || data?.ok === false || data?.sent === false ||
+      data?.status === "failed" || Boolean(data?.error);
+    return { ok: res.ok && !explicitFailure, data, status: res.status };
+  };
+
+  // If an image URL is provided, try image-send endpoints first (Baileys gateway).
+  // Try several common payload shapes so we work with most Baileys/WAHA-style gateways.
+  if (imageUrl) {
+    const imageAttempts: Array<{ path: string; body: Record<string, unknown> }> = [
+      { path: `/api/session/${sessionId}/send`, body: { to: candidate, message, image: { url: imageUrl }, caption: message } },
+      { path: `/api/session/${sessionId}/send`, body: { to: candidate, message, imageUrl, caption: message, type: "image" } },
+      { path: `/api/session/${sessionId}/send-image`, body: { to: candidate, url: imageUrl, caption: message } },
+      { path: `/api/session/${sessionId}/sendImage`, body: { to: candidate, url: imageUrl, caption: message } },
+      { path: `/api/sendImage`, body: { session: sessionId, chatId: candidate, file: { url: imageUrl }, caption: message } },
+    ];
+    for (const attempt of imageAttempts) {
+      try {
+        const res = await fetch(`${gateway}${attempt.path}`, {
+          method: "POST", headers, body: JSON.stringify(attempt.body),
+        });
+        const result = await interpret(res);
+        if (result.ok) return { ok: true, to: candidate, error: null, data: result.data };
+      } catch { /* try next */ }
+    }
+    // Image attempts failed → fall back to text-only with the URL appended so the
+    // customer still receives the link.
+    try {
+      const fallbackText = `${message}\n\n${imageUrl}`.trim();
+      const sendRes = await fetch(`${gateway}/api/session/${sessionId}/send`, {
+        method: "POST", headers, body: JSON.stringify({ to: candidate, message: fallbackText }),
+      });
+      const result = await interpret(sendRes);
+      if (result.ok) return { ok: true, to: candidate, error: null, data: result.data };
+      return { ok: false, to: candidate, error: `${candidate}: image send failed (gateway ${result.status})`, data: result.data };
+    } catch (e: any) {
+      return { ok: false, to: candidate, error: `${candidate}: ${e?.message || "gateway unreachable"}`, data: null };
+    }
+  }
+
   try {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
     const sendRes = await fetch(`${gateway}/api/session/${sessionId}/send`, {
       method: "POST",
       headers,
       body: JSON.stringify({ to: candidate, message }),
     });
-    const sendData = await sendRes.json().catch(() => ({}));
-    const explicitFailure = sendData?.success === false || sendData?.ok === false || sendData?.sent === false ||
-      sendData?.status === "failed" || Boolean(sendData?.error);
-    if (sendRes.ok && !explicitFailure) return { ok: true, to: candidate, error: null, data: sendData };
-    const err = `${candidate}: ${sendData?.error || sendData?.message || `gateway ${sendRes.status}`}`;
-    return { ok: false, to: candidate, error: err, data: sendData };
+    const result = await interpret(sendRes);
+    if (result.ok) return { ok: true, to: candidate, error: null, data: result.data };
+    const err = `${candidate}: ${(result.data as any)?.error || (result.data as any)?.message || `gateway ${result.status}`}`;
+    return { ok: false, to: candidate, error: err, data: result.data };
   } catch (e: any) {
     return { ok: false, to: candidate, error: `${candidate}: ${e?.message || "gateway unreachable"}`, data: null };
   }
@@ -1215,7 +1257,7 @@ Deno.serve(async (req) => {
       // Keyword rules
       const { data: rules } = await admin
         .from("auto_reply_rules")
-        .select("id, keywords, match_type, reply_template, session_id, priority, match_count")
+        .select("id, keywords, match_type, reply_template, image_url, session_id, priority, match_count")
         .eq("user_id", userId)
         .eq("is_active", true)
         .order("priority", { ascending: false });
@@ -1232,8 +1274,10 @@ Deno.serve(async (req) => {
       });
       if (ruleHit) {
         const reply = ruleHit.reply_template;
+        const ruleImageUrl = (ruleHit.image_url || "").trim();
         const sendResult = await sendViaGateway({
           gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
+          imageUrl: ruleImageUrl || undefined,
           showTyping: sessionTyping, accountProtection,
         });
         if (messageId) {
