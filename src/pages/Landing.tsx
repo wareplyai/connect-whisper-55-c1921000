@@ -142,6 +142,8 @@ type DbPlan = {
   display_name: string;
   price_monthly: number;
   price_yearly: number;
+  price_monthly_bdt: number;
+  price_yearly_bdt: number;
   max_sessions: number;
   features: string[] | null;
   is_active: boolean;
@@ -151,20 +153,24 @@ type DbPlan = {
   cta_label: string | null;
 };
 
+const USD_TO_BDT_FALLBACK = 122;
+
 const faqKeys = ["1", "2", "3", "4", "5", "6", "7", "8"] as const;
 
 const Landing = () => {
   const { t, lang } = useLanguage();
   const [tab, setTab] = useState("JS");
   const [yearly, setYearly] = useState(false);
-  const [currency, setCurrency] = useState<"USD" | "BDT">(lang === "bn" ? "BDT" : "USD");
-
-  useEffect(() => {
-    setCurrency(lang === "bn" ? "BDT" : "USD");
-  }, [lang]);
+  // Default to BDT regardless of language. User can switch to USD manually.
+  const [currency, setCurrency] = useState<"USD" | "BDT">("BDT");
   const [plans, setPlans] = useState<DbPlan[]>([]);
-  const fmtPrice = (usd: number) =>
-    currency === "USD" ? `$${usd.toFixed(usd % 1 === 0 ? 0 : 2)}` : `৳${Math.round(usd * USD_TO_BDT)}`;
+  const fmtUsd = (v: number) => `$${v.toFixed(v % 1 === 0 ? 0 : 2)}`;
+  const fmtBdt = (v: number) => `৳${Math.round(v).toLocaleString()}`;
+  const priceMonthly = (p: DbPlan) =>
+    currency === "USD" ? p.price_monthly : (p.price_monthly_bdt || Math.round(p.price_monthly * USD_TO_BDT_FALLBACK));
+  const priceYearly = (p: DbPlan) =>
+    currency === "USD" ? p.price_yearly : (p.price_yearly_bdt || Math.round(p.price_yearly * USD_TO_BDT_FALLBACK));
+  const fmtPrice = (v: number) => (currency === "USD" ? fmtUsd(v) : fmtBdt(v));
 
   useEffect(() => {
     supabase
@@ -906,7 +912,8 @@ const Landing = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
             {plans.filter(p => p.plan_name !== "trial").map((p) => {
-              const price = yearly ? p.price_yearly / 12 : p.price_monthly;
+              const yearlyTotal = priceYearly(p);
+              const price = yearly ? yearlyTotal / 12 : priceMonthly(p);
               const isFree = price === 0;
               return (
                 <div
@@ -942,7 +949,7 @@ const Landing = () => {
                         {!isFree && <span className="text-sm text-muted-foreground">{t("price.perMo")}</span>}
                       </div>
                       {yearly && !isFree && (
-                        <p className="mt-1 text-xs text-primary">{t("price.billed")} {fmtPrice(p.price_yearly)} {t("price.yearlySuffix")}</p>
+                        <p className="mt-1 text-xs text-primary">{t("price.billed")} {fmtPrice(yearlyTotal)} {t("price.yearlySuffix")}</p>
                       )}
                     </div>
 
