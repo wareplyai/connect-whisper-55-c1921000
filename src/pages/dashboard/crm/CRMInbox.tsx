@@ -288,9 +288,35 @@ export default function CRMInbox() {
             <div className="flex-1 grid place-items-center text-muted-foreground">Select a conversation</div>
           ) : (
             <>
-              <div className="p-3 border-b border-border">
-                <p className="font-semibold">{active.name}</p>
-                <p className="text-xs text-muted-foreground">+{active.phone}</p>
+              <div className="p-3 border-b border-border flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="font-semibold">{active.name}</p>
+                  <p className="text-xs text-muted-foreground">+{active.phone}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-xs">
+                    {activeSettings?.mode === "human"
+                      ? <User className="h-3.5 w-3.5" />
+                      : <Bot className="h-3.5 w-3.5 text-primary" />}
+                    <Label className="text-xs">{activeSettings?.mode === "human" ? "Human" : "Bot"}</Label>
+                    <Switch
+                      checked={activeSettings?.mode !== "human"}
+                      onCheckedChange={(v) => upsertSettings(active.phone, { mode: v ? "ai" : "human" })}
+                    />
+                  </div>
+                  <Select
+                    value={activeSettings?.assigned_agent || "_none"}
+                    onValueChange={(v) => upsertSettings(active.phone, { assigned_agent: v === "_none" ? null : v })}
+                  >
+                    <SelectTrigger className="w-44 h-8 text-xs"><SelectValue placeholder="Assign agent" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">Unassigned</SelectItem>
+                      {agents.filter(a => a.assign !== false).map(a => (
+                        <SelectItem key={a.id} value={a.name}>{a.name}{a.role ? ` · ${a.role}` : ""}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <ScrollArea className="flex-1 bg-muted/20">
