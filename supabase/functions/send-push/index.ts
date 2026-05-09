@@ -47,7 +47,12 @@ Deno.serve(async (req) => {
             payload,
           );
         } catch (e: any) {
-          // Clean up dead subscriptions (410 Gone / 404)
+          console.error("push send failed", {
+            id: s.id,
+            statusCode: e?.statusCode,
+            body: e?.body,
+            message: e?.message,
+          });
           if (e?.statusCode === 410 || e?.statusCode === 404) {
             await admin.from("push_subscriptions").delete().eq("id", s.id);
           }
