@@ -11,6 +11,8 @@ const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
 const RETURN_TRIGGERS = [/রিটার্ন/i, /\breturn\b/i, /ফেরত/i];
+const TRACKING_TRIGGERS = [/অর্ডার\s*কোথায়/i, /\btracking\b/i, /\btrack\b/i, /কোথায়\s*আছে/i];
+const COD_TRIGGERS = [/\bcod\b/i, /\bconfirm\b/i, /কনফার্ম/i];
 const YES_RE = /^(yes|হ্যাঁ|হা|y|হ্যা|yes please|ok)$/i;
 const NO_RE = /^(no|না|n|cancel|বাতিল)$/i;
 
