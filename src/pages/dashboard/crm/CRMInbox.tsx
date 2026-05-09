@@ -1,200 +1,270 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Send, Bot, User, CheckCircle2, Plus } from "lucide-react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { Send, Search } from "lucide-react";
 
-type Conv = any; type Msg = any;
-
-const STATUS_BADGE: Record<string, string> = {
-  bot: "bg-primary/15 text-primary",
-  human: "bg-warning/15 text-warning",
-  resolved: "bg-success/15 text-success",
+type IncomingRow = {
+  id: string;
+  user_id: string;
+  session_id: string;
+  from_number: string;
+  message_text: string | null;
+  message_type: string;
+  image_url: string | null;
+  image_caption: string | null;
+  reply_sent: boolean;
+  is_group: boolean;
+  received_at: string;
+  raw_payload: any;
 };
+
+type OutgoingRow = {
+  id: string;
+  user_id: string;
+  session_id: string;
+  to_number: string | null;
+  payload: any;
+  message_type: string;
+  status: string;
+  created_at: string;
+};
+
+const phoneTail = (p: string) => (p || "").replace(/\D/g, "").slice(-9);
+const nameOf = (m: IncomingRow) =>
+  m?.raw_payload?.pushName || m?.raw_payload?.notifyName || `+${m.from_number}`;
 
 export default function CRMInbox() {
   const { user } = useAuth();
-  const [convs, setConvs] = useState<Conv[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Msg[]>([]);
-  const [text, setText] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [incoming, setIncoming] = useState<IncomingRow[]>([]);
+  const [outgoing, setOutgoing] = useState<OutgoingRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activePhone, setActivePhone] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [newOpen, setNewOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const loadConvs = async () => {
+  const load = async () => {
     if (!user) return;
-    const { data } = await supabase.from("crm_conversations").select("*").eq("user_id", user.id).order("last_message_time", { ascending: false });
-    setConvs(data || []);
-    if (!activeId && data && data.length > 0) setActiveId(data[0].id);
+    const [incRes, outRes] = await Promise.all([
+      supabase.from("incoming_messages").select("*")
+        .eq("user_id", user.id).eq("is_group", false)
+        .order("received_at", { ascending: false }).limit(500),
+      supabase.from("message_logs").select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }).limit(500),
+    ]);
+    if (!incRes.error && incRes.data) setIncoming(incRes.data as any);
+    if (!outRes.error && outRes.data) setOutgoing(outRes.data as any);
+    setLoading(false);
   };
 
-  const loadMessages = async (cid: string) => {
-    const { data } = await supabase.from("crm_messages").select("*").eq("conversation_id", cid).order("created_at");
-    setMessages(data || []);
-    setTimeout(() => scrollRef.current?.scrollTo({ top: 999999 }), 50);
-    // mark as read
-    await supabase.from("crm_conversations").update({ unread_count: 0 }).eq("id", cid);
-  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
 
-  useEffect(() => { loadConvs(); }, [user]);
-  useEffect(() => { if (activeId) loadMessages(activeId); }, [activeId]);
-
+  // Realtime subscription
   useEffect(() => {
     if (!user) return;
-    const ch = supabase.channel("crm-inbox")
-      .on("postgres_changes", { event: "*", schema: "public", table: "crm_conversations", filter: `user_id=eq.${user.id}` }, loadConvs)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "crm_messages" }, (p: any) => { if (p.new.conversation_id === activeId) loadMessages(activeId); })
+    let t: any = null;
+    const schedule = () => { if (t) clearTimeout(t); t = setTimeout(load, 250); };
+    const ch = supabase.channel(`crm-inbox:${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "incoming_messages", filter: `user_id=eq.${user.id}` }, schedule)
+      .on("postgres_changes", { event: "*", schema: "public", table: "message_logs", filter: `user_id=eq.${user.id}` }, schedule)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [user, activeId]);
+    return () => { supabase.removeChannel(ch); if (t) clearTimeout(t); };
+    // eslint-disable-next-line
+  }, [user?.id]);
 
-  const active = convs.find(c => c.id === activeId);
+  // Group by from_number
+  const conversations = useMemo(() => {
+    const map = new Map<string, { phone: string; name: string; last: IncomingRow; unread: number; lastTs: string }>();
+    for (const m of incoming) {
+      const key = m.from_number;
+      const ex = map.get(key);
+      if (!ex) {
+        map.set(key, { phone: key, name: nameOf(m), last: m, unread: m.reply_sent ? 0 : 1, lastTs: m.received_at });
+      } else {
+        if (!m.reply_sent) ex.unread += 1;
+      }
+    }
+    let arr = [...map.values()];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      arr = arr.filter(c => c.phone.includes(q) || c.name.toLowerCase().includes(q));
+    }
+    return arr.sort((a, b) => +new Date(b.lastTs) - +new Date(a.lastTs));
+  }, [incoming, search]);
+
+  // Auto-select first
+  useEffect(() => {
+    if (!activePhone && conversations.length > 0) setActivePhone(conversations[0].phone);
+  }, [conversations, activePhone]);
+
+  const active = conversations.find(c => c.phone === activePhone);
+
+  // Build the thread (sorted asc)
+  const thread = useMemo(() => {
+    if (!activePhone) return [] as any[];
+    const tail = phoneTail(activePhone);
+    const inMsgs = incoming
+      .filter(m => m.from_number === activePhone)
+      .map(m => ({
+        id: `i-${m.id}`,
+        kind: "in" as const,
+        text: m.message_text || m.image_caption || (m.image_url ? "" : ""),
+        imageUrl: m.image_url,
+        ts: m.received_at,
+      }));
+    const outMsgs = outgoing
+      .filter(o => phoneTail(o.to_number || "") === tail)
+      .map(o => ({
+        id: `o-${o.id}`,
+        kind: "out" as const,
+        text: (typeof o.payload === "object"
+          ? (o.payload?.text || o.payload?.message)
+          : String(o.payload || "")) || "",
+        imageUrl: (o.payload?.image_url || null) as string | null,
+        ts: o.created_at,
+      }));
+    return [...inMsgs, ...outMsgs].sort((a, b) => +new Date(a.ts) - +new Date(b.ts));
+  }, [incoming, outgoing, activePhone]);
+
+  // Mark as read when opening
+  useEffect(() => {
+    if (!user || !activePhone) return;
+    const unreadIds = incoming
+      .filter(m => m.from_number === activePhone && !m.reply_sent)
+      .map(m => m.id);
+    if (unreadIds.length === 0) return;
+    supabase.from("incoming_messages").update({ reply_sent: true } as any)
+      .in("id", unreadIds).eq("user_id", user.id).then(() => {
+        setIncoming(prev => prev.map(m => unreadIds.includes(m.id) ? { ...m, reply_sent: true } : m));
+      });
+    // eslint-disable-next-line
+  }, [activePhone]);
+
+  // Auto-scroll
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const v = el.closest("[data-radix-scroll-area-viewport]") as HTMLElement | null;
+      if (v) v.scrollTop = v.scrollHeight;
+    });
+    return () => cancelAnimationFrame(id);
+  }, [activePhone, thread.length]);
 
   const send = async () => {
-    if (!text.trim() || !active || !user) return;
+    if (!text.trim() || !activePhone || !user) return;
     const t = text.trim();
-    setText("");
-    const { data, error } = await supabase.functions.invoke("crm-send-message", {
-      body: { conversation_id: active.id, text: t },
-    });
-    if (error || (data as any)?.ok === false) {
-      toast.error((data as any)?.error || error?.message || "Failed to send");
+    setText(""); setSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("crm-send-message", {
+        body: { to_number: activePhone, text: t },
+      });
+      if (error || (data as any)?.ok === false) {
+        toast.error((data as any)?.error || error?.message || "Failed to send");
+      }
+      load();
+    } finally {
+      setSending(false);
     }
-    loadMessages(active.id); loadConvs();
   };
-
-  const setStatus = async (status: string) => {
-    if (!active) return;
-    await supabase.from("crm_conversations").update({ status }).eq("id", active.id);
-    toast.success(`Conversation marked ${status}`);
-    loadConvs();
-  };
-
-  const filtered = convs.filter(c => {
-    if (filter !== "all" && c.status !== filter) return false;
-    if (search) return (c.customer_name || "").toLowerCase().includes(search.toLowerCase()) || (c.phone || "").includes(search);
-    return true;
-  });
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">WhatsApp Inbox</h1>
-          <p className="text-sm text-muted-foreground">Manage all customer conversations</p>
-        </div>
-        <Button onClick={() => setNewOpen(true)}><Plus className="h-4 w-4 mr-2" /> New Chat</Button>
+      <div>
+        <h1 className="text-2xl font-bold">WhatsApp Inbox</h1>
+        <p className="text-sm text-muted-foreground">All customer conversations from WhatsApp</p>
       </div>
 
       <Card className="flex h-[calc(100vh-220px)] overflow-hidden">
         {/* Left list */}
         <div className="w-80 border-r border-border flex flex-col">
-          <div className="p-3 border-b border-border space-y-2">
-            <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} />
-            <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="bot">Bot</SelectItem>
-                <SelectItem value="human">Human</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="p-3 border-b border-border">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="pl-8" />
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto">
-            {filtered.length === 0 ? (
+          <ScrollArea className="flex-1">
+            {loading ? (
+              <p className="p-6 text-sm text-muted-foreground text-center">Loading...</p>
+            ) : conversations.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground text-center">No conversations</p>
-            ) : filtered.map(c => (
-              <button key={c.id} onClick={() => setActiveId(c.id)} className={`w-full text-left p-3 border-b border-border hover:bg-muted/50 ${activeId === c.id ? "bg-muted" : ""}`}>
+            ) : conversations.map(c => (
+              <button
+                key={c.phone}
+                onClick={() => setActivePhone(c.phone)}
+                className={`w-full text-left p-3 border-b border-border hover:bg-muted/50 ${activePhone === c.phone ? "bg-muted" : ""}`}
+              >
                 <div className="flex justify-between items-start gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm truncate">{c.customer_name || c.phone}</p>
-                    <p className="text-xs text-muted-foreground truncate">{c.last_message || "No messages"}</p>
+                    <p className="font-medium text-sm truncate">{c.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {c.last.message_text || (c.last.image_url ? "📷 Image" : "")}
+                    </p>
                   </div>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${STATUS_BADGE[c.status] || "bg-muted"}`}>
-                    {c.status === "bot" ? "🤖" : c.status === "human" ? "👤" : "✅"}
-                  </span>
+                  {c.unread > 0 && <Badge className="bg-primary text-primary-foreground">{c.unread}</Badge>}
                 </div>
               </button>
             ))}
-          </div>
+          </ScrollArea>
         </div>
 
         {/* Right chat */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {!active ? (
             <div className="flex-1 grid place-items-center text-muted-foreground">Select a conversation</div>
           ) : (
             <>
-              <div className="p-3 border-b border-border flex items-center justify-between">
-                <div>
-                  <p className="font-semibold">{active.customer_name || active.phone}</p>
-                  <p className="text-xs text-muted-foreground">{active.phone} • <Badge variant="outline" className="text-[10px]">{active.status}</Badge></p>
-                </div>
-                <div className="flex gap-1">
-                  {active.status === "bot" && <Button size="sm" variant="outline" onClick={() => setStatus("human")}><User className="h-3 w-3 mr-1" /> Take Over</Button>}
-                  {active.status === "human" && <Button size="sm" variant="outline" onClick={() => setStatus("bot")}><Bot className="h-3 w-3 mr-1" /> Hand to Bot</Button>}
-                  <Button size="sm" variant="outline" onClick={() => setStatus("resolved")}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
-                </div>
+              <div className="p-3 border-b border-border">
+                <p className="font-semibold">{active.name}</p>
+                <p className="text-xs text-muted-foreground">+{active.phone}</p>
               </div>
 
-              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-2 bg-muted/20">
-                {messages.length === 0 ? (
-                  <p className="text-center text-sm text-muted-foreground py-8">No messages yet</p>
-                ) : messages.map(m => {
-                  const isOutgoing = m.sender !== "customer";
-                  return (
-                    <div key={m.id} className={`flex ${isOutgoing ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${isOutgoing ? "bg-primary text-primary-foreground" : "bg-card border border-border"}`}>
-                        <p className="text-[10px] opacity-70 mb-0.5">{m.sender}</p>
-                        {m.message_type === "image" && m.media_url && <img src={m.media_url} className="rounded mb-1 max-h-40" alt="" />}
-                        <p className="whitespace-pre-wrap">{m.message_text}</p>
-                        <p className="text-[10px] opacity-60 mt-1">{new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+              <ScrollArea className="flex-1 bg-muted/20">
+                <div ref={scrollRef} className="p-4 space-y-2">
+                  {thread.length === 0 ? (
+                    <p className="text-center text-sm text-muted-foreground py-8">No messages yet</p>
+                  ) : thread.map(m => {
+                    const isOut = m.kind === "out";
+                    return (
+                      <div key={m.id} className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
+                        <div className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${isOut ? "bg-primary text-primary-foreground" : "bg-card border border-border"}`}>
+                          {m.imageUrl && <img src={m.imageUrl} className="rounded mb-1 max-h-40" alt="" />}
+                          {m.text && <p className="whitespace-pre-wrap break-words">{m.text}</p>}
+                          <p className="text-[10px] opacity-60 mt-1">
+                            {new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
 
               <div className="p-3 border-t border-border flex gap-2">
-                <Input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Type a message..." />
-                <Button onClick={send}><Send className="h-4 w-4" /></Button>
+                <Input
+                  value={text}
+                  onChange={e => setText(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && !sending && send()}
+                  placeholder="Type a message..."
+                  disabled={sending}
+                />
+                <Button onClick={send} disabled={sending || !text.trim()}>
+                  <Send className="h-4 w-4" />
+                </Button>
               </div>
             </>
           )}
         </div>
       </Card>
-
-      <NewChatDialog open={newOpen} onOpenChange={setNewOpen} onCreated={(id) => { loadConvs(); setActiveId(id); }} />
     </div>
-  );
-}
-
-function NewChatDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenChange: (o: boolean) => void; onCreated: (id: string) => void }) {
-  const { user } = useAuth();
-  const [name, setName] = useState(""); const [phone, setPhone] = useState("");
-  const create = async () => {
-    if (!user || !phone) return;
-    const { data, error } = await supabase.from("crm_conversations").insert({ user_id: user.id, phone, customer_name: name || null, last_message_time: new Date().toISOString() }).select().single();
-    if (error) { toast.error(error.message); return; }
-    setName(""); setPhone(""); onOpenChange(false); onCreated(data.id);
-  };
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>New Conversation</DialogTitle></DialogHeader>
-        <div className="space-y-3"><div><Label>Customer Name</Label><Input value={name} onChange={e => setName(e.target.value)} /></div><div><Label>Phone *</Label><Input value={phone} onChange={e => setPhone(e.target.value)} /></div></div>
-        <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={create}>Create</Button></DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
