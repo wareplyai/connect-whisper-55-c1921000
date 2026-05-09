@@ -160,7 +160,7 @@ export default function HeadAdminLayout() {
               title="Open mobile app"
               className="p-2 rounded-lg hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <PhoneIcon className="h-[18px] w-[18px]" />
+              <SmartphoneCharging className="h-[18px] w-[18px]" />
             </Link>
             <NotificationBell />
             <Link to="/headadmin/settings" className="p-2 rounded-lg hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors">
