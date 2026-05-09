@@ -443,21 +443,37 @@ const Inbox = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
-                    {(["ai", "human", "auto_reply"] as const).map((m) => (
-                      <button
-                        key={m}
-                        onClick={() => setMode(m)}
-                        className={`px-2.5 py-1.5 flex items-center gap-1 transition-colors ${
-                          customerMode === m ? "bg-primary text-primary-foreground" : "bg-card hover:bg-card-elevated text-muted-foreground"
-                        }`}
-                      >
-                        {m === "ai" ? <><Bot className="h-3 w-3" /> AI</> :
-                          m === "human" ? <><User className="h-3 w-3" /> Human</> :
-                          <><Zap className="h-3 w-3" /> Auto</>}
-                      </button>
-                    ))}
+                  {/* AI / Human pill toggle */}
+                  <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 text-xs">
+                    <button
+                      onClick={() => setMode("ai")}
+                      className={`px-3 py-1 rounded-full flex items-center gap-1 transition-colors ${
+                        customerMode === "ai" ? "bg-green-500 text-white" : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Bot className="h-3 w-3" /> AI
+                    </button>
+                    <button
+                      onClick={() => setMode("human")}
+                      className={`px-3 py-1 rounded-full flex items-center gap-1 transition-colors ${
+                        customerMode === "human" ? "bg-green-500 text-white" : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <User className="h-3 w-3" /> Human
+                    </button>
                   </div>
+                  {/* Auto-reply separate button */}
+                  <button
+                    onClick={() => setMode("auto_reply")}
+                    className={`px-3 py-1.5 rounded-full border text-xs flex items-center gap-1 transition-colors ${
+                      customerMode === "auto_reply"
+                        ? "bg-green-500 text-white border-green-500"
+                        : "bg-card text-muted-foreground border-border hover:text-foreground"
+                    }`}
+                    title="Keyword auto-reply only"
+                  >
+                    <Zap className="h-3 w-3" /> Auto
+                  </button>
                   <label className="flex items-center gap-2 text-xs">
                     <span className="text-muted-foreground">{isBlocked ? "Blocked" : "Block"}</span>
                     <Switch checked={isBlocked} onCheckedChange={toggleBlock} />
