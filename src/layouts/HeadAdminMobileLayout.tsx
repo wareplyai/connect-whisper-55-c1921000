@@ -1,7 +1,14 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Home, Bell, Receipt, Users, LogOut } from "lucide-react";
+import { Home, Bell, BellOff, Receipt, Users, LogOut } from "lucide-react";
 import { useHeadAdmin } from "@/contexts/HeadAdminContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import {
+  getPushStatus,
+  registerSW,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from "@/lib/pushNotifications";
 
 const tabs = [
   { to: "/headadmin/m", label: "Home", icon: Home, end: true },
@@ -52,16 +59,19 @@ export default function HeadAdminMobileLayout() {
               </p>
             </div>
           </div>
-          <button
-            onClick={async () => {
-              await signOut();
-              nav("/headadmin/login");
-            }}
-            className="h-9 w-9 grid place-items-center rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white"
-            aria-label="Sign out"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <PushButton userId={headAdmin?.id} />
+            <button
+              onClick={async () => {
+                await signOut();
+                nav("/headadmin/login");
+              }}
+              className="h-9 w-9 grid place-items-center rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white"
+              aria-label="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -95,5 +105,68 @@ export default function HeadAdminMobileLayout() {
         </div>
       </nav>
     </div>
+  );
+}
+
+function PushButton({ userId }: { userId?: string }) {
+  const [status, setStatus] = useState<string>("default");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    registerSW().catch(() => {});
+    getPushStatus().then(setStatus);
+  }, []);
+
+  const enable = async () => {
+    if (!userId) return toast.error("Sign in first");
+    setBusy(true);
+    try {
+      await subscribeToPush(userId);
+      setStatus("granted");
+      toast.success("🔔 Lock-screen alerts enabled");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const disable = async () => {
+    setBusy(true);
+    try {
+      await unsubscribeFromPush();
+      setStatus("default");
+      toast("Notifications disabled");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (status === "unsupported") return null;
+  if (status === "preview")
+    return (
+      <button
+        onClick={() => toast("Open the published app on your phone to enable lock-screen alerts")}
+        className="h-9 w-9 grid place-items-center rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400"
+        aria-label="Push unavailable in preview"
+      >
+        <BellOff className="h-4 w-4" />
+      </button>
+    );
+
+  const enabled = status === "granted";
+  return (
+    <button
+      onClick={enabled ? disable : enable}
+      disabled={busy}
+      className={`h-9 w-9 grid place-items-center rounded-xl border ${
+        enabled
+          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+          : "bg-white/5 border-white/10 text-white/60"
+      }`}
+      aria-label={enabled ? "Disable notifications" : "Enable notifications"}
+    >
+      {enabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+    </button>
   );
 }
