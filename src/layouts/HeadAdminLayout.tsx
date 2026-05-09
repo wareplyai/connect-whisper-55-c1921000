@@ -2,7 +2,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Smartphone, DollarSign, MessageSquare,
   Bell, ScrollText, Settings, LogOut, CreditCard, Receipt, Tags, Search,
-  ChevronDown, Zap, ToggleRight,
+  ChevronDown, Zap, ToggleRight, SmartphoneCharging,
 } from "lucide-react";
 import { useHeadAdmin } from "@/contexts/HeadAdminContext";
 import { Logo } from "@/components/Logo";
@@ -155,6 +155,13 @@ export default function HeadAdminLayout() {
 
           <div className="flex items-center gap-1.5 ml-auto">
             <ThemeToggle />
+            <Link
+              to="/headadmin/m"
+              title="Open mobile app"
+              className="p-2 rounded-lg hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <SmartphoneCharging className="h-[18px] w-[18px]" />
+            </Link>
             <NotificationBell />
             <Link to="/headadmin/settings" className="p-2 rounded-lg hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors">
               <Settings className="h-[18px] w-[18px]" />

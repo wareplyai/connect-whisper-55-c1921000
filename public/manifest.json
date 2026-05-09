@@ -1,0 +1,15 @@
+{
+  "name": "WaReply Admin",
+  "short_name": "WA Admin",
+  "description": "WaReply HeadAdmin mobile control panel",
+  "start_url": "/headadmin/m",
+  "scope": "/headadmin",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0f0a",
+  "theme_color": "#10b981",
+  "icons": [
+    { "src": "/logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

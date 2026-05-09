@@ -55,6 +55,11 @@ import ActivityLogs from "./pages/headadmin/ActivityLogs";
 import HASettings from "./pages/headadmin/Settings";
 import SmsLogs from "./pages/headadmin/SmsLogs";
 import HAFeatureAccess from "./pages/headadmin/FeatureAccess";
+import HeadAdminMobileLayout from "./layouts/HeadAdminMobileLayout";
+import MobileHome from "./pages/headadmin/mobile/MobileHome";
+import MobileNotifications from "./pages/headadmin/mobile/MobileNotifications";
+import MobilePayments from "./pages/headadmin/mobile/MobilePayments";
+import MobileUsers from "./pages/headadmin/mobile/MobileUsers";
 import { FeatureGuard } from "./components/FeatureGuard";
 import DocsLayout from "./layouts/DocsLayout";
 import DocsIndex from "./pages/docs/DocsIndex";
@@ -113,6 +118,12 @@ const App = () => (
               </Route>
 
               <Route path="/headadmin/login" element={<HeadAdminLogin />} />
+              <Route path="/headadmin/m" element={<HeadAdminRoute><HeadAdminMobileLayout /></HeadAdminRoute>}>
+                <Route index element={<MobileHome />} />
+                <Route path="notifications" element={<MobileNotifications />} />
+                <Route path="payments" element={<MobilePayments />} />
+                <Route path="users" element={<MobileUsers />} />
+              </Route>
               <Route path="/headadmin" element={<HeadAdminRoute><HeadAdminLayout /></HeadAdminRoute>}>
                 <Route index element={<HeadAdminOverview />} />
                 <Route path="users" element={<AllUsers />} />
