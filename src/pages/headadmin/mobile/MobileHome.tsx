@@ -193,20 +193,6 @@ export default function MobileHome() {
   );
 }
 
-function RevenueAmount() {
-  const [revenue, setRevenue] = useState(0);
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase.from("sales").select("amount");
-      setRevenue((data || []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0));
-    };
-    load();
-    const i = setInterval(load, 30000);
-    return () => clearInterval(i);
-  }, []);
-  return <span className="hidden">{revenue}</span>;
-}
-
 function StatTile({
   icon: Icon, label, value, accent,
 }: { icon: any; label: string; value: string; accent: string }) {
