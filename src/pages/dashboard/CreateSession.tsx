@@ -87,28 +87,27 @@ const CreateSession = () => {
       if (!/^https:\/\//i.test(form.webhook_url.trim())) { setLoading(false); toast.error("Webhook URL must start with https://"); return; }
     }
 
-    // Duplicate phone check — own sessions
+    // Duplicate phone check — own sessions (any status)
     const { data: ownExisting } = await supabase
       .from("sessions")
-      .select("id, status, session_name")
+      .select("id, session_name")
       .eq("user_id", userId)
-      .eq("phone_number", fullPhone);
-    const ownActive = (ownExisting || []).find((s) => s.status !== "disconnected");
-    if (ownActive) {
+      .eq("phone_number", fullPhone)
+      .maybeSingle();
+    if (ownExisting) {
       setLoading(false);
-      toast.error(`This phone number is already connected in session: ${ownActive.session_name}. Please disconnect it first before adding again.`);
+      toast.error(`This phone number is already linked to your session "${ownExisting.session_name}". Delete that session first to reuse this number.`);
       return;
     }
 
-    // Platform-wide check across all users
-    const { data: anyExisting } = await supabase
+    // Platform-wide check — across all users / accounts (any status)
+    const { count: anyCount } = await supabase
       .from("sessions")
-      .select("id, status")
+      .select("id", { count: "exact", head: true })
       .eq("phone_number", fullPhone);
-    const anyActive = (anyExisting || []).find((s) => s.status !== "disconnected");
-    if (anyActive) {
+    if ((anyCount ?? 0) > 0) {
       setLoading(false);
-      toast.error("This number is already active in another session. Disconnect it first to reconnect.");
+      toast.error("This WhatsApp number is already linked to another account on this platform. One number can only be used in one session at a time.");
       return;
     }
 
@@ -136,7 +135,7 @@ const CreateSession = () => {
     if (error) {
       setLoading(false);
       if ((error as any).code === "23505" || /unique/i.test(error.message)) {
-        return toast.error("The phone number has already been taken. Disconnect the existing session first.");
+        return toast.error("This WhatsApp number is already linked to another session. Delete the existing session first before reusing this number.");
       }
       return toast.error(friendlyError(error));
     }
