@@ -1213,8 +1213,8 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, skipped: "reply_mode_none", message_id: messageId });
     }
 
-    if (autoReplyEnabled && !isImageMessage) {
-      // Fixed Q&A
+    // Fixed Q&A — runs for both AI Agent and Auto-Reply modes (exact/contains match bypasses AI)
+    if ((aiEnabled || autoReplyEnabled) && !isImageMessage) {
       const { data: fixed } = await admin
         .from("fixed_qa")
         .select("keyword, reply, match_type")
@@ -1229,7 +1229,7 @@ Deno.serve(async (req) => {
         const reply = fixedHit.reply;
         const sendResult = await sendViaGateway({
           gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
-          showTyping: sessionTyping, accountProtection,
+          showTyping: aiEnabled ? aiTyping : sessionTyping, accountProtection,
         });
         if (messageId) {
           await admin.from("incoming_messages").update({
@@ -1253,7 +1253,9 @@ Deno.serve(async (req) => {
         }
         return jsonResp({ ok: true, reply, sent: sendResult.ok, send_error: sendResult.error, sent_to: sendResult.to, source: "fixed_qa", message_id: messageId });
       }
+    }
 
+    if (autoReplyEnabled && !isImageMessage) {
       // Keyword rules
       const { data: rules } = await admin
         .from("auto_reply_rules")
