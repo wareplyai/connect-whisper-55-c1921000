@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.woo-webhook]
 verify_jwt = false
+
+[functions.crm-woo-order-webhook]
+verify_jwt = false
