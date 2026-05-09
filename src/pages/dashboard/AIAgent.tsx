@@ -508,6 +508,31 @@ RULES:
                 </SelectContent>
               </Select>
             </div>
+
+            <div>
+              <Label>Max Reply Tokens</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={50}
+                  max={4000}
+                  step={50}
+                  value={business.max_tokens}
+                  onChange={(e) => setBusiness({ ...business, max_tokens: Math.max(50, Math.min(4000, Number(e.target.value) || 500)) })}
+                  className="max-w-[160px]"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => persistBusinessPatch({ max_tokens: business.max_tokens })}
+                >
+                  Save
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Controls the maximum length of every AI reply (50–4000). Lower = shorter & cheaper. Default 500.
+              </p>
+            </div>
           </div>
         )}
       </section>
