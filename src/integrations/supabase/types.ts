@@ -433,6 +433,7 @@ export type Database = {
           description: string | null
           id: string
           location: string | null
+          max_tokens: number
           name: string | null
           system_prompt: string | null
           updated_at: string
@@ -453,6 +454,7 @@ export type Database = {
           description?: string | null
           id?: string
           location?: string | null
+          max_tokens?: number
           name?: string | null
           system_prompt?: string | null
           updated_at?: string
@@ -473,6 +475,7 @@ export type Database = {
           description?: string | null
           id?: string
           location?: string | null
+          max_tokens?: number
           name?: string | null
           system_prompt?: string | null
           updated_at?: string

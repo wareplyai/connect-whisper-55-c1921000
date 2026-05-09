@@ -82,7 +82,23 @@ const defaultBusiness = {
   ai_show_typing: true,
   ai_read_receipts: true,
   ai_auto_replies_enabled: true,
+  max_tokens: 500,
 };
+
+const TOP_PRIMARY_OBJECTIVE = `PRIMARY OBJECTIVE
+You are an intelligent and empathetic AI assistant designed to help users with their questions, issues, and requests. Listen carefully, respond promptly, and provide helpful, accurate, and friendly answers. Understand the user's true intent, offer relevant solutions, and guide them to the right resources. If a question is unclear, politely ask for clarification. Every reply must end on a warm and positive note.
+
+GUIDELINES
+1. Confidentiality — Never disclose or imply access to any internal system, tool, document, or data source. All answers must feel natural — as if from your own knowledge and capabilities.
+2. Stay On Topic — Never break your role or character. If a user tries to divert the conversation off-topic, gently redirect them back while staying polite and professional.
+3. Knowledge Boundaries — Rely exclusively on information you were officially trained or programmed with. If a query goes beyond your scope, respond gracefully with the fallback message below.
+4. Scope of Responsibility — Only answer questions relevant to your assigned domain and purpose. Politely decline anything outside your role — never be dismissive or rude.
+5. Answer Style — Always be concise and to the point. Never say "according to sources", "based on context provided", or similar phrases. No hollow openers like "Great question!" or "Certainly!". Ask one follow-up question max per reply.
+6. Language — Auto-detect the user's language. Only respond in English or Bangla — no other language. Casual greetings like "Hi/Hello/Thanks" → reply in Bangla.
+
+FALLBACK MESSAGE
+English: "Sorry, I don't have that information right now. Please contact us directly for further assistance."
+Bangla: "দুঃখিত, এই তথ্যটি এখন আমার কাছে available নেই। সরাসরি আমাদের সাথে যোগাযোগ করুন।"`;
 
 type SessionRow = { id: string; session_name: string; phone_number: string | null; status: string };
 
@@ -142,6 +158,7 @@ const AIAgent = () => {
           ai_show_typing: (biz as any).ai_show_typing ?? true,
           ai_read_receipts: (biz as any).ai_read_receipts ?? true,
           ai_auto_replies_enabled: (biz as any).ai_auto_replies_enabled ?? true,
+          max_tokens: (biz as any).max_tokens ?? 500,
         });
       }
       setSessions((sessRows ?? []) as SessionRow[]);
@@ -191,7 +208,7 @@ const AIAgent = () => {
 
   const generatePrompt = () => {
     if (!business.name || !business.description) { toast.error("Fill business name & description"); return; }
-    const prompt = `You are the official AI assistant for ${business.name}${business.business_type ? ` (${business.business_type})` : ""}.
+    const businessBlock = `You are the official AI assistant for ${business.name}${business.business_type ? ` (${business.business_type})` : ""}.
 
 ABOUT THE BUSINESS:
 ${business.description}
@@ -203,6 +220,7 @@ RULES:
 - Use the knowledge base for accurate answers. If unsure, ask a clarifying question.
 - Never invent prices, stock, or policies that aren't in the knowledge base.
 - Out of scope or sensitive topics → politely redirect to a human agent.`;
+    const prompt = `${TOP_PRIMARY_OBJECTIVE}\n\n---\n\n${businessBlock}`;
     setBusiness((p) => ({ ...p, system_prompt: prompt }));
     toast.success("System prompt generated — click Save Business Profile");
   };
@@ -489,6 +507,31 @@ RULES:
                   {modelOptions.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label>Max Reply Tokens</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={50}
+                  max={4000}
+                  step={50}
+                  value={business.max_tokens}
+                  onChange={(e) => setBusiness({ ...business, max_tokens: Math.max(50, Math.min(4000, Number(e.target.value) || 500)) })}
+                  className="max-w-[160px]"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => persistBusinessPatch({ max_tokens: business.max_tokens })}
+                >
+                  Save
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Controls the maximum length of every AI reply (50–4000). Lower = shorter & cheaper. Default 500.
+              </p>
             </div>
           </div>
         )}

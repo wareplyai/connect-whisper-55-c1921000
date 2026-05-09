@@ -47,8 +47,10 @@ function jsonResp(body: unknown, status = 200) {
 async function callAI(opts: {
   platform: string; model: string; apiKey: string;
   systemPrompt: string; userMessage: string;
+  maxTokens?: number;
 }): Promise<string> {
   const { platform, model, apiKey, systemPrompt, userMessage } = opts;
+  const maxTokens = Math.max(50, Math.min(4000, Number(opts.maxTokens) || 500));
 
   if (platform === "openai" || platform === "deepseek") {
     const url = platform === "openai"
@@ -63,6 +65,7 @@ async function callAI(opts: {
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
         ],
+        max_tokens: maxTokens,
       }),
     });
     const data = await r.json();
@@ -79,6 +82,7 @@ async function callAI(opts: {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: "user", parts: [{ text: userMessage }] }],
+          generationConfig: { maxOutputTokens: maxTokens },
         }),
       }
     );
@@ -1463,6 +1467,7 @@ Deno.serve(async (req) => {
           apiKey,
           systemPrompt,
           userMessage: messageText,
+          maxTokens: Number((biz as any)?.max_tokens) || 500,
         });
       } catch (aiErr: any) {
         if (messageId) {
