@@ -141,12 +141,12 @@ const DashboardHome = () => {
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
-    <div className="space-y-6">
+    <div className="crm-dash space-y-6 -m-4 md:-m-6 p-4 md:p-6 min-h-full bg-[radial-gradient(ellipse_at_top_left,hsl(142_70%_25%/0.18),transparent_55%),radial-gradient(ellipse_at_bottom_right,hsl(142_85%_45%/0.12),transparent_60%)]">
       {/* Premium AI hero header */}
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-card-elevated p-6 md:p-8">
-        <div className="absolute inset-0 bg-hero pointer-events-none" />
-        <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-[hsl(142_50%_8%)] via-[hsl(150_45%_10%)] to-[hsl(142_60%_14%)] p-6 md:p-8 shadow-[0_20px_60px_-20px_hsl(142_70%_30%/0.5)]">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(142_90%_55%/0.18),transparent_60%)] pointer-events-none" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-[hsl(142_90%_50%/0.25)] blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-[hsl(142_80%_45%/0.18)] blur-3xl pointer-events-none" />
 
         <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-5">
           <div className="space-y-3">
