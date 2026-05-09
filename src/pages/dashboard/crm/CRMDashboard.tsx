@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { ShoppingCart, Banknote, Users, RotateCcw, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--success))", "hsl(var(--warning))", "hsl(var(--destructive))", "hsl(var(--muted-foreground))"];
 
@@ -43,7 +44,16 @@ export default function CRMDashboard() {
       setActivity(o.slice(0, 8));
     };
     load();
-    const ch = supabase.channel("crm-dash").on("postgres_changes", { event: "*", schema: "public", table: "crm_orders" }, load).subscribe();
+    const ch = supabase.channel("crm-dash")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "crm_orders", filter: `user_id=eq.${user.id}` }, (payload: any) => {
+        const o = payload.new || {};
+        toast.success("🛒 New order received", {
+          description: `${o.customer_name || "Customer"} • ৳${o.total_amount} • #${o.woo_order_id || o.id?.slice(0, 8)}`,
+        });
+        load();
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "crm_orders", filter: `user_id=eq.${user.id}` }, load)
+      .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [user]);
 
