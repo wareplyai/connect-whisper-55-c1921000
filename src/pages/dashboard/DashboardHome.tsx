@@ -141,12 +141,12 @@ const DashboardHome = () => {
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
-    <div className="space-y-6">
+    <div className="crm-dash space-y-6 -m-4 md:-m-6 p-4 md:p-6 min-h-full bg-[radial-gradient(ellipse_at_top_left,hsl(142_70%_25%/0.18),transparent_55%),radial-gradient(ellipse_at_bottom_right,hsl(142_85%_45%/0.12),transparent_60%)]">
       {/* Premium AI hero header */}
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-card-elevated p-6 md:p-8">
-        <div className="absolute inset-0 bg-hero pointer-events-none" />
-        <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-[hsl(142_50%_8%)] via-[hsl(150_45%_10%)] to-[hsl(142_60%_14%)] p-6 md:p-8 shadow-[0_20px_60px_-20px_hsl(142_70%_30%/0.5)]">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(142_90%_55%/0.18),transparent_60%)] pointer-events-none" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-[hsl(142_90%_50%/0.25)] blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-[hsl(142_80%_45%/0.18)] blur-3xl pointer-events-none" />
 
         <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-5">
           <div className="space-y-3">
@@ -258,8 +258,8 @@ const DashboardHome = () => {
 
       {/* Chart + Activity */}
       <div className="grid lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-3 relative overflow-hidden rounded-2xl border border-border bg-card p-5">
-          <div className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+        <div className="lg:col-span-3 relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] p-5 shadow-[0_15px_50px_-20px_hsl(142_70%_30%/0.5)]">
+          <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-[hsl(142_90%_50%/0.18)] blur-3xl pointer-events-none" />
           <div className="flex items-center justify-between mb-4 relative">
             <div>
               <h3 className="font-semibold flex items-center gap-2">
@@ -296,7 +296,7 @@ const DashboardHome = () => {
           )}
         </div>
 
-        <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-5">
+        <div className="lg:col-span-2 relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] p-5 shadow-[0_15px_50px_-20px_hsl(142_70%_30%/0.5)]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold flex items-center gap-2">
               <Bot className="h-4 w-4 text-primary" /> AI Activity Stream
@@ -389,15 +389,16 @@ function KpiCard({
 }) {
   const t = toneStyles[accent];
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:border-primary/40 hover:shadow-[0_10px_40px_-15px_hsl(var(--primary)/0.4)]">
-      <div className={`absolute -top-10 -right-10 h-28 w-28 rounded-full ${t.bg} blur-2xl opacity-70 group-hover:opacity-100 transition-opacity`} />
+    <div className="group relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] p-5 transition-all hover:border-primary/50 hover:shadow-[0_15px_50px_-15px_hsl(142_90%_50%/0.5)]">
+      <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-[hsl(142_90%_50%/0.18)] blur-2xl opacity-80 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
       <div className="relative flex items-center justify-between mb-3">
-        <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</span>
-        <div className={`grid place-items-center h-8 w-8 rounded-lg ${t.bg} ${t.text} ring-1 ${t.ring}`}>
+        <span className="text-[11px] uppercase tracking-wider text-primary/70 font-semibold">{label}</span>
+        <div className={`grid place-items-center h-9 w-9 rounded-xl bg-[hsl(142_90%_50%/0.15)] text-primary ring-1 ring-primary/30 shadow-[0_0_20px_-4px_hsl(142_90%_50%/0.5)]`}>
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className="relative text-2xl md:text-[26px] font-bold tracking-tight">{value}</p>
+      <p className="relative text-2xl md:text-[28px] font-bold tracking-tight text-[hsl(120_100%_85%)] [text-shadow:0_0_30px_hsl(142_90%_50%/0.4)]">{value}</p>
       {progress != null && (
         <div className="relative mt-3 h-1.5 w-full rounded-full bg-muted overflow-hidden">
           <div
@@ -464,15 +465,20 @@ function MiniStat({
 }) {
   const t = toneStyles[tone];
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:border-primary/40">
-      <div className={`absolute -top-8 -right-8 h-24 w-24 rounded-full ${t.bg} blur-2xl opacity-60`} />
+    <div className={`group relative overflow-hidden rounded-2xl border p-5 transition-all hover:shadow-[0_15px_40px_-15px_hsl(142_90%_50%/0.5)] ${
+      highlight
+        ? "border-primary/40 bg-gradient-to-br from-[hsl(142_70%_18%)] via-[hsl(145_65%_22%)] to-[hsl(140_75%_28%)] shadow-[0_10px_30px_-10px_hsl(142_90%_50%/0.4)]"
+        : "border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] hover:border-primary/40"
+    }`}>
+      <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-[hsl(142_90%_55%/0.2)] blur-2xl opacity-70" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
       <div className="relative flex items-center justify-between mb-3">
-        <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</span>
-        <div className={`grid place-items-center h-8 w-8 rounded-lg ${t.bg} ${t.text} ring-1 ${t.ring}`}>
+        <span className={`text-[11px] uppercase tracking-wider font-semibold ${highlight ? "text-[hsl(120_100%_88%)]" : "text-primary/70"}`}>{label}</span>
+        <div className="grid place-items-center h-9 w-9 rounded-xl bg-[hsl(142_90%_50%/0.18)] text-primary ring-1 ring-primary/30 shadow-[0_0_18px_-4px_hsl(142_90%_50%/0.5)]">
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className={`relative text-2xl font-bold tracking-tight ${highlight ? t.text : ""}`}>{value}</p>
+      <p className={`relative text-2xl font-bold tracking-tight ${highlight ? "text-white [text-shadow:0_0_30px_hsl(142_90%_50%/0.6)]" : "text-[hsl(120_100%_85%)] [text-shadow:0_0_25px_hsl(142_90%_50%/0.35)]"}`}>{value}</p>
     </div>
   );
 }
