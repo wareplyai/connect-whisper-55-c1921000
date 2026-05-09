@@ -50,21 +50,39 @@ export default function CRMCourier() {
   useEffect(() => { load(); }, [user]);
 
   useEffect(() => {
-    const saved = localStorage.getItem("crm_courier_settings");
-    if (saved) {
-      try {
-        const p = JSON.parse(saved);
-        if (p.autoBooking !== undefined) setAutoBooking(p.autoBooking);
-        if (p.defaultCourier) setDefaultCourier(p.defaultCourier);
-        if (p.keys) setKeys((k) => ({ ...k, ...p.keys }));
-      } catch {}
-    }
-  }, []);
+    (async () => {
+      if (!user) return;
+      const { data } = await supabase.from("crm_courier_settings").select("*").eq("user_id", user.id).maybeSingle();
+      if (data) {
+        setAutoBooking(!!data.auto_book);
+        setDefaultCourier((data.default_courier as CourierKey) || "pathao");
+        setKeys({
+          pathao: { apiKey: data.pathao_client_id || "", secret: data.pathao_client_secret || "", enabled: !!data.pathao_enabled },
+          steadfast: { apiKey: data.steadfast_api_key || "", secret: data.steadfast_secret || "", enabled: !!data.steadfast_enabled },
+          redx: { apiKey: data.redx_api_key || "", secret: "", enabled: !!data.redx_enabled },
+        });
+      }
+    })();
+  }, [user]);
 
-  const saveSettings = () => {
-    localStorage.setItem("crm_courier_settings", JSON.stringify({ autoBooking, defaultCourier, keys }));
-    console.log("[stub] courier settings saved →", { autoBooking, defaultCourier, keys });
-    toast.success("Settings saved");
+  const saveSettings = async () => {
+    if (!user) return;
+    const payload = {
+      user_id: user.id,
+      auto_book: autoBooking,
+      default_courier: defaultCourier,
+      pathao_client_id: keys.pathao.apiKey,
+      pathao_client_secret: keys.pathao.secret,
+      pathao_enabled: keys.pathao.enabled,
+      steadfast_api_key: keys.steadfast.apiKey,
+      steadfast_secret: keys.steadfast.secret,
+      steadfast_enabled: keys.steadfast.enabled,
+      redx_api_key: keys.redx.apiKey,
+      redx_enabled: keys.redx.enabled,
+    };
+    const { error } = await supabase.from("crm_courier_settings").upsert(payload, { onConflict: "user_id" });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Courier settings saved");
   };
 
   const notifyFailed = (o: any) => {
