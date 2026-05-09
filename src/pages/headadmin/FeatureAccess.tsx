@@ -16,7 +16,7 @@ const FEATURES: { key: FeatureKey; label: string; icon: any }[] = [
 ];
 
 export default function FeatureAccess() {
-  const [globals, setGlobals] = useState<Record<FeatureKey, boolean>>({ ai_agent: true, auto_replies: true, abandoned_cart: true });
+  const [globals, setGlobals] = useState<Record<FeatureKey, boolean>>({ ai_agent: true, auto_replies: true, abandoned_cart: true, ecommerce: true });
   const [users, setUsers] = useState<any[]>([]);
   const [overrides, setOverrides] = useState<Record<string, Partial<Record<FeatureKey, boolean>>>>({});
   const [search, setSearch] = useState("");
@@ -29,7 +29,7 @@ export default function FeatureAccess() {
       supabase.from("profiles").select("id, full_name, email, plan").order("created_at", { ascending: false }),
       supabase.from("user_feature_access" as any).select("user_id, feature, enabled"),
     ]);
-    const gMap: any = { ai_agent: true, auto_replies: true, abandoned_cart: true };
+    const gMap: any = { ai_agent: true, auto_replies: true, abandoned_cart: true, ecommerce: true };
     (g || []).forEach((r: any) => { gMap[r.feature] = !!r.show_to_users; });
     setGlobals(gMap);
     setUsers(u || []);
