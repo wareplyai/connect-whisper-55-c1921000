@@ -41,10 +41,40 @@ export default function CRMSettings() {
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) try { setS({ ...DEFAULTS, ...JSON.parse(raw) }); } catch {}
+    (async () => {
+      const { data: { user } } = await (await import("@/integrations/supabase/client")).supabase.auth.getUser();
+      if (!user) return;
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase.from("crm_courier_settings").select("*").eq("user_id", user.id).maybeSingle();
+      if (data) {
+        setS((prev) => ({
+          ...prev,
+          pathao: { clientId: data.pathao_client_id || "", clientSecret: data.pathao_client_secret || "", storeId: data.pathao_store_id || "" },
+          steadfast: { apiKey: data.steadfast_api_key || "", secret: data.steadfast_secret || "" },
+          redx: { apiKey: data.redx_api_key || "" },
+        }));
+      }
+    })();
   }, []);
 
-  const save = () => {
+  const save = async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("crm_courier_settings").upsert({
+        user_id: user.id,
+        pathao_client_id: s.pathao.clientId,
+        pathao_client_secret: s.pathao.clientSecret,
+        pathao_store_id: s.pathao.storeId,
+        pathao_enabled: !!(s.pathao.clientId && s.pathao.clientSecret),
+        steadfast_api_key: s.steadfast.apiKey,
+        steadfast_secret: s.steadfast.secret,
+        steadfast_enabled: !!(s.steadfast.apiKey && s.steadfast.secret),
+        redx_api_key: s.redx.apiKey,
+        redx_enabled: !!s.redx.apiKey,
+      }, { onConflict: "user_id" });
+    }
     console.log("[stub] CRM settings saved →", s);
     toast.success("Settings saved");
   };
