@@ -40,7 +40,7 @@ import WooCommerce from "./pages/dashboard/WooCommerce";
 import AbandonedCart from "./pages/dashboard/AbandonedCart";
 import CRMDashboard from "./pages/dashboard/crm/CRMDashboard";
 import CRMOrders from "./pages/dashboard/crm/CRMOrders";
-import CRMInbox from "./pages/dashboard/crm/CRMInbox";
+
 import CRMLeads from "./pages/dashboard/crm/CRMLeads";
 import CRMCourier from "./pages/dashboard/crm/CRMCourier";
 import CRMReturns from "./pages/dashboard/crm/CRMReturns";
