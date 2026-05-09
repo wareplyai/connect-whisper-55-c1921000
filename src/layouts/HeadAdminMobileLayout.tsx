@@ -60,7 +60,7 @@ export default function HeadAdminMobileLayout() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <PushButton userId={headAdmin?.id} />
+            <PushButton userId={headAdmin?.auth_user_id} />
             <button
               onClick={async () => {
                 await signOut();
