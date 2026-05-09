@@ -242,6 +242,50 @@ export default function HeadAdminOverview() {
         <StatCard icon={Send} label="Messages Today" value={todayStats.msgsToday} accent="primary" />
       </div>
 
+      {/* Feature permissions row */}
+      <ChartCard
+        title="Feature Permissions"
+        subtitle={`How many users currently have access to each feature · ${featurePerms[0]?.total || 0} total users`}
+        action={<a href="/headadmin/feature-access" className="text-xs text-primary hover:underline">Manage</a>}
+      >
+        <div className="grid gap-4 md:grid-cols-3">
+          {featurePerms.map((f) => {
+            const pct = f.total > 0 ? Math.round((f.enabled / f.total) * 100) : 0;
+            const disabled = f.total - f.enabled;
+            return (
+              <div key={f.key} className="rounded-xl border border-border bg-card-elevated p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-9 w-9 grid place-items-center rounded-lg bg-primary/10 text-primary">
+                      <f.icon className="h-[18px] w-[18px]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">{f.label}</p>
+                      <p className="text-[11px] text-muted-foreground">Global: {f.globalOn ? "ON" : "OFF"}</p>
+                    </div>
+                  </div>
+                  <span className={`text-[11px] font-semibold px-2 py-1 rounded-full border ${
+                    f.globalOn ? "text-success bg-success/10 border-success/30"
+                               : "text-destructive bg-destructive/10 border-destructive/30"
+                  }`}>{pct}%</span>
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold tracking-tight">{f.enabled}</span>
+                  <span className="text-xs text-muted-foreground">/ {f.total} users</span>
+                </div>
+                <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                </div>
+                <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-success" /> {f.enabled} enabled</span>
+                  <span className="inline-flex items-center gap-1"><XCircle className="h-3 w-3 text-destructive" /> {disabled} disabled</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </ChartCard>
+
       {/* Charts row */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
