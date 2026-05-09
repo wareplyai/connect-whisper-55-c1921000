@@ -1215,7 +1215,7 @@ Deno.serve(async (req) => {
       // Keyword rules
       const { data: rules } = await admin
         .from("auto_reply_rules")
-        .select("id, keywords, match_type, reply_template, session_id, priority, match_count")
+        .select("id, keywords, match_type, reply_template, image_url, session_id, priority, match_count")
         .eq("user_id", userId)
         .eq("is_active", true)
         .order("priority", { ascending: false });
@@ -1232,8 +1232,10 @@ Deno.serve(async (req) => {
       });
       if (ruleHit) {
         const reply = ruleHit.reply_template;
+        const ruleImageUrl = (ruleHit.image_url || "").trim();
         const sendResult = await sendViaGateway({
           gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
+          imageUrl: ruleImageUrl || undefined,
           showTyping: sessionTyping, accountProtection,
         });
         if (messageId) {
