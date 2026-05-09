@@ -87,26 +87,19 @@ const DashboardLayout = () => {
                 to={n.to}
                 end={n.end}
                 className={({ isActive }) =>
-                  `relative flex items-center gap-3 pl-4 pr-3 py-2.5 text-sm transition-all duration-200 group ${
+                  `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors border-l-[3px] ${
                     isActive
-                      ? "bg-primary/15 text-primary font-semibold rounded-l-full mr-[-12px] pr-6 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.25)]"
-                      : "text-muted-foreground hover:text-foreground hover:bg-card-elevated rounded-lg"
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-card-elevated"
                   }`
                 }
               >
-                {({ isActive }) => (
-                  <>
-                    {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-7 w-1 rounded-r-full bg-primary" />
-                    )}
-                    <n.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
-                    <span className="flex-1">{n.label}</span>
-                    {n.to === "/dashboard/crm/inbox" && crmUnread > 0 && (
-                      <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-destructive text-destructive-foreground min-w-[18px] text-center">
-                        {crmUnread > 99 ? "99+" : crmUnread}
-                      </span>
-                    )}
-                  </>
+                <n.icon className="h-4 w-4" />
+                <span className="flex-1">{n.label}</span>
+                {n.to === "/dashboard/crm/inbox" && crmUnread > 0 && (
+                  <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-destructive text-destructive-foreground min-w-[18px] text-center">
+                    {crmUnread > 99 ? "99+" : crmUnread}
+                  </span>
                 )}
               </NavLink>
             ))}
