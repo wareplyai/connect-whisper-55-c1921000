@@ -443,43 +443,36 @@ const Inbox = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  {/* Bot / Human switch toggle (like CRM) */}
-                  {customerMode === "human" ? (
+                  {/* AI / Human pill toggle */}
+                  <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 text-xs">
                     <button
                       onClick={() => setMode("ai")}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-card hover:bg-card-elevated transition-colors"
-                      title="Switch to Bot (AI replies)"
+                      className={`px-3 py-1 rounded-full flex items-center gap-1 transition-colors ${
+                        customerMode === "ai" ? "bg-green-500 text-white" : "text-muted-foreground hover:text-foreground"
+                      }`}
                     >
-                      <User className="h-4 w-4 text-pink-400" />
-                      <span className="text-sm font-medium text-pink-400">Human</span>
-                      <span className="ml-1 inline-flex h-5 w-9 items-center rounded-full bg-muted px-0.5">
-                        <span className="h-4 w-4 rounded-full bg-foreground/70" />
-                      </span>
+                      <Bot className="h-3 w-3" /> AI
                     </button>
-                  ) : (
                     <button
                       onClick={() => setMode("human")}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-green-500/40 bg-green-500/10 hover:bg-green-500/20 transition-colors"
-                      title="Switch to Human (manual replies)"
+                      className={`px-3 py-1 rounded-full flex items-center gap-1 transition-colors ${
+                        customerMode === "human" ? "bg-green-500 text-white" : "text-muted-foreground hover:text-foreground"
+                      }`}
                     >
-                      <Bot className="h-4 w-4 text-green-500" />
-                      <span className="text-sm font-medium text-green-500">Bot</span>
-                      <span className="ml-1 inline-flex h-5 w-9 items-center justify-end rounded-full bg-green-500 px-0.5">
-                        <span className="h-4 w-4 rounded-full bg-white" />
-                      </span>
+                      <User className="h-3 w-3" /> Human
                     </button>
-                  )}
+                  </div>
                   {/* Auto-reply separate button */}
                   <button
-                    onClick={() => setMode(customerMode === "auto_reply" ? "ai" : "auto_reply")}
-                    className={`px-3 py-1.5 rounded-md border text-xs flex items-center gap-1 transition-colors ${
+                    onClick={() => setMode("auto_reply")}
+                    className={`px-3 py-1.5 rounded-full border text-xs flex items-center gap-1 transition-colors ${
                       customerMode === "auto_reply"
                         ? "bg-green-500 text-white border-green-500"
                         : "bg-card text-muted-foreground border-border hover:text-foreground"
                     }`}
                     title="Keyword auto-reply only"
                   >
-                    <Zap className="h-3.5 w-3.5" /> Auto
+                    <Zap className="h-3 w-3" /> Auto
                   </button>
                   <label className="flex items-center gap-2 text-xs">
                     <span className="text-muted-foreground">{isBlocked ? "Blocked" : "Block"}</span>
