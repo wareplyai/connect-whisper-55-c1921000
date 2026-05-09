@@ -3,6 +3,7 @@ import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, L
 import { TrialBanner } from "@/components/TrialBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { useCrmUnreadCount } from "@/hooks/useCrmUnreadCount";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -40,6 +41,7 @@ const resources = [
 const DashboardLayout = () => {
   const { profile, isAdmin, signOut } = useAuth();
   const { access } = useFeatureAccess();
+  const crmUnread = useCrmUnreadCount();
   const visibleNav = nav.filter((n) => {
     if (n.to === "/dashboard/ai-agent") return access.ai_agent;
     if (n.to === "/dashboard/auto-replies") return access.auto_replies;
@@ -76,7 +78,13 @@ const DashboardLayout = () => {
                   }`
                 }
               >
-                <n.icon className="h-4 w-4" /> {n.label}
+                <n.icon className="h-4 w-4" />
+                <span className="flex-1">{n.label}</span>
+                {n.to === "/dashboard/crm/inbox" && crmUnread > 0 && (
+                  <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-destructive text-destructive-foreground min-w-[18px] text-center">
+                    {crmUnread > 99 ? "99+" : crmUnread}
+                  </span>
+                )}
               </NavLink>
             ))}
             {isAdmin && (

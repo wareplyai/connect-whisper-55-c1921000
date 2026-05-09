@@ -539,6 +539,99 @@ export type Database = {
           },
         ]
       }
+      crm_courier_bookings: {
+        Row: {
+          booked_at: string
+          cod_amount: number | null
+          courier: string
+          created_at: string
+          delivered_at: string | null
+          id: string
+          notes: string | null
+          order_id: string | null
+          raw_response: Json | null
+          status: string
+          tracking_id: string | null
+          updated_at: string
+          user_id: string
+          weight: number | null
+        }
+        Insert: {
+          booked_at?: string
+          cod_amount?: number | null
+          courier: string
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          raw_response?: Json | null
+          status?: string
+          tracking_id?: string | null
+          updated_at?: string
+          user_id: string
+          weight?: number | null
+        }
+        Update: {
+          booked_at?: string
+          cod_amount?: number | null
+          courier?: string
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          raw_response?: Json | null
+          status?: string
+          tracking_id?: string | null
+          updated_at?: string
+          user_id?: string
+          weight?: number | null
+        }
+        Relationships: []
+      }
+      crm_follow_ups: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          day_offset: number | null
+          id: string
+          lead_id: string | null
+          message: string | null
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          day_offset?: number | null
+          id?: string
+          lead_id?: string | null
+          message?: string | null
+          scheduled_at: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          day_offset?: number | null
+          id?: string
+          lead_id?: string | null
+          message?: string | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       crm_leads: {
         Row: {
           assigned_agent: string | null
@@ -691,6 +784,51 @@ export type Database = {
           updated_at?: string
           user_id?: string
           woo_order_id?: string | null
+        }
+        Relationships: []
+      }
+      crm_returns: {
+        Row: {
+          created_at: string
+          customer_name: string | null
+          customer_phone: string | null
+          id: string
+          notes: string | null
+          order_id: string | null
+          photo_url: string | null
+          pickup_tracking_id: string | null
+          reason: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          photo_url?: string | null
+          pickup_tracking_id?: string | null
+          reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          photo_url?: string | null
+          pickup_tracking_id?: string | null
+          reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
