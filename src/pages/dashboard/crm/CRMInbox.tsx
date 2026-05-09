@@ -4,10 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Send, Search } from "lucide-react";
+import { Send, Search, Bot, User } from "lucide-react";
+
+type Agent = { id: string; name: string; phone: string; role: string; assign?: boolean };
+type ReplySettings = { mode: string; assigned_agent: string | null };
 
 type IncomingRow = {
   id: string;
