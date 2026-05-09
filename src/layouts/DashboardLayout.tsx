@@ -101,11 +101,6 @@ const DashboardLayout = () => {
                       <n.icon className="h-4 w-4" />
                     </span>
                     <span className="flex-1">{n.label}</span>
-                    {n.to === "/dashboard/crm/inbox" && crmUnread > 0 && (
-                      <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 text-white min-w-[20px] text-center shadow-[0_2px_8px_hsl(340_80%_50%/0.5)]">
-                        {crmUnread > 99 ? "99+" : crmUnread}
-                      </span>
-                    )}
                   </>
                 )}
               </NavLink>
