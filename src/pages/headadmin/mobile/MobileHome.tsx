@@ -110,8 +110,7 @@ export default function MobileHome() {
           Total Revenue
         </p>
         <p className="text-4xl font-bold mt-1 tracking-tight">
-          ৳{Number(stats[0]?.value.replace(/,/g, "") ? 0 : 0).toLocaleString()}
-          <RevenueAmount />
+          ৳{revenue.toLocaleString()}
         </p>
         <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold">
           <TrendingUp className="h-3.5 w-3.5" />
