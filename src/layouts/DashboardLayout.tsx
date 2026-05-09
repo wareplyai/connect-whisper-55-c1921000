@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, MessageCircle, Receipt, MessageSquareText, Bot, ShieldCheck, MessageSquare, Package, ShoppingCart, ShoppingBag, Briefcase, Users, Inbox as InboxIcon, ClipboardList, Truck, RotateCcw, BadgeDollarSign } from "lucide-react";
+import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, MessageCircle, Receipt, MessageSquareText, Bot, ShieldCheck, MessageSquare, Package, ShoppingCart, ShoppingBag, Briefcase, Users, Inbox as InboxIcon, ClipboardList, Truck, RotateCcw, BadgeDollarSign, Sparkles, Megaphone, Settings as SettingsIcon } from "lucide-react";
 import { TrialBanner } from "@/components/TrialBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
@@ -24,6 +24,9 @@ const nav = [
   { to: "/dashboard/crm/courier", label: "CRM Courier", icon: Truck },
   { to: "/dashboard/crm/returns", label: "CRM Returns", icon: RotateCcw },
   { to: "/dashboard/crm/cod", label: "CRM COD", icon: BadgeDollarSign },
+  { to: "/dashboard/crm/nurturing", label: "CRM AI Nurturing", icon: Sparkles },
+  { to: "/dashboard/crm/broadcast", label: "CRM Broadcast", icon: Megaphone },
+  { to: "/dashboard/crm/settings", label: "CRM Settings", icon: SettingsIcon },
   { to: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
   { to: "/dashboard/payments", label: "My Payments", icon: Receipt },
 ];
