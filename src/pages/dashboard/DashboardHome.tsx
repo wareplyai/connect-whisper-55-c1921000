@@ -231,7 +231,7 @@ const DashboardHome = () => {
           title="Incomplete Orders"
           subtitle="WordPress plugin · auto-recovery"
           icon={AlertCircle}
-          tone="warning"
+          tone="success"
           action={<Link to="/dashboard/abandoned-cart">View all</Link>}
         >
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
