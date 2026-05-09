@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 const VAPID_PUBLIC =
-  "BP5E0qoON11Ee4KcHCfO4vklmRpIVdlJxVdS0PNx3pIiR5oBXy1vgDFYizexIX-_9CEJjUJQwwTIPDnc5c3vLtc";
+  "BHF9qJpggWDbLbpCAp3wCGliRljAPL7f4ME1aVAyN48-OTHqHjvcpTAJpyEqypyfZjOe5o0aaBKz8wTEsX_YxcM";
 const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
 const VAPID_SUBJECT =
   Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@wareply.app";
@@ -47,7 +47,12 @@ Deno.serve(async (req) => {
             payload,
           );
         } catch (e: any) {
-          // Clean up dead subscriptions (410 Gone / 404)
+          console.error("push send failed", {
+            id: s.id,
+            statusCode: e?.statusCode,
+            body: e?.body,
+            message: e?.message,
+          });
           if (e?.statusCode === 410 || e?.statusCode === 404) {
             await admin.from("push_subscriptions").delete().eq("id", s.id);
           }
@@ -58,8 +63,15 @@ Deno.serve(async (req) => {
 
     const sent = results.filter((r) => r.status === "fulfilled").length;
     const failed = results.length - sent;
+    const errors = results
+      .filter((r) => r.status === "rejected")
+      .map((r: any) => ({
+        statusCode: r.reason?.statusCode,
+        body: r.reason?.body,
+        message: r.reason?.message,
+      }));
 
-    return new Response(JSON.stringify({ sent, failed, total: results.length }), {
+    return new Response(JSON.stringify({ sent, failed, total: results.length, errors }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
