@@ -1,6 +1,6 @@
 // Authenticated send-from-CRM endpoint. Sends a WhatsApp message via the
 // gateway using the user's most recent connected session and logs it into
-// crm_messages. Called by the CRM Inbox UI.
+// message_logs so it shows up in the same CRM Inbox thread.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -27,18 +27,15 @@ Deno.serve(async (req) => {
     if (!userId) return json({ error: "Unauthorized" }, 401);
 
     const body = await req.json().catch(() => ({}));
-    const { conversation_id, text, session_id } = body || {};
-    if (!conversation_id || !text) return json({ error: "conversation_id and text required" }, 400);
+    const { to_number, text, session_id } = body || {};
+    if (!to_number || !text) return json({ error: "to_number and text required" }, 400);
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { data: conv } = await admin.from("crm_conversations")
-      .select("id, phone, user_id").eq("id", conversation_id).maybeSingle();
-    if (!conv || conv.user_id !== userId) return json({ error: "conversation not found" }, 404);
-
+    // Resolve session
     let sessionId = session_id as string | undefined;
     let apiToken: string | null = null;
     if (sessionId) {
@@ -60,7 +57,7 @@ Deno.serve(async (req) => {
     try {
       const r = await fetch(`${GATEWAY}/api/session/${sessionId}/send`, {
         method: "POST", headers,
-        body: JSON.stringify({ to: conv.phone, message: text }),
+        body: JSON.stringify({ to: to_number, message: text }),
       });
       const data = await r.json().catch(() => ({}));
       gatewayOk = r.ok && data?.success !== false && data?.error == null;
@@ -69,14 +66,16 @@ Deno.serve(async (req) => {
       gatewayError = e?.message || "gateway unreachable";
     }
 
-    // Always log the agent message so the UI reflects intent
-    await admin.from("crm_messages").insert({
-      user_id: userId, conversation_id: conv.id,
-      sender: "agent", message_text: text, message_type: "text",
+    // Always log into message_logs so the inbox thread reflects intent
+    await admin.from("message_logs").insert({
+      user_id: userId,
+      session_id: sessionId,
+      to_number,
+      message_type: "text",
+      payload: { text, source: "manual" },
+      status: gatewayOk ? "sent" : "failed",
+      error_message: gatewayOk ? null : gatewayError,
     });
-    await admin.from("crm_conversations").update({
-      last_message: text, last_message_time: new Date().toISOString(),
-    }).eq("id", conv.id);
 
     if (!gatewayOk) return json({ ok: false, error: gatewayError }, 502);
     return json({ ok: true });

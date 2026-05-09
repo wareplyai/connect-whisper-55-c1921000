@@ -11,19 +11,20 @@ export function useCrmUnreadCount() {
     let active = true;
 
     const load = async () => {
-      const { data } = await supabase
-        .from("crm_conversations")
-        .select("unread_count")
-        .eq("user_id", user.id);
+      const { count: c } = await supabase
+        .from("incoming_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("is_group", false)
+        .eq("reply_sent", false);
       if (!active) return;
-      const total = (data || []).reduce((s: number, r: any) => s + (r.unread_count || 0), 0);
-      setCount(total);
+      setCount(c || 0);
     };
     load();
 
     const channel = supabase
       .channel(`crm_unread_${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "crm_conversations", filter: `user_id=eq.${user.id}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "incoming_messages", filter: `user_id=eq.${user.id}` }, load)
       .subscribe();
 
     return () => { active = false; supabase.removeChannel(channel); };
