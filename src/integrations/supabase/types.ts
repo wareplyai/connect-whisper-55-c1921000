@@ -1600,6 +1600,10 @@ export type Database = {
       }
       is_headadmin: { Args: { _uid: string }; Returns: boolean }
       is_internal_ai_reply_url: { Args: { _url: string }; Returns: boolean }
+      is_session_phone_available: {
+        Args: { _exclude_session_id?: string; _phone: string }
+        Returns: boolean
+      }
       latest_session_for_user: { Args: { _user_id: string }; Returns: string }
       log_incoming_message_with_match: {
         Args: {
@@ -1669,6 +1673,7 @@ export type Database = {
         Args: { _keywords: string[] }
         Returns: string[]
       }
+      normalize_whatsapp_phone: { Args: { _phone: string }; Returns: string }
       start_user_trial: {
         Args: never
         Returns: {

@@ -79,7 +79,8 @@ const CreateSession = () => {
       toast.error(v.message || "The phone number field must be a valid number.");
       return;
     }
-    const fullPhone = `${country.code}${v.digits}`;
+    // Store normalized digits only (no '+'), so +880... and 880... are treated identically.
+    const fullPhone = `${country.code}${v.digits}`.replace(/\D/g, "");
 
     // Webhook validation
     if (form.enable_webhook) {
@@ -87,7 +88,7 @@ const CreateSession = () => {
       if (!/^https:\/\//i.test(form.webhook_url.trim())) { setLoading(false); toast.error("Webhook URL must start with https://"); return; }
     }
 
-    // Duplicate phone check — own sessions (any status)
+    // Duplicate phone check — own sessions (any status). Compares on normalized digits.
     const { data: ownExisting } = await supabase
       .from("sessions")
       .select("id, session_name")
@@ -100,14 +101,18 @@ const CreateSession = () => {
       return;
     }
 
-    // Platform-wide check — across all users / accounts (any status)
-    const { count: anyCount } = await supabase
-      .from("sessions")
-      .select("id", { count: "exact", head: true })
-      .eq("phone_number", fullPhone);
-    if ((anyCount ?? 0) > 0) {
+    // Platform-wide check — across ALL users / accounts (any status), via SECURITY DEFINER RPC
+    // so RLS does not hide other accounts' rows.
+    const { data: available, error: availErr } = await supabase
+      .rpc("is_session_phone_available", { _phone: fullPhone, _exclude_session_id: null });
+    if (availErr) {
       setLoading(false);
-      toast.error("This WhatsApp number is already linked to another account on this platform. One number can only be used in one session at a time.");
+      toast.error(friendlyError(availErr));
+      return;
+    }
+    if (available === false) {
+      setLoading(false);
+      toast.error("This WhatsApp number is already linked to another account on this platform. One number can only be used in one session at a time. Ask the owner to delete their session first.");
       return;
     }
 
