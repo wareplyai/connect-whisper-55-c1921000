@@ -99,6 +99,11 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly, currency = "USD
       toast.error("Transaction ID and sender number are required");
       return;
     }
+    const digits = senderNumber.replace(/\D/g, "");
+    if (digits.length !== 11) {
+      toast.error("Invalid number! Please enter a valid 11-digit phone number (e.g. 01XXXXXXXXX)");
+      return;
+    }
     setSubmitting(true);
     try {
       const { data, error } = await supabase.from("payment_transactions").insert({
