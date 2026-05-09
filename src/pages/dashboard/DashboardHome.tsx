@@ -159,10 +159,10 @@ const DashboardHome = () => {
               <Sparkles className="h-3 w-3" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
                 {greeting}{firstName ? `, ${firstName}` : ""} <span className="text-gradient">👋</span>
               </h1>
-              <p className="text-muted-foreground text-sm mt-1.5 max-w-xl">
+              <p className="text-white/70 text-sm mt-1.5 max-w-xl">
                 Your AI CRM is monitoring conversations, orders and customer signals in real-time.
               </p>
             </div>
