@@ -4,7 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { CreditCard, CheckCircle2, MessageSquare, Wifi, Package, ShoppingCart, TrendingUp, Clock, AlertCircle, XCircle } from "lucide-react";
+import {
+  CreditCard, CheckCircle2, MessageSquare, Wifi, Package, ShoppingCart,
+  TrendingUp, Clock, AlertCircle, Sparkles, Bot, Activity, ArrowUpRight, Zap,
+} from "lucide-react";
 import { CartesianGrid, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
 
@@ -133,187 +136,345 @@ const DashboardHome = () => {
   const hasActivePlan = (planInfo?.status === "active" || planInfo?.status === "trial_active") && currentPlan !== "free";
   const successRate = stats.total > 0 ? Math.round((stats.sent / stats.total) * 100) : 0;
 
+  const firstName = profile?.full_name?.split(" ")[0] || "";
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}</h1>
-        <p className="text-muted-foreground text-sm">Here's what's happening with your sessions today.</p>
+      {/* Premium AI hero header */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-card-elevated p-6 md:p-8">
+        <div className="absolute inset-0 bg-hero pointer-events-none" />
+        <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/10 backdrop-blur-sm text-xs font-medium text-primary">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+              </span>
+              AI Engine Online
+              <Sparkles className="h-3 w-3" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                {greeting}{firstName ? `, ${firstName}` : ""} <span className="text-gradient">👋</span>
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1.5 max-w-xl">
+                Your AI CRM is monitoring conversations, orders and customer signals in real-time.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" className="bg-primary hover:bg-primary-hover text-primary-foreground shadow-[0_0_30px_-8px_hsl(var(--primary))]">
+              <Link to="/dashboard/sessions" className="flex items-center gap-1.5">
+                <Wifi className="h-4 w-4" /> Sessions
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="border-primary/30 hover:bg-primary/10">
+              <Link to="/dashboard/ai-agent" className="flex items-center gap-1.5">
+                <Bot className="h-4 w-4 text-primary" /> AI Agent
+              </Link>
+            </Button>
+          </div>
+        </div>
       </div>
 
       {!hasActivePlan && <NoActiveSubscriptionBanner />}
 
+      {/* Hero KPI cards */}
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">Total Messages (7d)</span>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <p className="text-2xl font-bold">{stats.total}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{stats.sent} sent · {stats.failed} failed · {stats.pending} pending</p>
-        </div>
-
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">Success Rate</span>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <p className="text-2xl font-bold">{successRate}%</p>
-          <div className="mt-2 h-2 w-full rounded-full bg-muted overflow-hidden">
-            <div className="h-full bg-primary" style={{ width: `${successRate}%` }} />
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">Sessions Connected</span>
-            <Wifi className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <p className="text-2xl font-bold">{connectedSessions}<span className="text-sm text-muted-foreground font-normal"> / {sessionCount}</span></p>
-          <Button asChild size="sm" variant="outline" className="mt-3 w-full">
-            <Link to="/dashboard/sessions">Manage</Link>
-          </Button>
-        </div>
-
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">Subscription</span>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <p className="text-2xl font-bold capitalize">{currentPlan}</p>
-          <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full ${hasActivePlan ? "bg-primary/10 text-primary" : "bg-warning/10 text-warning"}`}>
-            {hasActivePlan ? "Active plan" : "No active plan"}
-          </span>
-        </div>
+        <KpiCard
+          label="Messages (7d)"
+          value={stats.total.toLocaleString()}
+          icon={MessageSquare}
+          accent="primary"
+          sub={`${stats.sent} sent · ${stats.failed} failed · ${stats.pending} pending`}
+        />
+        <KpiCard
+          label="AI Success Rate"
+          value={`${successRate}%`}
+          icon={Sparkles}
+          accent="primary"
+          progress={successRate}
+        />
+        <KpiCard
+          label="Sessions Connected"
+          value={
+            <>
+              {connectedSessions}
+              <span className="text-base text-muted-foreground font-medium"> / {sessionCount}</span>
+            </>
+          }
+          icon={Wifi}
+          accent="info"
+          sub={connectedSessions > 0 ? "Live & syncing" : "No active sessions"}
+        />
+        <KpiCard
+          label="Subscription"
+          value={<span className="capitalize">{currentPlan}</span>}
+          icon={CreditCard}
+          accent={hasActivePlan ? "primary" : "warning"}
+          sub={hasActivePlan ? "Active plan" : "No active plan"}
+          badge
+        />
       </div>
 
       {access.abandoned_cart && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold flex items-center gap-2 text-orange-600">
-              <AlertCircle className="h-4 w-4" /> Incomplete Orders <span className="text-xs text-muted-foreground font-normal">(WordPress plugin)</span>
-            </h3>
-            <Button asChild size="sm" variant="outline" className="border-orange-400 text-orange-600 hover:bg-orange-500 hover:text-white">
-              <Link to="/dashboard/abandoned-cart">View all</Link>
-            </Button>
+        <SectionWrap
+          title="Incomplete Orders"
+          subtitle="WordPress plugin · auto-recovery"
+          icon={AlertCircle}
+          tone="warning"
+          action={<Link to="/dashboard/abandoned-cart">View all</Link>}
+        >
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <MiniStat label="Total received" value={aStats.received} icon={MessageSquare} tone="warning" />
+            <MiniStat label="Incomplete" value={aStats.incomplete} icon={AlertCircle} tone="warning" highlight />
+            <MiniStat label="Completed" value={aStats.completed} icon={CheckCircle2} tone="success" highlight />
+            <MiniStat label="SMS sent" value={aStats.sent} icon={Zap} tone="warning" />
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
-              <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Total received</span><MessageSquare className="h-4 w-4 text-orange-500" /></div>
-              <p className="text-2xl font-bold">{aStats.received}</p>
-            </div>
-            <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
-              <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Incomplete</span><AlertCircle className="h-4 w-4 text-orange-500" /></div>
-              <p className="text-2xl font-bold text-orange-600">{aStats.incomplete}</p>
-            </div>
-            <div className="rounded-xl border border-green-200 dark:border-green-900/40 bg-card p-5">
-              <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Completed</span><CheckCircle2 className="h-4 w-4 text-green-500" /></div>
-              <p className="text-2xl font-bold text-green-600">{aStats.completed}</p>
-            </div>
-            <div className="rounded-xl border border-orange-200 dark:border-orange-900/40 bg-card p-5">
-              <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">SMS sent</span><CheckCircle2 className="h-4 w-4 text-orange-500" /></div>
-              <p className="text-2xl font-bold text-orange-600">{aStats.sent}</p>
-            </div>
-          </div>
-        </div>
+        </SectionWrap>
       )}
 
-      {/* WooCommerce Stats */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> WooCommerce <span className="text-xs text-muted-foreground font-normal">(live)</span></h3>
-          <Button asChild size="sm" variant="outline"><Link to="/dashboard/woocommerce">Manage</Link></Button>
-        </div>
+      {/* WooCommerce */}
+      <SectionWrap
+        title="WooCommerce"
+        subtitle="Live commerce intelligence"
+        icon={ShoppingCart}
+        tone="primary"
+        action={<Link to="/dashboard/woocommerce">Manage</Link>}
+      >
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-muted-foreground">Total Products</span>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="text-2xl font-bold">{wooStats.totalProducts}</p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-muted-foreground">Total Orders</span>
-              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="text-2xl font-bold">{wooStats.totalOrders}</p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-muted-foreground">Today's Orders</span>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="text-2xl font-bold">{wooStats.todayOrders}</p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-muted-foreground">Today's Revenue</span>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="text-2xl font-bold">{wooStats.todayRevenue.toFixed(2)}</p>
-          </div>
+          <MiniStat label="Total Products" value={wooStats.totalProducts} icon={Package} tone="primary" />
+          <MiniStat label="Total Orders" value={wooStats.totalOrders} icon={ShoppingCart} tone="primary" />
+          <MiniStat label="Today's Orders" value={wooStats.todayOrders} icon={Clock} tone="info" />
+          <MiniStat label="Today's Revenue" value={wooStats.todayRevenue.toFixed(2)} icon={TrendingUp} tone="success" highlight />
         </div>
-      </div>
+      </SectionWrap>
 
-      <div className="grid lg:grid-cols-2 gap-4">
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="font-semibold mb-4">Messages by Status (last 7 days)</h3>
+      {/* Chart + Activity */}
+      <div className="grid lg:grid-cols-5 gap-4">
+        <div className="lg:col-span-3 relative overflow-hidden rounded-2xl border border-border bg-card p-5">
+          <div className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+          <div className="flex items-center justify-between mb-4 relative">
+            <div>
+              <h3 className="font-semibold flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" /> Message Throughput
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Last 7 days · grouped by status</p>
+            </div>
+            <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">Live</span>
+          </div>
           {stats.total === 0 ? (
             <div className="h-56 grid place-items-center text-sm text-muted-foreground">0 messages in the last 7 days</div>
           ) : (
-            <ResponsiveContainer width="100%" height={224}>
+            <ResponsiveContainer width="100%" height={260}>
               <BarChart data={chart}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} allowDecimals={false} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="sent" stackId="a" fill="hsl(var(--primary))" name="Sent" />
-                <Bar dataKey="pending" stackId="a" fill="hsl(var(--muted-foreground))" name="Pending" />
-                <Bar dataKey="failed" stackId="a" fill="hsl(var(--destructive))" name="Failed" />
+                <defs>
+                  <linearGradient id="grad-sent" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.95} />
+                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.55} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} allowDecimals={false} tickLine={false} axisLine={false} />
+                <Tooltip
+                  cursor={{ fill: "hsl(var(--primary) / 0.06)" }}
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, boxShadow: "0 10px 30px -10px hsl(var(--primary) / 0.3)" }}
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
+                <Bar dataKey="sent" stackId="a" fill="url(#grad-sent)" name="Sent" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="pending" stackId="a" fill="hsl(var(--muted-foreground) / 0.5)" name="Pending" />
+                <Bar dataKey="failed" stackId="a" fill="hsl(var(--destructive))" name="Failed" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
-      </div>
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="font-semibold mb-4">Recent Activity</h3>
+        </div>
+
+        <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Bot className="h-4 w-4 text-primary" /> AI Activity Stream
+            </h3>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Realtime</span>
+          </div>
           {recentLogs.length === 0 ? (
-            <div className="h-56 grid place-items-center text-sm text-muted-foreground">No recent activity yet</div>
+            <div className="h-56 grid place-items-center text-sm text-muted-foreground text-center px-4">
+              <div>
+                <Sparkles className="h-6 w-6 text-primary/40 mx-auto mb-2" />
+                Waiting for the first AI conversation…
+              </div>
+            </div>
           ) : (
-            <ul className="space-y-2 text-sm">
-              {recentLogs.map((l) => (
-                <li key={l.id} className="flex items-center justify-between gap-2 border-b border-border pb-2 last:border-0">
-                  <span className="truncate text-muted-foreground flex-1">→ {l.to_number}</span>
-                  <span className="text-xs text-muted-foreground">{new Date(l.created_at).toLocaleTimeString()}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${l.status === "failed" ? "bg-destructive/10 text-destructive" : l.status === "sent" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>{l.status}</span>
-                </li>
-              ))}
+            <ul className="space-y-2.5 text-sm">
+              {recentLogs.map((l) => {
+                const tone = l.status === "failed"
+                  ? "bg-destructive/10 text-destructive border-destructive/20"
+                  : l.status === "sent"
+                  ? "bg-primary/10 text-primary border-primary/20"
+                  : "bg-muted text-muted-foreground border-border";
+                return (
+                  <li key={l.id} className="group flex items-center gap-3 rounded-lg p-2.5 -mx-1 hover:bg-card-elevated transition-colors">
+                    <div className="grid place-items-center h-8 w-8 rounded-lg bg-primary/10 text-primary shrink-0">
+                      <ArrowUpRight className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate font-medium text-foreground/90">{l.to_number}</p>
+                      <p className="text-[11px] text-muted-foreground">{new Date(l.created_at).toLocaleTimeString()}</p>
+                    </div>
+                    <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full border ${tone}`}>
+                      {l.status}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
       </div>
 
       {failed.length > 0 && (
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="font-semibold mb-4">Last 5 Failed Messages</h3>
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase text-muted-foreground">
-              <tr><th className="text-left py-2">To</th><th className="text-left">Error</th><th className="text-right">When</th></tr>
-            </thead>
-            <tbody>
-              {failed.map((f) => (
-                <tr key={f.id} className="border-t border-border">
-                  <td className="py-2">{f.to_number}</td>
-                  <td className="text-destructive truncate max-w-[260px]">{f.error_message || "—"}</td>
-                  <td className="text-right text-muted-foreground">{new Date(f.created_at).toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="rounded-2xl border border-destructive/20 bg-card p-5">
+          <h3 className="font-semibold mb-4 flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-4 w-4" /> Last 5 Failed Messages
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase text-muted-foreground">
+                <tr><th className="text-left py-2">To</th><th className="text-left">Error</th><th className="text-right">When</th></tr>
+              </thead>
+              <tbody>
+                {failed.map((f) => (
+                  <tr key={f.id} className="border-t border-border">
+                    <td className="py-2.5 font-medium">{f.to_number}</td>
+                    <td className="text-destructive truncate max-w-[260px]">{f.error_message || "—"}</td>
+                    <td className="text-right text-muted-foreground">{new Date(f.created_at).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
   );
 };
+
+/* ---------- Premium UI primitives ---------- */
+
+type Tone = "primary" | "warning" | "info" | "success";
+
+const toneStyles: Record<Tone, { ring: string; text: string; bg: string }> = {
+  primary: { ring: "ring-primary/20", text: "text-primary", bg: "bg-primary/10" },
+  warning: { ring: "ring-warning/20", text: "text-warning", bg: "bg-warning/10" },
+  info:    { ring: "ring-info/20",    text: "text-info",    bg: "bg-info/10" },
+  success: { ring: "ring-success/20", text: "text-success", bg: "bg-success/10" },
+};
+
+function KpiCard({
+  label, value, icon: Icon, accent = "primary", sub, progress, badge,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon: any;
+  accent?: Tone;
+  sub?: React.ReactNode;
+  progress?: number;
+  badge?: boolean;
+}) {
+  const t = toneStyles[accent];
+  return (
+    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:border-primary/40 hover:shadow-[0_10px_40px_-15px_hsl(var(--primary)/0.4)]">
+      <div className={`absolute -top-10 -right-10 h-28 w-28 rounded-full ${t.bg} blur-2xl opacity-70 group-hover:opacity-100 transition-opacity`} />
+      <div className="relative flex items-center justify-between mb-3">
+        <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</span>
+        <div className={`grid place-items-center h-8 w-8 rounded-lg ${t.bg} ${t.text} ring-1 ${t.ring}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+      <p className="relative text-2xl md:text-[26px] font-bold tracking-tight">{value}</p>
+      {progress != null && (
+        <div className="relative mt-3 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all"
+            style={{ width: `${Math.min(progress, 100)}%` }}
+          />
+        </div>
+      )}
+      {sub && (
+        badge ? (
+          <span className={`relative mt-2 inline-block text-[11px] px-2 py-0.5 rounded-full ${t.bg} ${t.text} ring-1 ${t.ring}`}>
+            {sub}
+          </span>
+        ) : (
+          <p className="relative mt-1.5 text-xs text-muted-foreground">{sub}</p>
+        )
+      )}
+    </div>
+  );
+}
+
+function SectionWrap({
+  title, subtitle, icon: Icon, tone = "primary", action, children,
+}: {
+  title: string;
+  subtitle?: string;
+  icon: any;
+  tone?: Tone;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const t = toneStyles[tone];
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className={`grid place-items-center h-9 w-9 rounded-xl ${t.bg} ${t.text} ring-1 ${t.ring}`}>
+            <Icon className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="font-semibold leading-tight">{title}</h3>
+            {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
+          </div>
+        </div>
+        {action && (
+          <Button asChild size="sm" variant="outline" className="border-border hover:border-primary/40 hover:bg-primary/5">
+            {action}
+          </Button>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function MiniStat({
+  label, value, icon: Icon, tone = "primary", highlight,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon: any;
+  tone?: Tone;
+  highlight?: boolean;
+}) {
+  const t = toneStyles[tone];
+  return (
+    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:border-primary/40">
+      <div className={`absolute -top-8 -right-8 h-24 w-24 rounded-full ${t.bg} blur-2xl opacity-60`} />
+      <div className="relative flex items-center justify-between mb-3">
+        <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</span>
+        <div className={`grid place-items-center h-8 w-8 rounded-lg ${t.bg} ${t.text} ring-1 ${t.ring}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+      <p className={`relative text-2xl font-bold tracking-tight ${highlight ? t.text : ""}`}>{value}</p>
+    </div>
+  );
+}
 
 export default DashboardHome;
