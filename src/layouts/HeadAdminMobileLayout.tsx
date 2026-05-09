@@ -20,7 +20,7 @@ export default function HeadAdminMobileLayout() {
 
   return (
     <div
-      className="min-h-screen text-foreground relative overflow-x-hidden"
+      className="min-h-screen text-white relative overflow-x-hidden"
       style={{
         background:
           "radial-gradient(120% 80% at 50% -10%, hsl(150 60% 12%) 0%, hsl(160 30% 6%) 45%, hsl(0 0% 4%) 100%)",
@@ -48,7 +48,7 @@ export default function HeadAdminMobileLayout() {
               await signOut();
               nav("/headadmin/login");
             }}
-            className="h-9 w-9 grid place-items-center rounded-xl bg-white/5 border border-white/10 text-muted-foreground hover:text-foreground"
+            className="h-9 w-9 grid place-items-center rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white"
             aria-label="Sign out"
           >
             <LogOut className="h-4 w-4" />
@@ -75,7 +75,7 @@ export default function HeadAdminMobileLayout() {
                 `flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-2xl transition-all ${
                   isActive
                     ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/40"
-                    : "text-muted-foreground"
+                    : "text-white/60"
                 }`
               }
             >
