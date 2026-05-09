@@ -479,6 +479,45 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_bot_state: {
+        Row: {
+          created_at: string
+          data: Json
+          flow: string
+          id: string
+          order_id: string | null
+          phone: string
+          return_id: string | null
+          step: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          flow: string
+          id?: string
+          order_id?: string | null
+          phone: string
+          return_id?: string | null
+          step: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          flow?: string
+          id?: string
+          order_id?: string | null
+          phone?: string
+          return_id?: string | null
+          step?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       crm_conversations: {
         Row: {
           assigned_agent: string | null
