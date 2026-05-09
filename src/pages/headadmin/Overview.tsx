@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Users, Smartphone, MessageSquare, DollarSign, UserPlus, AlertTriangle,
   Zap, Send, ArrowUpRight, ArrowDownRight, MoreHorizontal, Activity,
-  AlertCircle, CheckCircle2, XCircle, Clock, Bot, MessageSquareText, ShoppingBag,
+  AlertCircle, CheckCircle2, XCircle, Clock, Bot, MessageSquareText, ShoppingBag, ShoppingBasket,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -78,12 +78,13 @@ export default function HeadAdminOverview() {
       supabase.from("profiles").select("id", { count: "exact", head: true }),
     ]);
     const total = totalUsers || 0;
-    const gMap: Record<string, boolean> = { ai_agent: true, auto_replies: true, abandoned_cart: true };
+    const gMap: Record<string, boolean> = { ai_agent: true, auto_replies: true, abandoned_cart: true, ecommerce: true };
     (globals || []).forEach((g: any) => { gMap[g.feature] = !!g.show_to_users; });
     const features = [
       { key: "ai_agent", label: "AI Agent", icon: Bot },
       { key: "auto_replies", label: "Auto-Replies", icon: MessageSquareText },
       { key: "abandoned_cart", label: "Incomplete (Abandoned)", icon: ShoppingBag },
+      { key: "ecommerce", label: "E-Commerce (CRM Suite)", icon: ShoppingBasket },
     ];
     const result = features.map((f) => {
       const ovs = (overrides || []).filter((o: any) => o.feature === f.key);
