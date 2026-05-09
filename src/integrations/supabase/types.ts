@@ -1598,6 +1598,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_headadmin: { Args: { _uid: string }; Returns: boolean }
       is_internal_ai_reply_url: { Args: { _url: string }; Returns: boolean }
       latest_session_for_user: { Args: { _user_id: string }; Returns: string }
       log_incoming_message_with_match: {
