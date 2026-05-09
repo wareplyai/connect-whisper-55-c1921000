@@ -255,7 +255,7 @@ const DashboardHome = () => {
           <MiniStat label="Total Products" value={wooStats.totalProducts} icon={Package} tone="primary" />
           <MiniStat label="Total Orders" value={wooStats.totalOrders} icon={ShoppingCart} tone="primary" />
           <MiniStat label="Today's Orders" value={wooStats.todayOrders} icon={Clock} tone="info" />
-          <MiniStat label="Today's Revenue" value={wooStats.todayRevenue.toFixed(2)} icon={TrendingUp} tone="success" highlight />
+          <MiniStat label="Today's Revenue" value={wooStats.todayRevenue.toFixed(2)} icon={TrendingUp} tone="success" />
         </div>
       </SectionWrap>
 
