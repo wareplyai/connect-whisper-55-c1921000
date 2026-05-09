@@ -115,6 +115,10 @@ const App = () => (
                 <Route path="products" element={<Products />} />
                 <Route path="woocommerce" element={<WooCommerce />} />
                 <Route path="abandoned-cart" element={<FeatureGuard feature="abandoned_cart"><AbandonedCart /></FeatureGuard>} />
+                <Route path="crm" element={<CRMDashboard />} />
+                <Route path="crm/orders" element={<CRMOrders />} />
+                <Route path="crm/inbox" element={<CRMInbox />} />
+                <Route path="crm/leads" element={<CRMLeads />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>
