@@ -30,6 +30,15 @@ export default function CRMCod() {
 
   useEffect(() => { load(); }, [user]);
 
+  // Realtime: refresh when bot updates an order based on YES/NO reply
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase.channel(`crm_orders_cod_${user.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "crm_orders", filter: `user_id=eq.${user.id}` }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user]);
+
   const pending = orders.filter((o) => !o.cod_confirmed);
 
   const toggle = (id: string) => {
@@ -44,10 +53,17 @@ export default function CRMCod() {
 
   const sendBulk = async () => {
     if (selected.size === 0) { toast.error("Select orders first"); return; }
-    const list = orders.filter((o) => selected.has(o.id));
-    list.forEach((o) => console.log("[stub] WhatsApp COD confirmation →", o.customer_phone, o.woo_order_id));
-    toast.success(`Confirmation sent to ${list.length} customer(s)`);
+    toast.message(`Sending to ${selected.size} customer(s)...`);
+    const { data, error } = await supabase.functions.invoke("crm-cod-send", {
+      body: { order_ids: Array.from(selected) },
+    });
+    if (error || data?.error) {
+      toast.error(error?.message || data?.error || "Send failed");
+      return;
+    }
+    toast.success(`Sent ${data.sent}/${data.total} • ${data.stub} stubbed`);
     setSelected(new Set());
+    load();
   };
 
   const setStatus = async (o: any, confirmed: boolean) => {
