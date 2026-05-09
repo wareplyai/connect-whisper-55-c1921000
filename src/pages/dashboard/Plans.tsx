@@ -107,7 +107,9 @@ const Plans = () => {
           {plans.map((p) => {
             const popular = p.plan_name === "pro";
             const isCurrent = currentPlan === p.plan_name;
-            const price = yearly ? p.price_yearly : p.price_monthly;
+            const monthly = currency === "USD" ? p.price_monthly : (p.price_monthly_bdt || Math.round(p.price_monthly * USD_TO_BDT));
+            const yearlyTotal = currency === "USD" ? p.price_yearly : (p.price_yearly_bdt || Math.round(p.price_yearly * USD_TO_BDT));
+            const price = yearly ? yearlyTotal : monthly;
             const perSession = price > 0 && p.max_sessions > 0 ? (price / p.max_sessions) : 0;
             return (
               <div key={p.id} className={`relative rounded-xl border-2 bg-[#111111] p-5 flex flex-col transition hover:shadow-lg ${isCurrent ? "border-white" : popular ? "border-green-500" : "border-border hover:border-border/80"}`}>
@@ -173,7 +175,7 @@ const Plans = () => {
         </Accordion>
       </div>
 
-      <PaymentModal open={!!selected} onOpenChange={(v) => !v && setSelected(null)} plan={selected} yearly={yearly} />
+      <PaymentModal open={!!selected} onOpenChange={(v) => !v && setSelected(null)} plan={selected} yearly={yearly} currency={currency} />
     </div>
   );
 };
