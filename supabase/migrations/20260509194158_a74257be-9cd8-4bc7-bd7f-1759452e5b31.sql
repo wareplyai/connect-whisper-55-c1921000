@@ -1,0 +1,1 @@
+ALTER TABLE public.business_profiles ADD COLUMN IF NOT EXISTS max_tokens INTEGER NOT NULL DEFAULT 500;
