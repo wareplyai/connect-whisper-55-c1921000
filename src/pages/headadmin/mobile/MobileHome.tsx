@@ -28,6 +28,7 @@ function timeAgo(iso: string) {
 export default function MobileHome() {
   const stats = useQuickStats();
   const [activity, setActivity] = useState<Activity[]>([]);
+  const [revenue, setRevenue] = useState(0);
   const seenRef = useRef<Set<string>>(new Set());
   const initRef = useRef(false);
 
