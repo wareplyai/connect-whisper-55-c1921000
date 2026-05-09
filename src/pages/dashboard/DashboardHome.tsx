@@ -206,7 +206,7 @@ const DashboardHome = () => {
           value={
             <>
               {connectedSessions}
-              <span className="text-base text-muted-foreground font-medium"> / {sessionCount}</span>
+              <span className="text-base text-[hsl(var(--muted-foreground))] font-medium"> / {sessionCount}</span>
             </>
           }
           icon={Wifi}
@@ -438,13 +438,13 @@ function SectionWrap({
           <div className={`grid place-items-center h-9 w-9 rounded-xl ${t.bg} ${t.text} ring-1 ${t.ring}`}>
             <Icon className="h-4 w-4" />
           </div>
-          <div>
-            <h3 className="font-semibold leading-tight">{title}</h3>
-            {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
+        <div>
+          <h3 className="font-semibold leading-tight text-[hsl(var(--crm-shell-foreground))]">{title}</h3>
+          {subtitle && <p className="text-[11px] text-[hsl(var(--crm-shell-muted))]">{subtitle}</p>}
           </div>
         </div>
         {action && (
-          <Button asChild size="sm" variant="outline" className="border-border hover:border-primary/40 hover:bg-primary/5">
+        <Button asChild size="sm" variant="outline" className="border-[hsl(var(--crm-shell-muted)/0.35)] text-[hsl(var(--crm-shell-foreground))] hover:border-primary/40 hover:bg-primary/10">
             {action}
           </Button>
         )}
