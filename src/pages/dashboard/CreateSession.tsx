@@ -135,7 +135,7 @@ const CreateSession = () => {
     if (error) {
       setLoading(false);
       if ((error as any).code === "23505" || /unique/i.test(error.message)) {
-        return toast.error("The phone number has already been taken. Disconnect the existing session first.");
+        return toast.error("This WhatsApp number is already linked to another session. Delete the existing session first before reusing this number.");
       }
       return toast.error(friendlyError(error));
     }
