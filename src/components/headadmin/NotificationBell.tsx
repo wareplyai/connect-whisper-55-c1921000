@@ -176,7 +176,7 @@ export function NotificationBell() {
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-[360px] p-0 bg-card border-border"
+        className="w-[360px] p-0 bg-card border border-border shadow-xl z-[100]"
         sideOffset={8}
       >
         <div className="flex items-center justify-between px-4 h-11 border-b border-border">
