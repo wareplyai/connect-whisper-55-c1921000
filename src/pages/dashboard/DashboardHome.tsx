@@ -236,8 +236,8 @@ const DashboardHome = () => {
         >
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             <MiniStat label="Total received" value={aStats.received} icon={MessageSquare} tone="warning" />
-            <MiniStat label="Incomplete" value={aStats.incomplete} icon={AlertCircle} tone="warning" highlight />
-            <MiniStat label="Completed" value={aStats.completed} icon={CheckCircle2} tone="success" highlight />
+            <MiniStat label="Incomplete" value={aStats.incomplete} icon={AlertCircle} tone="warning" />
+            <MiniStat label="Completed" value={aStats.completed} icon={CheckCircle2} tone="success" />
             <MiniStat label="SMS sent" value={aStats.sent} icon={Zap} tone="warning" />
           </div>
         </SectionWrap>
