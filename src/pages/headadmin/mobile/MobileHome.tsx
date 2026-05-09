@@ -33,7 +33,7 @@ export default function MobileHome() {
   const initRef = useRef(false);
 
   const load = async () => {
-    const [{ data: regs }, { data: pays }] = await Promise.all([
+    const [{ data: regs }, { data: pays }, { data: salesData }] = await Promise.all([
       supabase
         .from("profiles")
         .select("id,full_name,email,created_at")
@@ -44,7 +44,9 @@ export default function MobileHome() {
         .select("id,amount,status,created_at,user_id,profiles:user_id(full_name,email)")
         .order("created_at", { ascending: false })
         .limit(15),
+      supabase.from("sales").select("amount"),
     ]);
+    setRevenue((salesData || []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0));
 
     const merged: Activity[] = [
       ...((regs || []).map((r: any) => ({
