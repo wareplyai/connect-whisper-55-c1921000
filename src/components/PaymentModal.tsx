@@ -212,7 +212,16 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly, currency = "USD
               </div>
               <div className="space-y-2">
                 <Label>Your Payment Number *</Label>
-                <Input value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} placeholder="Number you paid from (01XXXXXXXXX)" />
+                <Input
+                  value={senderNumber}
+                  onChange={(e) => setSenderNumber(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                  placeholder="Number you paid from (01XXXXXXXXX)"
+                  inputMode="numeric"
+                  maxLength={11}
+                />
+                {senderNumber.length > 0 && senderNumber.length !== 11 && (
+                  <p className="text-xs text-red-500">Invalid number! Must be exactly 11 digits ({senderNumber.length}/11)</p>
+                )}
               </div>
               <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/30 p-3 text-xs">
                 ⚡ Auto-verification: If your bank SMS reaches our system, your plan will activate within seconds. Otherwise it will activate as soon as the SMS arrives (usually a few minutes).
