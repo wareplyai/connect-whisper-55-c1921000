@@ -108,6 +108,8 @@
   ::-webkit-scrollbar-thumb:hover { background: hsl(0 0% 25%); }
   /* Dashboard CRM scope: always light text on dark green cards */
   .crm-dash, .crm-dash * {
+    --crm-shell-foreground: 150 45% 9%;
+    --crm-shell-muted: 150 18% 34%;
     --foreground: 210 25% 96%;
     --muted-foreground: 142 25% 70%;
     --card: 150 45% 9%;
@@ -116,7 +118,10 @@
     --popover: 150 45% 9%;
     --popover-foreground: 210 25% 96%;
   }
-  .crm-dash { color: hsl(210 25% 96%); }
+  .dark .crm-dash, .dark .crm-dash * {
+    --crm-shell-foreground: 210 25% 96%;
+    --crm-shell-muted: 142 25% 70%;
+  }
 }
 
 @layer utilities {

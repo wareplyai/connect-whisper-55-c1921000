@@ -174,7 +174,7 @@ const DashboardHome = () => {
                 <Wifi className="h-4 w-4" /> Sessions
               </Link>
             </Button>
-            <Button asChild size="sm" variant="outline" className="border-primary/30 hover:bg-primary/10">
+            <Button asChild size="sm" variant="outline" className="border-primary/30 bg-card/70 text-foreground hover:bg-primary/15 hover:text-foreground">
               <Link to="/dashboard/ai-agent" className="flex items-center gap-1.5">
                 <Bot className="h-4 w-4 text-primary" /> AI Agent
               </Link>
@@ -206,7 +206,7 @@ const DashboardHome = () => {
           value={
             <>
               {connectedSessions}
-              <span className="text-base text-muted-foreground font-medium"> / {sessionCount}</span>
+              <span className="text-base text-[hsl(var(--muted-foreground))] font-medium"> / {sessionCount}</span>
             </>
           }
           icon={Wifi}
@@ -258,7 +258,7 @@ const DashboardHome = () => {
 
       {/* Chart + Activity */}
       <div className="grid lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-3 relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] p-5 shadow-[0_15px_50px_-20px_hsl(142_70%_30%/0.5)]">
+        <div className="lg:col-span-3 relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] p-5 text-foreground shadow-[0_15px_50px_-20px_hsl(142_70%_30%/0.5)]">
           <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-[hsl(142_90%_50%/0.18)] blur-3xl pointer-events-none" />
           <div className="flex items-center justify-between mb-4 relative">
             <div>
@@ -296,7 +296,7 @@ const DashboardHome = () => {
           )}
         </div>
 
-        <div className="lg:col-span-2 relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] p-5 shadow-[0_15px_50px_-20px_hsl(142_70%_30%/0.5)]">
+        <div className="lg:col-span-2 relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] p-5 text-foreground shadow-[0_15px_50px_-20px_hsl(142_70%_30%/0.5)]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold flex items-center gap-2">
               <Bot className="h-4 w-4 text-primary" /> AI Activity Stream
@@ -339,7 +339,7 @@ const DashboardHome = () => {
       </div>
 
       {failed.length > 0 && (
-        <div className="rounded-2xl border border-destructive/20 bg-card p-5">
+        <div className="rounded-2xl border border-destructive/20 bg-card p-5 text-foreground">
           <h3 className="font-semibold mb-4 flex items-center gap-2 text-destructive">
             <AlertCircle className="h-4 w-4" /> Last 5 Failed Messages
           </h3>
@@ -389,7 +389,7 @@ function KpiCard({
 }) {
   const t = toneStyles[accent];
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] p-5 transition-all hover:border-primary/50 hover:shadow-[0_15px_50px_-15px_hsl(142_90%_50%/0.5)]">
+    <div className="group relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] p-5 text-foreground transition-all hover:border-primary/50 hover:shadow-[0_15px_50px_-15px_hsl(142_90%_50%/0.5)]">
       <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-[hsl(142_90%_50%/0.18)] blur-2xl opacity-80 group-hover:opacity-100 transition-opacity" />
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
       <div className="relative flex items-center justify-between mb-3">
@@ -438,13 +438,13 @@ function SectionWrap({
           <div className={`grid place-items-center h-9 w-9 rounded-xl ${t.bg} ${t.text} ring-1 ${t.ring}`}>
             <Icon className="h-4 w-4" />
           </div>
-          <div>
-            <h3 className="font-semibold leading-tight">{title}</h3>
-            {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
+        <div>
+          <h3 className="font-semibold leading-tight text-[hsl(var(--crm-shell-foreground))]">{title}</h3>
+          {subtitle && <p className="text-[11px] text-[hsl(var(--crm-shell-muted))]">{subtitle}</p>}
           </div>
         </div>
         {action && (
-          <Button asChild size="sm" variant="outline" className="border-border hover:border-primary/40 hover:bg-primary/5">
+        <Button asChild size="sm" variant="outline" className="border-[hsl(var(--crm-shell-muted)/0.35)] bg-background/50 text-[hsl(var(--crm-shell-foreground))] hover:border-primary/40 hover:bg-primary/10 hover:text-[hsl(var(--crm-shell-foreground))]">
             {action}
           </Button>
         )}
@@ -465,7 +465,7 @@ function MiniStat({
 }) {
   const t = toneStyles[tone];
   return (
-    <div className={`group relative overflow-hidden rounded-2xl border p-5 transition-all hover:shadow-[0_15px_40px_-15px_hsl(142_90%_50%/0.5)] ${
+    <div className={`group relative overflow-hidden rounded-2xl border p-5 text-foreground transition-all hover:shadow-[0_15px_40px_-15px_hsl(142_90%_50%/0.5)] ${
       highlight
         ? "border-primary/40 bg-gradient-to-br from-[hsl(142_70%_18%)] via-[hsl(145_65%_22%)] to-[hsl(140_75%_28%)] shadow-[0_10px_30px_-10px_hsl(142_90%_50%/0.4)]"
         : "border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] hover:border-primary/40"
