@@ -55,6 +55,32 @@ export default function CRMInbox() {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [settingsByPhone, setSettingsByPhone] = useState<Record<string, ReplySettings>>({});
+
+  // Load agents from CRM Settings (localStorage)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("crm_settings");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed?.agents)) setAgents(parsed.agents);
+      }
+    } catch {}
+  }, []);
+
+  const loadSettings = async () => {
+    if (!user) return;
+    const { data } = await supabase.from("customer_reply_settings")
+      .select("phone_number, mode, assigned_agent").eq("user_id", user.id);
+    const map: Record<string, ReplySettings> = {};
+    (data || []).forEach((r: any) => {
+      map[r.phone_number] = { mode: r.mode || "ai", assigned_agent: r.assigned_agent };
+    });
+    setSettingsByPhone(map);
+  };
+  useEffect(() => { loadSettings(); /* eslint-disable-next-line */ }, [user?.id]);
+
 
   const load = async () => {
     if (!user) return;
