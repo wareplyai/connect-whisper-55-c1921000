@@ -58,11 +58,15 @@ export default function CRMOrders() {
 
   const bookCourier = async () => {
     if (!bookingOrder) return;
-    const trackingId = `${courier.toUpperCase()}-${Date.now().toString().slice(-8)}`;
-    await supabase.from("crm_orders").update({ courier_name: courier, tracking_id: trackingId, courier_status: "in_transit", order_status: "shipped" }).eq("id", bookingOrder.id);
-    toast.success(`Booked with ${courier.toUpperCase()} • ${trackingId}`);
-    console.log("[stub] courier API call →", { courier, weight, notes: bookNotes, trackingId });
-    toast.message("WhatsApp tracking message would be sent to customer");
+    toast.message(`Booking with ${courier.toUpperCase()}...`);
+    const { data, error } = await supabase.functions.invoke("crm-book-courier", {
+      body: { order_id: bookingOrder.id, courier, notes: bookNotes, weight },
+    });
+    if (error || data?.error) {
+      toast.error(error?.message || data?.error || "Booking failed");
+      return;
+    }
+    toast.success(`Booked • ${data.tracking_id}${data.stub ? " (stub)" : ""}`);
     setBookingOrder(null); setBookNotes(""); setWeight("1");
     load();
   };
