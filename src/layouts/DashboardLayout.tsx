@@ -17,6 +17,10 @@ const nav = [
   { to: "/dashboard/products", label: "Products", icon: Package },
   { to: "/dashboard/woocommerce", label: "WooCommerce", icon: ShoppingCart },
   { to: "/dashboard/abandoned-cart", label: "Incomplete", icon: ShoppingBag },
+  { to: "/dashboard/crm", label: "CRM Dashboard", icon: Briefcase, end: true },
+  { to: "/dashboard/crm/orders", label: "CRM Orders", icon: ClipboardList },
+  { to: "/dashboard/crm/inbox", label: "CRM Inbox", icon: InboxIcon },
+  { to: "/dashboard/crm/leads", label: "CRM Leads", icon: Users },
   { to: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
   { to: "/dashboard/payments", label: "My Payments", icon: Receipt },
 ];
