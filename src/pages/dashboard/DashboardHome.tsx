@@ -296,7 +296,7 @@ const DashboardHome = () => {
           )}
         </div>
 
-        <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-5">
+        <div className="lg:col-span-2 relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-[hsl(150_45%_9%)] via-[hsl(145_40%_11%)] to-[hsl(142_55%_13%)] p-5 shadow-[0_15px_50px_-20px_hsl(142_70%_30%/0.5)]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold flex items-center gap-2">
               <Bot className="h-4 w-4 text-primary" /> AI Activity Stream
