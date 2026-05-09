@@ -4,10 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Send, Search } from "lucide-react";
+import { Send, Search, Bot, User } from "lucide-react";
+
+type Agent = { id: string; name: string; phone: string; role: string; assign?: boolean };
+type ReplySettings = { mode: string; assigned_agent: string | null };
 
 type IncomingRow = {
   id: string;
@@ -49,6 +55,32 @@ export default function CRMInbox() {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [settingsByPhone, setSettingsByPhone] = useState<Record<string, ReplySettings>>({});
+
+  // Load agents from CRM Settings (localStorage)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("crm_settings");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed?.agents)) setAgents(parsed.agents);
+      }
+    } catch {}
+  }, []);
+
+  const loadSettings = async () => {
+    if (!user) return;
+    const { data } = await supabase.from("customer_reply_settings")
+      .select("phone_number, mode, assigned_agent").eq("user_id", user.id);
+    const map: Record<string, ReplySettings> = {};
+    (data || []).forEach((r: any) => {
+      map[r.phone_number] = { mode: r.mode || "ai", assigned_agent: r.assigned_agent };
+    });
+    setSettingsByPhone(map);
+  };
+  useEffect(() => { loadSettings(); /* eslint-disable-next-line */ }, [user?.id]);
+
 
   const load = async () => {
     if (!user) return;
@@ -185,6 +217,30 @@ export default function CRMInbox() {
     }
   };
 
+  const upsertSettings = async (phone: string, patch: Partial<ReplySettings>) => {
+    if (!user) return;
+    const cur = settingsByPhone[phone] || { mode: "ai", assigned_agent: null };
+    const next = { ...cur, ...patch };
+    setSettingsByPhone(p => ({ ...p, [phone]: next }));
+    // Need a session_id (NOT NULL) — pull most recent for this phone
+    const inc = incoming.find(m => m.from_number === phone);
+    const session_id = inc?.session_id;
+    if (!session_id) { toast.error("No session for this conversation"); return; }
+    const { error } = await supabase.from("customer_reply_settings").upsert({
+      user_id: user.id, session_id, phone_number: phone,
+      mode: next.mode, assigned_agent: next.assigned_agent,
+    } as any, { onConflict: "user_id,session_id,phone_number" });
+    if (error) {
+      // fallback: insert if no unique constraint
+      await supabase.from("customer_reply_settings").insert({
+        user_id: user.id, session_id, phone_number: phone,
+        mode: next.mode, assigned_agent: next.assigned_agent,
+      } as any);
+    }
+  };
+
+  const activeSettings = activePhone ? (settingsByPhone[activePhone] || { mode: "ai", assigned_agent: null }) : null;
+
   return (
     <div className="space-y-4">
       <div>
@@ -232,9 +288,35 @@ export default function CRMInbox() {
             <div className="flex-1 grid place-items-center text-muted-foreground">Select a conversation</div>
           ) : (
             <>
-              <div className="p-3 border-b border-border">
-                <p className="font-semibold">{active.name}</p>
-                <p className="text-xs text-muted-foreground">+{active.phone}</p>
+              <div className="p-3 border-b border-border flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="font-semibold">{active.name}</p>
+                  <p className="text-xs text-muted-foreground">+{active.phone}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-xs">
+                    {activeSettings?.mode === "human"
+                      ? <User className="h-3.5 w-3.5" />
+                      : <Bot className="h-3.5 w-3.5 text-primary" />}
+                    <Label className="text-xs">{activeSettings?.mode === "human" ? "Human" : "Bot"}</Label>
+                    <Switch
+                      checked={activeSettings?.mode !== "human"}
+                      onCheckedChange={(v) => upsertSettings(active.phone, { mode: v ? "ai" : "human" })}
+                    />
+                  </div>
+                  <Select
+                    value={activeSettings?.assigned_agent || "_none"}
+                    onValueChange={(v) => upsertSettings(active.phone, { assigned_agent: v === "_none" ? null : v })}
+                  >
+                    <SelectTrigger className="w-44 h-8 text-xs"><SelectValue placeholder="Assign agent" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">Unassigned</SelectItem>
+                      {agents.filter(a => a.assign !== false).map(a => (
+                        <SelectItem key={a.id} value={a.name}>{a.name}{a.role ? ` · ${a.role}` : ""}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <ScrollArea className="flex-1 bg-muted/20">

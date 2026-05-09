@@ -1,0 +1,1 @@
+ALTER TABLE public.customer_reply_settings ADD COLUMN IF NOT EXISTS assigned_agent text;

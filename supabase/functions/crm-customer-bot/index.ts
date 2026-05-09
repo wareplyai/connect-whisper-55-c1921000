@@ -11,6 +11,8 @@ const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
 const RETURN_TRIGGERS = [/রিটার্ন/i, /\breturn\b/i, /ফেরত/i];
+const TRACKING_TRIGGERS = [/অর্ডার\s*কোথায়/i, /\btracking\b/i, /\btrack\b/i, /কোথায়\s*আছে/i];
+const COD_TRIGGERS = [/\bcod\b/i, /\bconfirm\b/i, /কনফার্ম/i];
 const YES_RE = /^(yes|হ্যাঁ|হা|y|হ্যা|yes please|ok)$/i;
 const NO_RE = /^(no|না|n|cancel|বাতিল)$/i;
 
@@ -69,6 +71,13 @@ Deno.serve(async (req) => {
     const phone = String(from);
     const msg = String(text || "").trim();
     const lower = msg.toLowerCase();
+
+    // 0) Per-conversation Bot/Human mode — Human disables all auto-replies
+    const { data: crs } = await admin.from("customer_reply_settings")
+      .select("mode, ai_paused").eq("user_id", user_id).eq("phone_number", phone).maybeSingle();
+    if (crs && (crs.mode === "human" || crs.ai_paused)) {
+      return json({ ok: true, skipped: "human_mode" });
+    }
 
     // 1) Check active flows for this customer
     const { data: states } = await admin.from("crm_bot_state")
@@ -153,6 +162,71 @@ Deno.serve(async (req) => {
       });
       await sendWA(admin, user_id, phone, "রিটার্ন রিকোয়েস্ট শুরু হলো।\nঅনুগ্রহ করে আপনার অর্ডার নম্বর পাঠান।");
       return json({ ok: true, action: "return_started" });
+    }
+
+    // ---- Tracking flow ----
+    if (TRACKING_TRIGGERS.some((re) => re.test(msg))) {
+      const tail = phone.replace(/\D/g, "").slice(-9);
+      const { data: orders } = await admin.from("crm_orders")
+        .select("woo_order_id, order_status, courier_status, tracking_id, courier_name, customer_phone")
+        .eq("user_id", user_id).order("created_at", { ascending: false }).limit(20);
+      const order = (orders || []).find((o: any) =>
+        (o.customer_phone || "").replace(/\D/g, "").slice(-9) === tail);
+      if (!order) {
+        await sendWA(admin, user_id, phone, "আপনার নামে কোনো অর্ডার খুঁজে পাইনি। অনুগ্রহ করে অর্ডার নম্বর পাঠান।");
+      } else {
+        const lines = [
+          `📦 অর্ডার: ${order.woo_order_id || "-"}`,
+          `স্ট্যাটাস: ${order.order_status || "-"}`,
+          order.courier_name ? `কুরিয়ার: ${order.courier_name}` : "",
+          order.tracking_id ? `ট্র্যাকিং: ${order.tracking_id}` : "",
+          order.courier_status ? `ডেলিভারি: ${order.courier_status}` : "",
+        ].filter(Boolean).join("\n");
+        await sendWA(admin, user_id, phone, lines);
+      }
+      return json({ ok: true, action: "tracking" });
+    }
+
+    // ---- COD generic confirm trigger ----
+    if (COD_TRIGGERS.some((re) => re.test(msg))) {
+      await sendWA(admin, user_id, phone, "ধন্যবাদ! আপনার অর্ডার কনফার্ম করতে YES লিখুন অথবা NO লিখুন।");
+      return json({ ok: true, action: "cod_prompt" });
+    }
+
+    // ---- AI fallback (Lovable AI Gateway) ----
+    const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (LOVABLE_KEY && msg) {
+      const { data: profile } = await admin.from("business_profiles")
+        .select("system_prompt, ai_auto_replies_enabled").eq("user_id", user_id).maybeSingle();
+      if (profile && profile.ai_auto_replies_enabled !== false) {
+        const sysPrompt = profile.system_prompt
+          || "You are a friendly customer support assistant. Reply in the customer's language (Bangla/English). Keep replies short and helpful.";
+        try {
+          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${LOVABLE_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-3-flash-preview",
+              messages: [
+                { role: "system", content: sysPrompt },
+                { role: "user", content: msg },
+              ],
+            }),
+          });
+          if (r.ok) {
+            const j = await r.json();
+            const reply = j?.choices?.[0]?.message?.content?.trim();
+            if (reply) {
+              await sendWA(admin, user_id, phone, reply);
+              return json({ ok: true, action: "ai_reply" });
+            }
+          } else {
+            console.log("[ai gateway error]", r.status, await r.text().catch(() => ""));
+          }
+        } catch (e) {
+          console.error("AI fallback error", e);
+        }
+      }
     }
 
     return json({ ok: true, noop: true });

@@ -928,6 +928,7 @@ export type Database = {
       customer_reply_settings: {
         Row: {
           ai_paused: boolean
+          assigned_agent: string | null
           created_at: string
           id: string
           mode: string
@@ -939,6 +940,7 @@ export type Database = {
         }
         Insert: {
           ai_paused?: boolean
+          assigned_agent?: string | null
           created_at?: string
           id?: string
           mode?: string
@@ -950,6 +952,7 @@ export type Database = {
         }
         Update: {
           ai_paused?: boolean
+          assigned_agent?: string | null
           created_at?: string
           id?: string
           mode?: string
