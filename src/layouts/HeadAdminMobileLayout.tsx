@@ -15,7 +15,16 @@ export default function HeadAdminMobileLayout() {
   const nav = useNavigate();
 
   useEffect(() => {
-    document.documentElement.classList.add("dark");
+    const root = document.documentElement;
+    const prevClasses = root.className;
+    const prevColorScheme = root.style.colorScheme;
+    root.classList.remove("light");
+    root.classList.add("dark");
+    root.style.colorScheme = "dark";
+    return () => {
+      root.className = prevClasses;
+      root.style.colorScheme = prevColorScheme;
+    };
   }, []);
 
   return (
