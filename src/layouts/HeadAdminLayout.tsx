@@ -8,6 +8,7 @@ import { useHeadAdmin } from "@/contexts/HeadAdminContext";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useQuickStats } from "@/hooks/useHeadAdminStats";
+import { NotificationBell } from "@/components/headadmin/NotificationBell";
 
 const navGroups = [
   {
@@ -154,10 +155,7 @@ export default function HeadAdminLayout() {
 
           <div className="flex items-center gap-1.5 ml-auto">
             <ThemeToggle />
-            <Link to="/headadmin/notifications" className="relative p-2 rounded-lg hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors">
-              <Bell className="h-[18px] w-[18px]" />
-              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-warning" />
-            </Link>
+            <NotificationBell />
             <Link to="/headadmin/settings" className="p-2 rounded-lg hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors">
               <Settings className="h-[18px] w-[18px]" />
             </Link>
