@@ -120,7 +120,7 @@ export default function CRMInbox() {
         imageUrl: m.image_url,
         ts: m.received_at,
       }));
-    const outMsgs = outgoing
+    const outRaw = outgoing
       .filter(o => phoneTail(o.to_number || "") === tail)
       .map(o => ({
         id: `o-${o.id}`,
@@ -130,7 +130,16 @@ export default function CRMInbox() {
           : String(o.payload || "")) || "",
         imageUrl: (o.payload?.image_url || null) as string | null,
         ts: o.created_at,
-      }));
+      }))
+      .sort((a, b) => +new Date(a.ts) - +new Date(b.ts));
+    // Dedupe outgoing: same text within 60s window = duplicate (gateway + ai-reply both log)
+    const outMsgs: typeof outRaw = [];
+    for (const m of outRaw) {
+      const dup = outMsgs.find(
+        x => x.text === m.text && Math.abs(+new Date(x.ts) - +new Date(m.ts)) < 60_000,
+      );
+      if (!dup) outMsgs.push(m);
+    }
     return [...inMsgs, ...outMsgs].sort((a, b) => +new Date(a.ts) - +new Date(b.ts));
   }, [incoming, outgoing, activePhone]);
 
