@@ -44,7 +44,16 @@ export default function CRMDashboard() {
       setActivity(o.slice(0, 8));
     };
     load();
-    const ch = supabase.channel("crm-dash").on("postgres_changes", { event: "*", schema: "public", table: "crm_orders" }, load).subscribe();
+    const ch = supabase.channel("crm-dash")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "crm_orders", filter: `user_id=eq.${user.id}` }, (payload: any) => {
+        const o = payload.new || {};
+        toast.success("🛒 New order received", {
+          description: `${o.customer_name || "Customer"} • ৳${o.total_amount} • #${o.woo_order_id || o.id?.slice(0, 8)}`,
+        });
+        load();
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "crm_orders", filter: `user_id=eq.${user.id}` }, load)
+      .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [user]);
 
