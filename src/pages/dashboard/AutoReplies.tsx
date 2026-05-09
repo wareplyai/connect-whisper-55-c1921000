@@ -52,6 +52,7 @@ const empty: Partial<Rule> = {
   session_id: null,
   category: "",
   description: "",
+  image_url: "",
 };
 
 const AutoReplies = () => {
