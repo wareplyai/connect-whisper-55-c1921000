@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.crm-woo-order-webhook]
 verify_jwt = false
+
+[functions.crm-whatsapp-webhook]
+verify_jwt = false
