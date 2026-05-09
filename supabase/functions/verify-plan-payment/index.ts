@@ -83,10 +83,11 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Amount check: payment_transactions.amount is in USD, SMS is in BDT.
-    // Convert USD → BDT (rate 122) with tolerance ±50 BDT
+    // SMS amounts are in BDT. Convert tx.amount → BDT based on the customer's chosen currency.
     const USD_TO_BDT = 122;
-    const expectedBdt = Number(tx.amount) * USD_TO_BDT;
+    const expectedBdt = (tx.currency === "BDT")
+      ? Number(tx.amount)
+      : Number(tx.amount) * USD_TO_BDT;
     const smsAmount = Number(sms.amount || 0);
     if (smsAmount > 0 && Math.abs(smsAmount - expectedBdt) > 50) {
       return new Response(JSON.stringify({

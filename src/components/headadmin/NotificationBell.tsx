@@ -31,7 +31,7 @@ async function fetchPage(beforeIso: string | null, limit: number): Promise<Item[
     .limit(limit);
   const payQ = supabase
     .from("payment_transactions")
-    .select("id,amount,status,created_at,user_id,profiles:user_id(full_name,email)")
+    .select("id,amount,currency,status,created_at,user_id,profiles:user_id(full_name,email)")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (beforeIso) {
@@ -48,10 +48,13 @@ async function fetchPage(beforeIso: string | null, limit: number): Promise<Item[
     }))),
     ...((pays || []).map((p: any) => {
       const name = p.profiles?.full_name || p.profiles?.email || "User";
+      const sym = p.currency === "BDT" ? "৳" : "$";
+      const amt = Number(p.amount || 0);
+      const formatted = p.currency === "BDT" ? Math.round(amt).toLocaleString() : amt.toFixed(amt % 1 === 0 ? 0 : 2);
       return {
         id: `pay-${p.id}`,
         kind: "payment" as const,
-        title: `${name} submitted ৳${Number(p.amount || 0)} payment`,
+        title: `${name} submitted ${sym}${formatted} payment`,
         subtitle: p.status,
         created_at: p.created_at,
       };

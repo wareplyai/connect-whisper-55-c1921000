@@ -22,6 +22,8 @@ type Plan = {
   display_name: string;
   price_monthly: number;
   price_yearly: number;
+  price_monthly_bdt?: number;
+  price_yearly_bdt?: number;
 };
 
 const methodTheme: Record<string, { color: string; bg: string; label: string; emoji: string }> = {
@@ -36,9 +38,12 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   plan: Plan | null;
   yearly: boolean;
+  currency?: "USD" | "BDT";
 }
 
-export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
+const USD_TO_BDT = 122;
+
+export const PaymentModal = ({ open, onOpenChange, plan, yearly, currency = "USD" }: Props) => {
   const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [methods, setMethods] = useState<Method[]>([]);
@@ -48,7 +53,16 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
   const [submitting, setSubmitting] = useState(false);
   const [verifyState, setVerifyState] = useState<"idle" | "checking" | "approved" | "pending">("idle");
   const [verifyMessage, setVerifyMessage] = useState("");
-  const amount = plan ? (yearly ? plan.price_yearly : plan.price_monthly) : 0;
+  const symbol = currency === "BDT" ? "৳" : "$";
+  const amount = !plan
+    ? 0
+    : currency === "USD"
+      ? (yearly ? plan.price_yearly : plan.price_monthly)
+      : (yearly
+          ? (plan.price_yearly_bdt || Math.round(plan.price_yearly * USD_TO_BDT))
+          : (plan.price_monthly_bdt || Math.round(plan.price_monthly * USD_TO_BDT)));
+  const fmtAmount = (n: number) =>
+    currency === "BDT" ? `${symbol}${Math.round(n).toLocaleString()}` : `${symbol}${Number(n).toFixed(n % 1 === 0 ? 0 : 2)}`;
 
   useEffect(() => {
     if (!open) return;
@@ -91,11 +105,12 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
         user_id: user.id,
         plan: plan.plan_name,
         amount,
+        currency,
         payment_method: selected.method_name,
         transaction_id: trxId.trim().toUpperCase(),
         sender_number: senderNumber.trim(),
         status: "pending",
-      }).select().single();
+      } as any).select().single();
       if (error) throw error;
       setStep(4);
       tryAutoVerify(data.id);
@@ -113,7 +128,7 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
           <div>
             <h2 className="text-lg font-semibold">Complete Your Subscription</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {plan.display_name} Plan — ${amount}/{yearly ? "year" : "month"}
+              {plan.display_name} Plan — {fmtAmount(amount)}/{yearly ? "year" : "month"}
             </p>
           </div>
           <button onClick={() => onOpenChange(false)} className="p-1 rounded hover:bg-muted">
@@ -174,7 +189,7 @@ export const PaymentModal = ({ open, onOpenChange, plan, yearly }: Props) => {
               </div>
               <div className="rounded-xl border-2 border-green-500/40 bg-green-500/5 p-4 text-center">
                 <p className="text-xs text-muted-foreground">Amount to pay</p>
-                <p className="text-2xl font-bold text-green-500 mt-1">${amount}</p>
+                <p className="text-2xl font-bold text-green-500 mt-1">{fmtAmount(amount)}</p>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setStep(1)} className="flex-1">Back</Button>

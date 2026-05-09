@@ -16,6 +16,8 @@ type Plan = {
   description: string | null;
   price_monthly: number;
   price_yearly: number;
+  price_monthly_bdt: number;
+  price_yearly_bdt: number;
   max_sessions: number;
   features: string[] | null;
   is_active: boolean;
@@ -49,13 +51,15 @@ export default function HAPlanPricing() {
       description: editing.description,
       price_monthly: editing.price_monthly,
       price_yearly: editing.price_yearly,
+      price_monthly_bdt: editing.price_monthly_bdt,
+      price_yearly_bdt: editing.price_yearly_bdt,
       max_sessions: editing.max_sessions,
       features: editing.features,
       is_active: editing.is_active,
       is_popular: editing.is_popular,
       sort_order: editing.sort_order,
       cta_label: editing.cta_label,
-    }).eq("id", editing.id);
+    } as any).eq("id", editing.id);
     if (error) return toast.error(error.message);
     toast.success("Plan updated");
     setEditing(null); load();
@@ -75,8 +79,10 @@ export default function HAPlanPricing() {
               <th className="text-left px-4 py-3">Order</th>
               <th className="text-left px-4 py-3">Plan</th>
               <th className="text-left px-4 py-3">Display Name</th>
-              <th className="text-left px-4 py-3">Monthly</th>
-              <th className="text-left px-4 py-3">Yearly</th>
+              <th className="text-left px-4 py-3">Monthly (USD)</th>
+              <th className="text-left px-4 py-3">Monthly (BDT)</th>
+              <th className="text-left px-4 py-3">Yearly (USD)</th>
+              <th className="text-left px-4 py-3">Yearly (BDT)</th>
               <th className="text-left px-4 py-3">Sessions</th>
               <th className="text-left px-4 py-3">Popular</th>
               <th className="text-left px-4 py-3">Active</th>
@@ -89,7 +95,9 @@ export default function HAPlanPricing() {
                   <td className="px-4 py-3 capitalize font-medium">{p.plan_name}</td>
                   <td className="px-4 py-3">{p.display_name}</td>
                   <td className="px-4 py-3">${p.price_monthly}</td>
+                  <td className="px-4 py-3">৳{p.price_monthly_bdt}</td>
                   <td className="px-4 py-3">${p.price_yearly}</td>
+                  <td className="px-4 py-3">৳{p.price_yearly_bdt}</td>
                   <td className="px-4 py-3">{p.max_sessions}</td>
                   <td className="px-4 py-3">{p.is_popular ? <Star className="h-4 w-4 text-primary fill-primary" /> : "—"}</td>
                   <td className="px-4 py-3">{p.is_active ? "Yes" : "No"}</td>
@@ -112,8 +120,10 @@ export default function HAPlanPricing() {
                 <Textarea rows={3} value={editing.description || ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} placeholder="Short marketing tagline for this plan" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>Monthly Price ($)</Label><Input type="number" step="0.01" value={editing.price_monthly} onChange={(e) => setEditing({ ...editing, price_monthly: +e.target.value })} /></div>
-                <div><Label>Yearly Price ($)</Label><Input type="number" step="0.01" value={editing.price_yearly} onChange={(e) => setEditing({ ...editing, price_yearly: +e.target.value })} /></div>
+                <div><Label>Monthly Price (USD $)</Label><Input type="number" step="0.01" value={editing.price_monthly} onChange={(e) => setEditing({ ...editing, price_monthly: +e.target.value })} /></div>
+                <div><Label>Monthly Price (BDT ৳)</Label><Input type="number" step="1" value={editing.price_monthly_bdt} onChange={(e) => setEditing({ ...editing, price_monthly_bdt: +e.target.value })} /></div>
+                <div><Label>Yearly Price (USD $)</Label><Input type="number" step="0.01" value={editing.price_yearly} onChange={(e) => setEditing({ ...editing, price_yearly: +e.target.value })} /></div>
+                <div><Label>Yearly Price (BDT ৳)</Label><Input type="number" step="1" value={editing.price_yearly_bdt} onChange={(e) => setEditing({ ...editing, price_yearly_bdt: +e.target.value })} /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Max Sessions</Label><Input type="number" value={editing.max_sessions} onChange={(e) => setEditing({ ...editing, max_sessions: +e.target.value })} /></div>

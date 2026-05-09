@@ -889,6 +889,7 @@ export type Database = {
           admin_note: string | null
           amount: number
           created_at: string | null
+          currency: string
           id: string
           payment_method: string
           plan: string
@@ -904,6 +905,7 @@ export type Database = {
           admin_note?: string | null
           amount: number
           created_at?: string | null
+          currency?: string
           id?: string
           payment_method: string
           plan: string
@@ -919,6 +921,7 @@ export type Database = {
           admin_note?: string | null
           amount?: number
           created_at?: string | null
+          currency?: string
           id?: string
           payment_method?: string
           plan?: string
@@ -959,7 +962,9 @@ export type Database = {
           max_sessions: number
           plan_name: string
           price_monthly: number
+          price_monthly_bdt: number
           price_yearly: number
+          price_yearly_bdt: number
           sort_order: number
           updated_at: string | null
         }
@@ -974,7 +979,9 @@ export type Database = {
           max_sessions: number
           plan_name: string
           price_monthly: number
+          price_monthly_bdt?: number
           price_yearly: number
+          price_yearly_bdt?: number
           sort_order?: number
           updated_at?: string | null
         }
@@ -989,7 +996,9 @@ export type Database = {
           max_sessions?: number
           plan_name?: string
           price_monthly?: number
+          price_monthly_bdt?: number
           price_yearly?: number
+          price_yearly_bdt?: number
           sort_order?: number
           updated_at?: string | null
         }

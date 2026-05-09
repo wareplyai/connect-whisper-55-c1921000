@@ -15,6 +15,8 @@ type Plan = {
   display_name: string;
   price_monthly: number;
   price_yearly: number;
+  price_monthly_bdt: number;
+  price_yearly_bdt: number;
   max_sessions: number;
   features: string[] | null;
   is_active: boolean;
@@ -32,12 +34,13 @@ const FAQS = [
 const Plans = () => {
   const { user } = useAuth();
   const [yearly, setYearly] = useState(false);
-  const [currency, setCurrency] = useState<"USD" | "BDT">("USD");
+  // Default to BDT. User can switch to USD manually.
+  const [currency, setCurrency] = useState<"USD" | "BDT">("BDT");
   const USD_TO_BDT = 122;
-  const fmt = (usd: number) => {
-    if (usd === 0) return "Free";
-    if (currency === "BDT") return `৳${Math.round(usd * USD_TO_BDT).toLocaleString()}`;
-    return `$${Number(usd).toFixed(2)}`;
+  const fmt = (n: number) => {
+    if (!n || n === 0) return "Free";
+    if (currency === "BDT") return `৳${Math.round(n).toLocaleString()}`;
+    return `$${Number(n).toFixed(n % 1 === 0 ? 0 : 2)}`;
   };
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,7 +107,9 @@ const Plans = () => {
           {plans.map((p) => {
             const popular = p.plan_name === "pro";
             const isCurrent = currentPlan === p.plan_name;
-            const price = yearly ? p.price_yearly : p.price_monthly;
+            const monthly = currency === "USD" ? p.price_monthly : (p.price_monthly_bdt || Math.round(p.price_monthly * USD_TO_BDT));
+            const yearlyTotal = currency === "USD" ? p.price_yearly : (p.price_yearly_bdt || Math.round(p.price_yearly * USD_TO_BDT));
+            const price = yearly ? yearlyTotal : monthly;
             const perSession = price > 0 && p.max_sessions > 0 ? (price / p.max_sessions) : 0;
             return (
               <div key={p.id} className={`relative rounded-xl border-2 bg-[#111111] p-5 flex flex-col transition hover:shadow-lg ${isCurrent ? "border-white" : popular ? "border-green-500" : "border-border hover:border-border/80"}`}>
@@ -170,7 +175,7 @@ const Plans = () => {
         </Accordion>
       </div>
 
-      <PaymentModal open={!!selected} onOpenChange={(v) => !v && setSelected(null)} plan={selected} yearly={yearly} />
+      <PaymentModal open={!!selected} onOpenChange={(v) => !v && setSelected(null)} plan={selected} yearly={yearly} currency={currency} />
     </div>
   );
 };

@@ -13,9 +13,17 @@ type Activity = {
   kind: "registration" | "payment";
   title: string;
   amount?: number;
+  currency?: string;
   status?: string;
   created_at: string;
 };
+
+function fmtMoney(amount: number, currency?: string) {
+  const sym = currency === "BDT" ? "৳" : "$";
+  return currency === "BDT"
+    ? `${sym}${Math.round(amount).toLocaleString()}`
+    : `${sym}${amount.toFixed(amount % 1 === 0 ? 0 : 2)}`;
+}
 
 function timeAgo(iso: string) {
   const d = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -41,7 +49,7 @@ export default function MobileHome() {
         .limit(15),
       supabase
         .from("payment_transactions")
-        .select("id,amount,status,created_at,user_id,profiles:user_id(full_name,email)")
+        .select("id,amount,currency,status,created_at,user_id,profiles:user_id(full_name,email)")
         .order("created_at", { ascending: false })
         .limit(15),
       supabase.from("sales").select("amount"),
@@ -60,6 +68,7 @@ export default function MobileHome() {
         kind: "payment" as const,
         title: p.profiles?.full_name || p.profiles?.email || "User",
         amount: Number(p.amount || 0),
+        currency: p.currency || "USD",
         status: p.status,
         created_at: p.created_at,
       }))),
@@ -77,7 +86,7 @@ export default function MobileHome() {
         .forEach((n) => {
           seenRef.current.add(n.id);
           if (n.kind === "payment")
-            toast.success(`💰 ${n.title} sent ৳${n.amount}`);
+            toast.success(`💰 ${n.title} sent ${fmtMoney(n.amount || 0, n.currency)}`);
           else toast(`👤 ${n.title} just registered`);
         });
       merged.forEach((m) => seenRef.current.add(m.id));
@@ -177,7 +186,7 @@ export default function MobileHome() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">
                     {a.kind === "payment"
-                      ? `${a.title} • ৳${a.amount}`
+                      ? `${a.title} • ${fmtMoney(a.amount || 0, a.currency)}`
                       : `${a.title} registered`}
                   </p>
                   <p className="text-[11px] text-white/60">

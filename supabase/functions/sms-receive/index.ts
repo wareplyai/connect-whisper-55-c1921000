@@ -118,7 +118,10 @@ Deno.serve(async (req) => {
 
     if (ptxs && ptxs.length > 0) {
       for (const ptx of ptxs) {
-        const expectedBdt = Number(ptx.amount) * USD_TO_BDT;
+        // SMS amounts are always in BDT. Convert tx.amount to BDT based on its currency.
+        const expectedBdt = (ptx.currency === "BDT")
+          ? Number(ptx.amount)
+          : Number(ptx.amount) * USD_TO_BDT;
         if (amount && Math.abs(Number(amount) - expectedBdt) > 50) continue;
 
         const { data: plan } = await supabase

@@ -8,6 +8,7 @@ type Tx = {
   user_id: string | null;
   plan: string;
   amount: number;
+  currency?: string;
   payment_method: string;
   transaction_id: string | null;
   sender_number: string | null;
@@ -16,6 +17,13 @@ type Tx = {
   screenshot_url: string | null;
   profile?: { full_name: string | null; email: string | null };
 };
+
+function fmtMoney(amount: number, currency?: string) {
+  const sym = currency === "BDT" ? "৳" : "$";
+  return currency === "BDT"
+    ? `${sym}${Math.round(amount).toLocaleString()}`
+    : `${sym}${Number(amount).toFixed(amount % 1 === 0 ? 0 : 2)}`;
+}
 
 export default function MobilePayments() {
   const [rows, setRows] = useState<Tx[]>([]);
@@ -184,7 +192,7 @@ export default function MobilePayments() {
                 </p>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-lg font-bold text-emerald-400">৳{tx.amount}</p>
+                <p className="text-lg font-bold text-emerald-400">{fmtMoney(tx.amount, tx.currency)}</p>
                 <p className="text-[10px] text-white/60 uppercase font-semibold">
                   {tx.plan}
                 </p>
