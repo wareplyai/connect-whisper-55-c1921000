@@ -37,41 +37,62 @@ async function decryptKey(payload: string): Promise<string> {
   return dec.decode(pt);
 }
 
-// Transcribe a remote .ogg/.mp3/.m4a voice file via OpenAI Whisper.
-// Returns the transcript text on success, or "" on any failure (logged).
-async function transcribeVoiceFile(audioUrl: string, openaiKey: string): Promise<string> {
+// Transcribe a remote .ogg/.mp3/.m4a voice file via Lovable AI Gateway (Gemini).
+// Auto-detects Bangla / English. Returns "" on failure.
+async function transcribeVoiceFile(audioUrl: string): Promise<string> {
   try {
-    const audioRes = await fetch(audioUrl);
-    if (!audioRes.ok) {
-      console.log("[whisper] download failed:", audioRes.status, audioUrl);
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableKey) {
+      console.log("[stt] LOVABLE_API_KEY missing");
       return "";
     }
-    const ctype = audioRes.headers.get("content-type") || "audio/ogg";
-    const buf = await audioRes.arrayBuffer();
-    const ext = audioUrl.toLowerCase().includes(".mp3") ? "mp3"
-      : audioUrl.toLowerCase().includes(".m4a") ? "m4a"
-      : audioUrl.toLowerCase().includes(".wav") ? "wav"
-      : "ogg";
-    const fd = new FormData();
-    fd.append("file", new Blob([buf], { type: ctype }), `voice.${ext}`);
-    fd.append("model", "whisper-1");
-    // Whisper auto-detects when no language is set; passing "bn" can hurt mixed
-    // Bangla/English voice notes. Leave it off so transcription works for both.
-    const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    const audioRes = await fetch(audioUrl);
+    if (!audioRes.ok) {
+      console.log("[stt] download failed:", audioRes.status, audioUrl);
+      return "";
+    }
+    const ctype = (audioRes.headers.get("content-type") || "audio/ogg").split(";")[0].trim();
+    const buf = new Uint8Array(await audioRes.arrayBuffer());
+    // base64 encode
+    let bin = "";
+    for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    const b64 = btoa(bin);
+    console.log("[stt] audio bytes:", buf.length, "mime:", ctype);
+
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${openaiKey}` },
-      body: fd,
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are an automatic speech-to-text engine. Transcribe the user's audio verbatim into text. The audio may be in Bangla, English, or a mix. Output ONLY the transcript text — no quotes, no explanations, no language labels. If the audio has no speech, output an empty string.",
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Transcribe this voice note:" },
+              { type: "input_audio", input_audio: { data: b64, format: ctype.includes("mp3") ? "mp3" : "ogg" } },
+            ],
+          },
+        ],
+      }),
     });
     const data: any = await r.json().catch(() => ({}));
     if (!r.ok) {
-      console.log("[whisper] api error:", r.status, data?.error?.message || data);
+      console.log("[stt] gateway error:", r.status, JSON.stringify(data).slice(0, 400));
       return "";
     }
-    const text = String(data?.text || "").trim();
-    console.log("[whisper] transcribed", text.length, "chars from", audioUrl);
+    const text = String(data?.choices?.[0]?.message?.content || "").trim();
+    console.log("[stt] transcribed", text.length, "chars from", audioUrl);
     return text;
   } catch (e) {
-    console.log("[whisper] exception:", (e as Error)?.message);
+    console.log("[stt] exception:", (e as Error)?.message);
     return "";
   }
 }
