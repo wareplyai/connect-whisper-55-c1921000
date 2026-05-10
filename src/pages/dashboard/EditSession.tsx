@@ -31,6 +31,8 @@ const EditSession = () => {
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [num, setNum] = useState("");
   const [form, setForm] = useState<any>(null);
+  const [builtIn, setBuiltIn] = useState(true);
+  const AI_REPLY_WEBHOOK_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`;
 
   useEffect(() => {
     (async () => {
