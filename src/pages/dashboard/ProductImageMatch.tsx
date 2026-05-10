@@ -322,6 +322,16 @@ export default function ProductImageMatch() {
         </p>
       </div>
 
+      <Card className="p-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs font-medium">Image Match slots</span>
+          <span className={`text-xs font-semibold ${items.length >= MAX ? "text-red-600" : items.length >= 48 ? "text-red-500" : items.length >= 45 ? "text-amber-600" : "text-muted-foreground"}`}>
+            {items.length}/{MAX} used
+          </span>
+        </div>
+        <Progress value={(items.length / MAX) * 100} className="h-2" />
+      </Card>
+
       <Tabs defaultValue="products">
         <TabsList>
           <TabsTrigger value="products"><ImageIcon className="h-4 w-4 mr-1" /> Products ({items.length}/{MAX})</TabsTrigger>
