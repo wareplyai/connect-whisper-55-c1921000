@@ -39,25 +39,58 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Build a single multimodal prompt: customer image + every product image labeled
-    // by index. Ask Gemini to return the matching index (or -1).
+    // Download every image ourselves and convert to base64 data URLs. This avoids
+    // the AI provider failing to fetch Supabase storage URLs (we saw 400s).
+    async function toDataUrl(url: string): Promise<string | null> {
+      try {
+        const r = await fetch(url);
+        if (!r.ok) { console.log("[match] fetch fail", r.status, url); return null; }
+        const ct = (r.headers.get("content-type") || "image/jpeg").split(";")[0];
+        const buf = new Uint8Array(await r.arrayBuffer());
+        let bin = "";
+        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+        return `data:${ct};base64,${btoa(bin)}`;
+      } catch (e) {
+        console.log("[match] fetch error", url, (e as Error).message);
+        return null;
+      }
+    }
+
+    const customerData = await toDataUrl(image_url);
+    if (!customerData) {
+      return new Response(JSON.stringify({ match: false, reason: "customer_image_unfetchable" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const productData: { p: any; data: string }[] = [];
+    for (const p of products) {
+      const d = await toDataUrl(p.product_image_url);
+      if (d) productData.push({ p, data: d });
+    }
+    if (productData.length === 0) {
+      return new Response(JSON.stringify({ match: false, reason: "no_fetchable_products" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const content: any[] = [
       {
         type: "text",
         text:
-          `You are a product matching assistant. The FIRST image below is a photo a customer sent on WhatsApp. ` +
-          `The remaining images are products from a catalog, each labeled "Product #N: <name>". ` +
-          `Decide which catalog product is the SAME product as the customer's photo (same item — color, shape, design must match; ignore background, lighting, angle, watermark differences). ` +
-          `Reply STRICTLY in JSON: {"index": <number>, "confidence": "high"|"medium"|"low"}. ` +
+          `You are a product matching assistant. The FIRST image is a photo a customer sent on WhatsApp. ` +
+          `The remaining images are products from a catalog, each preceded by "Product #N: <name>". ` +
+          `Decide which catalog product is the SAME product as the customer's photo (color, shape, design must match; ignore background, lighting, angle, watermark differences). ` +
+          `Reply STRICTLY as JSON: {"index": <number>, "confidence": "high"|"medium"|"low"}. ` +
           `Use index = -1 if none clearly matches. Only say "high" if you are sure it's the same product.`,
       },
       { type: "text", text: "CUSTOMER IMAGE:" },
-      { type: "image_url", image_url: { url: image_url } },
+      { type: "image_url", image_url: { url: customerData } },
     ];
 
-    products.forEach((p, i) => {
+    productData.forEach(({ p }, i) => {
       content.push({ type: "text", text: `Product #${i}: ${p.product_name}` });
-      content.push({ type: "image_url", image_url: { url: p.product_image_url } });
+      content.push({ type: "image_url", image_url: { url: productData[i].data } });
     });
 
     const aiRes = await fetch(LOVABLE_AI_URL, {
