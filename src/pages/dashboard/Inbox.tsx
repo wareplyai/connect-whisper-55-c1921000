@@ -94,7 +94,7 @@ const Inbox = () => {
   const [selected, setSelected] = useState<{ session_id: string; phone_number: string } | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
-  const [loading, setLoading] = useState(!cached);
+  const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [signedMediaUrls, setSignedMediaUrls] = useState<Record<string, string>>({});
   const channelRef = useRef<any>(null);
