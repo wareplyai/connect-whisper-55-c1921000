@@ -1303,8 +1303,7 @@ Deno.serve(async (req) => {
       // Capture the public media URL the VPS sent us so the inbox can render it
       // immediately, even if the chat-media re-upload below fails.
       let payloadMediaUrl =
-        (typeof (body as any).media_url === "string" && (body as any).media_url) ||
-        (typeof (body as any).mediaUrl === "string" && (body as any).mediaUrl) ||
+        bodyMediaUrl ||
         (isImageMessage && imageUrl && /^https?:\/\//i.test(imageUrl) ? imageUrl : null) ||
         null;
       const payloadCaption =
@@ -1319,6 +1318,14 @@ Deno.serve(async (req) => {
         payloadMediaUrl = await findRecentWhatsappImageUrl(admin, fromNumber);
         if (payloadMediaUrl && !imageUrl) imageUrl = payloadMediaUrl;
       }
+      console.log("[ai-reply] image media resolved before insert", {
+        message_type: messageType,
+        is_image: isImageMessage,
+        media_url: payloadMediaUrl,
+        image_url: imageUrl,
+        image_url_kind: imageUrl ? (imageUrl.startsWith("data:") ? "data-url" : "url") : "none",
+        image_base64_length: imageUrl?.startsWith("data:") ? (imageUrl.split(",").pop()?.length || 0) : 0,
+      });
       const logRow: Record<string, unknown> = {
         session_id: sessionId,
         user_id: userId,
