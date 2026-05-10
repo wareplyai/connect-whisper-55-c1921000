@@ -238,12 +238,19 @@ export default function ProductImageMatch() {
     }
   };
 
+  const notifySlots = (count: number) => {
+    if (count >= MAX) toast.error(`🚫 Image Match is full! Delete a product to add new one.`);
+    else if (count >= 48) toast.warning(`🔴 Only ${MAX - count} slots left! (${count}/${MAX})`);
+    else if (count >= 45) toast.warning(`⚠️ ${MAX - count} slots remaining in Image Match (${count}/${MAX})`);
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this product?")) return;
     const { error } = await supabase.from("product_images" as any).delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Deleted");
-    load();
+    await load();
+    notifySlots(Math.max(0, items.length - 1));
   };
 
   const runTest = async () => {
