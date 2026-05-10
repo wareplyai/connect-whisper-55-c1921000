@@ -1679,11 +1679,29 @@ Deno.serve(async (req) => {
           .join("\n\n")}`
       : "";
 
+    // Load product catalog so AI can reference real products in replies.
+    const { data: catalogRows } = await admin
+      .from("products")
+      .select("id, name, price, description, category, stock, image_url")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .limit(100);
+
+    const productCatalog = (catalogRows || []).length
+      ? `\n\nPRODUCT CATALOG (use these exact names/prices when replying):\n${(catalogRows || [])
+          .map((p: any) => `- ${p.name} | ৳${p.price}${p.stock > 0 ? ` | stock: ${p.stock}` : " | out of stock"}${p.category ? ` | ${p.category}` : ""}${p.description ? ` — ${String(p.description).slice(0, 120)}` : ""}`)
+          .join("\n")}`
+      : "";
+
+    const productInstr = (catalogRows || []).length
+      ? `\n\nআপনি যখন কোনো product সম্পর্কে reply দেবেন, তখন product এর সব details (নাম, দাম, বিবরণ) text এ দিন। Product এর image automatically পাঠানো হবে। একসাথে maximum 3টা product suggest করুন। When you mention a product, use its EXACT name from the catalog so we can attach its image.`
+      : "";
+
     const baseSystem = (biz?.system_prompt && biz.system_prompt.trim().length > 0)
       ? biz.system_prompt
       : `You are a helpful WhatsApp assistant for ${biz?.name || "this business"}. Reply in the customer's language. Be friendly, concise, human-like.`;
 
-    const systemPrompt = `${baseSystem}${qaContext}`;
+    const systemPrompt = `${baseSystem}${qaContext}${productCatalog}${productInstr}`;
 
     let reply = "";
 
