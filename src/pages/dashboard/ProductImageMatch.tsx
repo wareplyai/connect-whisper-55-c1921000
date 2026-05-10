@@ -252,34 +252,47 @@ export default function ProductImageMatch() {
         </TabsList>
 
         <TabsContent value="products" className="space-y-4">
-          <Card className="p-4 space-y-4">
-            <h2 className="font-semibold">Add Product</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label>Product Name *</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Red Cotton T-Shirt" />
+          <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) reset(); }}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add Match Product</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Label>Product Name *</Label>
+                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Red Cotton T-Shirt" />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>Price</Label>
+                  <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="৳ 499" />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>Description</Label>
+                  <Textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="100% cotton, sizes S-XL..." rows={3} />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>Product Image *</Label>
+                  <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                </div>
               </div>
-              <div>
-                <Label>Price</Label>
-                <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="৳ 499" />
-              </div>
-            </div>
-            <div>
-              <Label>Description</Label>
-              <Textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="100% cotton, sizes S-XL..." rows={3} />
-            </div>
-            <div>
-              <Label>Product Image *</Label>
-              <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-            </div>
-            <Button onClick={handleUpload} disabled={saving || items.length >= MAX}>
-              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-              Upload Product
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAddOpen(false)} disabled={saving}>Cancel</Button>
+                <Button onClick={handleUpload} disabled={saving || items.length >= MAX}>
+                  {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                  Add Product
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h2 className="font-semibold">Your Products ({items.length}/{MAX})</h2>
+            <Button onClick={() => { reset(); setAddOpen(true); }} disabled={items.length >= MAX}>
+              <Plus className="h-4 w-4 mr-2" /> Add Match Product
             </Button>
-          </Card>
+          </div>
 
           <div>
-            <h2 className="font-semibold mb-3">Your Products</h2>
             {loading ? (
               <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
             ) : items.length === 0 ? (
