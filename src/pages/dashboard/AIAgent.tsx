@@ -570,6 +570,24 @@ RULES:
 
               <div>
                 <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-medium">Message Batching Wait Time</Label>
+                  <span className="text-sm font-mono text-primary">{business.batch_wait_seconds}s</span>
+                </div>
+                <Slider
+                  value={[business.batch_wait_seconds]}
+                  min={0}
+                  max={60}
+                  step={5}
+                  onValueChange={(v) => setBusiness({ ...business, batch_wait_seconds: v[0] })}
+                  onValueCommit={(v) => persistBusinessPatch({ batch_wait_seconds: v[0] })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  কত সেকেন্ড অপেক্ষা করার পর reply দেবে। এই সময়ের মধ্যে customer একাধিক message পাঠালে সব একসাথে answer দেবে। (0 = off)
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
                   <Label className="text-sm font-medium">Instructions for this Chatbot</Label>
                   <Button
                     variant="ghost"
