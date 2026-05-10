@@ -392,9 +392,23 @@ export default function Products() {
       <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
         <Pencil className="size-3 mr-1" /> Edit
       </Button>
-      <Button size="sm" variant="outline" onClick={() => addToImageMatch(p)}>
-        <Camera className="size-3 mr-1" /> Add to Image Match
-      </Button>
+      {(() => {
+        const s = matchStatus[p.id];
+        return (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={s === "loading"}
+            onClick={() => addToImageMatch(p)}
+            className={s === "success" ? "border-green-500 text-green-600" : s === "error" ? "border-red-500 text-red-600" : ""}
+          >
+            {s === "loading" ? (<><Loader2 className="size-3 mr-1 animate-spin" /> Adding…</>)
+              : s === "success" ? (<><Check className="size-3 mr-1" /> Added!</>)
+              : s === "error" ? (<><X className="size-3 mr-1" /> Failed</>)
+              : (<><Camera className="size-3 mr-1" /> Add to Image Match</>)}
+          </Button>
+        );
+      })()}
       <Button size="sm" variant="outline" onClick={() => retag(p)}>
         <RefreshCw className="size-3 mr-1" /> Re-tag
       </Button>
