@@ -170,20 +170,27 @@ const Inbox = () => {
     const phoneTail = selected.phone_number.replace(/\D/g, "").slice(-9);
     const inc = incoming
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number)
-      .map((m) => ({
-        id: `i-${m.id}`,
-        srcTable: "incoming_messages" as const,
-        srcId: m.id,
-        srcField: "message" as const,
-        kind: "in" as const,
-        text: m.message_text || m.image_caption || (m.image_url ? "" : "(no text)"),
-        imageUrl: (m as any).image_url as string | null,
-        mimetype: (m as any).mimetype as string | null,
-        productName: (m as any).extracted_product_name as string | null,
-        orderNumber: (m as any).extracted_order_number as string | null,
-        ts: m.received_at,
-        pending: !m.reply_sent && !m.reply_text,
-      }));
+      .map((m) => {
+        const mt = (m as any).message_type as string | null;
+        const mediaUrl = ((m as any).media_url || null) as string | null;
+        return {
+          id: `i-${m.id}`,
+          srcTable: "incoming_messages" as const,
+          srcId: m.id,
+          srcField: "message" as const,
+          kind: "in" as const,
+          text: m.message_text || (m as any).caption || m.image_caption || "",
+          imageUrl: (m as any).image_url as string | null,
+          mediaUrl,
+          mediaType: mt,
+          mediaFilename: (m as any).media_filename as string | null,
+          mimetype: (m as any).mimetype as string | null,
+          productName: (m as any).extracted_product_name as string | null,
+          orderNumber: (m as any).extracted_order_number as string | null,
+          ts: m.received_at,
+          pending: !m.reply_sent && !m.reply_text,
+        };
+      });
     const replies = incoming
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number && m.reply_text)
       .map((m) => {
