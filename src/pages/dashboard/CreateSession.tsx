@@ -274,6 +274,8 @@ const CreateSession = () => {
             )}
           </>
         )}
+
+        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
           <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:text-primary">
             <ChevronDown className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`} /> Advanced Settings
           </CollapsibleTrigger>
