@@ -277,7 +277,7 @@ RULES:
       }
       await supabase
         .from("business_profiles")
-        .upsert({ user_id: user.id, ...business, ai_enabled: true, active_reply_mode: "ai_agent" }, { onConflict: "user_id" });
+        .upsert({ user_id: user.id, ...business, ai_enabled: true, active_reply_mode: "ai_agent" } as any, { onConflict: "user_id" });
       setBusiness((p) => ({ ...p, ai_enabled: true }));
       toast.success("🟢 AI Agent ON");
     } else {
