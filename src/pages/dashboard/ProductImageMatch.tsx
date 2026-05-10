@@ -341,23 +341,38 @@ export default function ProductImageMatch() {
                 No products yet
               </Card>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
                 {items.map((p) => (
-                  <Card key={p.id} className="p-3 space-y-2">
-                    <img
-                      src={p.product_image_url}
-                      alt={p.product_name}
-                      className="w-full h-40 object-cover rounded-md bg-muted"
-                      onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
-                    />
-                    <div className="font-semibold">{p.product_name}</div>
-                    {p.product_price && <div className="text-sm text-primary">{p.product_price}</div>}
-                    {p.product_description && (
-                      <div className="text-xs text-muted-foreground line-clamp-2">{p.product_description}</div>
-                    )}
-                    <Button variant="destructive" size="sm" className="w-full" onClick={() => handleDelete(p.id)}>
-                      <Trash2 className="h-3 w-3 mr-1" /> Delete
-                    </Button>
+                  <Card key={p.id} className="p-3">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={p.product_image_url}
+                        alt={p.product_name}
+                        className="w-20 h-20 rounded object-cover flex-shrink-0 bg-muted"
+                        onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="font-semibold truncate">{p.product_name}</div>
+                            {p.product_description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{p.product_description}</p>
+                            )}
+                            <div className="mt-1">
+                              <Badge variant="secondary" className="text-[10px]">Image Match Active</Badge>
+                            </div>
+                          </div>
+                          {p.product_price && (
+                            <div className="font-bold whitespace-nowrap text-primary">{p.product_price}</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <Button variant="destructive" size="sm" onClick={() => handleDelete(p.id)}>
+                          <Trash2 className="h-3 w-3 mr-1" /> Delete
+                        </Button>
+                      </div>
+                    </div>
                   </Card>
                 ))}
               </div>
