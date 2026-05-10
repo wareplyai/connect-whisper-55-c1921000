@@ -1514,6 +1514,100 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, skipped: "session_not_connected", message_id: messageId });
     }
 
+    // ===== Message batching: collect rapid-fire customer messages, reply once =====
+    const batchWaitSeconds = Math.max(0, Math.min(120, Number((biz as any)?.batch_wait_seconds ?? 10)));
+    if (aiEnabled && batchWaitSeconds > 0 && !isImageMessage && !matchedProduct && messageText) {
+      try {
+        const cutoffIso = new Date(Date.now() - batchWaitSeconds * 1000).toISOString();
+        const { data: existing } = await admin
+          .from("message_batches")
+          .select("id, messages, last_message_at")
+          .eq("session_id", sessionId)
+          .eq("from_number", fromNumber)
+          .eq("processed", false)
+          .gte("last_message_at", cutoffIso)
+          .order("last_message_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const nowIso = new Date().toISOString();
+        let batchId: string;
+        let batchMessages: string[];
+        if (existing) {
+          batchId = (existing as any).id;
+          const prev = Array.isArray((existing as any).messages) ? (existing as any).messages as string[] : [];
+          batchMessages = [...prev, messageText];
+          await admin.from("message_batches").update({
+            messages: batchMessages,
+            last_message_at: nowIso,
+          }).eq("id", batchId);
+        } else {
+          // mark stale unprocessed batches as processed so they won't be picked up again
+          await admin.from("message_batches")
+            .update({ processed: true })
+            .eq("session_id", sessionId)
+            .eq("from_number", fromNumber)
+            .eq("processed", false);
+          batchMessages = [messageText];
+          const { data: created } = await admin.from("message_batches").insert({
+            session_id: sessionId, user_id: userId, from_number: fromNumber,
+            messages: batchMessages, first_message_at: nowIso, last_message_at: nowIso,
+          }).select("id").single();
+          batchId = (created as any)?.id;
+        }
+
+        const myStamp = nowIso;
+        await new Promise((r) => setTimeout(r, batchWaitSeconds * 1000));
+
+        const { data: latest } = await admin
+          .from("message_batches")
+          .select("id, messages, last_message_at, processed")
+          .eq("id", batchId)
+          .maybeSingle();
+
+        if (!latest || (latest as any).processed) {
+          if (messageId) {
+            await admin.from("incoming_messages").update({
+              delivery_status: "skipped",
+              reply_error: "Batched into newer message",
+              processed_at: new Date().toISOString(),
+            }).eq("id", messageId);
+          }
+          return jsonResp({ ok: true, skipped: "batched_already_processed", message_id: messageId });
+        }
+        if (((latest as any).last_message_at || "") > myStamp) {
+          if (messageId) {
+            await admin.from("incoming_messages").update({
+              delivery_status: "skipped",
+              reply_error: "Superseded by newer message in batch",
+              processed_at: new Date().toISOString(),
+            }).eq("id", messageId);
+          }
+          return jsonResp({ ok: true, skipped: "superseded_in_batch", message_id: messageId });
+        }
+
+        // Atomic claim
+        const { data: claimed } = await admin
+          .from("message_batches")
+          .update({ processed: true })
+          .eq("id", batchId)
+          .eq("processed", false)
+          .select("id, messages")
+          .maybeSingle();
+
+        if (!claimed) {
+          return jsonResp({ ok: true, skipped: "batch_already_claimed", message_id: messageId });
+        }
+        const arr: string[] = Array.isArray((claimed as any).messages) ? (claimed as any).messages : batchMessages;
+        if (arr.length > 1) {
+          messageText = arr.join("\n");
+          console.log("[ai-reply] batched", arr.length, "messages →", fromNumber);
+        }
+      } catch (e) {
+        console.log("[ai-reply] batching error:", (e as Error)?.message);
+      }
+    }
+
     const lowerMsg = messageText.toLowerCase();
 
     // MUTEX: route based on active_reply_mode (per-customer auto_reply overrides global "none")
