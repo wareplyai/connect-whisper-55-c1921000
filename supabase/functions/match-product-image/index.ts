@@ -11,8 +11,24 @@ const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  let _logCtx: { user_id?: string; image_url?: string; customer_phone?: string | null } = {};
+  let _supabaseAdmin: any = null;
+  const writeLog = async (fields: Record<string, any>) => {
+    try {
+      if (!_supabaseAdmin || !_logCtx.user_id) return;
+      await _supabaseAdmin.from("image_match_logs").insert({
+        user_id: _logCtx.user_id,
+        customer_phone: _logCtx.customer_phone || null,
+        query_image_url: _logCtx.image_url || null,
+        ...fields,
+      });
+    } catch (e) {
+      console.log("[match-product-image] log error", (e as Error).message);
+    }
+  };
   try {
-    const { image_url, user_id } = await req.json();
+    const { image_url, user_id, customer_phone } = await req.json();
+    _logCtx = { image_url, user_id, customer_phone: customer_phone || null };
     if (!image_url || !user_id) {
       return new Response(JSON.stringify({ error: "image_url and user_id required" }), {
         status: 400,
