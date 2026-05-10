@@ -1404,6 +1404,7 @@ Deno.serve(async (req) => {
     // ===== Product Image Recognition (perceptual hash match) =====
     // If customer sent an image and we have a usable URL, try matching against
     // the user's product catalog before falling through to AI/keyword routing.
+    let matchedProduct: any = null;
     if (isImageMessage && imageUrl && messageId) {
       try {
         console.log("[ai-reply] calling match-product-image", {
@@ -1438,43 +1439,52 @@ Deno.serve(async (req) => {
 
         if (matchData?.match && matchData.product) {
           const p = matchData.product;
-          const reply =
-            `✅ আমরা এই পণ্যটি চিনতে পেরেছি!\n\n` +
-            `🛍️ পণ্যের নাম: ${p.name}\n` +
-            (p.price ? `💰 মূল্য: ${p.price}\n` : "") +
-            (p.description ? `📝 বিবরণ: ${p.description}\n` : "") +
-            `\nঅর্ডার করতে চাইলে জানান!`;
+          matchedProduct = p;
 
-          const sendResult = await sendViaGateway({
-            gateway: GATEWAY,
-            sessionId,
-            apiToken: session.api_token,
-            to: fromNumber,
-            message: reply,
-            showTyping: aiEnabled ? aiTyping : sessionTyping,
-            accountProtection,
-          });
-          await admin.from("incoming_messages").update({
-            reply_text: reply,
-            reply_sent: sendResult.ok,
-            delivery_status: sendResult.ok ? "sent" : "failed",
-            reply_error: sendResult.ok ? null : sendResult.error,
-            processed_at: new Date().toISOString(),
-            reply_attempted_at: new Date().toISOString(),
-            reply_sent_at: sendResult.ok ? new Date().toISOString() : null,
-          }).eq("id", messageId);
-          if (sendResult.ok) {
-            await admin.from("message_logs").insert({
-              user_id: userId, session_id: sessionId, to_number: sendResult.to,
-              message_type: "text",
-              payload: { text: reply, source: "product_image_match", product_id: p.id, distance: matchData.distance },
-              status: "sent",
+          // If the customer also sent text along with the image, don't auto-reply
+          // here — let the AI handle the question with the matched product as
+          // context. We just store `matchedProduct` and continue down the flow.
+          if (messageText) {
+            console.log("[ai-reply] image+text — deferring to AI with product context", { product_id: p.id });
+          } else {
+            const reply =
+              `✅ আমরা এই পণ্যটি চিনতে পেরেছি!\n\n` +
+              `🛍️ পণ্যের নাম: ${p.name}\n` +
+              (p.price ? `💰 মূল্য: ${p.price}\n` : "") +
+              (p.description ? `📝 বিবরণ: ${p.description}\n` : "") +
+              `\nঅর্ডার করতে চাইলে জানান!`;
+
+            const sendResult = await sendViaGateway({
+              gateway: GATEWAY,
+              sessionId,
+              apiToken: session.api_token,
+              to: fromNumber,
+              message: reply,
+              showTyping: aiEnabled ? aiTyping : sessionTyping,
+              accountProtection,
+            });
+            await admin.from("incoming_messages").update({
+              reply_text: reply,
+              reply_sent: sendResult.ok,
+              delivery_status: sendResult.ok ? "sent" : "failed",
+              reply_error: sendResult.ok ? null : sendResult.error,
+              processed_at: new Date().toISOString(),
+              reply_attempted_at: new Date().toISOString(),
+              reply_sent_at: sendResult.ok ? new Date().toISOString() : null,
+            }).eq("id", messageId);
+            if (sendResult.ok) {
+              await admin.from("message_logs").insert({
+                user_id: userId, session_id: sessionId, to_number: sendResult.to,
+                message_type: "text",
+                payload: { text: reply, source: "product_image_match", product_id: p.id, distance: matchData.distance },
+                status: "sent",
+              });
+            }
+            return jsonResp({
+              ok: true, reply, sent: sendResult.ok, source: "product_image_match",
+              distance: matchData.distance, message_id: messageId,
             });
           }
-          return jsonResp({
-            ok: true, reply, sent: sendResult.ok, source: "product_image_match",
-            distance: matchData.distance, message_id: messageId,
-          });
         }
       } catch (e) {
         console.log("[ai-reply] product-image match failed:", (e as Error)?.message);
@@ -1519,7 +1529,7 @@ Deno.serve(async (req) => {
     }
 
     // Fixed Q&A — runs for both AI Agent and Auto-Reply modes (exact/contains match bypasses AI)
-    if ((aiEnabled || autoReplyEnabled) && !isImageMessage) {
+    if ((aiEnabled || autoReplyEnabled) && (!isImageMessage || !!messageText)) {
       const { data: fixed } = await admin
         .from("fixed_qa")
         .select("keyword, reply, match_type")
@@ -1564,7 +1574,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (autoReplyEnabled && !isImageMessage) {
+    if (autoReplyEnabled && (!isImageMessage || !!messageText)) {
       // Keyword rules
       const { data: rules } = await admin
         .from("auto_reply_rules")
@@ -1701,14 +1711,24 @@ Deno.serve(async (req) => {
       ? biz.system_prompt
       : `You are a helpful WhatsApp assistant for ${biz?.name || "this business"}. Reply in the customer's language. Be friendly, concise, human-like.`;
 
-    const systemPrompt = `${baseSystem}${qaContext}${productCatalog}${productInstr}`;
+    // If we have a matched product (image match) and/or text from the customer,
+    // route into the regular text-AI flow with extra context. Vision-only describe
+    // path only runs when the customer sent ONLY an image (no text).
+    const useTextFlow = !!messageText || !!matchedProduct;
+    const matchedContext = matchedProduct
+      ? `\n\nIMAGE MATCH: The customer attached a photo that matches this product from the catalog — name: "${matchedProduct.name}"${matchedProduct.price ? `, price: ${matchedProduct.price}` : ""}${matchedProduct.description ? `, description: ${String(matchedProduct.description).slice(0, 200)}` : ""}. Use this as the primary product the customer is asking about, and answer their text question about it.`
+      : "";
+    const finalSystemPrompt = `${systemPrompt}${matchedContext}`;
+    const finalUserMessage = messageText || (matchedProduct ? `(Customer sent a photo of "${matchedProduct.name}" with no caption.)` : "");
+
+    const systemPromptForVision = systemPrompt; // unused — kept for clarity
 
     let reply = "";
 
-    // ---- Image-message branch: vision describe + product match ----
-    if (isImageMessage && !imageUrl) {
+    // ---- Image-message branch: vision describe + product match (image-only) ----
+    if (isImageMessage && !imageUrl && !useTextFlow) {
       reply = "ছবি receive করেছি ✅ কিন্তু এই মুহূর্তে ছবিটা analyze করা সম্ভব হচ্ছে না। দয়া করে product টির নাম / রঙ / size text এ লিখে পাঠান, আমি match করে details দিচ্ছি।\n\nGot your image but couldn't open it right now — please describe the product in text (name / color / size).";
-    } else if (isImageMessage && imageUrl) {
+    } else if (isImageMessage && imageUrl && !useTextFlow) {
       if (keyRow.platform !== "openai") {
         reply = "Sorry, image search needs an OpenAI API key. Please describe the product in text. ছবি match করতে OpenAI key দরকার, দয়া করে product টি text এ describe করুন।";
       } else {
@@ -1788,8 +1808,8 @@ Deno.serve(async (req) => {
             "deepseek-chat"
           ),
           apiKey,
-          systemPrompt,
-          userMessage: messageText,
+          systemPrompt: finalSystemPrompt,
+          userMessage: finalUserMessage,
           maxTokens: Number((biz as any)?.max_tokens) || 2000,
           temperature: typeof (biz as any)?.temperature === "number" ? Number((biz as any).temperature) : 0.7,
         });
