@@ -1772,7 +1772,8 @@ Deno.serve(async (req) => {
           apiKey,
           systemPrompt,
           userMessage: messageText,
-          maxTokens: Number((biz as any)?.max_tokens) || 500,
+          maxTokens: Number((biz as any)?.max_tokens) || 2000,
+          temperature: typeof (biz as any)?.temperature === "number" ? Number((biz as any).temperature) : 0.7,
         });
       } catch (aiErr: any) {
         if (messageId) {
