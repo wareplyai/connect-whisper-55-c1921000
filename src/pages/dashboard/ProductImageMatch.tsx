@@ -165,9 +165,6 @@ export default function ProductImageMatch() {
                 {p.product_description && (
                   <div className="text-xs text-muted-foreground line-clamp-2">{p.product_description}</div>
                 )}
-                <div className="text-[10px] text-muted-foreground font-mono truncate">
-                  hash: {p.image_hash || "—"}
-                </div>
                 <Button variant="destructive" size="sm" className="w-full" onClick={() => handleDelete(p.id)}>
                   <Trash2 className="h-3 w-3 mr-1" /> Delete
                 </Button>
