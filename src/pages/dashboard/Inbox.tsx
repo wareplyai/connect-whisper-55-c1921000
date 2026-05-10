@@ -595,8 +595,10 @@ const Inbox = () => {
                         {(() => {
                           const mt = ((m as any).mediaType as string | null || "").toLowerCase();
                           const mu = (m as any).mediaUrl as string | null;
-                          const imgSrc = ((m as any).imageUrl as string | null)
+                          const rawImgSrc = ((m as any).imageUrl as string | null)
                             || (mu && (/image|photo|picture/.test(mt) || /^image\//i.test((m as any).mimetype || "")) ? mu : null);
+                          const imgPath = getChatMediaPath(rawImgSrc);
+                          const imgSrc = imgPath ? (signedMediaUrls[imgPath] || rawImgSrc) : rawImgSrc;
                           if (imgSrc) {
                             return (
                               <img
@@ -605,7 +607,13 @@ const Inbox = () => {
                                 className="mb-1 block max-h-64 w-auto max-w-full cursor-pointer rounded-md border border-border object-contain"
                                 loading="lazy"
                                 onClick={() => setLightbox(imgSrc)}
-                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                                onError={(e) => {
+                                  if (imgPath && signedMediaUrls[imgPath] && e.currentTarget.src !== signedMediaUrls[imgPath]) {
+                                    e.currentTarget.src = signedMediaUrls[imgPath];
+                                  } else {
+                                    e.currentTarget.style.display = "none";
+                                  }
+                                }}
                               />
                             );
                           }
