@@ -27,6 +27,10 @@ type IncomingRow = {
   image_url?: string | null;
   mimetype?: string | null;
   image_caption?: string | null;
+  media_url?: string | null;
+  media_filename?: string | null;
+  caption?: string | null;
+  message_type?: string | null;
   extracted_product_name?: string | null;
   extracted_order_number?: string | null;
 };
