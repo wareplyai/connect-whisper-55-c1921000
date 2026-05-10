@@ -568,11 +568,25 @@ const Inbox = () => {
                           >
                             <img
                               src={(m as any).imageUrl}
-                              alt={(m as any).productName || "Customer attachment"}
+                              alt={(m as any).productName || "Attachment"}
                               className="max-h-56 max-w-full object-cover"
                               loading="lazy"
                             />
                           </button>
+                        ) : (m as any).mediaUrl && (m as any).mediaType === "audio" ? (
+                          <audio controls src={(m as any).mediaUrl} className="mb-1 max-w-full" />
+                        ) : (m as any).mediaUrl && (m as any).mediaType === "video" ? (
+                          <video controls src={(m as any).mediaUrl} className="mb-1 max-h-56 max-w-full rounded-lg border border-border" />
+                        ) : (m as any).mediaUrl && (m as any).mediaType === "document" ? (
+                          <a
+                            href={(m as any).mediaUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mb-1 flex items-center gap-2 px-2 py-1.5 rounded-md border border-border bg-background/50 hover:bg-background transition text-xs"
+                          >
+                            <FileText className="h-4 w-4" />
+                            <span className="truncate">{(m as any).mediaFilename || "Open document"}</span>
+                          </a>
                         ) : m.kind === "in" && (m.text === "" || m.text?.startsWith("[customer sent an image]")) ? (
                           <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-md px-2 py-1.5 border border-border">
                             <ImageIcon className="h-3.5 w-3.5" />
