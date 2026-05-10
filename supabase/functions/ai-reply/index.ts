@@ -1808,8 +1808,8 @@ Deno.serve(async (req) => {
             "deepseek-chat"
           ),
           apiKey,
-          systemPrompt,
-          userMessage: messageText,
+          systemPrompt: finalSystemPrompt,
+          userMessage: finalUserMessage,
           maxTokens: Number((biz as any)?.max_tokens) || 2000,
           temperature: typeof (biz as any)?.temperature === "number" ? Number((biz as any).temperature) : 0.7,
         });
