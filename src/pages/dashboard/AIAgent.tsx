@@ -679,7 +679,7 @@ RULES:
         {business.system_prompt && (
           <div className="space-y-2">
             <Label>System Prompt (editable)</Label>
-            <Textarea rows={10} value={business.system_prompt} onChange={(e) => setBusiness({ ...business, system_prompt: e.target.value })} />
+            <ExpandableTextarea label="System Prompt" rows={10} value={business.system_prompt} onChange={(v) => setBusiness({ ...business, system_prompt: v })} />
           </div>
         )}
       </section>
