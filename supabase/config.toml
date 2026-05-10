@@ -44,3 +44,6 @@ verify_jwt = true
 
 [functions.match-product-image]
 verify_jwt = false
+
+[functions.send-product-image-to-customer]
+verify_jwt = false
