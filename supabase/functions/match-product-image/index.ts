@@ -6,35 +6,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-function hammingDistance(a: string, b: string): number {
-  const len = Math.min(a.length, b.length);
-  let d = Math.abs(a.length - b.length);
-  for (let i = 0; i < len; i++) if (a[i] !== b[i]) d++;
-  return d;
-}
-
-// Lightweight 8x8 average-hash approximation from raw bytes (no image decoder
-// available in Deno edge runtime). Same algorithm must be used for both
-// customer image and stored product image so distances are comparable.
-async function generateHash(imageUrl: string): Promise<string> {
-  const res = await fetch(imageUrl);
-  if (!res.ok) throw new Error(`fetch ${res.status}`);
-  const buf = new Uint8Array(await res.arrayBuffer());
-  const sample = 64;
-  if (buf.length < sample) throw new Error("image too small");
-  const step = Math.floor(buf.length / sample);
-  const pixels: number[] = [];
-  for (let i = 0; i < sample; i++) pixels.push(buf[i * step]);
-  const avg = pixels.reduce((a, b) => a + b, 0) / pixels.length;
-  return pixels.map((p) => (p > avg ? "1" : "0")).join("");
-}
+const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { image_url, user_id, store_for_product_id } = await req.json();
-    if (!image_url || (!user_id && !store_for_product_id)) {
+    const { image_url, user_id } = await req.json();
+    if (!image_url || !user_id) {
       return new Response(JSON.stringify({ error: "image_url and user_id required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -46,24 +25,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const hash = await generateHash(image_url);
-
-    // Mode 1: backfill — store hash for an existing product row
-    if (store_for_product_id) {
-      const { error } = await supabase
-        .from("product_images")
-        .update({ image_hash: hash })
-        .eq("id", store_for_product_id);
-      if (error) throw error;
-      return new Response(JSON.stringify({ ok: true, hash }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Mode 2: match
     const { data: products } = await supabase
       .from("product_images")
-      .select("id, product_name, product_price, product_description, product_image_url, image_hash")
+      .select("id, product_name, product_price, product_description, product_image_url")
       .eq("user_id", user_id);
 
     if (!products || products.length === 0) {
@@ -72,18 +36,62 @@ Deno.serve(async (req) => {
       });
     }
 
-    let best: any = null;
-    let bestDist = 999;
-    for (const p of products) {
-      if (!p.image_hash) continue;
-      const d = hammingDistance(hash, p.image_hash);
-      if (d < bestDist) { bestDist = d; best = p; }
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+
+    // Build a single multimodal prompt: customer image + every product image labeled
+    // by index. Ask Gemini to return the matching index (or -1).
+    const content: any[] = [
+      {
+        type: "text",
+        text:
+          `You are a product matching assistant. The FIRST image below is a photo a customer sent on WhatsApp. ` +
+          `The remaining images are products from a catalog, each labeled "Product #N: <name>". ` +
+          `Decide which catalog product is the SAME product as the customer's photo (same item — color, shape, design must match; ignore background, lighting, angle, watermark differences). ` +
+          `Reply STRICTLY in JSON: {"index": <number>, "confidence": "high"|"medium"|"low"}. ` +
+          `Use index = -1 if none clearly matches. Only say "high" if you are sure it's the same product.`,
+      },
+      { type: "text", text: "CUSTOMER IMAGE:" },
+      { type: "image_url", image_url: { url: image_url } },
+    ];
+
+    products.forEach((p, i) => {
+      content.push({ type: "text", text: `Product #${i}: ${p.product_name}` });
+      content.push({ type: "image_url", image_url: { url: p.product_image_url } });
+    });
+
+    const aiRes = await fetch(LOVABLE_AI_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [{ role: "user", content }],
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!aiRes.ok) {
+      const txt = await aiRes.text();
+      console.log("[match-product-image] AI error", aiRes.status, txt);
+      return new Response(JSON.stringify({ match: false, reason: "ai_error", status: aiRes.status }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    if (best && bestDist < 10) {
+    const aiJson = await aiRes.json();
+    const raw = aiJson?.choices?.[0]?.message?.content || "{}";
+    let parsed: any = {};
+    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+    const idx = typeof parsed.index === "number" ? parsed.index : -1;
+    const confidence = parsed.confidence || "low";
+
+    console.log("[match-product-image] AI result:", { idx, confidence, raw });
+
+    if (idx >= 0 && idx < products.length && confidence !== "low") {
+      const best = products[idx];
       return new Response(JSON.stringify({
         match: true,
-        distance: bestDist,
+        confidence,
         product: {
           id: best.id,
           name: best.product_name,
@@ -94,10 +102,11 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ match: false, distance: bestDist }), {
+    return new Response(JSON.stringify({ match: false, confidence, ai_index: idx }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
+    console.log("[match-product-image] error:", (e as Error).message);
     return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
