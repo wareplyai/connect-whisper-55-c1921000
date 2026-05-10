@@ -36,6 +36,7 @@ import Inbox from "./pages/dashboard/Inbox";
 import AIAgent from "./pages/dashboard/AIAgent";
 import BehaviorSettings from "./pages/dashboard/BehaviorSettings";
 import Products from "./pages/dashboard/Products";
+import ProductImageMatch from "./pages/dashboard/ProductImageMatch";
 import WooCommerce from "./pages/dashboard/WooCommerce";
 import AbandonedCart from "./pages/dashboard/AbandonedCart";
 import CRMDashboard from "./pages/dashboard/crm/CRMDashboard";
