@@ -1248,6 +1248,17 @@ Deno.serve(async (req) => {
     const autoReplyEnabled = (customerMode === "auto_reply" || replyMode === "auto_reply")
       && (session.auto_replies_enabled !== false)
       && ((biz as any)?.ai_auto_replies_enabled !== false);
+    const batchingEnabled = (biz as any)?.message_batching_enabled === true;
+    const batchWaitSeconds = batchingEnabled
+      ? Math.max(0, Math.min(120, Number((biz as any)?.batch_wait_seconds ?? 10)))
+      : 0;
+    console.log("=== AI REPLY START ===");
+    console.log("message_type:", messageType);
+    console.log("message:", messageText || null);
+    console.log("media_url:", bodyMediaUrl || null);
+    console.log("batching_enabled:", batchingEnabled);
+    console.log("reply_mode:", replyMode, "ai_enabled:", aiEnabled, "auto_reply_enabled:", autoReplyEnabled);
+    console.log("======================");
     const connectedSessions: string[] = (biz?.connected_session_ids ?? []) as string[];
     const sessionConnected = connectedSessions.includes(sessionId);
 
@@ -1517,8 +1528,6 @@ Deno.serve(async (req) => {
     // ===== Message batching: collect rapid-fire customer messages, reply once =====
     // Safe default: batching is OFF unless the user explicitly enables it.
     // Even when ON, if wait_seconds is 0 we skip batching entirely.
-    const batchingEnabled = (biz as any)?.message_batching_enabled === true;
-    const batchWaitSeconds = Math.max(0, Math.min(120, Number((biz as any)?.batch_wait_seconds ?? 10)));
     if (aiEnabled && batchingEnabled && batchWaitSeconds > 0 && !isImageMessage && !matchedProduct && messageText) {
       try {
         const nowMs = Date.now();
