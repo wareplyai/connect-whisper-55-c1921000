@@ -1404,6 +1404,7 @@ Deno.serve(async (req) => {
     // ===== Product Image Recognition (perceptual hash match) =====
     // If customer sent an image and we have a usable URL, try matching against
     // the user's product catalog before falling through to AI/keyword routing.
+    let matchedProduct: any = null;
     if (isImageMessage && imageUrl && messageId) {
       try {
         console.log("[ai-reply] calling match-product-image", {
