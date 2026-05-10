@@ -85,9 +85,11 @@ const CreateSession = () => {
     const fullPhone = `${country.code}${v.digits}`.replace(/\D/g, "");
 
     // Webhook validation
-    if (form.enable_webhook) {
-      if (!form.webhook_url.trim()) { setLoading(false); toast.error("Please enter a webhook URL to receive notifications."); return; }
-      if (!/^https:\/\//i.test(form.webhook_url.trim())) { setLoading(false); toast.error("Webhook URL must start with https://"); return; }
+    const effectiveWebhookUrl = builtIn ? AI_REPLY_WEBHOOK_URL : form.webhook_url.trim();
+    const effectiveEnableWebhook = builtIn ? true : form.enable_webhook;
+    if (effectiveEnableWebhook) {
+      if (!effectiveWebhookUrl) { setLoading(false); toast.error("Please enter a webhook URL to receive notifications."); return; }
+      if (!/^https:\/\//i.test(effectiveWebhookUrl)) { setLoading(false); toast.error("Webhook URL must start with https://"); return; }
     }
 
     // Duplicate phone check — own sessions (any status). Compares on normalized digits.
