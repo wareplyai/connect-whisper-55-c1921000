@@ -100,7 +100,7 @@ function HowItWorksHero() {
                 </div>
                 <div className="text-[9px] mt-1.5 px-0.5 text-foreground/80">Hae! Eta available ✅</div>
               </div>
-              <div className="text-[9px] text-muted-foreground mt-0.5 flex items-center gap-1"><Bot className="h-2.5 w-2.5" /> Bot · 12:04</div>
+              <div className="text-[9px] text-muted-foreground mt-0.5 flex items-center justify-end gap-1"><Bot className="h-2.5 w-2.5" /> Bot · 12:04</div>
             </div>
           </div>
         </div>
