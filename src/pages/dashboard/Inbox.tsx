@@ -640,6 +640,29 @@ const Inbox = () => {
               </ScrollArea>
               <div className="p-3 border-t border-border">
                 <div className="flex items-end gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="icon" disabled={sending || isBlocked} title="Send media">
+                        <Paperclip className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-2" align="start" side="top">
+                      <div className="flex flex-col gap-1">
+                        <Button variant="ghost" size="sm" className="justify-start" onClick={() => sendMedia("image")}>
+                          <ImageIcon className="h-4 w-4 mr-2" /> Send image
+                        </Button>
+                        <Button variant="ghost" size="sm" className="justify-start" onClick={() => sendMedia("voice")}>
+                          <Mic className="h-4 w-4 mr-2" /> Send voice
+                        </Button>
+                        <Button variant="ghost" size="sm" className="justify-start" onClick={() => sendMedia("video")}>
+                          <Film className="h-4 w-4 mr-2" /> Send video
+                        </Button>
+                        <Button variant="ghost" size="sm" className="justify-start" onClick={() => sendMedia("document")}>
+                          <FileText className="h-4 w-4 mr-2" /> Send document
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   <Input
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
