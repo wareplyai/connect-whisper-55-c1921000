@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PremiumVoicePlayer } from "@/components/dashboard/PremiumVoicePlayer";
 
 type IncomingRow = {
   id: string;
