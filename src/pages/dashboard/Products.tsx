@@ -9,7 +9,21 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List, Plus } from "lucide-react";
+import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List, Plus, Camera } from "lucide-react";
+
+const IMAGE_MATCH_MAX = 50;
+
+async function hashFromUrl(url: string): Promise<string> {
+  const res = await fetch(url);
+  const ab = await res.arrayBuffer();
+  const buf = new Uint8Array(ab);
+  const sample = 64;
+  const step = Math.max(1, Math.floor(buf.length / sample));
+  const px: number[] = [];
+  for (let i = 0; i < sample; i++) px.push(buf[i * step] || 0);
+  const avg = px.reduce((a, b) => a + b, 0) / px.length;
+  return px.map((p) => (p > avg ? "1" : "0")).join("");
+}
 
 type Product = {
   id: string;
