@@ -215,6 +215,7 @@ const AIAgent = () => {
 
   const generatePrompt = () => {
     if (!business.name || !business.description) { toast.error("Fill business name & description"); return; }
+    const instructionsBlock = (business.instructions || DEFAULT_INSTRUCTIONS).trim();
     const businessBlock = `You are the official AI assistant for ${business.name}${business.business_type ? ` (${business.business_type})` : ""}.
 
 ABOUT THE BUSINESS:
@@ -227,7 +228,7 @@ RULES:
 - Use the knowledge base for accurate answers. If unsure, ask a clarifying question.
 - Never invent prices, stock, or policies that aren't in the knowledge base.
 - Out of scope or sensitive topics → politely redirect to a human agent.`;
-    const prompt = `${TOP_PRIMARY_OBJECTIVE}\n\n---\n\n${businessBlock}`;
+    const prompt = `INSTRUCTIONS FOR THIS CHATBOT\n${instructionsBlock}\n\n---\n\n${TOP_PRIMARY_OBJECTIVE}\n\n---\n\n${businessBlock}`;
     setBusiness((p) => ({ ...p, system_prompt: prompt }));
     toast.success("System prompt generated — click Save Business Profile");
   };
