@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.send-manual-media]
 verify_jwt = true
+
+[functions.match-product-image]
+verify_jwt = false

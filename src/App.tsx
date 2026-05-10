@@ -36,6 +36,7 @@ import Inbox from "./pages/dashboard/Inbox";
 import AIAgent from "./pages/dashboard/AIAgent";
 import BehaviorSettings from "./pages/dashboard/BehaviorSettings";
 import Products from "./pages/dashboard/Products";
+import ProductImageMatch from "./pages/dashboard/ProductImageMatch";
 import WooCommerce from "./pages/dashboard/WooCommerce";
 import AbandonedCart from "./pages/dashboard/AbandonedCart";
 import CRMDashboard from "./pages/dashboard/crm/CRMDashboard";
@@ -120,6 +121,7 @@ const App = () => (
                 <Route path="ai-agent" element={<FeatureGuard feature="ai_agent"><AIAgent /></FeatureGuard>} />
                 <Route path="behavior" element={<BehaviorSettings />} />
                 <Route path="products" element={<Products />} />
+                <Route path="product-image-match" element={<ProductImageMatch />} />
                 <Route path="woocommerce" element={<WooCommerce />} />
                 <Route path="abandoned-cart" element={<FeatureGuard feature="abandoned_cart"><AbandonedCart /></FeatureGuard>} />
                 <Route path="crm" element={<CRMDashboard />} />
