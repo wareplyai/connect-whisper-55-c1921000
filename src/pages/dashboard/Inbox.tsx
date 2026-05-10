@@ -185,7 +185,14 @@ const Inbox = () => {
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number)
       .map((m) => {
         const mt = (m as any).message_type as string | null;
-        const mediaUrl = ((m as any).media_url || null) as string | null;
+        const rawPayload = (m as any).raw_payload as any;
+        const isAudio = mt === "audio" || mt === "voice" || mt === "ptt";
+        // For audio messages, prefer the original .ogg URL from raw_payload over any
+        // chat-media re-upload that may have happened upstream.
+        const rawAudioUrl = isAudio && rawPayload && typeof rawPayload === "object"
+          ? (rawPayload.media_url || rawPayload.mediaUrl || null)
+          : null;
+        const mediaUrl = (rawAudioUrl || (m as any).media_url || null) as string | null;
         return {
           id: `i-${m.id}`,
           srcTable: "incoming_messages" as const,
