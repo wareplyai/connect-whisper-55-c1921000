@@ -13,45 +13,96 @@ import { toast } from "sonner";
 import { Loader2, Trash2, Upload, ImageIcon, Sparkles, BarChart3, Camera, Bot, MessageSquare, ArrowRight, Zap, Plus } from "lucide-react";
 
 function HowItWorksHero() {
-  const Step = ({ icon: Icon, label, color, sub }: any) => (
-    <div className="flex-1 min-w-[150px] flex items-center gap-2.5 rounded-xl border bg-card/80 backdrop-blur px-3 py-2.5 shadow-sm">
-      <div className={`h-9 w-9 shrink-0 rounded-lg flex items-center justify-center ${color}`}>
-        <Icon className="h-4.5 w-4.5" />
-      </div>
-      <div className="flex flex-col min-w-0">
-        <span className="text-xs font-semibold leading-tight truncate">{label}</span>
-        <span className="text-[10px] text-muted-foreground leading-tight truncate">{sub}</span>
-      </div>
-    </div>
-  );
+  // 9s loop: 0-3s customer image, 3-6s AI scanning, 6-9s bot reply
+  const css = `
+@keyframes pim-cust { 0%,2% { opacity:0; transform: translateY(8px) scale(.95);} 6%,100% { opacity:1; transform:none; } }
+@keyframes pim-scan { 0%,30% { opacity:0; transform: translateY(8px);} 35%,100% { opacity:1; transform:none; } }
+@keyframes pim-scanline { 0%,30% { top:0; opacity:0;} 35% {opacity:1;} 65% { top:100%; opacity:1;} 66%,100% { opacity:0; top:0;} }
+@keyframes pim-bot { 0%,62% { opacity:0; transform: translateY(8px) scale(.96);} 68%,100% { opacity:1; transform:none; } }
+@keyframes pim-dot { 0%,100% { opacity:.3; transform: translateY(0);} 50% { opacity:1; transform: translateY(-3px);} }
+@keyframes pim-pulse-ring { 0% { transform: scale(.6); opacity:.7;} 100% { transform: scale(1.6); opacity:0;} }
+.pim-loop { animation-iteration-count: infinite; animation-duration: 9s; animation-timing-function: ease-in-out; }
+`;
   return (
-    <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-r from-primary/5 via-background to-primary/10">
-      <div className="absolute -top-10 -left-10 h-28 w-28 rounded-full bg-primary/10 blur-2xl animate-pulse pointer-events-none" />
-      <div className="absolute -bottom-10 -right-10 h-28 w-28 rounded-full bg-blue-500/10 blur-2xl animate-pulse [animation-delay:1s] pointer-events-none" />
+    <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 via-background to-blue-500/5">
+      <style>{css}</style>
+      <div className="absolute -top-12 -left-12 h-32 w-32 rounded-full bg-primary/10 blur-3xl animate-pulse pointer-events-none" />
+      <div className="absolute -bottom-12 -right-12 h-32 w-32 rounded-full bg-blue-500/10 blur-3xl animate-pulse [animation-delay:1.5s] pointer-events-none" />
 
-      <div className="relative px-4 pt-3 pb-1 flex items-center gap-2">
+      <div className="relative px-4 pt-3 pb-2 flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-        <span className="text-sm font-semibold">Product Image Match — How it works</span>
-        <Badge variant="secondary" className="ml-auto text-[10px] gap-1"><Zap className="h-3 w-3" /> Auto-reply</Badge>
+        <span className="text-sm font-semibold">How Product Image Match works</span>
+        <Badge variant="secondary" className="ml-auto text-[10px] gap-1"><Zap className="h-3 w-3" /> Live demo</Badge>
       </div>
 
-      <div className="relative px-4 py-3 flex items-center gap-2">
-        <Step icon={Camera} label="Customer sends photo" sub="On WhatsApp / Messenger" color="bg-green-500/15 text-green-600 dark:text-green-400" />
-        <div className="hidden sm:flex flex-col items-center gap-0.5 px-1">
-          <ArrowRight className="h-4 w-4 text-primary animate-[slide-in-right_1.5s_ease-in-out_infinite]" />
-          <span className="text-[9px] text-muted-foreground">match</span>
+      <div className="relative px-4 pb-4 grid gap-3 md:grid-cols-3">
+        {/* Step 1 — Customer sends photo */}
+        <div className="rounded-xl border bg-card/70 backdrop-blur p-3 shadow-sm">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="h-5 w-5 rounded-full bg-green-500/15 text-green-600 flex items-center justify-center text-[10px] font-bold">1</div>
+            <span className="text-[11px] font-semibold">Customer sends photo</span>
+          </div>
+          <div className="rounded-lg bg-muted/40 p-2 min-h-[120px] flex flex-col justify-end gap-1.5">
+            <div className="self-end pim-loop" style={{ animationName: 'pim-cust' }}>
+              <div className="bg-green-500 text-white rounded-2xl rounded-br-sm p-1.5 max-w-[140px] shadow">
+                <div className="h-16 w-full rounded-md bg-gradient-to-br from-amber-200 via-rose-300 to-rose-500 flex items-center justify-center">
+                  <Camera className="h-5 w-5 text-white/80" />
+                </div>
+                <div className="text-[9px] mt-1 px-0.5 opacity-90">Eta ase apnader kase? 🙂</div>
+              </div>
+              <div className="text-[9px] text-muted-foreground text-right mt-0.5">Customer · 12:04</div>
+            </div>
+          </div>
         </div>
-        <Step icon={Bot} label="AI matches catalog" sub="Visual hash compare" color="bg-primary/15 text-primary" />
-        <div className="hidden sm:flex flex-col items-center gap-0.5 px-1">
-          <ArrowRight className="h-4 w-4 text-primary animate-[slide-in-right_1.5s_ease-in-out_infinite] [animation-delay:0.5s]" />
-          <span className="text-[9px] text-muted-foreground">reply</span>
-        </div>
-        <Step icon={MessageSquare} label="Bot sends details" sub="Name • Price • Image" color="bg-blue-500/15 text-blue-600 dark:text-blue-400" />
-      </div>
 
-      <div className="relative px-4 pb-3">
-        <div className="h-1 w-full overflow-hidden rounded-full bg-primary/10">
-          <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-green-500 via-primary to-blue-500 animate-[slide-in-right_2.5s_ease-in-out_infinite]" />
+        {/* Step 2 — AI analyzes */}
+        <div className="rounded-xl border bg-card/70 backdrop-blur p-3 shadow-sm">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="h-5 w-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-bold">2</div>
+            <span className="text-[11px] font-semibold">AI analyzes & matches</span>
+          </div>
+          <div className="rounded-lg bg-muted/40 p-2 min-h-[120px] flex items-center justify-center">
+            <div className="pim-loop relative" style={{ animationName: 'pim-scan' }}>
+              <div className="relative h-20 w-20 rounded-lg overflow-hidden bg-gradient-to-br from-amber-200 via-rose-300 to-rose-500 border-2 border-primary/40">
+                <div className="absolute inset-x-0 h-0.5 bg-primary shadow-[0_0_8px_2px_hsl(var(--primary))] pim-loop" style={{ animationName: 'pim-scanline' }} />
+                <div className="absolute inset-0 ring-2 ring-primary/30 rounded-lg" />
+              </div>
+              <div className="absolute -right-2 -top-2 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg">
+                <Bot className="h-3.5 w-3.5" />
+                <span className="absolute inset-0 rounded-full border-2 border-primary pim-loop" style={{ animationName: 'pim-pulse-ring' }} />
+              </div>
+              <div className="mt-2 flex items-center justify-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary pim-loop" style={{ animationName: 'pim-dot', animationDuration: '1.2s', animationDelay: '0s' }} />
+                <span className="h-1.5 w-1.5 rounded-full bg-primary pim-loop" style={{ animationName: 'pim-dot', animationDuration: '1.2s', animationDelay: '.2s' }} />
+                <span className="h-1.5 w-1.5 rounded-full bg-primary pim-loop" style={{ animationName: 'pim-dot', animationDuration: '1.2s', animationDelay: '.4s' }} />
+                <span className="text-[9px] text-muted-foreground ml-1">scanning catalog…</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Step 3 — Bot replies */}
+        <div className="rounded-xl border bg-card/70 backdrop-blur p-3 shadow-sm">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="h-5 w-5 rounded-full bg-blue-500/15 text-blue-600 flex items-center justify-center text-[10px] font-bold">3</div>
+            <span className="text-[11px] font-semibold">Bot auto-replies</span>
+          </div>
+          <div className="rounded-lg bg-muted/40 p-2 min-h-[120px] flex flex-col justify-end gap-1.5">
+            <div className="self-start pim-loop" style={{ animationName: 'pim-bot' }}>
+              <div className="bg-card border border-blue-500/30 rounded-2xl rounded-bl-sm p-2 max-w-[170px] shadow">
+                <div className="flex gap-1.5">
+                  <div className="h-10 w-10 shrink-0 rounded-md bg-gradient-to-br from-amber-200 via-rose-300 to-rose-500" />
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-bold truncate">Rose Silk Saree</div>
+                    <div className="text-[10px] text-primary font-semibold">৳ 1,850</div>
+                    <div className="text-[8px] text-muted-foreground truncate">In stock · Free delivery</div>
+                  </div>
+                </div>
+                <div className="text-[9px] mt-1.5 px-0.5 text-foreground/80">Hae! Eta available ✅</div>
+              </div>
+              <div className="text-[9px] text-muted-foreground mt-0.5 flex items-center gap-1"><Bot className="h-2.5 w-2.5" /> Bot · 12:04</div>
+            </div>
+          </div>
         </div>
       </div>
     </Card>
