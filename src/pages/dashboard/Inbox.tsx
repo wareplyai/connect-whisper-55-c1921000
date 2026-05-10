@@ -298,6 +298,48 @@ const Inbox = () => {
     load();
   };
 
+  const sendMedia = async (kind: "image" | "voice" | "video" | "document") => {
+    if (!user || !selected) return;
+    const labels: Record<string, string> = {
+      image: "image URL (.jpg/.png)",
+      voice: "audio URL (.ogg/.mp3)",
+      video: "video URL (.mp4)",
+      document: "document URL (.pdf/.docx/.xlsx)",
+    };
+    const url = window.prompt(`Paste ${labels[kind]}:`)?.trim();
+    if (!url) return;
+    let caption = "";
+    let filename = "";
+    if (kind === "image" || kind === "video" || kind === "document") {
+      caption = window.prompt("Caption (optional):")?.trim() || "";
+    }
+    if (kind === "document") {
+      filename = window.prompt("Filename (optional, e.g. invoice.pdf):")?.trim() || "";
+    }
+    setSending(true);
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token;
+      const endpoint = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/send-manual-media`;
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          session_id: selected.session_id,
+          to_number: selected.phone_number,
+          kind, url, caption, filename,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.ok === false) toast.error(data?.error || "Send failed");
+      else { toast.success(`${kind} sent`); load(); }
+    } catch (e: any) {
+      toast.error(e?.message || "Send failed");
+    } finally {
+      setSending(false);
+    }
+  };
+
   const sendManual = async () => {
     if (!user || !selected || !draft.trim()) return;
     setSending(true);
