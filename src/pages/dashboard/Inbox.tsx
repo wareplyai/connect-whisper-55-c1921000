@@ -275,6 +275,26 @@ const Inbox = () => {
     return () => cancelAnimationFrame(id);
   }, [selectedKey, conversation.length]);
 
+  useEffect(() => {
+    const urls = conversation
+      .map((m: any) => m.imageUrl || (m.mediaType && /image|photo|picture/i.test(m.mediaType) ? m.mediaUrl : null))
+      .filter(Boolean) as string[];
+    const missingPaths = Array.from(new Set(urls.map(getChatMediaPath).filter(Boolean) as string[]))
+      .filter((path) => !signedMediaUrls[path]);
+    if (missingPaths.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(missingPaths.map(async (path) => {
+        const { data } = await supabase.storage.from("chat-media").createSignedUrl(path, 60 * 60);
+        return data?.signedUrl ? [path, data.signedUrl] as const : null;
+      }));
+      if (!cancelled) {
+        setSignedMediaUrls((prev) => ({ ...prev, ...Object.fromEntries(entries.filter(Boolean) as [string, string][]) }));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [conversation, signedMediaUrls]);
+
   const toggleBlock = async (next: boolean) => {
     if (!user || !selected) return;
     if (next) {
