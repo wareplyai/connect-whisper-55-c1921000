@@ -181,6 +181,7 @@ const AIAgent = () => {
           ai_auto_replies_enabled: (biz as any).ai_auto_replies_enabled ?? true,
           max_tokens: (biz as any).max_tokens ?? 2000,
           temperature: typeof (biz as any).temperature === "number" ? Number((biz as any).temperature) : 0.7,
+          batch_wait_seconds: typeof (biz as any).batch_wait_seconds === "number" ? Number((biz as any).batch_wait_seconds) : 10,
           instructions: ((biz as any).instructions ?? DEFAULT_INSTRUCTIONS) as string,
         });
       }
