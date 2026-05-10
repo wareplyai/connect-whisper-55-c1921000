@@ -610,6 +610,8 @@ const Inbox = () => {
                                 onError={(e) => {
                                   if (imgPath && signedMediaUrls[imgPath] && e.currentTarget.src !== signedMediaUrls[imgPath]) {
                                     e.currentTarget.src = signedMediaUrls[imgPath];
+                                  } else if (imgPath && !signedMediaUrls[imgPath]) {
+                                    return;
                                   } else {
                                     e.currentTarget.style.display = "none";
                                   }
