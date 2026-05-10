@@ -974,7 +974,9 @@ Deno.serve(async (req) => {
       const mediaUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
       const lowerType = messageType.toLowerCase();
       const isNonImageMedia = /audio|voice|ptt|video|document|file|sticker/.test(lowerType);
-      if (mediaUrl && isNonImageMedia) {
+      // If we already transcribed an audio message above, fall through to AI reply flow
+      // (we still want the audio + transcript saved in the inbox by the normal insert below).
+      if (mediaUrl && isNonImageMedia && !voiceTranscript) {
         const admin0 = createClient(
           Deno.env.get("SUPABASE_URL")!,
           Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
