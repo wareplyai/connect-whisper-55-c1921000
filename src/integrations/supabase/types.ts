@@ -426,6 +426,7 @@ export type Database = {
           ai_enabled: boolean
           ai_read_receipts: boolean
           ai_show_typing: boolean
+          batch_wait_seconds: number
           business_type: string | null
           connected_session_ids: string[]
           contact: string | null
@@ -449,6 +450,7 @@ export type Database = {
           ai_enabled?: boolean
           ai_read_receipts?: boolean
           ai_show_typing?: boolean
+          batch_wait_seconds?: number
           business_type?: string | null
           connected_session_ids?: string[]
           contact?: string | null
@@ -472,6 +474,7 @@ export type Database = {
           ai_enabled?: boolean
           ai_read_receipts?: boolean
           ai_show_typing?: boolean
+          batch_wait_seconds?: number
           business_type?: string | null
           connected_session_ids?: string[]
           contact?: string | null
@@ -1262,6 +1265,42 @@ export type Database = {
           source_name?: string | null
           source_type?: string
           source_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      message_batches: {
+        Row: {
+          created_at: string
+          first_message_at: string
+          from_number: string
+          id: string
+          last_message_at: string
+          messages: Json
+          processed: boolean
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          first_message_at?: string
+          from_number: string
+          id?: string
+          last_message_at?: string
+          messages?: Json
+          processed?: boolean
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          first_message_at?: string
+          from_number?: string
+          id?: string
+          last_message_at?: string
+          messages?: Json
+          processed?: boolean
+          session_id?: string
           user_id?: string
         }
         Relationships: []
