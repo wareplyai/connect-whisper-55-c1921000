@@ -436,6 +436,7 @@ export type Database = {
           instructions: string | null
           location: string | null
           max_tokens: number
+          message_batching_enabled: boolean
           name: string | null
           system_prompt: string | null
           temperature: number
@@ -460,6 +461,7 @@ export type Database = {
           instructions?: string | null
           location?: string | null
           max_tokens?: number
+          message_batching_enabled?: boolean
           name?: string | null
           system_prompt?: string | null
           temperature?: number
@@ -484,6 +486,7 @@ export type Database = {
           instructions?: string | null
           location?: string | null
           max_tokens?: number
+          message_batching_enabled?: boolean
           name?: string | null
           system_prompt?: string | null
           temperature?: number
