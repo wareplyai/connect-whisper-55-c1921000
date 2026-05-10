@@ -560,19 +560,18 @@ const Inbox = () => {
                         m.kind === "out" ? "bg-green-500/15 text-foreground" : "bg-muted text-foreground"
                       }`}>
                         {(() => {
-                          const mt = (m as any).mediaType as string | null;
+                          const mt = ((m as any).mediaType as string | null || "").toLowerCase();
                           const mu = (m as any).mediaUrl as string | null;
                           const imgSrc = ((m as any).imageUrl as string | null)
-                            || (mu && (mt === "image" || /^image\//i.test((m as any).mimetype || "")) ? mu : null);
+                            || (mu && (/image|photo|picture/.test(mt) || /^image\//i.test((m as any).mimetype || "")) ? mu : null);
                           if (imgSrc) {
                             return (
                               <img
                                 src={imgSrc}
-                                alt="image"
-                                style={{ maxWidth: "250px", borderRadius: "8px", cursor: "pointer" }}
-                                className="mb-1 block"
+                                alt="Customer sent image"
+                                className="mb-1 block max-h-64 w-auto max-w-full cursor-pointer rounded-md border border-border object-contain"
                                 loading="lazy"
-                                onClick={() => window.open(imgSrc, "_blank")}
+                                onClick={() => setLightbox(imgSrc)}
                                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                               />
                             );
@@ -590,14 +589,6 @@ const Inbox = () => {
                               <span className="truncate">{(m as any).mediaFilename || "Open document"}</span>
                             </a>
                           );
-                          if (m.kind === "in" && (m.text === "" || m.text?.startsWith("[customer sent an image]"))) {
-                            return (
-                              <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-md px-2 py-1.5 border border-border">
-                                <ImageIcon className="h-3.5 w-3.5" />
-                                <span>Image (loading…)</span>
-                              </div>
-                            );
-                          }
                           return null;
                         })()}
                         {((m as any).productName || (m as any).orderNumber) && (
@@ -610,7 +601,7 @@ const Inbox = () => {
                             )}
                           </div>
                         )}
-                        {m.text && <p className="whitespace-pre-wrap break-words">{m.text}</p>}
+                        {m.text && !m.text.startsWith("[customer sent an image]") && <p className="whitespace-pre-wrap break-words">{m.text}</p>}
                         <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
                           <span>{new Date(m.ts).toLocaleString()}</span>
                           {m.kind === "out" && (
