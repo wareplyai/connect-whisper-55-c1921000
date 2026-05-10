@@ -1363,11 +1363,17 @@ Deno.serve(async (req) => {
           imageMimetype = imageMimetype || uploaded.mime;
           await admin.from("incoming_messages").update({
             image_url: uploaded.url,
+            media_url: uploaded.url,
             mimetype: imageMimetype,
             image_caption: imageCaption,
           }).eq("id", messageId);
           imageUrl = uploaded.url;
-          console.log("[ai-reply] saved chat-media url for message", messageId);
+          console.log("[ai-reply] saved chat-media url for message", {
+            messageId,
+            media_url: uploaded.url,
+            image_url: imageUrl,
+            mime: imageMimetype,
+          });
         } else if (imageCaption || imageMimetype) {
           await admin.from("incoming_messages").update({
             mimetype: imageMimetype,
