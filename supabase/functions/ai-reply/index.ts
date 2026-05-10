@@ -884,9 +884,9 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const sessionId = String(body.session_id || body.sessionId || "").trim();
-    const rawText = String(body.message || body.text || body.message_text || "").trim();
+    let rawText = String(body.message || body.text || body.message_text || "").trim();
     const isGroup = Boolean(body.is_group ?? body.isGroup ?? false) || hasGroupJid(body);
-    const messageType = String(body.message_type || "text");
+    let messageType = String(body.message_type || "text");
     const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false) ||
       hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
