@@ -108,9 +108,11 @@ async function callAI(opts: {
   platform: string; model: string; apiKey: string;
   systemPrompt: string; userMessage: string;
   maxTokens?: number;
+  temperature?: number;
 }): Promise<string> {
   const { platform, model, apiKey, systemPrompt, userMessage } = opts;
-  const maxTokens = Math.max(50, Math.min(4000, Number(opts.maxTokens) || 500));
+  const maxTokens = Math.max(50, Math.min(4000, Number(opts.maxTokens) || 2000));
+  const temperature = Math.max(0, Math.min(2, typeof opts.temperature === "number" ? opts.temperature : 0.7));
 
   if (platform === "openai" || platform === "deepseek") {
     const url = platform === "openai"
