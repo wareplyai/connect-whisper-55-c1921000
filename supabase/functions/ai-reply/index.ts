@@ -128,6 +128,7 @@ async function callAI(opts: {
           { role: "user", content: userMessage },
         ],
         max_tokens: maxTokens,
+        temperature,
       }),
     });
     const data = await r.json();
