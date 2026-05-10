@@ -47,6 +47,7 @@ const CreateSession = () => {
   });
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [builtIn, setBuiltIn] = useState(true);
 
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
   const toggleEvent = (e: string) => {
