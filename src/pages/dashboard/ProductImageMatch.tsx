@@ -158,6 +158,7 @@ export default function ProductImageMatch() {
 
       toast.success("Product added");
       reset();
+      setAddOpen(false);
       load();
     } catch (e: any) {
       toast.error(e.message || "Upload failed");
