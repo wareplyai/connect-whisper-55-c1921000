@@ -37,6 +37,45 @@ async function decryptKey(payload: string): Promise<string> {
   return dec.decode(pt);
 }
 
+// Transcribe a remote .ogg/.mp3/.m4a voice file via OpenAI Whisper.
+// Returns the transcript text on success, or "" on any failure (logged).
+async function transcribeVoiceFile(audioUrl: string, openaiKey: string): Promise<string> {
+  try {
+    const audioRes = await fetch(audioUrl);
+    if (!audioRes.ok) {
+      console.log("[whisper] download failed:", audioRes.status, audioUrl);
+      return "";
+    }
+    const ctype = audioRes.headers.get("content-type") || "audio/ogg";
+    const buf = await audioRes.arrayBuffer();
+    const ext = audioUrl.toLowerCase().includes(".mp3") ? "mp3"
+      : audioUrl.toLowerCase().includes(".m4a") ? "m4a"
+      : audioUrl.toLowerCase().includes(".wav") ? "wav"
+      : "ogg";
+    const fd = new FormData();
+    fd.append("file", new Blob([buf], { type: ctype }), `voice.${ext}`);
+    fd.append("model", "whisper-1");
+    // Whisper auto-detects when no language is set; passing "bn" can hurt mixed
+    // Bangla/English voice notes. Leave it off so transcription works for both.
+    const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${openaiKey}` },
+      body: fd,
+    });
+    const data: any = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      console.log("[whisper] api error:", r.status, data?.error?.message || data);
+      return "";
+    }
+    const text = String(data?.text || "").trim();
+    console.log("[whisper] transcribed", text.length, "chars from", audioUrl);
+    return text;
+  } catch (e) {
+    console.log("[whisper] exception:", (e as Error)?.message);
+    return "";
+  }
+}
+
 function jsonResp(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
