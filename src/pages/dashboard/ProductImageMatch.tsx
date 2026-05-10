@@ -88,8 +88,8 @@ function HowItWorksHero() {
             <span className="text-[11px] font-semibold">Bot auto-replies</span>
           </div>
           <div className="rounded-lg bg-muted/40 p-2 min-h-[120px] flex flex-col justify-end gap-1.5">
-            <div className="self-start pim-loop" style={{ animationName: 'pim-bot' }}>
-              <div className="bg-card border border-blue-500/30 rounded-2xl rounded-bl-sm p-2 max-w-[170px] shadow">
+            <div className="self-end pim-loop" style={{ animationName: 'pim-bot' }}>
+              <div className="bg-card border border-blue-500/30 rounded-2xl rounded-br-sm p-2 max-w-[170px] shadow">
                 <div className="flex gap-1.5">
                   <div className="h-10 w-10 shrink-0 rounded-md bg-gradient-to-br from-amber-200 via-rose-300 to-rose-500" />
                   <div className="min-w-0">
