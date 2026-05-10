@@ -42,11 +42,13 @@ const EditSession = () => {
       setName(data.session_name || "");
       const sp = splitPhone(data.phone_number);
       setCountry(sp.country); setNum(sp.number);
+      const savedUrl = data.webhook_url || AI_REPLY_WEBHOOK_URL;
+      setBuiltIn(!data.webhook_url || savedUrl === AI_REPLY_WEBHOOK_URL);
       setForm({
         enable_account_protection: data.enable_account_protection,
         enable_message_logging: data.enable_message_logging,
         enable_webhook: data.enable_webhook,
-        webhook_url: data.webhook_url || `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`,
+        webhook_url: savedUrl,
         webhook_events: data.webhook_events || [],
         read_incoming_messages: data.read_incoming_messages,
         auto_reject_calls: data.auto_reject_calls,
