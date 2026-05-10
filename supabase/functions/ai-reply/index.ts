@@ -1017,18 +1017,27 @@ Deno.serve(async (req) => {
     }
 
     // ---- Image detection: scan body deeply for any image source (URL/dataURL/base64) ----
+    const bodyMediaUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
     let imageUrl = findImageUrl(body);
     const looksImageType = /image|photo|picture|media/i.test(messageType);
     const payloadHasImage = looksImageType || payloadLooksLikeImage(body);
     // Tentatively flag as image — we may resolve the actual binary from the gateway below.
     let isImageMessage = (!!imageUrl && (looksImageType || !rawText)) || (payloadHasImage && !rawText);
-    const messageText = rawText || (isImageMessage ? "[customer sent an image]" : "");
+    const messageText = rawText || "";
+
+    console.log("message_type:", messageType);
+    console.log("media_url:", bodyMediaUrl || null);
+    console.log("Image received, media_url:", isImageMessage ? (bodyMediaUrl || null) : null);
 
     console.log("[ai-reply] incoming", {
       sessionId,
       messageType,
       hasText: !!rawText,
       hasImage: !!imageUrl,
+      media_url: bodyMediaUrl || null,
+      image_url: imageUrl || null,
+      image_url_length: imageUrl ? imageUrl.length : 0,
+      image_base64_length: imageUrl?.startsWith("data:") ? (imageUrl.split(",").pop()?.length || 0) : 0,
       payloadHasImage,
       imageKind: imageUrl ? (imageUrl.startsWith("data:") ? "data-url" : "http") : "none",
       bodyKeys: Object.keys(body || {}),
