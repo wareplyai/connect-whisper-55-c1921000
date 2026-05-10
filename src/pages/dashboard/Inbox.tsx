@@ -198,6 +198,7 @@ const Inbox = () => {
           mediaType: mt,
           mediaFilename: (m as any).media_filename as string | null,
           mimetype: (m as any).mimetype as string | null,
+          transcribedText: (m as any).transcribed_text as string | null,
           productName: (m as any).extracted_product_name as string | null,
           orderNumber: (m as any).extracted_order_number as string | null,
           ts: m.received_at,
