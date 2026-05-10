@@ -20,8 +20,22 @@ type Platform = "openai" | "gemini" | "deepseek" | "unknown";
 const MODELS: Record<Exclude<Platform, "unknown">, { value: string; label: string }[]> = {
   openai: [
     { value: "gpt-4.1-mini", label: "gpt-4.1-mini (default)" },
+    { value: "gpt-4.1", label: "gpt-4.1" },
+    { value: "gpt-4.1-nano", label: "gpt-4.1-nano" },
     { value: "gpt-4o", label: "gpt-4o" },
     { value: "gpt-4-turbo", label: "gpt-4-turbo" },
+    { value: "gpt-5", label: "gpt-5" },
+    { value: "gpt-5-mini", label: "gpt-5-mini" },
+    { value: "gpt-5-nano", label: "gpt-5-nano" },
+    { value: "gpt-5-chat-latest", label: "gpt-5-chat-latest" },
+    { value: "gpt-5.1", label: "gpt-5.1" },
+    { value: "gpt-5.1-chat-latest", label: "gpt-5.1-chat-latest" },
+    { value: "gpt-5.2", label: "gpt-5.2" },
+    { value: "gpt-5.2-chat-latest", label: "gpt-5.2-chat-latest" },
+    { value: "gpt-5.3-chat-latest", label: "gpt-5.3-chat-latest" },
+    { value: "gpt-5.4-mini", label: "gpt-5.4-mini" },
+    { value: "o4-mini", label: "o4-mini" },
+    { value: "o3-mini", label: "o3-mini" },
     { value: "gpt-3.5-turbo", label: "gpt-3.5-turbo" },
   ],
   gemini: [
