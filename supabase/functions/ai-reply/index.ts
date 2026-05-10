@@ -431,6 +431,32 @@ async function uploadChatMediaImage(
   }
 }
 
+async function findRecentWhatsappImageUrl(admin: any, fromNumber: string): Promise<string | null> {
+  const digits = String(fromNumber || "").replace(/\D/g, "");
+  if (!digits) return null;
+  try {
+    const since = new Date(Date.now() - 10 * 60_000).toISOString();
+    const { data, error } = await admin.storage.from("whatsapp-media").list("whatsapp-media", {
+      limit: 25,
+      sortBy: { column: "created_at", order: "desc" },
+    });
+    if (error) {
+      if (error) console.log("[ai-reply] storage image lookup failed:", error.message);
+      return null;
+    }
+    const match = (data || []).find((item: any) =>
+      String(item?.name || "").endsWith(`-${digits}.jpg`) &&
+      (!item?.created_at || new Date(item.created_at).getTime() >= new Date(since).getTime())
+    );
+    if (!match?.name) return null;
+    const { data: pub } = admin.storage.from("whatsapp-media").getPublicUrl(`whatsapp-media/${match.name}`);
+    return pub?.publicUrl || null;
+  } catch (e) {
+    console.log("[ai-reply] storage image lookup exception:", (e as Error)?.message);
+    return null;
+  }
+}
+
 function recipientVariants(input: string): string[] {
   const raw = String(input ?? "").trim();
   // Strip any @lid / @s.whatsapp.net suffix and use digits only
@@ -1267,7 +1293,7 @@ Deno.serve(async (req) => {
     if (!messageId) {
       // Capture the public media URL the VPS sent us so the inbox can render it
       // immediately, even if the chat-media re-upload below fails.
-      const payloadMediaUrl =
+      let payloadMediaUrl =
         (typeof (body as any).media_url === "string" && (body as any).media_url) ||
         (typeof (body as any).mediaUrl === "string" && (body as any).mediaUrl) ||
         (isImageMessage && imageUrl && /^https?:\/\//i.test(imageUrl) ? imageUrl : null) ||
@@ -1280,6 +1306,10 @@ Deno.serve(async (req) => {
         (typeof (body as any).media_filename === "string" && (body as any).media_filename) ||
         (typeof (body as any).filename === "string" && (body as any).filename) ||
         null;
+      if (isImageMessage && !payloadMediaUrl) {
+        payloadMediaUrl = await findRecentWhatsappImageUrl(admin, fromNumber);
+        if (payloadMediaUrl && !imageUrl) imageUrl = payloadMediaUrl;
+      }
       const logRow: Record<string, unknown> = {
         session_id: sessionId,
         user_id: userId,
