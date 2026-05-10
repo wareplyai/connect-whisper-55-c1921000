@@ -1395,6 +1395,13 @@ Deno.serve(async (req) => {
     // the user's product catalog before falling through to AI/keyword routing.
     if (isImageMessage && imageUrl && messageId) {
       try {
+        console.log("[ai-reply] calling match-product-image", {
+          message_id: messageId,
+          image_url: imageUrl,
+          media_url: bodyMediaUrl || imageUrl,
+          image_url_kind: imageUrl.startsWith("data:") ? "data-url" : "url",
+          image_base64_length: imageUrl.startsWith("data:") ? (imageUrl.split(",").pop()?.length || 0) : 0,
+        });
         const matchRes = await fetch(
           `${Deno.env.get("SUPABASE_URL")}/functions/v1/match-product-image`,
           {
@@ -1407,7 +1414,16 @@ Deno.serve(async (req) => {
           },
         );
         const matchData = await matchRes.json().catch(() => ({}));
-        console.log("[ai-reply] product-image match:", matchData);
+        console.log("match result:", matchData);
+        console.log("[ai-reply] product-image match:", {
+          http_status: matchRes.status,
+          match: !!matchData?.match,
+          confidence: matchData?.confidence || null,
+          idx: matchData?.ai_index ?? matchData?.index ?? null,
+          product_id: matchData?.product?.id || null,
+          reason: matchData?.reason || null,
+          raw: matchData,
+        });
 
         if (matchData?.match && matchData.product) {
           const p = matchData.product;
