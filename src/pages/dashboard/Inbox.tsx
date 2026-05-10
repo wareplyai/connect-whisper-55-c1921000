@@ -664,7 +664,13 @@ const Inbox = () => {
                             )}
                           </div>
                         )}
-                        {m.text && !m.text.startsWith("[customer sent an image]") && <p className="whitespace-pre-wrap break-words">{m.text}</p>}
+                        {(() => {
+                          const mt2 = (m as any).message_type as string | null;
+                          const isAudioMsg = mt2 === "audio" || mt2 === "voice" || mt2 === "ptt";
+                          if (isAudioMsg) return null;
+                          if (!m.text || m.text.startsWith("[customer sent an image]")) return null;
+                          return <p className="whitespace-pre-wrap break-words">{m.text}</p>;
+                        })()}
                         <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
                           <span>{new Date(m.ts).toLocaleString()}</span>
                           {m.kind === "out" && (
