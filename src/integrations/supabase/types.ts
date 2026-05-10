@@ -436,6 +436,7 @@ export type Database = {
           max_tokens: number
           name: string | null
           system_prompt: string | null
+          temperature: number
           updated_at: string
           user_id: string
           website: string | null
@@ -457,6 +458,7 @@ export type Database = {
           max_tokens?: number
           name?: string | null
           system_prompt?: string | null
+          temperature?: number
           updated_at?: string
           user_id: string
           website?: string | null
@@ -478,6 +480,7 @@ export type Database = {
           max_tokens?: number
           name?: string | null
           system_prompt?: string | null
+          temperature?: number
           updated_at?: string
           user_id?: string
           website?: string | null

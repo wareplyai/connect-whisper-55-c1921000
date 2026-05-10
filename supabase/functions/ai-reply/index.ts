@@ -108,9 +108,11 @@ async function callAI(opts: {
   platform: string; model: string; apiKey: string;
   systemPrompt: string; userMessage: string;
   maxTokens?: number;
+  temperature?: number;
 }): Promise<string> {
   const { platform, model, apiKey, systemPrompt, userMessage } = opts;
-  const maxTokens = Math.max(50, Math.min(4000, Number(opts.maxTokens) || 500));
+  const maxTokens = Math.max(50, Math.min(4000, Number(opts.maxTokens) || 2000));
+  const temperature = Math.max(0, Math.min(2, typeof opts.temperature === "number" ? opts.temperature : 0.7));
 
   if (platform === "openai" || platform === "deepseek") {
     const url = platform === "openai"
@@ -126,6 +128,7 @@ async function callAI(opts: {
           { role: "user", content: userMessage },
         ],
         max_tokens: maxTokens,
+        temperature,
       }),
     });
     const data = await r.json();
@@ -142,7 +145,7 @@ async function callAI(opts: {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: "user", parts: [{ text: userMessage }] }],
-          generationConfig: { maxOutputTokens: maxTokens },
+          generationConfig: { maxOutputTokens: maxTokens, temperature },
         }),
       }
     );
@@ -1769,7 +1772,8 @@ Deno.serve(async (req) => {
           apiKey,
           systemPrompt,
           userMessage: messageText,
-          maxTokens: Number((biz as any)?.max_tokens) || 500,
+          maxTokens: Number((biz as any)?.max_tokens) || 2000,
+          temperature: typeof (biz as any)?.temperature === "number" ? Number((biz as any).temperature) : 0.7,
         });
       } catch (aiErr: any) {
         if (messageId) {
