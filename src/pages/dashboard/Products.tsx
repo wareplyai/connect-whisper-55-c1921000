@@ -328,16 +328,29 @@ export default function Products() {
     }
   };
 
+  const setMatchStatusFor = (id: string, s: "loading" | "success" | "error" | null) => {
+    setMatchStatus((prev) => {
+      const next = { ...prev };
+      if (s === null) delete next[id]; else next[id] = s;
+      return next;
+    });
+  };
+
   const addToImageMatch = async (p: Product) => {
     if (!user) return;
     if (!p.image_url) return toast.error("Product has no image");
+    if (matchStatus[p.id] === "loading") return;
+    setMatchStatusFor(p.id, "loading");
     try {
       const { count } = await supabase
         .from("product_images" as any)
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id);
       if ((count || 0) >= IMAGE_MATCH_MAX) {
-        return toast.error(`Max ${IMAGE_MATCH_MAX} products allowed in Image Match`);
+        toast.error(`Max ${IMAGE_MATCH_MAX} products allowed in Image Match`);
+        setMatchStatusFor(p.id, "error");
+        setTimeout(() => setMatchStatusFor(p.id, null), 2000);
+        return;
       }
       const { data: existing } = await supabase
         .from("product_images" as any)
@@ -345,7 +358,12 @@ export default function Products() {
         .eq("user_id", user.id)
         .eq("product_name", p.name)
         .maybeSingle();
-      if (existing) return toast.info("Already in Image Match");
+      if (existing) {
+        toast.info("Already in Image Match");
+        setMatchStatusFor(p.id, "success");
+        setTimeout(() => setMatchStatusFor(p.id, null), 2000);
+        return;
+      }
 
       const hash = await hashFromUrl(p.image_url);
       const { error: insErr } = await supabase
@@ -360,8 +378,12 @@ export default function Products() {
         } as any);
       if (insErr) throw insErr;
       toast.success("Added to Image Match!");
+      setMatchStatusFor(p.id, "success");
+      setTimeout(() => setMatchStatusFor(p.id, null), 2000);
     } catch (e: any) {
       toast.error(e.message || "Failed");
+      setMatchStatusFor(p.id, "error");
+      setTimeout(() => setMatchStatusFor(p.id, null), 2000);
     }
   };
 
