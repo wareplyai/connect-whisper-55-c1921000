@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List, Plus, Camera, FileSpreadsheet, Download } from "lucide-react";
+import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List, Plus, Camera, FileSpreadsheet, Download, Check, X } from "lucide-react";
 
 type CsvRow = { name: string; price: string; description: string; category: string; stock: string; image_url: string };
 
