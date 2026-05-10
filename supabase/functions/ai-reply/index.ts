@@ -437,7 +437,8 @@ async function findRecentWhatsappImageUrl(admin: any, fromNumber: string): Promi
   try {
     const since = new Date(Date.now() - 10 * 60_000).toISOString();
     const { data, error } = await admin
-      .from("storage.objects")
+      .schema("storage")
+      .from("objects")
       .select("name, created_at")
       .eq("bucket_id", "whatsapp-media")
       .gte("created_at", since)
