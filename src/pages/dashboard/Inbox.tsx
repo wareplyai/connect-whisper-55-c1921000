@@ -94,14 +94,14 @@ const Inbox = () => {
   const [selected, setSelected] = useState<{ session_id: string; phone_number: string } | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
-  const [loading, setLoading] = useState(!cached);
+  const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [signedMediaUrls, setSignedMediaUrls] = useState<Record<string, string>>({});
   const channelRef = useRef<any>(null);
 
   const load = async (showLoader = false) => {
     if (!user) return;
-    if (showLoader && !cached) setLoading(true);
+    if (showLoader) setLoading(true);
     try {
       const [incRes, outRes, blRes, paRes] = await Promise.all([
         supabase.from("incoming_messages").select("*, media_url, message_type").eq("user_id", user.id).order("received_at", { ascending: false }).limit(500),
