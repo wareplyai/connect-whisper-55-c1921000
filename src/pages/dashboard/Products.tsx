@@ -109,6 +109,69 @@ export default function Products() {
   });
   const [editSaving, setEditSaving] = useState(false);
 
+  // CSV import
+  const [csvOpen, setCsvOpen] = useState(false);
+  const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvProgress, setCsvProgress] = useState(0);
+
+  const handleCsvFile = async (f: File | null) => {
+    if (!f) return;
+    const text = await f.text();
+    const rows = parseCsv(text).filter((r) => r.name);
+    if (!rows.length) return toast.error("No rows found in CSV");
+    setCsvRows(rows);
+  };
+
+  const downloadSampleCsv = () => {
+    const sample = `name,price,description,category,stock,image_url
+"T-Shirt Red",499,"100% cotton t-shirt","Clothing",100,"https://example.com/red.jpg"
+"Blue Mug",250,"Ceramic 350ml","Home",50,"https://example.com/mug.jpg"
+`;
+    const blob = new Blob([sample], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "products-sample.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importCsv = async () => {
+    if (!user || !csvRows.length) return;
+    setCsvImporting(true);
+    setCsvProgress(0);
+    let imported = 0;
+    let skipped = 0;
+    try {
+      const existingNames = new Set(items.map((i) => i.name.trim().toLowerCase()));
+      for (let i = 0; i < csvRows.length; i++) {
+        const r = csvRows[i];
+        const key = r.name.trim().toLowerCase();
+        if (existingNames.has(key)) { skipped++; }
+        else {
+          const { error } = await supabase.from("products" as any).insert({
+            user_id: user.id,
+            name: r.name.trim(),
+            price: Number(r.price) || 0,
+            description: r.description || null,
+            category: r.category || null,
+            stock: Number(r.stock) || 0,
+            image_url: r.image_url || null,
+          });
+          if (!error) { imported++; existingNames.add(key); }
+          else skipped++;
+        }
+        setCsvProgress(Math.round(((i + 1) / csvRows.length) * 100));
+      }
+      toast.success(`${imported} products imported${skipped ? `, ${skipped} skipped` : ""}`);
+      setCsvOpen(false);
+      setCsvRows([]);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Import failed");
+    } finally {
+      setCsvImporting(false);
+    }
+  };
   const load = async () => {
     setLoading(true);
     const { data } = await supabase
