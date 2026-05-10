@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Trash2, Upload, ImageIcon, Sparkles, BarChart3, Camera, Bot, MessageSquare, ArrowRight, Zap } from "lucide-react";
+import { Loader2, Trash2, Upload, ImageIcon, Sparkles, BarChart3, Camera, Bot, MessageSquare, ArrowRight, Zap, Plus } from "lucide-react";
 
 function HowItWorksHero() {
   const Step = ({ icon: Icon, label, color }: any) => (
