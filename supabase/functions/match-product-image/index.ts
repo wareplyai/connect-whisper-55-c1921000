@@ -11,8 +11,24 @@ const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  let _logCtx: { user_id?: string; image_url?: string; customer_phone?: string | null } = {};
+  let _supabaseAdmin: any = null;
+  const writeLog = async (fields: Record<string, any>) => {
+    try {
+      if (!_supabaseAdmin || !_logCtx.user_id) return;
+      await _supabaseAdmin.from("image_match_logs").insert({
+        user_id: _logCtx.user_id,
+        customer_phone: _logCtx.customer_phone || null,
+        query_image_url: _logCtx.image_url || null,
+        ...fields,
+      });
+    } catch (e) {
+      console.log("[match-product-image] log error", (e as Error).message);
+    }
+  };
   try {
-    const { image_url, user_id } = await req.json();
+    const { image_url, user_id, customer_phone } = await req.json();
+    _logCtx = { image_url, user_id, customer_phone: customer_phone || null };
     if (!image_url || !user_id) {
       return new Response(JSON.stringify({ error: "image_url and user_id required" }), {
         status: 400,
@@ -31,6 +47,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+    _supabaseAdmin = supabase;
 
     const { data: products } = await supabase
       .from("product_images")
@@ -40,6 +57,7 @@ Deno.serve(async (req) => {
     console.log("[match-product-image] product count", products?.length || 0);
 
     if (!products || products.length === 0) {
+      await writeLog({ matched: false, match_confidence: "none" });
       return new Response(JSON.stringify({ match: false, reason: "no_products" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -110,6 +128,7 @@ Deno.serve(async (req) => {
     const customerData = await toDataUrl(image_url, "customer");
     if (!customerData) {
       console.log("[match-product-image] customer image unfetchable", { image_url });
+      await writeLog({ matched: false, match_confidence: "unfetchable" });
       return new Response(JSON.stringify({ match: false, reason: "customer_image_unfetchable" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -126,6 +145,7 @@ Deno.serve(async (req) => {
       }
     }
     if (productData.length === 0) {
+      await writeLog({ matched: false, match_confidence: "no_fetchable_products" });
       return new Response(JSON.stringify({ match: false, reason: "no_fetchable_products" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -163,6 +183,7 @@ Deno.serve(async (req) => {
     if (!aiRes.ok) {
       const txt = await aiRes.text();
       console.log("[match-product-image] AI error", aiRes.status, txt);
+      await writeLog({ matched: false, match_confidence: "ai_error" });
       return new Response(JSON.stringify({ match: false, reason: "ai_error", status: aiRes.status }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -185,6 +206,12 @@ Deno.serve(async (req) => {
 
     if (idx >= 0 && idx < productData.length && confidence !== "low") {
       const best = productData[idx].p;
+      await writeLog({
+        matched: true,
+        match_confidence: confidence,
+        matched_product_id: best.id,
+        matched_product_name: best.product_name,
+      });
       return new Response(JSON.stringify({
         match: true,
         confidence,
@@ -198,11 +225,13 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    await writeLog({ matched: false, match_confidence: confidence });
     return new Response(JSON.stringify({ match: false, confidence, ai_index: idx }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.log("[match-product-image] error:", (e as Error).message);
+    await writeLog({ matched: false, match_confidence: "error" });
     return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

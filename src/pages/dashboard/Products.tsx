@@ -9,7 +9,45 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List, Plus, Camera } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List, Plus, Camera, FileSpreadsheet, Download } from "lucide-react";
+
+type CsvRow = { name: string; price: string; description: string; category: string; stock: string; image_url: string };
+
+function parseCsv(text: string): CsvRow[] {
+  const rows: string[][] = [];
+  let cur: string[] = [];
+  let field = "";
+  let inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') inQ = false;
+      else field += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ",") { cur.push(field); field = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (field !== "" || cur.length) { cur.push(field); rows.push(cur); cur = []; field = ""; }
+        if (c === "\r" && text[i + 1] === "\n") i++;
+      } else field += c;
+    }
+  }
+  if (field !== "" || cur.length) { cur.push(field); rows.push(cur); }
+  if (rows.length < 2) return [];
+  const header = rows[0].map((h) => h.trim().toLowerCase());
+  const idx = (k: string) => header.indexOf(k);
+  const ni = idx("name"), pi = idx("price"), di = idx("description"), ci = idx("category"), si = idx("stock"), ii = idx("image_url");
+  return rows.slice(1).filter((r) => r.some((v) => v.trim())).map((r) => ({
+    name: (r[ni] || "").trim(),
+    price: (r[pi] || "").trim(),
+    description: (r[di] || "").trim(),
+    category: (r[ci] || "").trim(),
+    stock: (r[si] || "").trim(),
+    image_url: (r[ii] || "").trim(),
+  }));
+}
 
 const IMAGE_MATCH_MAX = 50;
 
@@ -71,6 +109,69 @@ export default function Products() {
   });
   const [editSaving, setEditSaving] = useState(false);
 
+  // CSV import
+  const [csvOpen, setCsvOpen] = useState(false);
+  const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvProgress, setCsvProgress] = useState(0);
+
+  const handleCsvFile = async (f: File | null) => {
+    if (!f) return;
+    const text = await f.text();
+    const rows = parseCsv(text).filter((r) => r.name);
+    if (!rows.length) return toast.error("No rows found in CSV");
+    setCsvRows(rows);
+  };
+
+  const downloadSampleCsv = () => {
+    const sample = `name,price,description,category,stock,image_url
+"T-Shirt Red",499,"100% cotton t-shirt","Clothing",100,"https://example.com/red.jpg"
+"Blue Mug",250,"Ceramic 350ml","Home",50,"https://example.com/mug.jpg"
+`;
+    const blob = new Blob([sample], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "products-sample.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importCsv = async () => {
+    if (!user || !csvRows.length) return;
+    setCsvImporting(true);
+    setCsvProgress(0);
+    let imported = 0;
+    let skipped = 0;
+    try {
+      const existingNames = new Set(items.map((i) => i.name.trim().toLowerCase()));
+      for (let i = 0; i < csvRows.length; i++) {
+        const r = csvRows[i];
+        const key = r.name.trim().toLowerCase();
+        if (existingNames.has(key)) { skipped++; }
+        else {
+          const { error } = await supabase.from("products" as any).insert({
+            user_id: user.id,
+            name: r.name.trim(),
+            price: Number(r.price) || 0,
+            description: r.description || null,
+            category: r.category || null,
+            stock: Number(r.stock) || 0,
+            image_url: r.image_url || null,
+          });
+          if (!error) { imported++; existingNames.add(key); }
+          else skipped++;
+        }
+        setCsvProgress(Math.round(((i + 1) / csvRows.length) * 100));
+      }
+      toast.success(`${imported} products imported${skipped ? `, ${skipped} skipped` : ""}`);
+      setCsvOpen(false);
+      setCsvRows([]);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Import failed");
+    } finally {
+      setCsvImporting(false);
+    }
+  };
   const load = async () => {
     setLoading(true);
     const { data } = await supabase
@@ -289,9 +390,14 @@ export default function Products() {
             Upload product images. AI will auto-tag them so customers can find them by sending a photo on WhatsApp.
           </p>
         </div>
-        <Button onClick={() => { reset(); setAddOpen(true); }}>
-          <Plus className="size-4 mr-2" /> New product
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => { setCsvRows([]); setCsvOpen(true); }}>
+            <FileSpreadsheet className="size-4 mr-2" /> Import CSV
+          </Button>
+          <Button onClick={() => { reset(); setAddOpen(true); }}>
+            <Plus className="size-4 mr-2" /> New product
+          </Button>
+        </div>
       </div>
 
       <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) reset(); }}>
@@ -477,6 +583,62 @@ export default function Products() {
             <Button onClick={saveEdit} disabled={editSaving}>
               {editSaving && <Loader2 className="size-4 animate-spin mr-2" />}
               Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={csvOpen} onOpenChange={(o) => { if (!csvImporting) setCsvOpen(o); }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Import products from CSV</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={downloadSampleCsv}>
+                <Download className="size-4 mr-1" /> Download sample CSV
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Columns: name, price, description, category, stock, image_url
+              </span>
+            </div>
+            <Input type="file" accept=".csv,text/csv" onChange={(e) => handleCsvFile(e.target.files?.[0] || null)} />
+            {csvRows.length > 0 && (
+              <div className="border rounded-md max-h-72 overflow-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted sticky top-0">
+                    <tr>
+                      <th className="text-left p-2">Name</th>
+                      <th className="text-left p-2">Price</th>
+                      <th className="text-left p-2">Category</th>
+                      <th className="text-left p-2">Stock</th>
+                      <th className="text-left p-2">Image</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {csvRows.slice(0, 100).map((r, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="p-2">{r.name}</td>
+                        <td className="p-2">{r.price}</td>
+                        <td className="p-2">{r.category}</td>
+                        <td className="p-2">{r.stock}</td>
+                        <td className="p-2 truncate max-w-[200px]">{r.image_url}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {csvRows.length > 100 && (
+                  <div className="p-2 text-xs text-muted-foreground">+ {csvRows.length - 100} more rows</div>
+                )}
+              </div>
+            )}
+            {csvImporting && <Progress value={csvProgress} />}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCsvOpen(false)} disabled={csvImporting}>Cancel</Button>
+            <Button onClick={importCsv} disabled={csvImporting || !csvRows.length}>
+              {csvImporting ? <Loader2 className="size-4 animate-spin mr-2" /> : <Upload className="size-4 mr-2" />}
+              Import {csvRows.length} products
             </Button>
           </DialogFooter>
         </DialogContent>
