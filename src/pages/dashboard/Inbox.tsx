@@ -101,7 +101,7 @@ const Inbox = () => {
 
   const load = async (showLoader = false) => {
     if (!user) return;
-    if (showLoader && !cached) setLoading(true);
+    if (showLoader) setLoading(true);
     try {
       const [incRes, outRes, blRes, paRes] = await Promise.all([
         supabase.from("incoming_messages").select("*, media_url, message_type").eq("user_id", user.id).order("received_at", { ascending: false }).limit(500),
