@@ -1017,18 +1017,27 @@ Deno.serve(async (req) => {
     }
 
     // ---- Image detection: scan body deeply for any image source (URL/dataURL/base64) ----
+    const bodyMediaUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
     let imageUrl = findImageUrl(body);
     const looksImageType = /image|photo|picture|media/i.test(messageType);
     const payloadHasImage = looksImageType || payloadLooksLikeImage(body);
     // Tentatively flag as image — we may resolve the actual binary from the gateway below.
     let isImageMessage = (!!imageUrl && (looksImageType || !rawText)) || (payloadHasImage && !rawText);
-    const messageText = rawText || (isImageMessage ? "[customer sent an image]" : "");
+    const messageText = rawText || "";
+
+    console.log("message_type:", messageType);
+    console.log("media_url:", bodyMediaUrl || null);
+    console.log("Image received, media_url:", isImageMessage ? (bodyMediaUrl || null) : null);
 
     console.log("[ai-reply] incoming", {
       sessionId,
       messageType,
       hasText: !!rawText,
       hasImage: !!imageUrl,
+      media_url: bodyMediaUrl || null,
+      image_url: imageUrl || null,
+      image_url_length: imageUrl ? imageUrl.length : 0,
+      image_base64_length: imageUrl?.startsWith("data:") ? (imageUrl.split(",").pop()?.length || 0) : 0,
       payloadHasImage,
       imageKind: imageUrl ? (imageUrl.startsWith("data:") ? "data-url" : "http") : "none",
       bodyKeys: Object.keys(body || {}),
@@ -1294,8 +1303,7 @@ Deno.serve(async (req) => {
       // Capture the public media URL the VPS sent us so the inbox can render it
       // immediately, even if the chat-media re-upload below fails.
       let payloadMediaUrl =
-        (typeof (body as any).media_url === "string" && (body as any).media_url) ||
-        (typeof (body as any).mediaUrl === "string" && (body as any).mediaUrl) ||
+        bodyMediaUrl ||
         (isImageMessage && imageUrl && /^https?:\/\//i.test(imageUrl) ? imageUrl : null) ||
         null;
       const payloadCaption =
@@ -1310,6 +1318,14 @@ Deno.serve(async (req) => {
         payloadMediaUrl = await findRecentWhatsappImageUrl(admin, fromNumber);
         if (payloadMediaUrl && !imageUrl) imageUrl = payloadMediaUrl;
       }
+      console.log("[ai-reply] image media resolved before insert", {
+        message_type: messageType,
+        is_image: isImageMessage,
+        media_url: payloadMediaUrl,
+        image_url: imageUrl,
+        image_url_kind: imageUrl ? (imageUrl.startsWith("data:") ? "data-url" : "url") : "none",
+        image_base64_length: imageUrl?.startsWith("data:") ? (imageUrl.split(",").pop()?.length || 0) : 0,
+      });
       const logRow: Record<string, unknown> = {
         session_id: sessionId,
         user_id: userId,
@@ -1347,11 +1363,17 @@ Deno.serve(async (req) => {
           imageMimetype = imageMimetype || uploaded.mime;
           await admin.from("incoming_messages").update({
             image_url: uploaded.url,
+            media_url: uploaded.url,
             mimetype: imageMimetype,
             image_caption: imageCaption,
           }).eq("id", messageId);
           imageUrl = uploaded.url;
-          console.log("[ai-reply] saved chat-media url for message", messageId);
+          console.log("[ai-reply] saved chat-media url for message", {
+            messageId,
+            media_url: uploaded.url,
+            image_url: imageUrl,
+            mime: imageMimetype,
+          });
         } else if (imageCaption || imageMimetype) {
           await admin.from("incoming_messages").update({
             mimetype: imageMimetype,
@@ -1373,6 +1395,13 @@ Deno.serve(async (req) => {
     // the user's product catalog before falling through to AI/keyword routing.
     if (isImageMessage && imageUrl && messageId) {
       try {
+        console.log("[ai-reply] calling match-product-image", {
+          message_id: messageId,
+          image_url: imageUrl,
+          media_url: bodyMediaUrl || imageUrl,
+          image_url_kind: imageUrl.startsWith("data:") ? "data-url" : "url",
+          image_base64_length: imageUrl.startsWith("data:") ? (imageUrl.split(",").pop()?.length || 0) : 0,
+        });
         const matchRes = await fetch(
           `${Deno.env.get("SUPABASE_URL")}/functions/v1/match-product-image`,
           {
@@ -1385,7 +1414,16 @@ Deno.serve(async (req) => {
           },
         );
         const matchData = await matchRes.json().catch(() => ({}));
-        console.log("[ai-reply] product-image match:", matchData);
+        console.log("match result:", matchData);
+        console.log("[ai-reply] product-image match:", {
+          http_status: matchRes.status,
+          match: !!matchData?.match,
+          confidence: matchData?.confidence || null,
+          idx: matchData?.ai_index ?? matchData?.index ?? null,
+          product_id: matchData?.product?.id || null,
+          reason: matchData?.reason || null,
+          raw: matchData,
+        });
 
         if (matchData?.match && matchData.product) {
           const p = matchData.product;

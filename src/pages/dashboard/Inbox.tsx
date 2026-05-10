@@ -71,6 +71,18 @@ const writeCache = (uid: string, payload: any) => {
   try { sessionStorage.setItem(`${CACHE_KEY}:${uid}`, JSON.stringify(payload)); } catch {}
 };
 
+const getChatMediaPath = (url?: string | null) => {
+  if (!url) return null;
+  try {
+    const path = new URL(url).pathname;
+    const marker = "/storage/v1/object/public/chat-media/";
+    const privateMarker = "/storage/v1/object/chat-media/";
+    if (path.includes(marker)) return decodeURIComponent(path.split(marker)[1] || "");
+    if (path.includes(privateMarker)) return decodeURIComponent(path.split(privateMarker)[1] || "");
+  } catch {}
+  return null;
+};
+
 const Inbox = () => {
   const { user } = useAuth();
   const cached = readCache(user?.id);
@@ -84,6 +96,7 @@ const Inbox = () => {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(!cached);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [signedMediaUrls, setSignedMediaUrls] = useState<Record<string, string>>({});
   const channelRef = useRef<any>(null);
 
   const load = async (showLoader = false) => {
@@ -261,6 +274,26 @@ const Inbox = () => {
     });
     return () => cancelAnimationFrame(id);
   }, [selectedKey, conversation.length]);
+
+  useEffect(() => {
+    const urls = conversation
+      .map((m: any) => m.imageUrl || (m.mediaType && /image|photo|picture/i.test(m.mediaType) ? m.mediaUrl : null))
+      .filter(Boolean) as string[];
+    const missingPaths = Array.from(new Set(urls.map(getChatMediaPath).filter(Boolean) as string[]))
+      .filter((path) => !signedMediaUrls[path]);
+    if (missingPaths.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(missingPaths.map(async (path) => {
+        const { data } = await supabase.storage.from("chat-media").createSignedUrl(path, 60 * 60);
+        return data?.signedUrl ? [path, data.signedUrl] as const : null;
+      }));
+      if (!cancelled) {
+        setSignedMediaUrls((prev) => ({ ...prev, ...Object.fromEntries(entries.filter(Boolean) as [string, string][]) }));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [conversation, signedMediaUrls]);
 
   const toggleBlock = async (next: boolean) => {
     if (!user || !selected) return;
@@ -560,20 +593,29 @@ const Inbox = () => {
                         m.kind === "out" ? "bg-green-500/15 text-foreground" : "bg-muted text-foreground"
                       }`}>
                         {(() => {
-                          const mt = (m as any).mediaType as string | null;
+                          const mt = ((m as any).mediaType as string | null || "").toLowerCase();
                           const mu = (m as any).mediaUrl as string | null;
-                          const imgSrc = ((m as any).imageUrl as string | null)
-                            || (mu && (mt === "image" || /^image\//i.test((m as any).mimetype || "")) ? mu : null);
+                          const rawImgSrc = ((m as any).imageUrl as string | null)
+                            || (mu && (/image|photo|picture/.test(mt) || /^image\//i.test((m as any).mimetype || "")) ? mu : null);
+                          const imgPath = getChatMediaPath(rawImgSrc);
+                          const imgSrc = imgPath ? (signedMediaUrls[imgPath] || rawImgSrc) : rawImgSrc;
                           if (imgSrc) {
                             return (
                               <img
                                 src={imgSrc}
-                                alt="image"
-                                style={{ maxWidth: "250px", borderRadius: "8px", cursor: "pointer" }}
-                                className="mb-1 block"
+                                alt="Customer sent image"
+                                className="mb-1 block max-h-64 w-auto max-w-full cursor-pointer rounded-md border border-border object-contain"
                                 loading="lazy"
-                                onClick={() => window.open(imgSrc, "_blank")}
-                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                                onClick={() => setLightbox(imgSrc)}
+                                onError={(e) => {
+                                  if (imgPath && signedMediaUrls[imgPath] && e.currentTarget.src !== signedMediaUrls[imgPath]) {
+                                    e.currentTarget.src = signedMediaUrls[imgPath];
+                                  } else if (imgPath && !signedMediaUrls[imgPath]) {
+                                    return;
+                                  } else {
+                                    e.currentTarget.style.display = "none";
+                                  }
+                                }}
                               />
                             );
                           }
@@ -590,14 +632,6 @@ const Inbox = () => {
                               <span className="truncate">{(m as any).mediaFilename || "Open document"}</span>
                             </a>
                           );
-                          if (m.kind === "in" && (m.text === "" || m.text?.startsWith("[customer sent an image]"))) {
-                            return (
-                              <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-md px-2 py-1.5 border border-border">
-                                <ImageIcon className="h-3.5 w-3.5" />
-                                <span>Image (loading…)</span>
-                              </div>
-                            );
-                          }
                           return null;
                         })()}
                         {((m as any).productName || (m as any).orderNumber) && (
@@ -610,7 +644,7 @@ const Inbox = () => {
                             )}
                           </div>
                         )}
-                        {m.text && <p className="whitespace-pre-wrap break-words">{m.text}</p>}
+                        {m.text && !m.text.startsWith("[customer sent an image]") && <p className="whitespace-pre-wrap break-words">{m.text}</p>}
                         <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
                           <span>{new Date(m.ts).toLocaleString()}</span>
                           {m.kind === "out" && (
