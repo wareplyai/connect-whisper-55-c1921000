@@ -891,6 +891,53 @@ Deno.serve(async (req) => {
       hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
 
+    // ---- Voice / audio messages: transcribe via OpenAI Whisper, then process as text.
+    // Customer never sees the transcript; the AI agent receives it as a normal text message.
+    {
+      const audioUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
+      const lowerType0 = messageType.toLowerCase();
+      const isAudio = /audio|voice|ptt/.test(lowerType0);
+      if (audioUrl && isAudio && !rawText) {
+        try {
+          const adminA = createClient(
+            Deno.env.get("SUPABASE_URL")!,
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+          );
+          const { data: sesA } = await adminA.from("sessions")
+            .select("id, user_id").eq("id", sessionId).maybeSingle();
+          let openaiKey = Deno.env.get("OPENAI_API_KEY") || "";
+          if (!openaiKey && sesA?.user_id) {
+            const { data: keyRow } = await adminA.from("ai_api_keys")
+              .select("encrypted_key, platform")
+              .eq("user_id", sesA.user_id)
+              .eq("is_active", true)
+              .maybeSingle();
+            if (keyRow && keyRow.platform === "openai") {
+              try { openaiKey = await decryptKey(keyRow.encrypted_key); }
+              catch (e) { console.log("[whisper] decrypt key failed:", (e as Error)?.message); }
+            }
+          }
+          if (!openaiKey) {
+            console.log("[whisper] no OpenAI key for session", sessionId, "- audio will be logged & skipped");
+          } else {
+            const transcript = await transcribeVoiceFile(audioUrl, openaiKey);
+            if (transcript) {
+              rawText = transcript;
+              messageType = "text";
+              (body as any).message = transcript;
+              (body as any).message_type = "text";
+              (body as any).original_type = "audio";
+              console.log("[whisper] AI agent will reply to transcribed audio for session", sessionId);
+            } else {
+              console.log("[whisper] empty transcript for", audioUrl);
+            }
+          }
+        } catch (e) {
+          console.log("[whisper] pre-step failed:", (e as Error)?.message);
+        }
+      }
+    }
+
     // ---- Non-image media (audio/video/document) — log to inbox and skip AI reply.
     // VPS already uploaded the file to Supabase storage and gives us a public media_url.
     {
