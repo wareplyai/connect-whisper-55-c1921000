@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List, Plus, Camera, FileSpreadsheet, Download } from "lucide-react";
+import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List, Plus, Camera, FileSpreadsheet, Download, Check, X } from "lucide-react";
 
 type CsvRow = { name: string; price: string; description: string; category: string; stock: string; image_url: string };
 
@@ -113,6 +113,7 @@ export default function Products() {
   const [csvOpen, setCsvOpen] = useState(false);
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [csvImporting, setCsvImporting] = useState(false);
+  const [matchStatus, setMatchStatus] = useState<Record<string, "loading" | "success" | "error">>({});
   const [csvProgress, setCsvProgress] = useState(0);
 
   const handleCsvFile = async (f: File | null) => {
@@ -327,16 +328,29 @@ export default function Products() {
     }
   };
 
+  const setMatchStatusFor = (id: string, s: "loading" | "success" | "error" | null) => {
+    setMatchStatus((prev) => {
+      const next = { ...prev };
+      if (s === null) delete next[id]; else next[id] = s;
+      return next;
+    });
+  };
+
   const addToImageMatch = async (p: Product) => {
     if (!user) return;
     if (!p.image_url) return toast.error("Product has no image");
+    if (matchStatus[p.id] === "loading") return;
+    setMatchStatusFor(p.id, "loading");
     try {
       const { count } = await supabase
         .from("product_images" as any)
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id);
       if ((count || 0) >= IMAGE_MATCH_MAX) {
-        return toast.error(`Max ${IMAGE_MATCH_MAX} products allowed in Image Match`);
+        toast.error(`Max ${IMAGE_MATCH_MAX} products allowed in Image Match`);
+        setMatchStatusFor(p.id, "error");
+        setTimeout(() => setMatchStatusFor(p.id, null), 2000);
+        return;
       }
       const { data: existing } = await supabase
         .from("product_images" as any)
@@ -344,7 +358,12 @@ export default function Products() {
         .eq("user_id", user.id)
         .eq("product_name", p.name)
         .maybeSingle();
-      if (existing) return toast.info("Already in Image Match");
+      if (existing) {
+        toast.info("Already in Image Match");
+        setMatchStatusFor(p.id, "success");
+        setTimeout(() => setMatchStatusFor(p.id, null), 2000);
+        return;
+      }
 
       const hash = await hashFromUrl(p.image_url);
       const { error: insErr } = await supabase
@@ -359,8 +378,12 @@ export default function Products() {
         } as any);
       if (insErr) throw insErr;
       toast.success("Added to Image Match!");
+      setMatchStatusFor(p.id, "success");
+      setTimeout(() => setMatchStatusFor(p.id, null), 2000);
     } catch (e: any) {
       toast.error(e.message || "Failed");
+      setMatchStatusFor(p.id, "error");
+      setTimeout(() => setMatchStatusFor(p.id, null), 2000);
     }
   };
 
@@ -369,9 +392,23 @@ export default function Products() {
       <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
         <Pencil className="size-3 mr-1" /> Edit
       </Button>
-      <Button size="sm" variant="outline" onClick={() => addToImageMatch(p)}>
-        <Camera className="size-3 mr-1" /> Add to Image Match
-      </Button>
+      {(() => {
+        const s = matchStatus[p.id];
+        return (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={s === "loading"}
+            onClick={() => addToImageMatch(p)}
+            className={s === "success" ? "border-green-500 text-green-600" : s === "error" ? "border-red-500 text-red-600" : ""}
+          >
+            {s === "loading" ? (<><Loader2 className="size-3 mr-1 animate-spin" /> Adding…</>)
+              : s === "success" ? (<><Check className="size-3 mr-1" /> Added!</>)
+              : s === "error" ? (<><X className="size-3 mr-1" /> Failed</>)
+              : (<><Camera className="size-3 mr-1" /> Add to Image Match</>)}
+          </Button>
+        );
+      })()}
       <Button size="sm" variant="outline" onClick={() => retag(p)}>
         <RefreshCw className="size-3 mr-1" /> Re-tag
       </Button>

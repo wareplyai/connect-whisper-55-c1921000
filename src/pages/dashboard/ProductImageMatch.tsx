@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -228,7 +229,8 @@ export default function ProductImageMatch() {
       toast.success("Product added");
       reset();
       setAddOpen(false);
-      load();
+      await load();
+      notifySlots(items.length + 1);
     } catch (e: any) {
       toast.error(e.message || "Upload failed");
     } finally {
@@ -236,12 +238,19 @@ export default function ProductImageMatch() {
     }
   };
 
+  const notifySlots = (count: number) => {
+    if (count >= MAX) toast.error(`🚫 Image Match is full! Delete a product to add new one.`);
+    else if (count >= 48) toast.warning(`🔴 Only ${MAX - count} slots left! (${count}/${MAX})`);
+    else if (count >= 45) toast.warning(`⚠️ ${MAX - count} slots remaining in Image Match (${count}/${MAX})`);
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this product?")) return;
     const { error } = await supabase.from("product_images" as any).delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Deleted");
-    load();
+    await load();
+    notifySlots(Math.max(0, items.length - 1));
   };
 
   const runTest = async () => {
@@ -312,6 +321,16 @@ export default function ProductImageMatch() {
           Upload products. When customers send a matching photo on WhatsApp, the bot replies with details automatically.
         </p>
       </div>
+
+      <Card className="p-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs font-medium">Image Match slots</span>
+          <span className={`text-xs font-semibold ${items.length >= MAX ? "text-red-600" : items.length >= 48 ? "text-red-500" : items.length >= 45 ? "text-amber-600" : "text-muted-foreground"}`}>
+            {items.length}/{MAX} used
+          </span>
+        </div>
+        <Progress value={(items.length / MAX) * 100} className="h-2" />
+      </Card>
 
       <Tabs defaultValue="products">
         <TabsList>
