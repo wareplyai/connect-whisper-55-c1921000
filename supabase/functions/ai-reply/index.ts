@@ -852,6 +852,58 @@ Deno.serve(async (req) => {
       hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
 
+    // ---- Non-image media (audio/video/document) — log to inbox and skip AI reply.
+    // VPS already uploaded the file to Supabase storage and gives us a public media_url.
+    {
+      const mediaUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
+      const lowerType = messageType.toLowerCase();
+      const isNonImageMedia = /audio|voice|ptt|video|document|file|sticker/.test(lowerType);
+      if (mediaUrl && isNonImageMedia) {
+        const admin0 = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        );
+        const { data: ses0 } = await admin0.from("sessions")
+          .select("id, user_id, webhook_secret, phone_number")
+          .eq("id", sessionId).maybeSingle();
+        const provided0 =
+          req.headers.get("x-webhook-secret") ||
+          (req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "");
+        if (!ses0) return jsonResp({ error: "Session not found" }, 404);
+        if (!provided0 || provided0 !== ses0.webhook_secret) {
+          return jsonResp({ error: "Invalid webhook secret" }, 401);
+        }
+        if (fromMe || isGroup) return jsonResp({ ok: true, skipped: "from_me_or_group" });
+
+        const fromDigits = String((body as any).from || (body as any).from_number || "").replace(/\D/g, "");
+        if (!fromDigits) return jsonResp({ error: "from required" }, 400);
+
+        const normType = /audio|voice|ptt/.test(lowerType) ? "audio"
+          : /video/.test(lowerType) ? "video"
+          : /document|file/.test(lowerType) ? "document"
+          : lowerType;
+        const caption = String((body as any).caption || (body as any).image_caption || "").trim() || null;
+        const filename = String((body as any).filename || (body as any).media_filename || "").trim() || null;
+
+        await admin0.from("incoming_messages").insert({
+          session_id: sessionId,
+          user_id: ses0.user_id,
+          from_number: fromDigits,
+          message_text: caption,
+          message_type: normType,
+          is_group: false,
+          raw_payload: body,
+          reply_sent: false,
+          delivery_status: "skipped",
+          received_at: new Date().toISOString(),
+          media_url: mediaUrl,
+          media_filename: filename,
+          caption,
+        });
+        return jsonResp({ ok: true, logged: normType });
+      }
+    }
+
     // ---- Image detection: scan body deeply for any image source (URL/dataURL/base64) ----
     let imageUrl = findImageUrl(body);
     const looksImageType = /image|photo|picture|media/i.test(messageType);
