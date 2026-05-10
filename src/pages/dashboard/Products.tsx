@@ -9,7 +9,45 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List, Plus, Camera } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List, Plus, Camera, FileSpreadsheet, Download } from "lucide-react";
+
+type CsvRow = { name: string; price: string; description: string; category: string; stock: string; image_url: string };
+
+function parseCsv(text: string): CsvRow[] {
+  const rows: string[][] = [];
+  let cur: string[] = [];
+  let field = "";
+  let inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') inQ = false;
+      else field += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ",") { cur.push(field); field = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (field !== "" || cur.length) { cur.push(field); rows.push(cur); cur = []; field = ""; }
+        if (c === "\r" && text[i + 1] === "\n") i++;
+      } else field += c;
+    }
+  }
+  if (field !== "" || cur.length) { cur.push(field); rows.push(cur); }
+  if (rows.length < 2) return [];
+  const header = rows[0].map((h) => h.trim().toLowerCase());
+  const idx = (k: string) => header.indexOf(k);
+  const ni = idx("name"), pi = idx("price"), di = idx("description"), ci = idx("category"), si = idx("stock"), ii = idx("image_url");
+  return rows.slice(1).filter((r) => r.some((v) => v.trim())).map((r) => ({
+    name: (r[ni] || "").trim(),
+    price: (r[pi] || "").trim(),
+    description: (r[di] || "").trim(),
+    category: (r[ci] || "").trim(),
+    stock: (r[si] || "").trim(),
+    image_url: (r[ii] || "").trim(),
+  }));
+}
 
 const IMAGE_MATCH_MAX = 50;
 
