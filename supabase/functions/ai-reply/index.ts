@@ -1574,7 +1574,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (autoReplyEnabled && !isImageMessage) {
+    if (autoReplyEnabled && (!isImageMessage || !!messageText)) {
       // Keyword rules
       const { data: rules } = await admin
         .from("auto_reply_rules")
