@@ -1095,6 +1095,45 @@ export type Database = {
         }
         Relationships: []
       }
+      image_match_logs: {
+        Row: {
+          created_at: string
+          customer_phone: string | null
+          id: string
+          match_confidence: string | null
+          match_distance: number | null
+          matched: boolean
+          matched_product_id: string | null
+          matched_product_name: string | null
+          query_image_url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_phone?: string | null
+          id?: string
+          match_confidence?: string | null
+          match_distance?: number | null
+          matched?: boolean
+          matched_product_id?: string | null
+          matched_product_name?: string | null
+          query_image_url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_phone?: string | null
+          id?: string
+          match_confidence?: string | null
+          match_distance?: number | null
+          matched?: boolean
+          matched_product_id?: string | null
+          matched_product_name?: string | null
+          query_image_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       incoming_messages: {
         Row: {
           caption: string | null
