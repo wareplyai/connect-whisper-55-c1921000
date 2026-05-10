@@ -1439,43 +1439,52 @@ Deno.serve(async (req) => {
 
         if (matchData?.match && matchData.product) {
           const p = matchData.product;
-          const reply =
-            `✅ আমরা এই পণ্যটি চিনতে পেরেছি!\n\n` +
-            `🛍️ পণ্যের নাম: ${p.name}\n` +
-            (p.price ? `💰 মূল্য: ${p.price}\n` : "") +
-            (p.description ? `📝 বিবরণ: ${p.description}\n` : "") +
-            `\nঅর্ডার করতে চাইলে জানান!`;
+          matchedProduct = p;
 
-          const sendResult = await sendViaGateway({
-            gateway: GATEWAY,
-            sessionId,
-            apiToken: session.api_token,
-            to: fromNumber,
-            message: reply,
-            showTyping: aiEnabled ? aiTyping : sessionTyping,
-            accountProtection,
-          });
-          await admin.from("incoming_messages").update({
-            reply_text: reply,
-            reply_sent: sendResult.ok,
-            delivery_status: sendResult.ok ? "sent" : "failed",
-            reply_error: sendResult.ok ? null : sendResult.error,
-            processed_at: new Date().toISOString(),
-            reply_attempted_at: new Date().toISOString(),
-            reply_sent_at: sendResult.ok ? new Date().toISOString() : null,
-          }).eq("id", messageId);
-          if (sendResult.ok) {
-            await admin.from("message_logs").insert({
-              user_id: userId, session_id: sessionId, to_number: sendResult.to,
-              message_type: "text",
-              payload: { text: reply, source: "product_image_match", product_id: p.id, distance: matchData.distance },
-              status: "sent",
+          // If the customer also sent text along with the image, don't auto-reply
+          // here — let the AI handle the question with the matched product as
+          // context. We just store `matchedProduct` and continue down the flow.
+          if (messageText) {
+            console.log("[ai-reply] image+text — deferring to AI with product context", { product_id: p.id });
+          } else {
+            const reply =
+              `✅ আমরা এই পণ্যটি চিনতে পেরেছি!\n\n` +
+              `🛍️ পণ্যের নাম: ${p.name}\n` +
+              (p.price ? `💰 মূল্য: ${p.price}\n` : "") +
+              (p.description ? `📝 বিবরণ: ${p.description}\n` : "") +
+              `\nঅর্ডার করতে চাইলে জানান!`;
+
+            const sendResult = await sendViaGateway({
+              gateway: GATEWAY,
+              sessionId,
+              apiToken: session.api_token,
+              to: fromNumber,
+              message: reply,
+              showTyping: aiEnabled ? aiTyping : sessionTyping,
+              accountProtection,
+            });
+            await admin.from("incoming_messages").update({
+              reply_text: reply,
+              reply_sent: sendResult.ok,
+              delivery_status: sendResult.ok ? "sent" : "failed",
+              reply_error: sendResult.ok ? null : sendResult.error,
+              processed_at: new Date().toISOString(),
+              reply_attempted_at: new Date().toISOString(),
+              reply_sent_at: sendResult.ok ? new Date().toISOString() : null,
+            }).eq("id", messageId);
+            if (sendResult.ok) {
+              await admin.from("message_logs").insert({
+                user_id: userId, session_id: sessionId, to_number: sendResult.to,
+                message_type: "text",
+                payload: { text: reply, source: "product_image_match", product_id: p.id, distance: matchData.distance },
+                status: "sent",
+              });
+            }
+            return jsonResp({
+              ok: true, reply, sent: sendResult.ok, source: "product_image_match",
+              distance: matchData.distance, message_id: messageId,
             });
           }
-          return jsonResp({
-            ok: true, reply, sent: sendResult.ok, source: "product_image_match",
-            distance: matchData.distance, message_id: messageId,
-          });
         }
       } catch (e) {
         console.log("[ai-reply] product-image match failed:", (e as Error)?.message);
