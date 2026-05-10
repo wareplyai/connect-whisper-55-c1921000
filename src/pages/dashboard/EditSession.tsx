@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, ChevronDown, Edit, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ArrowLeft, ChevronDown, Edit, Loader2, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { CountryCodeSelect } from "@/components/CountryCodeSelect";
 import { splitPhone, DEFAULT_COUNTRY, Country, validatePhoneForCountry } from "@/lib/countries";
@@ -30,6 +31,8 @@ const EditSession = () => {
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [num, setNum] = useState("");
   const [form, setForm] = useState<any>(null);
+  const [builtIn, setBuiltIn] = useState(true);
+  const AI_REPLY_WEBHOOK_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`;
 
   useEffect(() => {
     (async () => {
@@ -39,11 +42,13 @@ const EditSession = () => {
       setName(data.session_name || "");
       const sp = splitPhone(data.phone_number);
       setCountry(sp.country); setNum(sp.number);
+      const savedUrl = data.webhook_url || AI_REPLY_WEBHOOK_URL;
+      setBuiltIn(!data.webhook_url || savedUrl === AI_REPLY_WEBHOOK_URL);
       setForm({
         enable_account_protection: data.enable_account_protection,
         enable_message_logging: data.enable_message_logging,
         enable_webhook: data.enable_webhook,
-        webhook_url: data.webhook_url || `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`,
+        webhook_url: savedUrl,
         webhook_events: data.webhook_events || [],
         read_incoming_messages: data.read_incoming_messages,
         auto_reject_calls: data.auto_reject_calls,
@@ -69,9 +74,11 @@ const EditSession = () => {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
-    if (form.enable_webhook) {
-      if (!form.webhook_url.trim()) { toast.error("Please enter a webhook URL to receive notifications."); return; }
-      if (!/^https:\/\//i.test(form.webhook_url.trim())) { toast.error("Webhook URL must start with https://"); return; }
+    const effectiveWebhookUrl = builtIn ? AI_REPLY_WEBHOOK_URL : (form.webhook_url || "").trim();
+    const effectiveEnableWebhook = builtIn ? true : form.enable_webhook;
+    if (effectiveEnableWebhook) {
+      if (!effectiveWebhookUrl) { toast.error("Please enter a webhook URL to receive notifications."); return; }
+      if (!/^https:\/\//i.test(effectiveWebhookUrl)) { toast.error("Webhook URL must start with https://"); return; }
     }
     let phone: string | null = null;
     if (num.trim()) {
@@ -84,8 +91,9 @@ const EditSession = () => {
       session_name: name,
       phone_number: phone,
       ...form,
+      enable_webhook: effectiveEnableWebhook,
       proxy_url: form.proxy_url || null,
-      webhook_url: form.webhook_url || null,
+      webhook_url: effectiveWebhookUrl || null,
     }).eq("id", id);
     setSaving(false);
     if (error) return toast.error(friendlyError(error));
@@ -139,7 +147,6 @@ const EditSession = () => {
         {[
           { k: "enable_account_protection", label: "Enable Account Protection", desc: "Helps prevent WhatsApp from restricting your account by controlling sending frequency." },
           { k: "enable_message_logging", label: "Enable Message Logging", desc: "When disabled, only delivery statuses are recorded. When enabled, full content is stored." },
-          { k: "enable_webhook", label: "Enable Webhook Notifications", desc: "When enabled, events will be sent to the webhook URL below." },
         ].map((c) => (
           <label key={c.k} className="flex items-start gap-3 cursor-pointer">
             <Checkbox checked={form[c.k]} onCheckedChange={(v) => set(c.k, !!v)} className="mt-1" />
@@ -150,28 +157,63 @@ const EditSession = () => {
           </label>
         ))}
 
-        {form.enable_webhook && (
-          <div className="space-y-4 rounded-lg border border-border bg-card-elevated p-4">
-            <div>
-              <Label>Webhook URL (POST)</Label>
-              <Input value={form.webhook_url} onChange={(e) => set("webhook_url", e.target.value)} placeholder={`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`} className="mt-1.5" />
-              <p className="mt-1 text-xs text-muted-foreground">Default: our ai-reply endpoint. The webhook secret is auto-generated per session.</p>
-            </div>
-            <div>
-              <Label className="mb-2 block">Webhook Events</Label>
-              <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2">
-                {ALL_EVENTS.map((e) => (
-                  <label key={e} className="flex items-center gap-2 text-xs cursor-pointer">
-                    <Checkbox checked={form.webhook_events.includes(e)} onCheckedChange={() => toggleEvent(e)} />
-                    <span className="font-mono">{e}</span>
-                  </label>
-                ))}
+        {/* Built-in Processing Toggle */}
+        <div className="rounded-lg border border-border bg-card-elevated p-4 space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Zap className="h-5 w-5 text-primary mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Built-in Processing</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {builtIn
+                    ? "ON — All messages are processed inside our platform. No data leaves the system. (Recommended)"
+                    : "OFF — Forward events to your own webhook (n8n, Make, custom server, etc)."}
+                </p>
               </div>
             </div>
-            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
-              Note: Your webhook endpoint must be publicly accessible, accept POST requests, and respond with 200 within 60s.
-            </div>
+            <Switch checked={builtIn} onCheckedChange={setBuiltIn} />
           </div>
+        </div>
+
+        {!builtIn && (
+          <>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <Checkbox checked={form.enable_webhook} onCheckedChange={(v) => set("enable_webhook", !!v)} className="mt-1" />
+              <div>
+                <p className="text-sm font-medium">Enable Webhook Notifications</p>
+                <p className="text-xs text-muted-foreground">When enabled, events will be sent to the webhook URL below.</p>
+              </div>
+            </label>
+
+            {form.enable_webhook && (
+              <div className="space-y-4 rounded-lg border border-border bg-card-elevated p-4">
+                <div>
+                  <Label>Webhook URL (POST)</Label>
+                  <Input
+                    value={form.webhook_url === AI_REPLY_WEBHOOK_URL ? "" : form.webhook_url}
+                    onChange={(e) => set("webhook_url", e.target.value)}
+                    placeholder="https://your-server.com/webhook"
+                    className="mt-1.5"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">URL must start with https://</p>
+                </div>
+                <div>
+                  <Label className="mb-2 block">Webhook Events</Label>
+                  <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2">
+                    {ALL_EVENTS.map((e) => (
+                      <label key={e} className="flex items-center gap-2 text-xs cursor-pointer">
+                        <Checkbox checked={form.webhook_events.includes(e)} onCheckedChange={() => toggleEvent(e)} />
+                        <span className="font-mono">{e}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+                  Note: Your webhook endpoint must be publicly accessible, accept POST requests, and respond with 200 within 60s.
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
