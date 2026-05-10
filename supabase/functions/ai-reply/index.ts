@@ -1049,7 +1049,7 @@ Deno.serve(async (req) => {
       bodyKeys: Object.keys(body || {}),
     });
 
-    if (!sessionId || (!messageText && !imageUrl && !payloadHasImage)) {
+    if (!sessionId || (!messageText && !imageUrl && !payloadHasImage && !bodyMediaUrl)) {
       return jsonResp({ error: "session_id and message or image required" }, 400);
     }
 
