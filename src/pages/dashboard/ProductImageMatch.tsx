@@ -43,8 +43,8 @@ function HowItWorksHero() {
             <span className="text-[11px] font-semibold">Customer sends photo</span>
           </div>
           <div className="rounded-lg bg-muted/40 p-2 min-h-[120px] flex flex-col justify-end gap-1.5">
-            <div className="self-end pim-loop" style={{ animationName: 'pim-cust' }}>
-              <div className="bg-green-500 text-white rounded-2xl rounded-br-sm p-1.5 max-w-[140px] shadow">
+            <div className="self-start pim-loop" style={{ animationName: 'pim-cust' }}>
+              <div className="bg-green-500 text-white rounded-2xl rounded-bl-sm p-1.5 max-w-[140px] shadow">
                 <div className="h-16 w-full rounded-md bg-gradient-to-br from-amber-200 via-rose-300 to-rose-500 flex items-center justify-center">
                   <Camera className="h-5 w-5 text-white/80" />
                 </div>
