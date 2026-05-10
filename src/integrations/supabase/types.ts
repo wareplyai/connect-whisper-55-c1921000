@@ -1528,6 +1528,42 @@ export type Database = {
         }
         Relationships: []
       }
+      product_images: {
+        Row: {
+          created_at: string
+          id: string
+          image_hash: string | null
+          product_description: string | null
+          product_image_url: string
+          product_name: string
+          product_price: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_hash?: string | null
+          product_description?: string | null
+          product_image_url: string
+          product_name: string
+          product_price?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_hash?: string | null
+          product_description?: string | null
+          product_image_url?: string
+          product_name?: string
+          product_price?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           ai_tags: string | null
