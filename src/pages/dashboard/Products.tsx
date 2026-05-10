@@ -226,10 +226,50 @@ export default function Products() {
     }
   };
 
+  const addToImageMatch = async (p: Product) => {
+    if (!user) return;
+    if (!p.image_url) return toast.error("Product has no image");
+    try {
+      const { count } = await supabase
+        .from("product_images" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      if ((count || 0) >= IMAGE_MATCH_MAX) {
+        return toast.error(`Max ${IMAGE_MATCH_MAX} products allowed in Image Match`);
+      }
+      const { data: existing } = await supabase
+        .from("product_images" as any)
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("product_name", p.name)
+        .maybeSingle();
+      if (existing) return toast.info("Already in Image Match");
+
+      const hash = await hashFromUrl(p.image_url);
+      const { error: insErr } = await supabase
+        .from("product_images" as any)
+        .insert({
+          user_id: user.id,
+          product_name: p.name,
+          product_price: p.price ? String(p.price) : null,
+          product_description: p.description || null,
+          product_image_url: p.image_url,
+          image_hash: hash,
+        } as any);
+      if (insErr) throw insErr;
+      toast.success("Added to Image Match!");
+    } catch (e: any) {
+      toast.error(e.message || "Failed");
+    }
+  };
+
   const ProductActions = ({ p }: { p: Product }) => (
     <div className="flex gap-2 flex-wrap">
       <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
         <Pencil className="size-3 mr-1" /> Edit
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => addToImageMatch(p)}>
+        <Camera className="size-3 mr-1" /> Add to Image Match
       </Button>
       <Button size="sm" variant="outline" onClick={() => retag(p)}>
         <RefreshCw className="size-3 mr-1" /> Re-tag
