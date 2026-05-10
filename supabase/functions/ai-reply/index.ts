@@ -1529,7 +1529,7 @@ Deno.serve(async (req) => {
     }
 
     // Fixed Q&A — runs for both AI Agent and Auto-Reply modes (exact/contains match bypasses AI)
-    if ((aiEnabled || autoReplyEnabled) && !isImageMessage) {
+    if ((aiEnabled || autoReplyEnabled) && (!isImageMessage || !!messageText)) {
       const { data: fixed } = await admin
         .from("fixed_qa")
         .select("keyword, reply, match_type")
