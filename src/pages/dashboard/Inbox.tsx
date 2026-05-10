@@ -148,7 +148,7 @@ const Inbox = () => {
 
   const customers = useMemo(() => {
     const map = new Map<string, { key: string; session_id: string; phone_number: string; last: IncomingRow; unread: number }>();
-    const replied = (m: IncomingRow) => m.reply_sent || !!m.reply_text;
+    const replied = (m: IncomingRow) => m.reply_sent || !!m.reply_text || (m as any).delivery_status === "skipped";
     for (const m of incoming) {
       const key = `${m.session_id}|${m.from_number}`;
       const ex = map.get(key);
