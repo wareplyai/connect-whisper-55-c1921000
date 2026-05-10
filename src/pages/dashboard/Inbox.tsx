@@ -559,40 +559,52 @@ const Inbox = () => {
                       <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
                         m.kind === "out" ? "bg-green-500/15 text-foreground" : "bg-muted text-foreground"
                       }`}>
-                        {(m as any).imageUrl ? (
-                          <button
-                            type="button"
-                            onClick={() => setLightbox((m as any).imageUrl)}
-                            className="block mb-1 rounded-lg overflow-hidden border border-border hover:opacity-90 transition"
-                            title="Click to view full image"
-                          >
-                            <img
-                              src={(m as any).imageUrl}
-                              alt={(m as any).productName || "Attachment"}
-                              className="max-h-56 max-w-full object-cover"
-                              loading="lazy"
-                            />
-                          </button>
-                        ) : (m as any).mediaUrl && (m as any).mediaType === "audio" ? (
-                          <audio controls src={(m as any).mediaUrl} className="mb-1 max-w-full" />
-                        ) : (m as any).mediaUrl && (m as any).mediaType === "video" ? (
-                          <video controls src={(m as any).mediaUrl} className="mb-1 max-h-56 max-w-full rounded-lg border border-border" />
-                        ) : (m as any).mediaUrl && (m as any).mediaType === "document" ? (
-                          <a
-                            href={(m as any).mediaUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mb-1 flex items-center gap-2 px-2 py-1.5 rounded-md border border-border bg-background/50 hover:bg-background transition text-xs"
-                          >
-                            <FileText className="h-4 w-4" />
-                            <span className="truncate">{(m as any).mediaFilename || "Open document"}</span>
-                          </a>
-                        ) : m.kind === "in" && (m.text === "" || m.text?.startsWith("[customer sent an image]")) ? (
-                          <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-md px-2 py-1.5 border border-border">
-                            <ImageIcon className="h-3.5 w-3.5" />
-                            <span>Image (loading…)</span>
-                          </div>
-                        ) : null}
+                        {(() => {
+                          const mt = (m as any).mediaType as string | null;
+                          const mu = (m as any).mediaUrl as string | null;
+                          const imgSrc = ((m as any).imageUrl as string | null)
+                            || (mu && (mt === "image" || /^image\//i.test((m as any).mimetype || "")) ? mu : null);
+                          if (imgSrc) {
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => setLightbox(imgSrc)}
+                                className="block mb-1 rounded-lg overflow-hidden border border-border hover:opacity-90 transition"
+                                title="Click to view full image"
+                              >
+                                <img
+                                  src={imgSrc}
+                                  alt={(m as any).productName || "Attachment"}
+                                  className="max-h-56 max-w-full object-cover"
+                                  loading="lazy"
+                                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                                />
+                              </button>
+                            );
+                          }
+                          if (mu && mt === "audio") return <audio controls src={mu} className="mb-1 max-w-full" />;
+                          if (mu && mt === "video") return <video controls src={mu} className="mb-1 max-h-56 max-w-full rounded-lg border border-border" />;
+                          if (mu && mt === "document") return (
+                            <a
+                              href={mu}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mb-1 flex items-center gap-2 px-2 py-1.5 rounded-md border border-border bg-background/50 hover:bg-background transition text-xs"
+                            >
+                              <FileText className="h-4 w-4" />
+                              <span className="truncate">{(m as any).mediaFilename || "Open document"}</span>
+                            </a>
+                          );
+                          if (m.kind === "in" && (m.text === "" || m.text?.startsWith("[customer sent an image]"))) {
+                            return (
+                              <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-md px-2 py-1.5 border border-border">
+                                <ImageIcon className="h-3.5 w-3.5" />
+                                <span>Image (loading…)</span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                         {((m as any).productName || (m as any).orderNumber) && (
                           <div className="flex flex-wrap gap-1 mb-1">
                             {(m as any).productName && (
