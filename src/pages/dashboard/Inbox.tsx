@@ -71,6 +71,18 @@ const writeCache = (uid: string, payload: any) => {
   try { sessionStorage.setItem(`${CACHE_KEY}:${uid}`, JSON.stringify(payload)); } catch {}
 };
 
+const getChatMediaPath = (url?: string | null) => {
+  if (!url) return null;
+  try {
+    const path = new URL(url).pathname;
+    const marker = "/storage/v1/object/public/chat-media/";
+    const privateMarker = "/storage/v1/object/chat-media/";
+    if (path.includes(marker)) return decodeURIComponent(path.split(marker)[1] || "");
+    if (path.includes(privateMarker)) return decodeURIComponent(path.split(privateMarker)[1] || "");
+  } catch {}
+  return null;
+};
+
 const Inbox = () => {
   const { user } = useAuth();
   const cached = readCache(user?.id);
@@ -84,6 +96,7 @@ const Inbox = () => {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(!cached);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [signedMediaUrls, setSignedMediaUrls] = useState<Record<string, string>>({});
   const channelRef = useRef<any>(null);
 
   const load = async (showLoader = false) => {
