@@ -659,7 +659,7 @@ RULES:
               </SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-2"><Label>Description</Label><Textarea rows={3} placeholder="What do you sell / offer?" value={business.description} onChange={(e) => setBusiness({ ...business, description: e.target.value })} /></div>
+          <div className="md:col-span-2"><Label>Description</Label><ExpandableTextarea label="Description" rows={3} placeholder="What do you sell / offer?" value={business.description} onChange={(v) => setBusiness({ ...business, description: v })} /></div>
           <div><Label>Location / Address</Label><Input value={business.location} onChange={(e) => setBusiness({ ...business, location: e.target.value })} /></div>
           <div><Label>Working Hours</Label><Input placeholder="Sat–Thu 10am–10pm" value={business.working_hours} onChange={(e) => setBusiness({ ...business, working_hours: e.target.value })} /></div>
           <div><Label>Contact Info</Label><Input value={business.contact} onChange={(e) => setBusiness({ ...business, contact: e.target.value })} /></div>
