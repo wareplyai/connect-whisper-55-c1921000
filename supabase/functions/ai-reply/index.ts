@@ -37,41 +37,62 @@ async function decryptKey(payload: string): Promise<string> {
   return dec.decode(pt);
 }
 
-// Transcribe a remote .ogg/.mp3/.m4a voice file via OpenAI Whisper.
-// Returns the transcript text on success, or "" on any failure (logged).
-async function transcribeVoiceFile(audioUrl: string, openaiKey: string): Promise<string> {
+// Transcribe a remote .ogg/.mp3/.m4a voice file via Lovable AI Gateway (Gemini).
+// Auto-detects Bangla / English. Returns "" on failure.
+async function transcribeVoiceFile(audioUrl: string): Promise<string> {
   try {
-    const audioRes = await fetch(audioUrl);
-    if (!audioRes.ok) {
-      console.log("[whisper] download failed:", audioRes.status, audioUrl);
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableKey) {
+      console.log("[stt] LOVABLE_API_KEY missing");
       return "";
     }
-    const ctype = audioRes.headers.get("content-type") || "audio/ogg";
-    const buf = await audioRes.arrayBuffer();
-    const ext = audioUrl.toLowerCase().includes(".mp3") ? "mp3"
-      : audioUrl.toLowerCase().includes(".m4a") ? "m4a"
-      : audioUrl.toLowerCase().includes(".wav") ? "wav"
-      : "ogg";
-    const fd = new FormData();
-    fd.append("file", new Blob([buf], { type: ctype }), `voice.${ext}`);
-    fd.append("model", "whisper-1");
-    // Whisper auto-detects when no language is set; passing "bn" can hurt mixed
-    // Bangla/English voice notes. Leave it off so transcription works for both.
-    const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    const audioRes = await fetch(audioUrl);
+    if (!audioRes.ok) {
+      console.log("[stt] download failed:", audioRes.status, audioUrl);
+      return "";
+    }
+    const ctype = (audioRes.headers.get("content-type") || "audio/ogg").split(";")[0].trim();
+    const buf = new Uint8Array(await audioRes.arrayBuffer());
+    // base64 encode
+    let bin = "";
+    for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    const b64 = btoa(bin);
+    console.log("[stt] audio bytes:", buf.length, "mime:", ctype);
+
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${openaiKey}` },
-      body: fd,
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are an automatic speech-to-text engine. Transcribe the user's audio verbatim into text. The audio may be in Bangla, English, or a mix. Output ONLY the transcript text — no quotes, no explanations, no language labels. If the audio has no speech, output an empty string.",
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Transcribe this voice note:" },
+              { type: "input_audio", input_audio: { data: b64, format: ctype.includes("mp3") ? "mp3" : "ogg" } },
+            ],
+          },
+        ],
+      }),
     });
     const data: any = await r.json().catch(() => ({}));
     if (!r.ok) {
-      console.log("[whisper] api error:", r.status, data?.error?.message || data);
+      console.log("[stt] gateway error:", r.status, JSON.stringify(data).slice(0, 400));
       return "";
     }
-    const text = String(data?.text || "").trim();
-    console.log("[whisper] transcribed", text.length, "chars from", audioUrl);
+    const text = String(data?.choices?.[0]?.message?.content || "").trim();
+    console.log("[stt] transcribed", text.length, "chars from", audioUrl);
     return text;
   } catch (e) {
-    console.log("[whisper] exception:", (e as Error)?.message);
+    console.log("[stt] exception:", (e as Error)?.message);
     return "";
   }
 }
@@ -920,49 +941,29 @@ Deno.serve(async (req) => {
       hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
 
-    // ---- Voice / audio messages: transcribe via OpenAI Whisper, then process as text.
-    // Customer never sees the transcript; the AI agent receives it as a normal text message.
+    // ---- Voice / audio messages: transcribe via Lovable AI Gateway, then process as text.
+    // We keep the original audio media_url + message_type so the inbox shows the audio player,
+    // and we expose `transcribed_text` so the inbox can show the transcript under it.
+    let voiceTranscript = "";
     {
       const audioUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
       const lowerType0 = messageType.toLowerCase();
       const isAudio = /audio|voice|ptt/.test(lowerType0);
       if (audioUrl && isAudio && !rawText) {
         try {
-          const adminA = createClient(
-            Deno.env.get("SUPABASE_URL")!,
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-          );
-          const { data: sesA } = await adminA.from("sessions")
-            .select("id, user_id").eq("id", sessionId).maybeSingle();
-          let openaiKey = Deno.env.get("OPENAI_API_KEY") || "";
-          if (!openaiKey && sesA?.user_id) {
-            const { data: keyRow } = await adminA.from("ai_api_keys")
-              .select("encrypted_key, platform")
-              .eq("user_id", sesA.user_id)
-              .eq("is_active", true)
-              .maybeSingle();
-            if (keyRow && keyRow.platform === "openai") {
-              try { openaiKey = await decryptKey(keyRow.encrypted_key); }
-              catch (e) { console.log("[whisper] decrypt key failed:", (e as Error)?.message); }
-            }
-          }
-          if (!openaiKey) {
-            console.log("[whisper] no OpenAI key for session", sessionId, "- audio will be logged & skipped");
+          const transcript = await transcribeVoiceFile(audioUrl);
+          if (transcript) {
+            voiceTranscript = transcript;
+            rawText = transcript;
+            (body as any).message = transcript;
+            (body as any).transcribed_text = transcript;
+            (body as any).original_type = "audio";
+            console.log("[stt] AI agent will reply to transcribed audio for session", sessionId);
           } else {
-            const transcript = await transcribeVoiceFile(audioUrl, openaiKey);
-            if (transcript) {
-              rawText = transcript;
-              messageType = "text";
-              (body as any).message = transcript;
-              (body as any).message_type = "text";
-              (body as any).original_type = "audio";
-              console.log("[whisper] AI agent will reply to transcribed audio for session", sessionId);
-            } else {
-              console.log("[whisper] empty transcript for", audioUrl);
-            }
+            console.log("[stt] empty transcript for", audioUrl);
           }
         } catch (e) {
-          console.log("[whisper] pre-step failed:", (e as Error)?.message);
+          console.log("[stt] pre-step failed:", (e as Error)?.message);
         }
       }
     }
@@ -973,7 +974,9 @@ Deno.serve(async (req) => {
       const mediaUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
       const lowerType = messageType.toLowerCase();
       const isNonImageMedia = /audio|voice|ptt|video|document|file|sticker/.test(lowerType);
-      if (mediaUrl && isNonImageMedia) {
+      // If we already transcribed an audio message above, fall through to AI reply flow
+      // (we still want the audio + transcript saved in the inbox by the normal insert below).
+      if (mediaUrl && isNonImageMedia && !voiceTranscript) {
         const admin0 = createClient(
           Deno.env.get("SUPABASE_URL")!,
           Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -1344,6 +1347,7 @@ Deno.serve(async (req) => {
         media_filename: payloadFilename,
         caption: payloadCaption,
         image_url: isImageMessage ? payloadMediaUrl : null,
+        transcribed_text: voiceTranscript || null,
       };
       const { data: msgRow } = await admin
         .from("incoming_messages")

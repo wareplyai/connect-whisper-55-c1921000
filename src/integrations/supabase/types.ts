@@ -1118,6 +1118,7 @@ export type Database = {
           reply_sent_at: string | null
           reply_text: string | null
           session_id: string
+          transcribed_text: string | null
           user_id: string
         }
         Insert: {
@@ -1148,6 +1149,7 @@ export type Database = {
           reply_sent_at?: string | null
           reply_text?: string | null
           session_id: string
+          transcribed_text?: string | null
           user_id: string
         }
         Update: {
@@ -1178,6 +1180,7 @@ export type Database = {
           reply_sent_at?: string | null
           reply_text?: string | null
           session_id?: string
+          transcribed_text?: string | null
           user_id?: string
         }
         Relationships: []
@@ -2220,6 +2223,7 @@ export type Database = {
           reply_sent_at: string | null
           reply_text: string | null
           session_id: string
+          transcribed_text: string | null
           user_id: string
         }
         SetofOptions: {

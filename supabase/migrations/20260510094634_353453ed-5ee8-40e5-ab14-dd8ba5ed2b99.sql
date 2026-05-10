@@ -1,0 +1,1 @@
+ALTER TABLE public.incoming_messages ADD COLUMN IF NOT EXISTS transcribed_text text;
