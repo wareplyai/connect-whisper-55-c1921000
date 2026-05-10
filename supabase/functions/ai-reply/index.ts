@@ -431,6 +431,31 @@ async function uploadChatMediaImage(
   }
 }
 
+async function findRecentWhatsappImageUrl(admin: any, fromNumber: string): Promise<string | null> {
+  const digits = String(fromNumber || "").replace(/\D/g, "");
+  if (!digits) return null;
+  try {
+    const since = new Date(Date.now() - 10 * 60_000).toISOString();
+    const { data, error } = await admin
+      .from("storage.objects")
+      .select("name, created_at")
+      .eq("bucket_id", "whatsapp-media")
+      .gte("created_at", since)
+      .ilike("name", `whatsapp-media/%-${digits}.jpg`)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (error || !data?.[0]?.name) {
+      if (error) console.log("[ai-reply] storage image lookup failed:", error.message);
+      return null;
+    }
+    const { data: pub } = admin.storage.from("whatsapp-media").getPublicUrl(data[0].name);
+    return pub?.publicUrl || null;
+  } catch (e) {
+    console.log("[ai-reply] storage image lookup exception:", (e as Error)?.message);
+    return null;
+  }
+}
+
 function recipientVariants(input: string): string[] {
   const raw = String(input ?? "").trim();
   // Strip any @lid / @s.whatsapp.net suffix and use digits only
