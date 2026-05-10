@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Clock, Trash2, Image as ImageIcon } from "lucide-react";
+import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Clock, Trash2, Image as ImageIcon, Mic, Film, FileText, Paperclip } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +27,10 @@ type IncomingRow = {
   image_url?: string | null;
   mimetype?: string | null;
   image_caption?: string | null;
+  media_url?: string | null;
+  media_filename?: string | null;
+  caption?: string | null;
+  message_type?: string | null;
   extracted_product_name?: string | null;
   extracted_order_number?: string | null;
 };
@@ -165,20 +170,27 @@ const Inbox = () => {
     const phoneTail = selected.phone_number.replace(/\D/g, "").slice(-9);
     const inc = incoming
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number)
-      .map((m) => ({
-        id: `i-${m.id}`,
-        srcTable: "incoming_messages" as const,
-        srcId: m.id,
-        srcField: "message" as const,
-        kind: "in" as const,
-        text: m.message_text || m.image_caption || (m.image_url ? "" : "(no text)"),
-        imageUrl: (m as any).image_url as string | null,
-        mimetype: (m as any).mimetype as string | null,
-        productName: (m as any).extracted_product_name as string | null,
-        orderNumber: (m as any).extracted_order_number as string | null,
-        ts: m.received_at,
-        pending: !m.reply_sent && !m.reply_text,
-      }));
+      .map((m) => {
+        const mt = (m as any).message_type as string | null;
+        const mediaUrl = ((m as any).media_url || null) as string | null;
+        return {
+          id: `i-${m.id}`,
+          srcTable: "incoming_messages" as const,
+          srcId: m.id,
+          srcField: "message" as const,
+          kind: "in" as const,
+          text: m.message_text || (m as any).caption || m.image_caption || "",
+          imageUrl: (m as any).image_url as string | null,
+          mediaUrl,
+          mediaType: mt,
+          mediaFilename: (m as any).media_filename as string | null,
+          mimetype: (m as any).mimetype as string | null,
+          productName: (m as any).extracted_product_name as string | null,
+          orderNumber: (m as any).extracted_order_number as string | null,
+          ts: m.received_at,
+          pending: !m.reply_sent && !m.reply_text,
+        };
+      });
     const replies = incoming
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number && m.reply_text)
       .map((m) => {
@@ -215,13 +227,21 @@ const Inbox = () => {
         const source: "ai" | "keyword_rule" | "manual" =
           src === "ai" ? "ai" : (src === "keyword_rule" || src === "fixed_qa") ? "keyword_rule" : "manual";
         if (src !== "manual") return null;
+        const kind = o.payload?.kind as string | undefined;
+        const mediaUrl = (o.payload?.url as string | undefined) || null;
+        const mediaType = kind === "voice" ? "audio" : (kind || (o as any).message_type) || null;
+        const cap = (o.payload?.caption as string | undefined) || "";
         return {
           id: `o-${o.id}`,
           srcTable: "message_logs" as const,
           srcId: o.id,
           srcField: "row" as const,
           kind: "out" as const,
-          text: typeof o.payload === "object" ? (o.payload?.text || JSON.stringify(o.payload)) : String(o.payload || ""),
+          text: (typeof o.payload === "object" ? (o.payload?.text || cap) : String(o.payload || "")) || "",
+          imageUrl: kind === "image" ? mediaUrl : null,
+          mediaUrl: mediaUrl && kind !== "image" ? mediaUrl : null,
+          mediaType,
+          mediaFilename: (o.payload?.filename as string | undefined) || null,
           ts: o.created_at,
           source,
         };
@@ -276,6 +296,48 @@ const Inbox = () => {
       "Auto-Reply only (keyword rules)"
     );
     load();
+  };
+
+  const sendMedia = async (kind: "image" | "voice" | "video" | "document") => {
+    if (!user || !selected) return;
+    const labels: Record<string, string> = {
+      image: "image URL (.jpg/.png)",
+      voice: "audio URL (.ogg/.mp3)",
+      video: "video URL (.mp4)",
+      document: "document URL (.pdf/.docx/.xlsx)",
+    };
+    const url = window.prompt(`Paste ${labels[kind]}:`)?.trim();
+    if (!url) return;
+    let caption = "";
+    let filename = "";
+    if (kind === "image" || kind === "video" || kind === "document") {
+      caption = window.prompt("Caption (optional):")?.trim() || "";
+    }
+    if (kind === "document") {
+      filename = window.prompt("Filename (optional, e.g. invoice.pdf):")?.trim() || "";
+    }
+    setSending(true);
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token;
+      const endpoint = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/send-manual-media`;
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          session_id: selected.session_id,
+          to_number: selected.phone_number,
+          kind, url, caption, filename,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.ok === false) toast.error(data?.error || "Send failed");
+      else { toast.success(`${kind} sent`); load(); }
+    } catch (e: any) {
+      toast.error(e?.message || "Send failed");
+    } finally {
+      setSending(false);
+    }
   };
 
   const sendManual = async () => {
@@ -506,11 +568,25 @@ const Inbox = () => {
                           >
                             <img
                               src={(m as any).imageUrl}
-                              alt={(m as any).productName || "Customer attachment"}
+                              alt={(m as any).productName || "Attachment"}
                               className="max-h-56 max-w-full object-cover"
                               loading="lazy"
                             />
                           </button>
+                        ) : (m as any).mediaUrl && (m as any).mediaType === "audio" ? (
+                          <audio controls src={(m as any).mediaUrl} className="mb-1 max-w-full" />
+                        ) : (m as any).mediaUrl && (m as any).mediaType === "video" ? (
+                          <video controls src={(m as any).mediaUrl} className="mb-1 max-h-56 max-w-full rounded-lg border border-border" />
+                        ) : (m as any).mediaUrl && (m as any).mediaType === "document" ? (
+                          <a
+                            href={(m as any).mediaUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mb-1 flex items-center gap-2 px-2 py-1.5 rounded-md border border-border bg-background/50 hover:bg-background transition text-xs"
+                          >
+                            <FileText className="h-4 w-4" />
+                            <span className="truncate">{(m as any).mediaFilename || "Open document"}</span>
+                          </a>
                         ) : m.kind === "in" && (m.text === "" || m.text?.startsWith("[customer sent an image]")) ? (
                           <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-md px-2 py-1.5 border border-border">
                             <ImageIcon className="h-3.5 w-3.5" />
@@ -564,6 +640,29 @@ const Inbox = () => {
               </ScrollArea>
               <div className="p-3 border-t border-border">
                 <div className="flex items-end gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="icon" disabled={sending || isBlocked} title="Send media">
+                        <Paperclip className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-2" align="start" side="top">
+                      <div className="flex flex-col gap-1">
+                        <Button variant="ghost" size="sm" className="justify-start" onClick={() => sendMedia("image")}>
+                          <ImageIcon className="h-4 w-4 mr-2" /> Send image
+                        </Button>
+                        <Button variant="ghost" size="sm" className="justify-start" onClick={() => sendMedia("voice")}>
+                          <Mic className="h-4 w-4 mr-2" /> Send voice
+                        </Button>
+                        <Button variant="ghost" size="sm" className="justify-start" onClick={() => sendMedia("video")}>
+                          <Film className="h-4 w-4 mr-2" /> Send video
+                        </Button>
+                        <Button variant="ghost" size="sm" className="justify-start" onClick={() => sendMedia("document")}>
+                          <FileText className="h-4 w-4 mr-2" /> Send document
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   <Input
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
