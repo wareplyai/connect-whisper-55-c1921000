@@ -1033,7 +1033,7 @@ Deno.serve(async (req) => {
     const payloadHasImage = !isAudioMessage && (looksImageType || payloadLooksLikeImage(body));
     // Tentatively flag as image — we may resolve the actual binary from the gateway below.
     let isImageMessage = !isAudioMessage && ((!!imageUrl && (looksImageType || !rawText)) || (payloadHasImage && !rawText));
-    const messageText = rawText || "";
+    let messageText = rawText || "";
 
     console.log("message_type:", messageType);
     console.log("media_url:", bodyMediaUrl || null);
