@@ -1711,14 +1711,24 @@ Deno.serve(async (req) => {
       ? biz.system_prompt
       : `You are a helpful WhatsApp assistant for ${biz?.name || "this business"}. Reply in the customer's language. Be friendly, concise, human-like.`;
 
-    const systemPrompt = `${baseSystem}${qaContext}${productCatalog}${productInstr}`;
+    // If we have a matched product (image match) and/or text from the customer,
+    // route into the regular text-AI flow with extra context. Vision-only describe
+    // path only runs when the customer sent ONLY an image (no text).
+    const useTextFlow = !!messageText || !!matchedProduct;
+    const matchedContext = matchedProduct
+      ? `\n\nIMAGE MATCH: The customer attached a photo that matches this product from the catalog — name: "${matchedProduct.name}"${matchedProduct.price ? `, price: ${matchedProduct.price}` : ""}${matchedProduct.description ? `, description: ${String(matchedProduct.description).slice(0, 200)}` : ""}. Use this as the primary product the customer is asking about, and answer their text question about it.`
+      : "";
+    const finalSystemPrompt = `${systemPrompt}${matchedContext}`;
+    const finalUserMessage = messageText || (matchedProduct ? `(Customer sent a photo of "${matchedProduct.name}" with no caption.)` : "");
+
+    const systemPromptForVision = systemPrompt; // unused — kept for clarity
 
     let reply = "";
 
-    // ---- Image-message branch: vision describe + product match ----
-    if (isImageMessage && !imageUrl) {
+    // ---- Image-message branch: vision describe + product match (image-only) ----
+    if (isImageMessage && !imageUrl && !useTextFlow) {
       reply = "ছবি receive করেছি ✅ কিন্তু এই মুহূর্তে ছবিটা analyze করা সম্ভব হচ্ছে না। দয়া করে product টির নাম / রঙ / size text এ লিখে পাঠান, আমি match করে details দিচ্ছি।\n\nGot your image but couldn't open it right now — please describe the product in text (name / color / size).";
-    } else if (isImageMessage && imageUrl) {
+    } else if (isImageMessage && imageUrl && !useTextFlow) {
       if (keyRow.platform !== "openai") {
         reply = "Sorry, image search needs an OpenAI API key. Please describe the product in text. ছবি match করতে OpenAI key দরকার, দয়া করে product টি text এ describe করুন।";
       } else {
