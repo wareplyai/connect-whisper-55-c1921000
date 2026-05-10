@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sparkles, KeyRound, CheckCircle2, Upload, FileText, Globe, MessagesSquare, Lock, Trash2, Plus, Bot, Loader2, Smartphone, Power } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -163,7 +164,9 @@ const AIAgent = () => {
           ai_show_typing: (biz as any).ai_show_typing ?? true,
           ai_read_receipts: (biz as any).ai_read_receipts ?? true,
           ai_auto_replies_enabled: (biz as any).ai_auto_replies_enabled ?? true,
-          max_tokens: (biz as any).max_tokens ?? 500,
+          max_tokens: (biz as any).max_tokens ?? 2000,
+          temperature: typeof (biz as any).temperature === "number" ? Number((biz as any).temperature) : 0.7,
+          instructions: ((biz as any).instructions ?? DEFAULT_INSTRUCTIONS) as string,
         });
       }
       setSessions((sessRows ?? []) as SessionRow[]);
@@ -213,6 +216,7 @@ const AIAgent = () => {
 
   const generatePrompt = () => {
     if (!business.name || !business.description) { toast.error("Fill business name & description"); return; }
+    const instructionsBlock = (business.instructions || DEFAULT_INSTRUCTIONS).trim();
     const businessBlock = `You are the official AI assistant for ${business.name}${business.business_type ? ` (${business.business_type})` : ""}.
 
 ABOUT THE BUSINESS:
@@ -225,7 +229,7 @@ RULES:
 - Use the knowledge base for accurate answers. If unsure, ask a clarifying question.
 - Never invent prices, stock, or policies that aren't in the knowledge base.
 - Out of scope or sensitive topics → politely redirect to a human agent.`;
-    const prompt = `${TOP_PRIMARY_OBJECTIVE}\n\n---\n\n${businessBlock}`;
+    const prompt = `INSTRUCTIONS FOR THIS CHATBOT\n${instructionsBlock}\n\n---\n\n${TOP_PRIMARY_OBJECTIVE}\n\n---\n\n${businessBlock}`;
     setBusiness((p) => ({ ...p, system_prompt: prompt }));
     toast.success("System prompt generated — click Save Business Profile");
   };
@@ -235,7 +239,7 @@ RULES:
     setSavingBiz(true);
     const { error } = await supabase
       .from("business_profiles")
-      .upsert({ user_id: user.id, ...business }, { onConflict: "user_id" });
+      .upsert({ user_id: user.id, ...business } as any, { onConflict: "user_id" });
     setSavingBiz(false);
     if (error) toast.error(friendlyError(error));
     else toast.success("Business profile saved");
@@ -247,7 +251,7 @@ RULES:
     setBusiness(next);
     const { error } = await supabase
       .from("business_profiles")
-      .upsert({ user_id: user.id, ...next }, { onConflict: "user_id" });
+      .upsert({ user_id: user.id, ...next } as any, { onConflict: "user_id" });
     if (error) toast.error(friendlyError(error));
   };
 
@@ -274,13 +278,13 @@ RULES:
       }
       await supabase
         .from("business_profiles")
-        .upsert({ user_id: user.id, ...business, ai_enabled: true, active_reply_mode: "ai_agent" }, { onConflict: "user_id" });
+        .upsert({ user_id: user.id, ...business, ai_enabled: true, active_reply_mode: "ai_agent" } as any, { onConflict: "user_id" });
       setBusiness((p) => ({ ...p, ai_enabled: true }));
       toast.success("🟢 AI Agent ON");
     } else {
       await supabase
         .from("business_profiles")
-        .upsert({ user_id: user.id, ...business, ai_enabled: false, active_reply_mode: "none" }, { onConflict: "user_id" });
+        .upsert({ user_id: user.id, ...business, ai_enabled: false, active_reply_mode: "none" } as any, { onConflict: "user_id" });
       setBusiness((p) => ({ ...p, ai_enabled: false }));
       toast.success("⚪ AI Agent OFF");
     }
@@ -514,29 +518,63 @@ RULES:
               </Select>
             </div>
 
-            <div>
-              <Label>Max Reply Tokens</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
+            {/* Premium tuning panel */}
+            <div className="rounded-xl border border-border bg-gradient-to-br from-primary/5 via-background to-background p-4 space-y-5">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-medium">Temperature</Label>
+                  <span className="text-sm font-mono text-primary">{business.temperature.toFixed(2)}</span>
+                </div>
+                <Slider
+                  value={[business.temperature]}
+                  min={0}
+                  max={2}
+                  step={0.05}
+                  onValueChange={(v) => setBusiness({ ...business, temperature: v[0] })}
+                  onValueCommit={(v) => persistBusinessPatch({ temperature: v[0] })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Lower = focused & predictable. Higher = creative. Default 0.7.</p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-medium">Max Tokens</Label>
+                  <span className="text-sm font-mono text-primary">{business.max_tokens}</span>
+                </div>
+                <Slider
+                  value={[business.max_tokens]}
                   min={50}
                   max={4000}
                   step={50}
-                  value={business.max_tokens}
-                  onChange={(e) => setBusiness({ ...business, max_tokens: Math.max(50, Math.min(4000, Number(e.target.value) || 500)) })}
-                  className="max-w-[160px]"
+                  onValueChange={(v) => setBusiness({ ...business, max_tokens: v[0] })}
+                  onValueCommit={(v) => persistBusinessPatch({ max_tokens: v[0] })}
                 />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => persistBusinessPatch({ max_tokens: business.max_tokens })}
-                >
-                  Save
-                </Button>
+                <p className="text-xs text-muted-foreground mt-1">Maximum length of every AI reply (50–4000). Default 2000.</p>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Controls the maximum length of every AI reply (50–4000). Lower = shorter & cheaper. Default 500.
-              </p>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-medium">Instructions for this Chatbot</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setBusiness({ ...business, instructions: DEFAULT_INSTRUCTIONS })}
+                  >
+                    Reset to default
+                  </Button>
+                </div>
+                <Textarea
+                  rows={7}
+                  value={business.instructions}
+                  onChange={(e) => setBusiness({ ...business, instructions: e.target.value })}
+                  onBlur={() => persistBusinessPatch({ instructions: business.instructions })}
+                  className="bg-green-500/5 border-green-500/20 focus-visible:ring-green-500/40 leading-relaxed"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Auto-Generate Prompt চাপলে এই instructions automatic ভাবে generated system prompt-এর শুরুতে যুক্ত হয়ে যাবে।
+                </p>
+              </div>
             </div>
           </div>
         )}
