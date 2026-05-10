@@ -12,85 +12,29 @@ import { toast } from "sonner";
 import { Loader2, Trash2, Upload, ImageIcon, Sparkles, BarChart3, Camera, Bot, MessageSquare, ArrowRight, Zap } from "lucide-react";
 
 function HowItWorksHero() {
+  const Step = ({ icon: Icon, label, color }: any) => (
+    <div className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-sm">
+      <div className={`h-7 w-7 rounded-full flex items-center justify-center ${color}`}>
+        <Icon className="h-3.5 w-3.5" />
+      </div>
+      <span className="text-xs font-medium whitespace-nowrap">{label}</span>
+    </div>
+  );
   return (
-    <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 via-background to-primary/10">
-      <div className="absolute inset-0 opacity-30 pointer-events-none">
-        <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-primary/20 blur-3xl animate-pulse" />
-        <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-primary/20 blur-3xl animate-pulse [animation-delay:1s]" />
-      </div>
-      <div className="relative p-5 md:p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Zap className="h-5 w-5 text-primary animate-pulse" />
-          <h2 className="font-semibold">How Image Match works</h2>
+    <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-r from-primary/5 via-background to-primary/10">
+      <div className="absolute -top-8 -left-8 h-24 w-24 rounded-full bg-primary/10 blur-2xl animate-pulse pointer-events-none" />
+      <div className="absolute -bottom-8 -right-8 h-24 w-24 rounded-full bg-primary/10 blur-2xl animate-pulse [animation-delay:1s] pointer-events-none" />
+      <div className="relative px-4 py-3 flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <Zap className="h-4 w-4 text-primary animate-pulse" />
+          <span className="text-sm font-semibold">How it works:</span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-3">
-          {/* Step 1 - Customer sends */}
-          <div className="rounded-xl border bg-card p-3 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="h-8 w-8 rounded-full bg-green-500/15 flex items-center justify-center">
-                <Camera className="h-4 w-4 text-green-500" />
-              </div>
-              <div className="text-xs font-medium">Customer sends photo</div>
-            </div>
-            <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-2 ml-auto max-w-[180px]">
-              <div className="aspect-square w-full rounded bg-gradient-to-br from-green-400/30 to-emerald-600/30 mb-1 flex items-center justify-center">
-                <ImageIcon className="h-6 w-6 text-green-600/70" />
-              </div>
-              <p className="text-[10px] text-muted-foreground">"Eta ase apnader kase?"</p>
-            </div>
-          </div>
-
-          <ArrowRight className="hidden md:block h-5 w-5 text-primary animate-pulse" />
-
-          {/* Step 2 - AI matches */}
-          <div className="rounded-xl border bg-card p-3 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center">
-                <Bot className="h-4 w-4 text-primary animate-pulse" />
-              </div>
-              <div className="text-xs font-medium">AI matches catalog</div>
-            </div>
-            <div className="space-y-1">
-              <div className="h-2 rounded bg-primary/20 overflow-hidden">
-                <div className="h-full w-1/3 bg-primary animate-[slide_2s_ease-in-out_infinite]" style={{ animation: "slide 2s ease-in-out infinite" }} />
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="aspect-square rounded bg-primary/10 border border-primary/20 animate-pulse"
-                    style={{ animationDelay: `${i * 0.3}s` }}
-                  />
-                ))}
-              </div>
-              <p className="text-[10px] text-muted-foreground text-center">Comparing images...</p>
-            </div>
-          </div>
-
-          <ArrowRight className="hidden md:block h-5 w-5 text-primary animate-pulse" />
-
-          {/* Step 3 - Bot replies */}
-          <div className="rounded-xl border bg-card p-3 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="h-8 w-8 rounded-full bg-blue-500/15 flex items-center justify-center">
-                <MessageSquare className="h-4 w-4 text-blue-500" />
-              </div>
-              <div className="text-xs font-medium">Bot auto-replies</div>
-            </div>
-            <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-2 max-w-[180px]">
-              <div className="aspect-square w-full rounded bg-gradient-to-br from-blue-400/30 to-indigo-600/30 mb-1 flex items-center justify-center">
-                <Sparkles className="h-6 w-6 text-blue-600/70" />
-              </div>
-              <p className="text-[10px] font-semibold">Red T-Shirt · ৳499</p>
-              <p className="text-[10px] text-muted-foreground line-clamp-1">100% cotton, sizes S-XL</p>
-            </div>
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground mt-4 text-center">
-          Upload your products below — when WhatsApp customers send a photo, the bot finds the matching item and replies with name, price & details automatically.
-        </p>
+        <Step icon={Camera} label="Customer sends photo" color="bg-green-500/15 text-green-500" />
+        <ArrowRight className="h-4 w-4 text-primary animate-pulse" />
+        <Step icon={Bot} label="AI matches catalog" color="bg-primary/15 text-primary" />
+        <ArrowRight className="h-4 w-4 text-primary animate-pulse" />
+        <Step icon={MessageSquare} label="Bot auto-replies with details" color="bg-blue-500/15 text-blue-500" />
       </div>
-      <style>{`@keyframes slide { 0%,100% { transform: translateX(-100%); width: 30%; } 50% { transform: translateX(250%); width: 30%; } }`}</style>
     </Card>
   );
 }
