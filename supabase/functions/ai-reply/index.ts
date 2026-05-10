@@ -37,6 +37,45 @@ async function decryptKey(payload: string): Promise<string> {
   return dec.decode(pt);
 }
 
+// Transcribe a remote .ogg/.mp3/.m4a voice file via OpenAI Whisper.
+// Returns the transcript text on success, or "" on any failure (logged).
+async function transcribeVoiceFile(audioUrl: string, openaiKey: string): Promise<string> {
+  try {
+    const audioRes = await fetch(audioUrl);
+    if (!audioRes.ok) {
+      console.log("[whisper] download failed:", audioRes.status, audioUrl);
+      return "";
+    }
+    const ctype = audioRes.headers.get("content-type") || "audio/ogg";
+    const buf = await audioRes.arrayBuffer();
+    const ext = audioUrl.toLowerCase().includes(".mp3") ? "mp3"
+      : audioUrl.toLowerCase().includes(".m4a") ? "m4a"
+      : audioUrl.toLowerCase().includes(".wav") ? "wav"
+      : "ogg";
+    const fd = new FormData();
+    fd.append("file", new Blob([buf], { type: ctype }), `voice.${ext}`);
+    fd.append("model", "whisper-1");
+    // Whisper auto-detects when no language is set; passing "bn" can hurt mixed
+    // Bangla/English voice notes. Leave it off so transcription works for both.
+    const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${openaiKey}` },
+      body: fd,
+    });
+    const data: any = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      console.log("[whisper] api error:", r.status, data?.error?.message || data);
+      return "";
+    }
+    const text = String(data?.text || "").trim();
+    console.log("[whisper] transcribed", text.length, "chars from", audioUrl);
+    return text;
+  } catch (e) {
+    console.log("[whisper] exception:", (e as Error)?.message);
+    return "";
+  }
+}
+
 function jsonResp(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -845,12 +884,59 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const sessionId = String(body.session_id || body.sessionId || "").trim();
-    const rawText = String(body.message || body.text || body.message_text || "").trim();
+    let rawText = String(body.message || body.text || body.message_text || "").trim();
     const isGroup = Boolean(body.is_group ?? body.isGroup ?? false) || hasGroupJid(body);
-    const messageType = String(body.message_type || "text");
+    let messageType = String(body.message_type || "text");
     const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false) ||
       hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
+
+    // ---- Voice / audio messages: transcribe via OpenAI Whisper, then process as text.
+    // Customer never sees the transcript; the AI agent receives it as a normal text message.
+    {
+      const audioUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
+      const lowerType0 = messageType.toLowerCase();
+      const isAudio = /audio|voice|ptt/.test(lowerType0);
+      if (audioUrl && isAudio && !rawText) {
+        try {
+          const adminA = createClient(
+            Deno.env.get("SUPABASE_URL")!,
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+          );
+          const { data: sesA } = await adminA.from("sessions")
+            .select("id, user_id").eq("id", sessionId).maybeSingle();
+          let openaiKey = Deno.env.get("OPENAI_API_KEY") || "";
+          if (!openaiKey && sesA?.user_id) {
+            const { data: keyRow } = await adminA.from("ai_api_keys")
+              .select("encrypted_key, platform")
+              .eq("user_id", sesA.user_id)
+              .eq("is_active", true)
+              .maybeSingle();
+            if (keyRow && keyRow.platform === "openai") {
+              try { openaiKey = await decryptKey(keyRow.encrypted_key); }
+              catch (e) { console.log("[whisper] decrypt key failed:", (e as Error)?.message); }
+            }
+          }
+          if (!openaiKey) {
+            console.log("[whisper] no OpenAI key for session", sessionId, "- audio will be logged & skipped");
+          } else {
+            const transcript = await transcribeVoiceFile(audioUrl, openaiKey);
+            if (transcript) {
+              rawText = transcript;
+              messageType = "text";
+              (body as any).message = transcript;
+              (body as any).message_type = "text";
+              (body as any).original_type = "audio";
+              console.log("[whisper] AI agent will reply to transcribed audio for session", sessionId);
+            } else {
+              console.log("[whisper] empty transcript for", audioUrl);
+            }
+          }
+        } catch (e) {
+          console.log("[whisper] pre-step failed:", (e as Error)?.message);
+        }
+      }
+    }
 
     // ---- Non-image media (audio/video/document) — log to inbox and skip AI reply.
     // VPS already uploaded the file to Supabase storage and gives us a public media_url.
