@@ -1679,11 +1679,29 @@ Deno.serve(async (req) => {
           .join("\n\n")}`
       : "";
 
+    // Load product catalog so AI can reference real products in replies.
+    const { data: catalogRows } = await admin
+      .from("products")
+      .select("id, name, price, description, category, stock, image_url")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .limit(100);
+
+    const productCatalog = (catalogRows || []).length
+      ? `\n\nPRODUCT CATALOG (use these exact names/prices when replying):\n${(catalogRows || [])
+          .map((p: any) => `- ${p.name} | ৳${p.price}${p.stock > 0 ? ` | stock: ${p.stock}` : " | out of stock"}${p.category ? ` | ${p.category}` : ""}${p.description ? ` — ${String(p.description).slice(0, 120)}` : ""}`)
+          .join("\n")}`
+      : "";
+
+    const productInstr = (catalogRows || []).length
+      ? `\n\nআপনি যখন কোনো product সম্পর্কে reply দেবেন, তখন product এর সব details (নাম, দাম, বিবরণ) text এ দিন। Product এর image automatically পাঠানো হবে। একসাথে maximum 3টা product suggest করুন। When you mention a product, use its EXACT name from the catalog so we can attach its image.`
+      : "";
+
     const baseSystem = (biz?.system_prompt && biz.system_prompt.trim().length > 0)
       ? biz.system_prompt
       : `You are a helpful WhatsApp assistant for ${biz?.name || "this business"}. Reply in the customer's language. Be friendly, concise, human-like.`;
 
-    const systemPrompt = `${baseSystem}${qaContext}`;
+    const systemPrompt = `${baseSystem}${qaContext}${productCatalog}${productInstr}`;
 
     let reply = "";
 
@@ -1836,6 +1854,49 @@ Deno.serve(async (req) => {
         message_type: "text", payload: { text: reply, auto_reply: true, source: "ai" },
         status: "sent",
       });
+
+      // Auto-attach product image when the AI's reply (or the customer's message)
+      // mentions a real product from the catalog.
+      try {
+        if (!isImageMessage && (catalogRows || []).length > 0) {
+          const hay = `${reply} \n ${messageText}`.toLowerCase();
+          const tokenize = (s: string) =>
+            s.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter((t) => t.length >= 3);
+          let bestProd: any = null;
+          let bestScore = 0;
+          for (const p of (catalogRows || []) as any[]) {
+            if (!p.image_url) continue;
+            const name = String(p.name || "").toLowerCase().trim();
+            if (!name) continue;
+            let score = 0;
+            if (hay.includes(name)) score = 1;
+            else {
+              const nameTokens = tokenize(name);
+              const hayTokens = new Set(tokenize(hay));
+              const hits = nameTokens.filter((t) => hayTokens.has(t)).length;
+              if (nameTokens.length > 0) score = hits / nameTokens.length;
+            }
+            if (score > bestScore) { bestScore = score; bestProd = p; }
+          }
+          if (bestProd && bestScore >= 0.6) {
+            await new Promise((r) => setTimeout(r, 1000));
+            await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-product-image-to-customer`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({
+                session_id: sessionId,
+                to: sendResult.to || fromNumber,
+                product_id: bestProd.id,
+              }),
+            });
+          }
+        }
+      } catch (e) {
+        console.log("[ai-reply] product image attach failed:", (e as Error)?.message);
+      }
     }
 
     return jsonResp({ ok: true, reply, sent: sendOk, send_error: sendErr, sent_to: sendResult.to, source: "ai", message_id: messageId });
