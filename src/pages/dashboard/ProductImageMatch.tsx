@@ -13,28 +13,46 @@ import { toast } from "sonner";
 import { Loader2, Trash2, Upload, ImageIcon, Sparkles, BarChart3, Camera, Bot, MessageSquare, ArrowRight, Zap, Plus } from "lucide-react";
 
 function HowItWorksHero() {
-  const Step = ({ icon: Icon, label, color }: any) => (
-    <div className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-sm">
-      <div className={`h-7 w-7 rounded-full flex items-center justify-center ${color}`}>
-        <Icon className="h-3.5 w-3.5" />
+  const Step = ({ icon: Icon, label, color, sub }: any) => (
+    <div className="flex-1 min-w-[150px] flex items-center gap-2.5 rounded-xl border bg-card/80 backdrop-blur px-3 py-2.5 shadow-sm">
+      <div className={`h-9 w-9 shrink-0 rounded-lg flex items-center justify-center ${color}`}>
+        <Icon className="h-4.5 w-4.5" />
       </div>
-      <span className="text-xs font-medium whitespace-nowrap">{label}</span>
+      <div className="flex flex-col min-w-0">
+        <span className="text-xs font-semibold leading-tight truncate">{label}</span>
+        <span className="text-[10px] text-muted-foreground leading-tight truncate">{sub}</span>
+      </div>
     </div>
   );
   return (
     <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-r from-primary/5 via-background to-primary/10">
-      <div className="absolute -top-8 -left-8 h-24 w-24 rounded-full bg-primary/10 blur-2xl animate-pulse pointer-events-none" />
-      <div className="absolute -bottom-8 -right-8 h-24 w-24 rounded-full bg-primary/10 blur-2xl animate-pulse [animation-delay:1s] pointer-events-none" />
-      <div className="relative px-4 py-3 flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <Zap className="h-4 w-4 text-primary animate-pulse" />
-          <span className="text-sm font-semibold">How it works:</span>
+      <div className="absolute -top-10 -left-10 h-28 w-28 rounded-full bg-primary/10 blur-2xl animate-pulse pointer-events-none" />
+      <div className="absolute -bottom-10 -right-10 h-28 w-28 rounded-full bg-blue-500/10 blur-2xl animate-pulse [animation-delay:1s] pointer-events-none" />
+
+      <div className="relative px-4 pt-3 pb-1 flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+        <span className="text-sm font-semibold">Product Image Match — How it works</span>
+        <Badge variant="secondary" className="ml-auto text-[10px] gap-1"><Zap className="h-3 w-3" /> Auto-reply</Badge>
+      </div>
+
+      <div className="relative px-4 py-3 flex items-center gap-2">
+        <Step icon={Camera} label="Customer sends photo" sub="On WhatsApp / Messenger" color="bg-green-500/15 text-green-600 dark:text-green-400" />
+        <div className="hidden sm:flex flex-col items-center gap-0.5 px-1">
+          <ArrowRight className="h-4 w-4 text-primary animate-[slide-in-right_1.5s_ease-in-out_infinite]" />
+          <span className="text-[9px] text-muted-foreground">match</span>
         </div>
-        <Step icon={Camera} label="Customer sends photo" color="bg-green-500/15 text-green-500" />
-        <ArrowRight className="h-4 w-4 text-primary animate-pulse" />
-        <Step icon={Bot} label="AI matches catalog" color="bg-primary/15 text-primary" />
-        <ArrowRight className="h-4 w-4 text-primary animate-pulse" />
-        <Step icon={MessageSquare} label="Bot auto-replies with details" color="bg-blue-500/15 text-blue-500" />
+        <Step icon={Bot} label="AI matches catalog" sub="Visual hash compare" color="bg-primary/15 text-primary" />
+        <div className="hidden sm:flex flex-col items-center gap-0.5 px-1">
+          <ArrowRight className="h-4 w-4 text-primary animate-[slide-in-right_1.5s_ease-in-out_infinite] [animation-delay:0.5s]" />
+          <span className="text-[9px] text-muted-foreground">reply</span>
+        </div>
+        <Step icon={MessageSquare} label="Bot sends details" sub="Name • Price • Image" color="bg-blue-500/15 text-blue-600 dark:text-blue-400" />
+      </div>
+
+      <div className="relative px-4 pb-3">
+        <div className="h-1 w-full overflow-hidden rounded-full bg-primary/10">
+          <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-green-500 via-primary to-blue-500 animate-[slide-in-right_2.5s_ease-in-out_infinite]" />
+        </div>
       </div>
     </Card>
   );
