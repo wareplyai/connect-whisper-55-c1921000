@@ -432,6 +432,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          instructions: string | null
           location: string | null
           max_tokens: number
           name: string | null
@@ -454,6 +455,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          instructions?: string | null
           location?: string | null
           max_tokens?: number
           name?: string | null
@@ -476,6 +478,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          instructions?: string | null
           location?: string | null
           max_tokens?: number
           name?: string | null
