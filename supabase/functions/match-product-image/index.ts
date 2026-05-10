@@ -20,6 +20,13 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log("[match-product-image] request", {
+      user_id,
+      image_url,
+      image_url_kind: String(image_url).startsWith("data:") ? "data-url" : "url",
+      image_url_length: String(image_url).length,
+    });
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -29,6 +36,8 @@ Deno.serve(async (req) => {
       .from("product_images")
       .select("id, product_name, product_price, product_description, product_image_url")
       .eq("user_id", user_id);
+
+    console.log("[match-product-image] product count", products?.length || 0);
 
     if (!products || products.length === 0) {
       return new Response(JSON.stringify({ match: false, reason: "no_products" }), {
@@ -41,32 +50,57 @@ Deno.serve(async (req) => {
 
     // Download every image ourselves and convert to base64 data URLs. This avoids
     // the AI provider failing to fetch Supabase storage URLs (we saw 400s).
-    async function toDataUrl(url: string): Promise<string | null> {
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const base64Length = (dataUrl: string) => dataUrl.includes(",") ? dataUrl.split(",").pop()?.length || 0 : 0;
+
+    async function toDataUrl(url: string, label: string): Promise<string | null> {
       try {
-        const r = await fetch(url);
-        if (!r.ok) { console.log("[match] fetch fail", r.status, url); return null; }
+        console.log("[match-product-image] fetch start", { label, image_url: url, url_length: url.length });
+        if (/^data:image\//i.test(url)) {
+          console.log("[match-product-image] data-url input", { label, base64_length: base64Length(url), data_url_length: url.length });
+          return url;
+        }
+        const r = await fetch(url, {
+          headers: {
+            apikey: serviceKey,
+            Authorization: `Bearer ${serviceKey}`,
+          },
+        });
+        if (!r.ok) {
+          const body = await r.text().catch(() => "");
+          console.log("[match-product-image] fetch fail", { label, status: r.status, image_url: url, body: body.slice(0, 300) });
+          return null;
+        }
         const ct = (r.headers.get("content-type") || "image/jpeg").split(";")[0];
         const buf = new Uint8Array(await r.arrayBuffer());
         let bin = "";
         for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-        return `data:${ct};base64,${btoa(bin)}`;
+        const b64 = btoa(bin);
+        console.log("[match-product-image] fetch ok", { label, content_type: ct, bytes: buf.length, base64_length: b64.length });
+        return `data:${ct};base64,${b64}`;
       } catch (e) {
-        console.log("[match] fetch error", url, (e as Error).message);
+        console.log("[match-product-image] fetch error", { label, image_url: url, error: (e as Error).message });
         return null;
       }
     }
 
-    const customerData = await toDataUrl(image_url);
+    const customerData = await toDataUrl(image_url, "customer");
     if (!customerData) {
+      console.log("[match-product-image] customer image unfetchable", { image_url });
       return new Response(JSON.stringify({ match: false, reason: "customer_image_unfetchable" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    console.log("[match-product-image] customer base64 ready", { base64_length: base64Length(customerData), data_url_length: customerData.length });
 
     const productData: { p: any; data: string }[] = [];
-    for (const p of products) {
-      const d = await toDataUrl(p.product_image_url);
-      if (d) productData.push({ p, data: d });
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+      const d = await toDataUrl(p.product_image_url, `product #${i} ${p.id}`);
+      if (d) {
+        console.log("[match-product-image] product base64 ready", { idx: i, id: p.id, name: p.product_name, base64_length: base64Length(d) });
+        productData.push({ p, data: d });
+      }
     }
     if (productData.length === 0) {
       return new Response(JSON.stringify({ match: false, reason: "no_fetchable_products" }), {
