@@ -909,6 +909,9 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
+    console.log("INCOMING PAYLOAD:", JSON.stringify(body).slice(0, 2000));
+    console.log("media_url value:", (body as any)?.media_url ?? null);
+    console.log("message_type:", (body as any)?.message_type ?? null);
     const sessionId = String(body.session_id || body.sessionId || "").trim();
     let rawText = String(body.message || body.text || body.message_text || "").trim();
     const isGroup = Boolean(body.is_group ?? body.isGroup ?? false) || hasGroupJid(body);
