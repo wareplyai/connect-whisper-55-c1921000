@@ -43,14 +43,14 @@ function HowItWorksHero() {
             <span className="text-[11px] font-semibold">Customer sends photo</span>
           </div>
           <div className="rounded-lg bg-muted/40 p-2 min-h-[120px] flex flex-col justify-end gap-1.5">
-            <div className="self-end pim-loop" style={{ animationName: 'pim-cust' }}>
-              <div className="bg-green-500 text-white rounded-2xl rounded-br-sm p-1.5 max-w-[140px] shadow">
+            <div className="self-start pim-loop" style={{ animationName: 'pim-cust' }}>
+              <div className="bg-green-500 text-white rounded-2xl rounded-bl-sm p-1.5 max-w-[140px] shadow">
                 <div className="h-16 w-full rounded-md bg-gradient-to-br from-amber-200 via-rose-300 to-rose-500 flex items-center justify-center">
                   <Camera className="h-5 w-5 text-white/80" />
                 </div>
                 <div className="text-[9px] mt-1 px-0.5 opacity-90">Eta ase apnader kase? 🙂</div>
               </div>
-              <div className="text-[9px] text-muted-foreground text-right mt-0.5">Customer · 12:04</div>
+              <div className="text-[9px] text-muted-foreground text-left mt-0.5">Customer · 12:04</div>
             </div>
           </div>
         </div>
@@ -88,8 +88,8 @@ function HowItWorksHero() {
             <span className="text-[11px] font-semibold">Bot auto-replies</span>
           </div>
           <div className="rounded-lg bg-muted/40 p-2 min-h-[120px] flex flex-col justify-end gap-1.5">
-            <div className="self-start pim-loop" style={{ animationName: 'pim-bot' }}>
-              <div className="bg-card border border-blue-500/30 rounded-2xl rounded-bl-sm p-2 max-w-[170px] shadow">
+            <div className="self-end pim-loop" style={{ animationName: 'pim-bot' }}>
+              <div className="bg-card border border-blue-500/30 rounded-2xl rounded-br-sm p-2 max-w-[170px] shadow">
                 <div className="flex gap-1.5">
                   <div className="h-10 w-10 shrink-0 rounded-md bg-gradient-to-br from-amber-200 via-rose-300 to-rose-500" />
                   <div className="min-w-0">
@@ -100,7 +100,7 @@ function HowItWorksHero() {
                 </div>
                 <div className="text-[9px] mt-1.5 px-0.5 text-foreground/80">Hae! Eta available ✅</div>
               </div>
-              <div className="text-[9px] text-muted-foreground mt-0.5 flex items-center gap-1"><Bot className="h-2.5 w-2.5" /> Bot · 12:04</div>
+              <div className="text-[9px] text-muted-foreground mt-0.5 flex items-center justify-end gap-1"><Bot className="h-2.5 w-2.5" /> Bot · 12:04</div>
             </div>
           </div>
         </div>
