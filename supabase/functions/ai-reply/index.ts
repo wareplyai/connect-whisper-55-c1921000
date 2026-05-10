@@ -1798,7 +1798,7 @@ Deno.serve(async (req) => {
       : "";
 
     const productInstr = (catalogRows || []).length
-      ? `\n\nআপনি যখন কোনো product সম্পর্কে reply দেবেন, তখন product এর সব details (নাম, দাম, বিবরণ) text এ দিন। Product এর image automatically পাঠানো হবে। একসাথে maximum 3টা product suggest করুন। When you mention a product, use its EXACT name from the catalog so we can attach its image.`
+      ? `\n\nআপনি যখন কোনো product সম্পর্কে reply দেবেন, তখন product এর সব details (নাম, দাম, বিবরণ) text এ দিন। একসাথে maximum 3টা product suggest করুন। When you mention a product, use its EXACT name from the catalog.\n\nRules for responding:\n1. NEVER send product images unless the customer explicitly asks with words like 'দেখাও', 'ছবি', 'image', 'photo', 'show me', 'picture', 'pic'. For delivery/price/stock/general questions → text reply only, no image.\n2. Answer ALL the customer's questions in ONE comprehensive reply (the customer may have sent several short messages joined together — treat them as one question).\n3. Be concise but complete.`
       : "";
 
     const baseSystem = (biz?.system_prompt && biz.system_prompt.trim().length > 0)
