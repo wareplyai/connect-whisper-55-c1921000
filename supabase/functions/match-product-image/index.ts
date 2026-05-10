@@ -128,6 +128,7 @@ Deno.serve(async (req) => {
     const customerData = await toDataUrl(image_url, "customer");
     if (!customerData) {
       console.log("[match-product-image] customer image unfetchable", { image_url });
+      await writeLog({ matched: false, match_confidence: "unfetchable" });
       return new Response(JSON.stringify({ match: false, reason: "customer_image_unfetchable" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -144,6 +145,7 @@ Deno.serve(async (req) => {
       }
     }
     if (productData.length === 0) {
+      await writeLog({ matched: false, match_confidence: "no_fetchable_products" });
       return new Response(JSON.stringify({ match: false, reason: "no_fetchable_products" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
