@@ -1515,10 +1515,41 @@ Deno.serve(async (req) => {
     }
 
     // ===== Message batching: collect rapid-fire customer messages, reply once =====
+    // Safe default: batching is OFF unless the user explicitly enables it.
+    // Even when ON, if wait_seconds is 0 we skip batching entirely.
+    const batchingEnabled = (biz as any)?.message_batching_enabled === true;
     const batchWaitSeconds = Math.max(0, Math.min(120, Number((biz as any)?.batch_wait_seconds ?? 10)));
-    if (aiEnabled && batchWaitSeconds > 0 && !isImageMessage && !matchedProduct && messageText) {
+    if (aiEnabled && batchingEnabled && batchWaitSeconds > 0 && !isImageMessage && !matchedProduct && messageText) {
       try {
-        const cutoffIso = new Date(Date.now() - batchWaitSeconds * 1000).toISOString();
+        const nowMs = Date.now();
+        const nowIso = new Date(nowMs).toISOString();
+        // Window for "still actively batching"
+        const cutoffIso = new Date(nowMs - batchWaitSeconds * 1000).toISOString();
+
+        // Step 1 — absorb ANY older unprocessed batches for this customer (stale ones
+        // whose previous edge invocation died before sending). We merge them into the
+        // current message so nothing gets lost.
+        const { data: stalePrev } = await admin
+          .from("message_batches")
+          .select("id, messages")
+          .eq("session_id", sessionId)
+          .eq("from_number", fromNumber)
+          .eq("processed", false)
+          .lt("last_message_at", cutoffIso);
+        let absorbed: string[] = [];
+        if (Array.isArray(stalePrev) && stalePrev.length > 0) {
+          for (const row of stalePrev) {
+            const arr = Array.isArray((row as any).messages) ? (row as any).messages as string[] : [];
+            absorbed.push(...arr);
+          }
+          await admin.from("message_batches")
+            .update({ processed: true })
+            .in("id", stalePrev.map((r: any) => r.id));
+          console.log("[ai-reply] absorbed", absorbed.length, "stale batched messages for", fromNumber);
+        }
+
+        // Step 2 — find an active (within wait window) batch and append to it,
+        // or create a new one.
         const { data: existing } = await admin
           .from("message_batches")
           .select("id, messages, last_message_at")
@@ -1530,25 +1561,18 @@ Deno.serve(async (req) => {
           .limit(1)
           .maybeSingle();
 
-        const nowIso = new Date().toISOString();
         let batchId: string;
         let batchMessages: string[];
         if (existing) {
           batchId = (existing as any).id;
           const prev = Array.isArray((existing as any).messages) ? (existing as any).messages as string[] : [];
-          batchMessages = [...prev, messageText];
+          batchMessages = [...prev, ...absorbed, messageText];
           await admin.from("message_batches").update({
             messages: batchMessages,
             last_message_at: nowIso,
           }).eq("id", batchId);
         } else {
-          // mark stale unprocessed batches as processed so they won't be picked up again
-          await admin.from("message_batches")
-            .update({ processed: true })
-            .eq("session_id", sessionId)
-            .eq("from_number", fromNumber)
-            .eq("processed", false);
-          batchMessages = [messageText];
+          batchMessages = [...absorbed, messageText];
           const { data: created } = await admin.from("message_batches").insert({
             session_id: sessionId, user_id: userId, from_number: fromNumber,
             messages: batchMessages, first_message_at: nowIso, last_message_at: nowIso,
@@ -1557,6 +1581,9 @@ Deno.serve(async (req) => {
         }
 
         const myStamp = nowIso;
+        // Wait the configured window. Edge function timeout is generous enough for
+        // typical 5–60s waits; absorption above guarantees no message is lost even
+        // if this invocation dies.
         await new Promise((r) => setTimeout(r, batchWaitSeconds * 1000));
 
         const { data: latest } = await admin

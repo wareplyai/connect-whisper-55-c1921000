@@ -132,6 +132,7 @@ const defaultBusiness = {
   ai_auto_replies_enabled: true,
   max_tokens: 2000,
   temperature: 0.7,
+  message_batching_enabled: false,
   batch_wait_seconds: 10,
   instructions: DEFAULT_INSTRUCTIONS,
 };
@@ -213,6 +214,7 @@ const AIAgent = () => {
           max_tokens: (biz as any).max_tokens ?? 2000,
           temperature: typeof (biz as any).temperature === "number" ? Number((biz as any).temperature) : 0.7,
           batch_wait_seconds: typeof (biz as any).batch_wait_seconds === "number" ? Number((biz as any).batch_wait_seconds) : 10,
+          message_batching_enabled: (biz as any).message_batching_enabled === true,
           instructions: ((biz as any).instructions ?? DEFAULT_INSTRUCTIONS) as string,
         });
       }
@@ -599,22 +601,37 @@ RULES:
                 <p className="text-xs text-muted-foreground mt-1">Maximum length of every AI reply (50–4000). Default 2000.</p>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-sm font-medium">Message Batching Wait Time</Label>
-                  <span className="text-sm font-mono text-primary">{business.batch_wait_seconds}s</span>
+              <div className="rounded-lg border border-border bg-background/40 p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <Label className="text-sm font-medium">Enable Message Batching</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      OFF = প্রতিটি message-এ সাথে সাথে reply (safe default)। ON = কয়েক সেকেন্ড অপেক্ষা করে একসাথে reply।
+                    </p>
+                  </div>
+                  <Switch
+                    checked={business.message_batching_enabled}
+                    onCheckedChange={(v) => { setBusiness({ ...business, message_batching_enabled: v }); persistBusinessPatch({ message_batching_enabled: v }); }}
+                  />
                 </div>
-                <Slider
-                  value={[business.batch_wait_seconds]}
-                  min={0}
-                  max={60}
-                  step={5}
-                  onValueChange={(v) => setBusiness({ ...business, batch_wait_seconds: v[0] })}
-                  onValueCommit={(v) => persistBusinessPatch({ batch_wait_seconds: v[0] })}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  কত সেকেন্ড অপেক্ষা করার পর reply দেবে। এই সময়ের মধ্যে customer একাধিক message পাঠালে সব একসাথে answer দেবে। (0 = off)
-                </p>
+
+                <div className={business.message_batching_enabled ? "" : "opacity-50 pointer-events-none"}>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-medium">Wait Time</Label>
+                    <span className="text-sm font-mono text-primary">{business.batch_wait_seconds}s</span>
+                  </div>
+                  <Slider
+                    value={[business.batch_wait_seconds]}
+                    min={0}
+                    max={60}
+                    step={5}
+                    onValueChange={(v) => setBusiness({ ...business, batch_wait_seconds: v[0] })}
+                    onValueCommit={(v) => persistBusinessPatch({ batch_wait_seconds: v[0] })}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    কত সেকেন্ড অপেক্ষা করার পর reply দেবে। এই সময়ের মধ্যে customer একাধিক message পাঠালে সব একসাথে answer দেবে।
+                  </p>
+                </div>
               </div>
 
               <div>
