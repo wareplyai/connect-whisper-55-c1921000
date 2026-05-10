@@ -210,7 +210,7 @@ const Inbox = () => {
           productName: (m as any).extracted_product_name as string | null,
           orderNumber: (m as any).extracted_order_number as string | null,
           ts: m.received_at,
-          pending: !m.reply_sent && !m.reply_text,
+          pending: !m.reply_sent && !m.reply_text && (m as any).delivery_status !== "skipped",
         };
       });
     const replies = incoming
