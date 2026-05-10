@@ -632,10 +632,17 @@ const Inbox = () => {
                             const audioSrc = audioPath ? (signedMediaUrls[audioPath] || mu) : mu;
                             const transcript = (m as any).transcribedText as string | null;
                             return (
-                              <div className="mb-1 space-y-1">
-                                <audio controls src={audioSrc} className="max-w-full" />
+                              <div className="mb-1 flex flex-col gap-1.5 rounded-xl bg-[hsl(var(--primary))] px-3.5 py-2.5 max-w-[300px]">
+                                <div className="flex items-center gap-2 text-primary-foreground">
+                                  <span>🎵</span>
+                                  <span className="text-[13px] font-medium">Voice Message</span>
+                                </div>
+                                <audio controls preload="metadata" className="w-full h-9">
+                                  <source src={audioSrc} type="audio/ogg" />
+                                  <source src={audioSrc} type="audio/mpeg" />
+                                </audio>
                                 {transcript && (
-                                  <p className="text-[11px] italic text-muted-foreground border-l-2 border-primary/40 pl-2">
+                                  <p className="text-[11px] italic text-primary-foreground/80 border-l-2 border-primary-foreground/40 pl-2">
                                     🎙️ {transcript}
                                   </p>
                                 )}
