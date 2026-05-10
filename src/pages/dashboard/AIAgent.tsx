@@ -238,7 +238,7 @@ RULES:
     setSavingBiz(true);
     const { error } = await supabase
       .from("business_profiles")
-      .upsert({ user_id: user.id, ...business }, { onConflict: "user_id" });
+      .upsert({ user_id: user.id, ...business } as any, { onConflict: "user_id" });
     setSavingBiz(false);
     if (error) toast.error(friendlyError(error));
     else toast.success("Business profile saved");
@@ -250,7 +250,7 @@ RULES:
     setBusiness(next);
     const { error } = await supabase
       .from("business_profiles")
-      .upsert({ user_id: user.id, ...next }, { onConflict: "user_id" });
+      .upsert({ user_id: user.id, ...next } as any, { onConflict: "user_id" });
     if (error) toast.error(friendlyError(error));
   };
 
