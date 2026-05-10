@@ -74,9 +74,11 @@ const EditSession = () => {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
-    if (form.enable_webhook) {
-      if (!form.webhook_url.trim()) { toast.error("Please enter a webhook URL to receive notifications."); return; }
-      if (!/^https:\/\//i.test(form.webhook_url.trim())) { toast.error("Webhook URL must start with https://"); return; }
+    const effectiveWebhookUrl = builtIn ? AI_REPLY_WEBHOOK_URL : (form.webhook_url || "").trim();
+    const effectiveEnableWebhook = builtIn ? true : form.enable_webhook;
+    if (effectiveEnableWebhook) {
+      if (!effectiveWebhookUrl) { toast.error("Please enter a webhook URL to receive notifications."); return; }
+      if (!/^https:\/\//i.test(effectiveWebhookUrl)) { toast.error("Webhook URL must start with https://"); return; }
     }
     let phone: string | null = null;
     if (num.trim()) {
@@ -89,8 +91,9 @@ const EditSession = () => {
       session_name: name,
       phone_number: phone,
       ...form,
+      enable_webhook: effectiveEnableWebhook,
       proxy_url: form.proxy_url || null,
-      webhook_url: form.webhook_url || null,
+      webhook_url: effectiveWebhookUrl || null,
     }).eq("id", id);
     setSaving(false);
     if (error) return toast.error(friendlyError(error));
