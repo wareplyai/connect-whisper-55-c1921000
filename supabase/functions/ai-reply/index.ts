@@ -1265,7 +1265,22 @@ Deno.serve(async (req) => {
 
     // Always log direct webhook messages. Trigger-queued messages reuse their existing row.
     if (!messageId) {
-      const logRow = {
+      // Capture the public media URL the VPS sent us so the inbox can render it
+      // immediately, even if the chat-media re-upload below fails.
+      const payloadMediaUrl =
+        (typeof (body as any).media_url === "string" && (body as any).media_url) ||
+        (typeof (body as any).mediaUrl === "string" && (body as any).mediaUrl) ||
+        (isImageMessage && imageUrl && /^https?:\/\//i.test(imageUrl) ? imageUrl : null) ||
+        null;
+      const payloadCaption =
+        (typeof (body as any).caption === "string" && (body as any).caption) ||
+        (typeof (body as any).image_caption === "string" && (body as any).image_caption) ||
+        null;
+      const payloadFilename =
+        (typeof (body as any).media_filename === "string" && (body as any).media_filename) ||
+        (typeof (body as any).filename === "string" && (body as any).filename) ||
+        null;
+      const logRow: Record<string, unknown> = {
         session_id: sessionId,
         user_id: userId,
         from_number: fromNumber,
@@ -1276,6 +1291,10 @@ Deno.serve(async (req) => {
         reply_sent: false,
         delivery_status: "processing" as const,
         received_at: new Date().toISOString(),
+        media_url: payloadMediaUrl,
+        media_filename: payloadFilename,
+        caption: payloadCaption,
+        image_url: isImageMessage ? payloadMediaUrl : null,
       };
       const { data: msgRow } = await admin
         .from("incoming_messages")
