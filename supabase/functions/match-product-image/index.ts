@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+    _supabaseAdmin = supabase;
 
     const { data: products } = await supabase
       .from("product_images")
@@ -56,6 +57,7 @@ Deno.serve(async (req) => {
     console.log("[match-product-image] product count", products?.length || 0);
 
     if (!products || products.length === 0) {
+      await writeLog({ matched: false, match_confidence: "none" });
       return new Response(JSON.stringify({ match: false, reason: "no_products" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
