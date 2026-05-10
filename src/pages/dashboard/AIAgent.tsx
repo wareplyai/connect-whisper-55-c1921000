@@ -8,7 +8,38 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Sparkles, KeyRound, CheckCircle2, Upload, FileText, Globe, MessagesSquare, Lock, Trash2, Plus, Bot, Loader2, Smartphone, Power } from "lucide-react";
+import { Sparkles, KeyRound, CheckCircle2, Upload, FileText, Globe, MessagesSquare, Lock, Trash2, Plus, Bot, Loader2, Smartphone, Power, Maximize2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+
+function ExpandableTextarea({ label, value, onChange, rows, placeholder }: { label: string; value: string; onChange: (v: string) => void; rows: number; placeholder?: string }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
+  return (
+    <>
+      <div className="relative">
+        <Textarea rows={rows} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} className="pr-10" />
+        <button
+          type="button"
+          onClick={() => { setDraft(value); setOpen(true); }}
+          className="absolute top-2 right-2 p-1.5 rounded-md bg-background/80 border border-border hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Expand"
+        >
+          <Maximize2 className="h-4 w-4" />
+        </button>
+      </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-4xl w-[95vw]">
+          <DialogHeader><DialogTitle>{label}</DialogTitle></DialogHeader>
+          <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="min-h-[60vh] font-mono text-sm" placeholder={placeholder} />
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+            <Button onClick={() => { onChange(draft); setOpen(false); }} className="bg-primary text-primary-foreground hover:bg-primary-hover">Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
