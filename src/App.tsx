@@ -121,6 +121,7 @@ const App = () => (
                 <Route path="ai-agent" element={<FeatureGuard feature="ai_agent"><AIAgent /></FeatureGuard>} />
                 <Route path="behavior" element={<BehaviorSettings />} />
                 <Route path="products" element={<Products />} />
+                <Route path="product-image-match" element={<ProductImageMatch />} />
                 <Route path="woocommerce" element={<WooCommerce />} />
                 <Route path="abandoned-cart" element={<FeatureGuard feature="abandoned_cart"><AbandonedCart /></FeatureGuard>} />
                 <Route path="crm" element={<CRMDashboard />} />
