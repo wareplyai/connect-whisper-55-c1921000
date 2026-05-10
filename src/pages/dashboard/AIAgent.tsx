@@ -101,6 +101,7 @@ const defaultBusiness = {
   ai_auto_replies_enabled: true,
   max_tokens: 2000,
   temperature: 0.7,
+  batch_wait_seconds: 10,
   instructions: DEFAULT_INSTRUCTIONS,
 };
 
