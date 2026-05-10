@@ -52,6 +52,16 @@ Deno.serve(async (req) => {
     // the AI provider failing to fetch Supabase storage URLs (we saw 400s).
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const base64Length = (dataUrl: string) => dataUrl.includes(",") ? dataUrl.split(",").pop()?.length || 0 : 0;
+    const storagePathFromUrl = (url: string, bucket: string) => {
+      try {
+        const path = new URL(url).pathname;
+        const markers = [`/storage/v1/object/public/${bucket}/`, `/storage/v1/object/${bucket}/`];
+        const marker = markers.find((m) => path.includes(m));
+        return marker ? decodeURIComponent(path.split(marker)[1] || "") : null;
+      } catch {
+        return null;
+      }
+    };
 
     async function toDataUrl(url: string, label: string): Promise<string | null> {
       try {
@@ -60,19 +70,32 @@ Deno.serve(async (req) => {
           console.log("[match-product-image] data-url input", { label, base64_length: base64Length(url), data_url_length: url.length });
           return url;
         }
-        const r = await fetch(url, {
-          headers: {
-            apikey: serviceKey,
-            Authorization: `Bearer ${serviceKey}`,
-          },
-        });
-        if (!r.ok) {
-          const body = await r.text().catch(() => "");
-          console.log("[match-product-image] fetch fail", { label, status: r.status, image_url: url, body: body.slice(0, 300) });
-          return null;
+        const chatMediaPath = storagePathFromUrl(url, "chat-media");
+        let ct = "image/jpeg";
+        let buf: Uint8Array;
+        if (chatMediaPath) {
+          const { data, error } = await supabase.storage.from("chat-media").download(chatMediaPath);
+          if (error || !data) {
+            console.log("[match-product-image] storage download fail", { label, bucket: "chat-media", path: chatMediaPath, error: error?.message });
+            return null;
+          }
+          ct = (data.type || "image/jpeg").split(";")[0];
+          buf = new Uint8Array(await data.arrayBuffer());
+        } else {
+          const r = await fetch(url, {
+            headers: {
+              apikey: serviceKey,
+              Authorization: `Bearer ${serviceKey}`,
+            },
+          });
+          if (!r.ok) {
+            const body = await r.text().catch(() => "");
+            console.log("[match-product-image] fetch fail", { label, status: r.status, image_url: url, body: body.slice(0, 300) });
+            return null;
+          }
+          ct = (r.headers.get("content-type") || "image/jpeg").split(";")[0];
+          buf = new Uint8Array(await r.arrayBuffer());
         }
-        const ct = (r.headers.get("content-type") || "image/jpeg").split(";")[0];
-        const buf = new Uint8Array(await r.arrayBuffer());
         let bin = "";
         for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
         const b64 = btoa(bin);
