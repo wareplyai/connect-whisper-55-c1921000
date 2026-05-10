@@ -113,6 +113,7 @@ export default function Products() {
   const [csvOpen, setCsvOpen] = useState(false);
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [csvImporting, setCsvImporting] = useState(false);
+  const [matchStatus, setMatchStatus] = useState<Record<string, "loading" | "success" | "error">>({});
   const [csvProgress, setCsvProgress] = useState(0);
 
   const handleCsvFile = async (f: File | null) => {
