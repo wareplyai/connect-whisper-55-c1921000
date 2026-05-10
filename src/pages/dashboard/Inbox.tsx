@@ -91,7 +91,7 @@ const Inbox = () => {
     if (showLoader && !cached) setLoading(true);
     try {
       const [incRes, outRes, blRes, paRes] = await Promise.all([
-        supabase.from("incoming_messages").select("*").eq("user_id", user.id).order("received_at", { ascending: false }).limit(500),
+        supabase.from("incoming_messages").select("*, media_url, message_type").eq("user_id", user.id).order("received_at", { ascending: false }).limit(500),
         supabase.from("message_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(500),
         supabase.from("blocked_customers" as any).select("id, phone_number, session_id").eq("user_id", user.id),
         supabase.from("customer_reply_settings" as any).select("phone_number, session_id, ai_paused, mode").eq("user_id", user.id),
@@ -566,20 +566,15 @@ const Inbox = () => {
                             || (mu && (mt === "image" || /^image\//i.test((m as any).mimetype || "")) ? mu : null);
                           if (imgSrc) {
                             return (
-                              <button
-                                type="button"
-                                onClick={() => setLightbox(imgSrc)}
-                                className="block mb-1 rounded-lg overflow-hidden border border-border hover:opacity-90 transition"
-                                title="Click to view full image"
-                              >
-                                <img
-                                  src={imgSrc}
-                                  alt={(m as any).productName || "Attachment"}
-                                  className="max-h-56 max-w-full object-cover"
-                                  loading="lazy"
-                                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                                />
-                              </button>
+                              <img
+                                src={imgSrc}
+                                alt="image"
+                                style={{ maxWidth: "250px", borderRadius: "8px", cursor: "pointer" }}
+                                className="mb-1 block"
+                                loading="lazy"
+                                onClick={() => window.open(imgSrc, "_blank")}
+                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                              />
                             );
                           }
                           if (mu && mt === "audio") return <audio controls src={mu} className="mb-1 max-w-full" />;
