@@ -183,6 +183,7 @@ Deno.serve(async (req) => {
     if (!aiRes.ok) {
       const txt = await aiRes.text();
       console.log("[match-product-image] AI error", aiRes.status, txt);
+      await writeLog({ matched: false, match_confidence: "ai_error" });
       return new Response(JSON.stringify({ match: false, reason: "ai_error", status: aiRes.status }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -205,6 +206,12 @@ Deno.serve(async (req) => {
 
     if (idx >= 0 && idx < productData.length && confidence !== "low") {
       const best = productData[idx].p;
+      await writeLog({
+        matched: true,
+        match_confidence: confidence,
+        matched_product_id: best.id,
+        matched_product_name: best.product_name,
+      });
       return new Response(JSON.stringify({
         match: true,
         confidence,
@@ -218,11 +225,13 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    await writeLog({ matched: false, match_confidence: confidence });
     return new Response(JSON.stringify({ match: false, confidence, ai_index: idx }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.log("[match-product-image] error:", (e as Error).message);
+    await writeLog({ matched: false, match_confidence: "error" });
     return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
