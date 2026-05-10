@@ -288,6 +288,8 @@ export default function ProductImageMatch() {
 
   return (
     <div className="space-y-6 p-4">
+      <HowItWorksHero />
+
       <div>
         <h1 className="text-2xl font-bold">Product Image Recognition</h1>
         <p className="text-sm text-muted-foreground">
