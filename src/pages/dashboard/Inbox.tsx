@@ -620,7 +620,21 @@ const Inbox = () => {
                               />
                             );
                           }
-                          if (mu && mt === "audio") return <audio controls src={mu} className="mb-1 max-w-full" />;
+                          if (mu && (mt === "audio" || mt === "voice" || mt === "ptt")) {
+                            const audioPath = getChatMediaPath(mu);
+                            const audioSrc = audioPath ? (signedMediaUrls[audioPath] || mu) : mu;
+                            const transcript = (m as any).transcribedText as string | null;
+                            return (
+                              <div className="mb-1 space-y-1">
+                                <audio controls src={audioSrc} className="max-w-full" />
+                                {transcript && (
+                                  <p className="text-[11px] italic text-muted-foreground border-l-2 border-primary/40 pl-2">
+                                    🎙️ {transcript}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          }
                           if (mu && mt === "video") return <video controls src={mu} className="mb-1 max-h-56 max-w-full rounded-lg border border-border" />;
                           if (mu && mt === "document") return (
                             <a
