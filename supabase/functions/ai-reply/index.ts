@@ -1840,6 +1840,7 @@ Deno.serve(async (req) => {
     const baseSystem = (biz?.system_prompt && biz.system_prompt.trim().length > 0)
       ? biz.system_prompt
       : `You are a helpful WhatsApp assistant for ${biz?.name || "this business"}. Reply in the customer's language. Be friendly, concise, human-like.`;
+    const systemPrompt = `${baseSystem}${qaContext}${productCatalog}${productInstr}`;
 
     // If we have a matched product (image match) and/or text from the customer,
     // route into the regular text-AI flow with extra context. Vision-only describe
@@ -1850,8 +1851,6 @@ Deno.serve(async (req) => {
       : "";
     const finalSystemPrompt = `${systemPrompt}${matchedContext}`;
     const finalUserMessage = messageText || (matchedProduct ? `(Customer sent a photo of "${matchedProduct.name}" with no caption.)` : "");
-
-    const systemPromptForVision = systemPrompt; // unused — kept for clarity
 
     let reply = "";
 
