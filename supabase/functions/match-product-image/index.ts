@@ -152,7 +152,13 @@ Deno.serve(async (req) => {
     const idx = typeof parsed.index === "number" ? parsed.index : -1;
     const confidence = parsed.confidence || "low";
 
-    console.log("[match-product-image] AI result:", { idx, confidence, raw });
+    console.log("[match-product-image] AI result:", {
+      idx,
+      confidence,
+      raw,
+      matched_product_id: idx >= 0 && idx < productData.length ? productData[idx].p.id : null,
+      matched_product_name: idx >= 0 && idx < productData.length ? productData[idx].p.product_name : null,
+    });
 
     if (idx >= 0 && idx < productData.length && confidence !== "low") {
       const best = productData[idx].p;
