@@ -390,9 +390,14 @@ export default function Products() {
             Upload product images. AI will auto-tag them so customers can find them by sending a photo on WhatsApp.
           </p>
         </div>
-        <Button onClick={() => { reset(); setAddOpen(true); }}>
-          <Plus className="size-4 mr-2" /> New product
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => { setCsvRows([]); setCsvOpen(true); }}>
+            <FileSpreadsheet className="size-4 mr-2" /> Import CSV
+          </Button>
+          <Button onClick={() => { reset(); setAddOpen(true); }}>
+            <Plus className="size-4 mr-2" /> New product
+          </Button>
+        </div>
       </div>
 
       <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) reset(); }}>
