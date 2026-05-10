@@ -1024,11 +1024,12 @@ Deno.serve(async (req) => {
 
     // ---- Image detection: scan body deeply for any image source (URL/dataURL/base64) ----
     const bodyMediaUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
-    let imageUrl = findImageUrl(body);
-    const looksImageType = /image|photo|picture|media/i.test(messageType);
-    const payloadHasImage = looksImageType || payloadLooksLikeImage(body);
+    const isAudioMessage = /audio|voice|ptt/.test(messageType.toLowerCase());
+    let imageUrl = isAudioMessage ? "" : findImageUrl(body);
+    const looksImageType = !isAudioMessage && /image|photo|picture/i.test(messageType);
+    const payloadHasImage = !isAudioMessage && (looksImageType || payloadLooksLikeImage(body));
     // Tentatively flag as image — we may resolve the actual binary from the gateway below.
-    let isImageMessage = (!!imageUrl && (looksImageType || !rawText)) || (payloadHasImage && !rawText);
+    let isImageMessage = !isAudioMessage && ((!!imageUrl && (looksImageType || !rawText)) || (payloadHasImage && !rawText));
     const messageText = rawText || "";
 
     console.log("message_type:", messageType);
