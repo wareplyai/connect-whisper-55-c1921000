@@ -1091,6 +1091,7 @@ export type Database = {
       }
       incoming_messages: {
         Row: {
+          caption: string | null
           delivery_status: string
           extracted_order_number: string | null
           extracted_product_name: string | null
@@ -1103,6 +1104,8 @@ export type Database = {
           is_group: boolean
           match_log: Json | null
           matched_rule_id: string | null
+          media_filename: string | null
+          media_url: string | null
           message_text: string | null
           message_type: string
           mimetype: string | null
@@ -1118,6 +1121,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          caption?: string | null
           delivery_status?: string
           extracted_order_number?: string | null
           extracted_product_name?: string | null
@@ -1130,6 +1134,8 @@ export type Database = {
           is_group?: boolean
           match_log?: Json | null
           matched_rule_id?: string | null
+          media_filename?: string | null
+          media_url?: string | null
           message_text?: string | null
           message_type?: string
           mimetype?: string | null
@@ -1145,6 +1151,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          caption?: string | null
           delivery_status?: string
           extracted_order_number?: string | null
           extracted_product_name?: string | null
@@ -1157,6 +1164,8 @@ export type Database = {
           is_group?: boolean
           match_log?: Json | null
           matched_rule_id?: string | null
+          media_filename?: string | null
+          media_url?: string | null
           message_text?: string | null
           message_type?: string
           mimetype?: string | null
@@ -2148,6 +2157,7 @@ export type Database = {
       mark_auto_reply_delivery: {
         Args: { p_error?: string; p_message_id: string; p_sent: boolean }
         Returns: {
+          caption: string | null
           delivery_status: string
           extracted_order_number: string | null
           extracted_product_name: string | null
@@ -2160,6 +2170,8 @@ export type Database = {
           is_group: boolean
           match_log: Json | null
           matched_rule_id: string | null
+          media_filename: string | null
+          media_url: string | null
           message_text: string | null
           message_type: string
           mimetype: string | null
