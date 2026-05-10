@@ -120,8 +120,8 @@ Deno.serve(async (req) => {
 
     console.log("[match-product-image] AI result:", { idx, confidence, raw });
 
-    if (idx >= 0 && idx < products.length && confidence !== "low") {
-      const best = products[idx];
+    if (idx >= 0 && idx < productData.length && confidence !== "low") {
+      const best = productData[idx].p;
       return new Response(JSON.stringify({
         match: true,
         confidence,
