@@ -587,6 +587,62 @@ export default function Products() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={csvOpen} onOpenChange={(o) => { if (!csvImporting) setCsvOpen(o); }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Import products from CSV</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={downloadSampleCsv}>
+                <Download className="size-4 mr-1" /> Download sample CSV
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Columns: name, price, description, category, stock, image_url
+              </span>
+            </div>
+            <Input type="file" accept=".csv,text/csv" onChange={(e) => handleCsvFile(e.target.files?.[0] || null)} />
+            {csvRows.length > 0 && (
+              <div className="border rounded-md max-h-72 overflow-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted sticky top-0">
+                    <tr>
+                      <th className="text-left p-2">Name</th>
+                      <th className="text-left p-2">Price</th>
+                      <th className="text-left p-2">Category</th>
+                      <th className="text-left p-2">Stock</th>
+                      <th className="text-left p-2">Image</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {csvRows.slice(0, 100).map((r, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="p-2">{r.name}</td>
+                        <td className="p-2">{r.price}</td>
+                        <td className="p-2">{r.category}</td>
+                        <td className="p-2">{r.stock}</td>
+                        <td className="p-2 truncate max-w-[200px]">{r.image_url}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {csvRows.length > 100 && (
+                  <div className="p-2 text-xs text-muted-foreground">+ {csvRows.length - 100} more rows</div>
+                )}
+              </div>
+            )}
+            {csvImporting && <Progress value={csvProgress} />}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCsvOpen(false)} disabled={csvImporting}>Cancel</Button>
+            <Button onClick={importCsv} disabled={csvImporting || !csvRows.length}>
+              {csvImporting ? <Loader2 className="size-4 animate-spin mr-2" /> : <Upload className="size-4 mr-2" />}
+              Import {csvRows.length} products
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
