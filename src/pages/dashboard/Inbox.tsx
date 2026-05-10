@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PremiumVoicePlayer } from "@/components/dashboard/PremiumVoicePlayer";
 
 type IncomingRow = {
   id: string;
@@ -632,21 +633,11 @@ const Inbox = () => {
                             const audioSrc = audioPath ? (signedMediaUrls[audioPath] || mu) : mu;
                             const transcript = (m as any).transcribedText as string | null;
                             return (
-                              <div className="mb-1 flex flex-col gap-1.5 rounded-xl bg-[hsl(var(--primary))] px-3.5 py-2.5 max-w-[300px]">
-                                <div className="flex items-center gap-2 text-primary-foreground">
-                                  <span>🎵</span>
-                                  <span className="text-[13px] font-medium">Voice Message</span>
-                                </div>
-                                <audio controls preload="metadata" className="w-full h-9">
-                                  <source src={audioSrc} type="audio/ogg" />
-                                  <source src={audioSrc} type="audio/mpeg" />
-                                </audio>
-                                {transcript && (
-                                  <p className="text-[11px] italic text-primary-foreground/80 border-l-2 border-primary-foreground/40 pl-2">
-                                    🎙️ {transcript}
-                                  </p>
-                                )}
-                              </div>
+                              <PremiumVoicePlayer
+                                src={audioSrc}
+                                transcript={transcript}
+                                outgoing={m.kind === "out"}
+                              />
                             );
                           }
                           if (mu && mt === "video") return <video controls src={mu} className="mb-1 max-h-56 max-w-full rounded-lg border border-border" />;
