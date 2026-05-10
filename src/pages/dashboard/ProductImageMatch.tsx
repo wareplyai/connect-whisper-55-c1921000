@@ -50,7 +50,7 @@ function HowItWorksHero() {
                 </div>
                 <div className="text-[9px] mt-1 px-0.5 opacity-90">Eta ase apnader kase? 🙂</div>
               </div>
-              <div className="text-[9px] text-muted-foreground text-right mt-0.5">Customer · 12:04</div>
+              <div className="text-[9px] text-muted-foreground text-left mt-0.5">Customer · 12:04</div>
             </div>
           </div>
         </div>
