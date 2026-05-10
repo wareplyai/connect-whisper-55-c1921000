@@ -227,13 +227,21 @@ const Inbox = () => {
         const source: "ai" | "keyword_rule" | "manual" =
           src === "ai" ? "ai" : (src === "keyword_rule" || src === "fixed_qa") ? "keyword_rule" : "manual";
         if (src !== "manual") return null;
+        const kind = o.payload?.kind as string | undefined;
+        const mediaUrl = (o.payload?.url as string | undefined) || null;
+        const mediaType = kind === "voice" ? "audio" : (kind || (o as any).message_type) || null;
+        const cap = (o.payload?.caption as string | undefined) || "";
         return {
           id: `o-${o.id}`,
           srcTable: "message_logs" as const,
           srcId: o.id,
           srcField: "row" as const,
           kind: "out" as const,
-          text: typeof o.payload === "object" ? (o.payload?.text || JSON.stringify(o.payload)) : String(o.payload || ""),
+          text: (typeof o.payload === "object" ? (o.payload?.text || cap) : String(o.payload || "")) || "",
+          imageUrl: kind === "image" ? mediaUrl : null,
+          mediaUrl: mediaUrl && kind !== "image" ? mediaUrl : null,
+          mediaType,
+          mediaFilename: (o.payload?.filename as string | undefined) || null,
           ts: o.created_at,
           source,
         };
