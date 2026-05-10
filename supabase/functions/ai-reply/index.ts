@@ -1972,7 +1972,21 @@ Deno.serve(async (req) => {
       // Auto-attach product image when the AI's reply (or the customer's message)
       // mentions a real product from the catalog.
       try {
-        if (!isImageMessage && (catalogRows || []).length > 0) {
+        // Only attach product image if customer EXPLICITLY asked to see it.
+        const imageRequestKeywords = [
+          "image দেখাও", "ছবি দেখাও", "ছবি দেখান", "photo দেখাও",
+          "দেখতে কেমন", "কেমন দেখতে", "ছবি পাঠা", "ছবি দেন", "ছবি দাও",
+          "image send", "photo send", "send image", "send photo",
+          "show image", "show photo", "show me", "picture", " pic ",
+          "দেখাও", "দেখান", "dekhao", "dekao", "dekhau",
+        ];
+        const customerLower = ` ${(messageText || "").toLowerCase()} `;
+        const customerWantsImage = imageRequestKeywords.some((kw) =>
+          customerLower.includes(kw.toLowerCase())
+        );
+        if (!customerWantsImage) {
+          // Skip image attach silently — text reply only.
+        } else if (!isImageMessage && (catalogRows || []).length > 0) {
           const hay = `${reply} \n ${messageText}`.toLowerCase();
           const tokenize = (s: string) =>
             s.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter((t) => t.length >= 3);
