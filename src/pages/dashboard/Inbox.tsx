@@ -665,10 +665,10 @@ const Inbox = () => {
                           </div>
                         )}
                         {(() => {
-                          const mt2 = (m as any).message_type as string | null;
+                          const mt2 = ((m as any).mediaType ?? (m as any).message_type) as string | null;
                           const isAudioMsg = mt2 === "audio" || mt2 === "voice" || mt2 === "ptt";
                           if (isAudioMsg) return null;
-                          if (!m.text || m.text.startsWith("[customer sent an image]")) return null;
+                          if (!m.text || m.text.startsWith("[customer sent an image]") || m.text.startsWith("[customer sent a voice")) return null;
                           return <p className="whitespace-pre-wrap break-words">{m.text}</p>;
                         })()}
                         <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
