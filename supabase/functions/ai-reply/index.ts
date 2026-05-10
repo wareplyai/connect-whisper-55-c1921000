@@ -1639,6 +1639,26 @@ Deno.serve(async (req) => {
           messageText = arr.join("\n");
           console.log("[ai-reply] batched", arr.length, "messages →", fromNumber);
         }
+        // Clear "Pending" status from earlier incoming_messages that were absorbed
+        // into this batch. The current messageId will get its own final status after
+        // the AI reply is sent below.
+        try {
+          const clearQ = admin
+            .from("incoming_messages")
+            .update({
+              delivery_status: "skipped",
+              reply_error: "Batched into combined reply",
+              processed_at: new Date().toISOString(),
+            })
+            .eq("session_id", sessionId)
+            .eq("from_number", fromNumber)
+            .eq("reply_sent", false)
+            .in("delivery_status", ["pending", "processing"]);
+          if (messageId) clearQ.neq("id", messageId);
+          await clearQ;
+        } catch (e) {
+          console.log("[ai-reply] clear pending error:", (e as Error)?.message);
+        }
       } catch (e) {
         console.log("[ai-reply] batching error:", (e as Error)?.message);
       }
