@@ -436,20 +436,20 @@ async function findRecentWhatsappImageUrl(admin: any, fromNumber: string): Promi
   if (!digits) return null;
   try {
     const since = new Date(Date.now() - 10 * 60_000).toISOString();
-    const { data, error } = await admin
-      .schema("storage")
-      .from("objects")
-      .select("name, created_at")
-      .eq("bucket_id", "whatsapp-media")
-      .gte("created_at", since)
-      .ilike("name", `whatsapp-media/%-${digits}.jpg`)
-      .order("created_at", { ascending: false })
-      .limit(1);
-    if (error || !data?.[0]?.name) {
+    const { data, error } = await admin.storage.from("whatsapp-media").list("whatsapp-media", {
+      limit: 25,
+      sortBy: { column: "created_at", order: "desc" },
+    });
+    if (error) {
       if (error) console.log("[ai-reply] storage image lookup failed:", error.message);
       return null;
     }
-    const { data: pub } = admin.storage.from("whatsapp-media").getPublicUrl(data[0].name);
+    const match = (data || []).find((item: any) =>
+      String(item?.name || "").endsWith(`-${digits}.jpg`) &&
+      (!item?.created_at || new Date(item.created_at).getTime() >= new Date(since).getTime())
+    );
+    if (!match?.name) return null;
+    const { data: pub } = admin.storage.from("whatsapp-media").getPublicUrl(`whatsapp-media/${match.name}`);
     return pub?.publicUrl || null;
   } catch (e) {
     console.log("[ai-reply] storage image lookup exception:", (e as Error)?.message);
