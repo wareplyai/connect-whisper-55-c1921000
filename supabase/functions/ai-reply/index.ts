@@ -1757,7 +1757,7 @@ Deno.serve(async (req) => {
     }
 
     // Fixed Q&A — runs for both AI Agent and Auto-Reply modes (exact/contains match bypasses AI)
-    if ((aiEnabled || autoReplyEnabled) && (!isImageMessage || !!messageText)) {
+    if ((aiEnabled || autoReplyEnabled) && !matchedProduct && (!isImageMessage || !!messageText)) {
       const { data: fixed } = await admin
         .from("fixed_qa")
         .select("keyword, reply, match_type")
@@ -1802,7 +1802,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (autoReplyEnabled && (!isImageMessage || !!messageText)) {
+    if (autoReplyEnabled && !matchedProduct && (!isImageMessage || !!messageText)) {
       // Keyword rules
       const { data: rules } = await admin
         .from("auto_reply_rules")
