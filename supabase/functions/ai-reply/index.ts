@@ -1933,7 +1933,7 @@ Deno.serve(async (req) => {
       : "";
 
     const productInstr = (catalogRows || []).length
-      ? `\n\nআপনি যখন কোনো product সম্পর্কে reply দেবেন, তখন product এর সব details (নাম, দাম, বিবরণ) text এ দিন। একসাথে maximum 3টা product suggest করুন। When you mention a product, use its EXACT name from the catalog.\n\nRules for responding:\n1. NEVER send product images unless the customer explicitly asks with words like 'দেখাও', 'ছবি', 'image', 'photo', 'show me', 'picture', 'pic'. For delivery/price/stock/general questions → text reply only, no image.\n2. Answer ALL the customer's questions in ONE comprehensive reply (the customer may have sent several short messages joined together — treat them as one question).\n3. Be concise but complete.`
+      ? `\n\nআপনি যখন কোনো product সম্পর্কে reply দেবেন, তখন product এর সব details (নাম, দাম, বিবরণ) text এ দিন। একসাথে maximum 3টা product suggest করুন। When you mention a product, use its EXACT name from the catalog.\n\nRules for responding:\n1. IMAGE SENDING: You CAN send product images. If the customer asks to see a photo (words like 'দেখাও', 'ছবি', 'picture', 'photo', 'pic', 'den', 'dao', 'deo', 'show'), reply with ONLY a short confirmation (e.g. "এই নিন ছবি 📷" or "Here you go 📷") and mention the product name — the system will AUTOMATICALLY attach the product image to your reply. NEVER say you cannot send images, NEVER say "ছবি পাঠানোর ব্যবস্থা নেই" — that is FALSE.\n2. For delivery/price/stock/general questions → text reply only.\n3. Answer ALL the customer's questions in ONE comprehensive reply (customer may send several short messages — treat as one).\n4. Be concise but complete.`
       : "";
 
     const baseSystem = (biz?.system_prompt && biz.system_prompt.trim().length > 0)
@@ -2160,20 +2160,31 @@ Deno.serve(async (req) => {
       // user can see WhatsApp orders in the same Orders section as WooCommerce.
       try {
         const txt = String(messageText || "");
-        const phoneMatch = txt.match(/(?:\+?88)?0?1[3-9]\d{8}/);
+        // Accept BD-style or any 7-15 digit phone-looking sequence
+        const phoneMatch = txt.match(/(?:\+?\d{1,3}[\s-]?)?0?1[3-9]\d{8}/) || txt.match(/\d{7,15}/);
+        const hasInlineKeys = /\b(name|নাম)\b/i.test(txt) && /\b(address|ঠিকানা|addr)\b/i.test(txt);
         const lines = txt.split(/\n+/).map(l => l.trim()).filter(Boolean);
-        const looksLikeOrder = !!phoneMatch && lines.length >= 2;
+        const looksLikeOrder = !!phoneMatch && (lines.length >= 2 || hasInlineKeys);
         if (looksLikeOrder) {
-          const pick = (re: RegExp) => {
-            const l = lines.find(x => re.test(x));
-            return l ? l.replace(re, "").replace(/^[:\-\s]+/, "").trim() : "";
+          // Inline extraction: "Name X number Y address Z" on a single line
+          const inlineGrab = (re: RegExp): string => {
+            const m = txt.match(re);
+            return m ? (m[1] || "").trim() : "";
           };
-          const name = pick(/^(name|নাম)\s*[:\-]?/i)
-            || lines.find(l => !/\d{6,}/.test(l) && !/address|ঠিকানা/i.test(l))?.replace(/^(name|নাম)\s*[:\-]?\s*/i, "").trim()
-            || "";
-          const address = pick(/^(address|ঠিকানা|addresss)\s*[:\-]?/i)
-            || lines.filter(l => l !== name && !l.includes(phoneMatch![0])).pop()
-            || "";
+          let name = inlineGrab(/(?:name|নাম)\s*[:\-]?\s*([^\n,]*?)(?=\s+(?:number|phone|mobile|mob|ফোন|নম্বর|address|ঠিকানা|addr)\b|$)/i);
+          let address = inlineGrab(/(?:address|ঠিকানা|addr)\s*[:\-]?\s*([^\n]*?)$/i);
+          if (!name) {
+            const pick = (re: RegExp) => {
+              const l = lines.find(x => re.test(x));
+              return l ? l.replace(re, "").replace(/^[:\-\s]+/, "").trim() : "";
+            };
+            name = pick(/^(name|নাম)\s*[:\-]?/i)
+              || lines.find(l => !/\d{6,}/.test(l) && !/address|ঠিকানা/i.test(l))?.replace(/^(name|নাম)\s*[:\-]?\s*/i, "").trim()
+              || "";
+          }
+          if (!address) {
+            address = lines.filter(l => l !== name && !l.includes(phoneMatch![0])).pop() || "";
+          }
           const phone = phoneMatch![0].replace(/\D/g, "");
 
           // Pull product details from the recently matched product (if any)
@@ -2235,11 +2246,10 @@ Deno.serve(async (req) => {
       try {
         // Only attach product image if customer EXPLICITLY asked to see it.
         const imageRequestKeywords = [
-          "image দেখাও", "ছবি দেখাও", "ছবি দেখান", "photo দেখাও",
-          "দেখতে কেমন", "কেমন দেখতে", "ছবি পাঠা", "ছবি দেন", "ছবি দাও",
-          "image send", "photo send", "send image", "send photo",
-          "show image", "show photo", "show me", "picture", " pic ",
-          "দেখাও", "দেখান", "dekhao", "dekao", "dekhau",
+          "ছবি", "চবি", "photo", "image", "picture", " pic ",
+          "দেখাও", "দেখান", "দেখতে", "dekhao", "dekao", "dekhau", "dekhi",
+          "den", "dao", "deo", "diben", "dey", "dey vai", "den vai",
+          "show", "send",
         ];
         const customerLower = ` ${(messageText || "").toLowerCase()} `;
         const customerWantsImage = imageRequestKeywords.some((kw) =>
