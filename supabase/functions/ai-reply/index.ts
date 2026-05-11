@@ -2016,10 +2016,12 @@ Deno.serve(async (req) => {
       }
     } else {
       try {
-        const conversationHistory = await fetchConversationHistory(
-          admin, sessionId, fromNumber, messageId || null, 20,
-        );
-        console.log("[ai-reply] conversation history loaded", { count: conversationHistory.length, customer: fromNumber });
+        const memLimitRaw = Number((biz as any)?.memory_message_limit);
+        const memLimit = Number.isFinite(memLimitRaw) ? Math.max(0, Math.min(50, memLimitRaw)) : 10;
+        const conversationHistory = memLimit > 0
+          ? await fetchConversationHistory(admin, sessionId, fromNumber, messageId || null, memLimit)
+          : [];
+        console.log("[ai-reply] conversation history loaded", { count: conversationHistory.length, limit: memLimit, customer: fromNumber });
 
         const memoryInstruction = `\n\nCONVERSATION MEMORY RULES:\n- The previous turns of this WhatsApp chat are provided as message history above.\n- Use that history to remember which products were already shown / discussed with this customer.\n- If the customer says things like "order korte chai" / "ata nibo" / "price koto" / "ar ekta dao" without naming a product, refer to the most recently discussed product from history (especially any product details you sent earlier after an image match).\n- Never ask the customer to repeat info (name, address, product) they already provided in the history.\n- Maintain natural conversation continuity; do not greet again if you already greeted in this chat.`;
 
