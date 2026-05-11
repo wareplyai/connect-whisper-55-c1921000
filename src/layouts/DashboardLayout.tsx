@@ -11,6 +11,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/dashboard/all-orders", label: "All Orders", icon: ClipboardList },
   { to: "/dashboard/sessions", label: "Sessions", icon: Smartphone },
   { to: "/dashboard/inbox", label: "Inbox", icon: MessageSquare },
   { to: "/dashboard/auto-replies", label: "Auto-Replies", icon: MessageSquareText },
