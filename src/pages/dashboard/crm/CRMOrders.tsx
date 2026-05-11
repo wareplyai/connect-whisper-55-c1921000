@@ -96,7 +96,7 @@ export default function CRMOrders() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Orders</h1>
-          <p className="text-sm text-muted-foreground">All WooCommerce orders</p>
+          <p className="text-sm text-muted-foreground">All orders from WooCommerce & WhatsApp in one place</p>
         </div>
         <Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4 mr-2" /> Add Order</Button>
       </div>
