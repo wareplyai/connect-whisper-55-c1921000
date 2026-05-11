@@ -2016,6 +2016,13 @@ Deno.serve(async (req) => {
       }
     } else {
       try {
+        const conversationHistory = await fetchConversationHistory(
+          admin, sessionId, fromNumber, messageId || null, 20,
+        );
+        console.log("[ai-reply] conversation history loaded", { count: conversationHistory.length, customer: fromNumber });
+
+        const memoryInstruction = `\n\nCONVERSATION MEMORY RULES:\n- The previous turns of this WhatsApp chat are provided as message history above.\n- Use that history to remember which products were already shown / discussed with this customer.\n- If the customer says things like "order korte chai" / "ata nibo" / "price koto" / "ar ekta dao" without naming a product, refer to the most recently discussed product from history (especially any product details you sent earlier after an image match).\n- Never ask the customer to repeat info (name, address, product) they already provided in the history.\n- Maintain natural conversation continuity; do not greet again if you already greeted in this chat.`;
+
         reply = await callAI({
           platform: keyRow.platform,
           model: keyRow.model && keyRow.model !== "default" ? keyRow.model : (
@@ -2024,8 +2031,9 @@ Deno.serve(async (req) => {
             "deepseek-chat"
           ),
           apiKey,
-          systemPrompt: finalSystemPrompt,
+          systemPrompt: finalSystemPrompt + memoryInstruction,
           userMessage: finalUserMessage,
+          history: conversationHistory,
           maxTokens: Number((biz as any)?.max_tokens) || 2000,
           temperature: typeof (biz as any)?.temperature === "number" ? Number((biz as any).temperature) : 0.7,
         });
