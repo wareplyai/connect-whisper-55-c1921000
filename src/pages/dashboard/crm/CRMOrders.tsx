@@ -50,12 +50,19 @@ export default function CRMOrders() {
 
   const filtered = orders.filter(o => {
     if (statusFilter !== "all" && o.order_status !== statusFilter) return false;
+    if (sourceFilter !== "all" && (o.source || "woocommerce") !== sourceFilter) return false;
     if (search) {
       const s = search.toLowerCase();
       return (o.customer_name || "").toLowerCase().includes(s) || (o.customer_phone || "").includes(s) || (o.woo_order_id || "").toLowerCase().includes(s);
     }
     return true;
   });
+
+  const counts = {
+    all: orders.length,
+    woocommerce: orders.filter(o => (o.source || "woocommerce") === "woocommerce").length,
+    whatsapp: orders.filter(o => o.source === "whatsapp").length,
+  };
 
   const bookCourier = async () => {
     if (!bookingOrder) return;
