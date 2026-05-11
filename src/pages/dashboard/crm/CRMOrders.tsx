@@ -101,6 +101,21 @@ export default function CRMOrders() {
         <Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4 mr-2" /> Add Order</Button>
       </div>
 
+      <div className="grid grid-cols-3 gap-3">
+        <button onClick={() => setSourceFilter("all")} className={`text-left p-3 rounded-xl border ${sourceFilter==="all"?"border-primary bg-primary/5":"border-border bg-card"}`}>
+          <div className="text-xs text-muted-foreground">All Orders</div>
+          <div className="text-2xl font-bold">{counts.all}</div>
+        </button>
+        <button onClick={() => setSourceFilter("woocommerce")} className={`text-left p-3 rounded-xl border ${sourceFilter==="woocommerce"?"border-primary bg-primary/5":"border-border bg-card"}`}>
+          <div className="text-xs text-muted-foreground">WooCommerce</div>
+          <div className="text-2xl font-bold">{counts.woocommerce}</div>
+        </button>
+        <button onClick={() => setSourceFilter("whatsapp")} className={`text-left p-3 rounded-xl border ${sourceFilter==="whatsapp"?"border-primary bg-primary/5":"border-border bg-card"}`}>
+          <div className="text-xs text-muted-foreground">WhatsApp</div>
+          <div className="text-2xl font-bold">{counts.whatsapp}</div>
+        </button>
+      </div>
+
       <Card>
         <CardContent className="p-4">
           <div className="flex gap-3 flex-wrap mb-4">
@@ -112,6 +127,14 @@ export default function CRMOrders() {
                 {["pending", "confirmed", "shipped", "delivered", "returned", "cancelled"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                <SelectItem value="woocommerce">WooCommerce</SelectItem>
+                <SelectItem value="whatsapp">WhatsApp</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="overflow-x-auto">
@@ -119,6 +142,7 @@ export default function CRMOrders() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Order</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Amount</TableHead>
@@ -132,12 +156,17 @@ export default function CRMOrders() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">Loading...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={11} className="text-center py-6 text-muted-foreground">Loading...</TableCell></TableRow>
                 ) : filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={10} className="text-center py-10 text-muted-foreground">No orders. Click "Add Order" to create one.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={11} className="text-center py-10 text-muted-foreground">No orders.</TableCell></TableRow>
                 ) : filtered.map(o => (
                   <TableRow key={o.id}>
                     <TableCell className="font-mono text-xs">{o.woo_order_id || o.id.slice(0, 8)}</TableCell>
+                    <TableCell>
+                      {o.source === "whatsapp"
+                        ? <Badge className="bg-green-500/15 text-green-600">WhatsApp</Badge>
+                        : <Badge className="bg-purple-500/15 text-purple-600">WooCommerce</Badge>}
+                    </TableCell>
                     <TableCell>{o.customer_name || "-"}</TableCell>
                     <TableCell className="text-xs">{o.customer_phone || "-"}</TableCell>
                     <TableCell>৳{o.total_amount}</TableCell>
