@@ -1,0 +1,1 @@
+ALTER TABLE public.business_profiles ADD COLUMN IF NOT EXISTS memory_message_limit integer NOT NULL DEFAULT 10;

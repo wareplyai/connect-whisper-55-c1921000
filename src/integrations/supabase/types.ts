@@ -436,6 +436,7 @@ export type Database = {
           instructions: string | null
           location: string | null
           max_tokens: number
+          memory_message_limit: number
           message_batching_enabled: boolean
           name: string | null
           system_prompt: string | null
@@ -461,6 +462,7 @@ export type Database = {
           instructions?: string | null
           location?: string | null
           max_tokens?: number
+          memory_message_limit?: number
           message_batching_enabled?: boolean
           name?: string | null
           system_prompt?: string | null
@@ -486,6 +488,7 @@ export type Database = {
           instructions?: string | null
           location?: string | null
           max_tokens?: number
+          memory_message_limit?: number
           message_batching_enabled?: boolean
           name?: string | null
           system_prompt?: string | null
