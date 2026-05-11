@@ -41,6 +41,7 @@ import WooCommerce from "./pages/dashboard/WooCommerce";
 import AbandonedCart from "./pages/dashboard/AbandonedCart";
 import CRMDashboard from "./pages/dashboard/crm/CRMDashboard";
 import CRMOrders from "./pages/dashboard/crm/CRMOrders";
+import AllOrders from "./pages/dashboard/AllOrders";
 
 import CRMLeads from "./pages/dashboard/crm/CRMLeads";
 import CRMCourier from "./pages/dashboard/crm/CRMCourier";
@@ -126,6 +127,7 @@ const App = () => (
                 <Route path="abandoned-cart" element={<FeatureGuard feature="abandoned_cart"><AbandonedCart /></FeatureGuard>} />
                 <Route path="crm" element={<CRMDashboard />} />
                 <Route path="crm/orders" element={<CRMOrders />} />
+                <Route path="all-orders" element={<AllOrders />} />
                 
                 <Route path="crm/leads" element={<CRMLeads />} />
                 <Route path="crm/courier" element={<CRMCourier />} />
