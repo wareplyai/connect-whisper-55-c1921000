@@ -1948,7 +1948,9 @@ Deno.serve(async (req) => {
       ? `\n\n🆕 NEW IMAGE MATCH (HIGHEST PRIORITY — OVERRIDES HISTORY):\nThe customer JUST sent a NEW photo in this current message that matches this product from the catalog:\n- Name: "${matchedProduct.name}"${matchedProduct.price ? `\n- Price: ${matchedProduct.price}` : ""}${matchedProduct.description ? `\n- Description: ${String(matchedProduct.description).slice(0, 300)}` : ""}\n\nCRITICAL RULES:\n1. The customer is now asking about THIS product — NOT any previous product discussed earlier in the chat history.\n2. IGNORE any older product context from history. The newly-matched product above is the ONLY product the customer cares about right now.\n3. Reply with details (name, price, description) of THIS new product. If the customer's text caption asks "ata ki [color] ase" / "price koto" / "available?" — answer about THIS product.\n4. Do NOT say "we don't have it" referring to a previous product. The new image was successfully matched, so the product IS in catalog — share its actual details.`
       : "";
     const finalSystemPrompt = `${systemPrompt}${matchedContext}`;
-    const finalUserMessage = messageText || (matchedProduct ? `(Customer sent a photo of "${matchedProduct.name}" with no caption.)` : "");
+    const finalUserMessage = matchedProduct
+      ? `Customer sent a product photo that matched "${matchedProduct.name}".${messageText ? `\nCustomer caption/text: ${messageText}` : "\nCustomer caption/text: (none)"}`
+      : messageText;
 
     let reply = "";
 
