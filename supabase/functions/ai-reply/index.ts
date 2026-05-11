@@ -1098,9 +1098,20 @@ Deno.serve(async (req) => {
     let imageUrl = isAudioMessage ? "" : findImageUrl(body);
     const looksImageType = !isAudioMessage && /image|photo|picture/i.test(messageType);
     const payloadHasImage = !isAudioMessage && (looksImageType || payloadLooksLikeImage(body));
-    // Tentatively flag as image — we may resolve the actual binary from the gateway below.
-    let isImageMessage = !isAudioMessage && ((!!imageUrl && (looksImageType || !rawText)) || (payloadHasImage && !rawText));
+    // Tentatively flag as image — even when the customer added a caption/text.
+    // For WhatsApp image+caption payloads, the caption may arrive in nested
+    // imageMessage.caption instead of body.message. We must treat this as ONE
+    // image message so product matching runs before the AI answers the caption.
+    let isImageMessage = !isAudioMessage && (!!imageUrl || payloadHasImage);
     let messageText = rawText || "";
+    let imageCaption: string | null = isImageMessage ? findCaption(body) : null;
+    if (!messageText && imageCaption) {
+      messageText = imageCaption;
+      rawText = imageCaption;
+      (body as any).message = imageCaption;
+      (body as any).image_caption = imageCaption;
+      console.log("[ai-reply] using image caption as customer text", { caption: imageCaption });
+    }
 
     console.log("message_type:", messageType);
     console.log("media_url:", bodyMediaUrl || null);
