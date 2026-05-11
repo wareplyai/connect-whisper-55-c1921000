@@ -216,6 +216,7 @@ const AIAgent = () => {
           temperature: typeof (biz as any).temperature === "number" ? Number((biz as any).temperature) : 0.7,
           batch_wait_seconds: typeof (biz as any).batch_wait_seconds === "number" ? Number((biz as any).batch_wait_seconds) : 10,
           message_batching_enabled: (biz as any).message_batching_enabled === true,
+          memory_message_limit: typeof (biz as any).memory_message_limit === "number" ? Number((biz as any).memory_message_limit) : 10,
           instructions: ((biz as any).instructions ?? DEFAULT_INSTRUCTIONS) as string,
         });
       }
