@@ -1408,6 +1408,7 @@ Deno.serve(async (req) => {
       const payloadCaption =
         (typeof (body as any).caption === "string" && (body as any).caption) ||
         (typeof (body as any).image_caption === "string" && (body as any).image_caption) ||
+        imageCaption ||
         null;
       const payloadFilename =
         (typeof (body as any).media_filename === "string" && (body as any).media_filename) ||
@@ -2148,7 +2149,9 @@ Deno.serve(async (req) => {
     if (sendOk) {
       await admin.from("message_logs").insert({
         user_id: userId, session_id: sessionId, to_number: sendResult.to,
-        message_type: "text", payload: { text: reply, auto_reply: true, source: "ai" },
+        message_type: "text", payload: matchedProduct
+          ? { text: reply, auto_reply: true, source: "product_image_match", product_id: matchedProduct.id, via_ai: true }
+          : { text: reply, auto_reply: true, source: "ai" },
         status: "sent",
       });
 
