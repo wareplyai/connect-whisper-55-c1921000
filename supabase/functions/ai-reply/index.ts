@@ -2139,6 +2139,81 @@ Deno.serve(async (req) => {
         status: "sent",
       });
 
+      // Auto-capture WhatsApp orders: when the customer's message looks like
+      // order details (name + phone + address), save into crm_orders so the
+      // user can see WhatsApp orders in the same Orders section as WooCommerce.
+      try {
+        const txt = String(messageText || "");
+        const phoneMatch = txt.match(/(?:\+?88)?0?1[3-9]\d{8}/);
+        const lines = txt.split(/\n+/).map(l => l.trim()).filter(Boolean);
+        const looksLikeOrder = !!phoneMatch && lines.length >= 2;
+        if (looksLikeOrder) {
+          const pick = (re: RegExp) => {
+            const l = lines.find(x => re.test(x));
+            return l ? l.replace(re, "").replace(/^[:\-\s]+/, "").trim() : "";
+          };
+          const name = pick(/^(name|নাম)\s*[:\-]?/i)
+            || lines.find(l => !/\d{6,}/.test(l) && !/address|ঠিকানা/i.test(l))?.replace(/^(name|নাম)\s*[:\-]?\s*/i, "").trim()
+            || "";
+          const address = pick(/^(address|ঠিকানা|addresss)\s*[:\-]?/i)
+            || lines.filter(l => l !== name && !l.includes(phoneMatch![0])).pop()
+            || "";
+          const phone = phoneMatch![0].replace(/\D/g, "");
+
+          // Pull product details from the recently matched product (if any)
+          let productName: string | null = null;
+          let amount = 0;
+          try {
+            const { data: lastMatchLog } = await admin
+              .from("message_logs")
+              .select("payload")
+              .eq("session_id", sessionId)
+              .eq("to_number", fromNumber)
+              .contains("payload", { source: "product_image_match" })
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            const pid = (lastMatchLog as any)?.payload?.product_id;
+            if (pid) {
+              const { data: pImg } = await admin
+                .from("product_images")
+                .select("product_name, product_price")
+                .eq("id", pid).maybeSingle();
+              if (pImg) {
+                productName = (pImg as any).product_name || null;
+                amount = Number((pImg as any).product_price) || 0;
+              }
+            }
+          } catch (_) {}
+
+          // De-dupe: skip if a whatsapp order from this phone exists in last 24h
+          const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+          const { data: dup } = await admin
+            .from("crm_orders").select("id")
+            .eq("user_id", userId).eq("customer_phone", phone)
+            .eq("source", "whatsapp").gte("created_at", since).maybeSingle();
+
+          if (!dup) {
+            const { error: ordErr } = await admin.from("crm_orders").insert({
+              user_id: userId,
+              source: "whatsapp",
+              woo_order_id: `WA-${Date.now()}`,
+              customer_name: name || null,
+              customer_phone: phone,
+              customer_address: address || null,
+              total_amount: amount,
+              payment_method: "COD",
+              order_status: "pending",
+              notes: productName ? `Product: ${productName}` : null,
+            });
+            if (ordErr) console.error("[ai-reply] crm_orders insert error:", ordErr.message);
+            else console.log("[ai-reply] WhatsApp order captured", { phone, name, productName });
+          }
+        }
+      } catch (e) {
+        console.error("[ai-reply] order capture error:", (e as Error)?.message);
+      }
+
       // Auto-attach product image when the AI's reply (or the customer's message)
       // mentions a real product from the catalog.
       try {
