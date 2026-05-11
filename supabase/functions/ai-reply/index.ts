@@ -107,10 +107,12 @@ function jsonResp(body: unknown, status = 200) {
 async function callAI(opts: {
   platform: string; model: string; apiKey: string;
   systemPrompt: string; userMessage: string;
+  history?: Array<{ role: "user" | "assistant"; content: string }>;
   maxTokens?: number;
   temperature?: number;
 }): Promise<string> {
   const { platform, model, apiKey, systemPrompt, userMessage } = opts;
+  const history = Array.isArray(opts.history) ? opts.history.filter((m) => m && m.content && m.content.trim()) : [];
   const maxTokens = Math.max(50, Math.min(4000, Number(opts.maxTokens) || 2000));
   const temperature = Math.max(0, Math.min(2, typeof opts.temperature === "number" ? opts.temperature : 0.7));
 
@@ -125,6 +127,7 @@ async function callAI(opts: {
         model,
         messages: [
           { role: "system", content: systemPrompt },
+          ...history.map((m) => ({ role: m.role, content: m.content })),
           { role: "user", content: userMessage },
         ],
         max_tokens: maxTokens,
@@ -137,6 +140,13 @@ async function callAI(opts: {
   }
 
   if (platform === "gemini") {
+    const contents = [
+      ...history.map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      })),
+      { role: "user", parts: [{ text: userMessage }] },
+    ];
     const r = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
@@ -144,7 +154,7 @@ async function callAI(opts: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: "user", parts: [{ text: userMessage }] }],
+          contents,
           generationConfig: { maxOutputTokens: maxTokens, temperature },
         }),
       }
@@ -155,6 +165,63 @@ async function callAI(opts: {
   }
 
   throw new Error(`Unsupported platform: ${platform}`);
+}
+
+// Fetch the last N (incoming + outgoing) messages for this customer in this session,
+// merged + sorted oldest→newest, so the AI has conversation memory.
+async function fetchConversationHistory(
+  admin: any,
+  sessionId: string,
+  fromNumber: string,
+  excludeIncomingId: string | null,
+  limit = 20,
+): Promise<Array<{ role: "user" | "assistant"; content: string }>> {
+  try {
+    const [{ data: incoming }, { data: outgoing }] = await Promise.all([
+      admin
+        .from("incoming_messages")
+        .select("id, message_text, message_type, image_caption, transcribed_text, received_at")
+        .eq("session_id", sessionId)
+        .eq("from_number", fromNumber)
+        .order("received_at", { ascending: false })
+        .limit(limit),
+      admin
+        .from("message_logs")
+        .select("payload, message_type, created_at")
+        .eq("session_id", sessionId)
+        .eq("to_number", fromNumber)
+        .order("created_at", { ascending: false })
+        .limit(limit),
+    ]);
+
+    const items: Array<{ role: "user" | "assistant"; content: string; t: number }> = [];
+
+    for (const m of incoming || []) {
+      if (excludeIncomingId && (m as any).id === excludeIncomingId) continue;
+      const text =
+        (m as any).message_text ||
+        (m as any).transcribed_text ||
+        (m as any).image_caption ||
+        ((m as any).message_type === "image" ? "[Customer sent an image]" :
+         (m as any).message_type === "audio" ? "[Customer sent a voice message]" : "");
+      if (!text) continue;
+      items.push({ role: "user", content: String(text).slice(0, 1000), t: new Date((m as any).received_at).getTime() });
+    }
+    for (const m of outgoing || []) {
+      const p = (m as any).payload || {};
+      const text = p.text || p.reply || p.message || "";
+      if (!text) continue;
+      items.push({ role: "assistant", content: String(text).slice(0, 1500), t: new Date((m as any).created_at).getTime() });
+    }
+
+    items.sort((a, b) => a.t - b.t);
+    // Keep only last `limit` total
+    const trimmed = items.slice(-limit);
+    return trimmed.map(({ role, content }) => ({ role, content }));
+  } catch (e) {
+    console.log("[ai-reply] fetchConversationHistory failed:", (e as Error)?.message);
+    return [];
+  }
 }
 
 // Detect whether the payload looks image-related, even when the binary URL/base64 is stripped.
