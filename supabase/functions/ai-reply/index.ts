@@ -1098,9 +1098,20 @@ Deno.serve(async (req) => {
     let imageUrl = isAudioMessage ? "" : findImageUrl(body);
     const looksImageType = !isAudioMessage && /image|photo|picture/i.test(messageType);
     const payloadHasImage = !isAudioMessage && (looksImageType || payloadLooksLikeImage(body));
-    // Tentatively flag as image — we may resolve the actual binary from the gateway below.
-    let isImageMessage = !isAudioMessage && ((!!imageUrl && (looksImageType || !rawText)) || (payloadHasImage && !rawText));
+    // Tentatively flag as image — even when the customer added a caption/text.
+    // For WhatsApp image+caption payloads, the caption may arrive in nested
+    // imageMessage.caption instead of body.message. We must treat this as ONE
+    // image message so product matching runs before the AI answers the caption.
+    let isImageMessage = !isAudioMessage && (!!imageUrl || payloadHasImage);
     let messageText = rawText || "";
+    let imageCaption: string | null = isImageMessage ? findCaption(body) : null;
+    if (!messageText && imageCaption) {
+      messageText = imageCaption;
+      rawText = imageCaption;
+      (body as any).message = imageCaption;
+      (body as any).image_caption = imageCaption;
+      console.log("[ai-reply] using image caption as customer text", { caption: imageCaption });
+    }
 
     console.log("message_type:", messageType);
     console.log("media_url:", bodyMediaUrl || null);
@@ -1397,6 +1408,7 @@ Deno.serve(async (req) => {
       const payloadCaption =
         (typeof (body as any).caption === "string" && (body as any).caption) ||
         (typeof (body as any).image_caption === "string" && (body as any).image_caption) ||
+        imageCaption ||
         null;
       const payloadFilename =
         (typeof (body as any).media_filename === "string" && (body as any).media_filename) ||
@@ -1440,7 +1452,7 @@ Deno.serve(async (req) => {
     }
 
     // Capture caption + mimetype from the raw payload (Baileys imageMessage.caption etc.)
-    const imageCaption = isImageMessage ? findCaption(body) : null;
+    imageCaption = isImageMessage ? (imageCaption || findCaption(body)) : null;
     let imageMimetype: string | null = isImageMessage ? findMimetype(body) : null;
 
     // If we have an image (resolved from payload or recovered from gateway), upload it to
@@ -1746,7 +1758,7 @@ Deno.serve(async (req) => {
     }
 
     // Fixed Q&A — runs for both AI Agent and Auto-Reply modes (exact/contains match bypasses AI)
-    if ((aiEnabled || autoReplyEnabled) && (!isImageMessage || !!messageText)) {
+    if ((aiEnabled || autoReplyEnabled) && !matchedProduct && (!isImageMessage || !!messageText)) {
       const { data: fixed } = await admin
         .from("fixed_qa")
         .select("keyword, reply, match_type")
@@ -1791,7 +1803,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (autoReplyEnabled && (!isImageMessage || !!messageText)) {
+    if (autoReplyEnabled && !matchedProduct && (!isImageMessage || !!messageText)) {
       // Keyword rules
       const { data: rules } = await admin
         .from("auto_reply_rules")
@@ -1937,7 +1949,9 @@ Deno.serve(async (req) => {
       ? `\n\n🆕 NEW IMAGE MATCH (HIGHEST PRIORITY — OVERRIDES HISTORY):\nThe customer JUST sent a NEW photo in this current message that matches this product from the catalog:\n- Name: "${matchedProduct.name}"${matchedProduct.price ? `\n- Price: ${matchedProduct.price}` : ""}${matchedProduct.description ? `\n- Description: ${String(matchedProduct.description).slice(0, 300)}` : ""}\n\nCRITICAL RULES:\n1. The customer is now asking about THIS product — NOT any previous product discussed earlier in the chat history.\n2. IGNORE any older product context from history. The newly-matched product above is the ONLY product the customer cares about right now.\n3. Reply with details (name, price, description) of THIS new product. If the customer's text caption asks "ata ki [color] ase" / "price koto" / "available?" — answer about THIS product.\n4. Do NOT say "we don't have it" referring to a previous product. The new image was successfully matched, so the product IS in catalog — share its actual details.`
       : "";
     const finalSystemPrompt = `${systemPrompt}${matchedContext}`;
-    const finalUserMessage = messageText || (matchedProduct ? `(Customer sent a photo of "${matchedProduct.name}" with no caption.)` : "");
+    const finalUserMessage = matchedProduct
+      ? `Customer sent a product photo that matched "${matchedProduct.name}".${messageText ? `\nCustomer caption/text: ${messageText}` : "\nCustomer caption/text: (none)"}`
+      : messageText;
 
     let reply = "";
 
@@ -2135,7 +2149,9 @@ Deno.serve(async (req) => {
     if (sendOk) {
       await admin.from("message_logs").insert({
         user_id: userId, session_id: sessionId, to_number: sendResult.to,
-        message_type: "text", payload: { text: reply, auto_reply: true, source: "ai" },
+        message_type: "text", payload: matchedProduct
+          ? { text: reply, auto_reply: true, source: "product_image_match", product_id: matchedProduct.id, via_ai: true }
+          : { text: reply, auto_reply: true, source: "ai" },
         status: "sent",
       });
 
