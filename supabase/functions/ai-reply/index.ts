@@ -1451,7 +1451,7 @@ Deno.serve(async (req) => {
     }
 
     // Capture caption + mimetype from the raw payload (Baileys imageMessage.caption etc.)
-    const imageCaption = isImageMessage ? findCaption(body) : null;
+    imageCaption = isImageMessage ? (imageCaption || findCaption(body)) : null;
     let imageMimetype: string | null = isImageMessage ? findMimetype(body) : null;
 
     // If we have an image (resolved from payload or recovered from gateway), upload it to
