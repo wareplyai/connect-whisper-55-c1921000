@@ -1934,7 +1934,7 @@ Deno.serve(async (req) => {
     // path only runs when the customer sent ONLY an image (no text).
     const useTextFlow = !!messageText || !!matchedProduct;
     const matchedContext = matchedProduct
-      ? `\n\nIMAGE MATCH: The customer attached a photo that matches this product from the catalog — name: "${matchedProduct.name}"${matchedProduct.price ? `, price: ${matchedProduct.price}` : ""}${matchedProduct.description ? `, description: ${String(matchedProduct.description).slice(0, 200)}` : ""}. Use this as the primary product the customer is asking about, and answer their text question about it.`
+      ? `\n\n🆕 NEW IMAGE MATCH (HIGHEST PRIORITY — OVERRIDES HISTORY):\nThe customer JUST sent a NEW photo in this current message that matches this product from the catalog:\n- Name: "${matchedProduct.name}"${matchedProduct.price ? `\n- Price: ${matchedProduct.price}` : ""}${matchedProduct.description ? `\n- Description: ${String(matchedProduct.description).slice(0, 300)}` : ""}\n\nCRITICAL RULES:\n1. The customer is now asking about THIS product — NOT any previous product discussed earlier in the chat history.\n2. IGNORE any older product context from history. The newly-matched product above is the ONLY product the customer cares about right now.\n3. Reply with details (name, price, description) of THIS new product. If the customer's text caption asks "ata ki [color] ase" / "price koto" / "available?" — answer about THIS product.\n4. Do NOT say "we don't have it" referring to a previous product. The new image was successfully matched, so the product IS in catalog — share its actual details.`
       : "";
     const finalSystemPrompt = `${systemPrompt}${matchedContext}`;
     const finalUserMessage = messageText || (matchedProduct ? `(Customer sent a photo of "${matchedProduct.name}" with no caption.)` : "");
@@ -2016,10 +2016,12 @@ Deno.serve(async (req) => {
       }
     } else {
       try {
-        const conversationHistory = await fetchConversationHistory(
-          admin, sessionId, fromNumber, messageId || null, 20,
-        );
-        console.log("[ai-reply] conversation history loaded", { count: conversationHistory.length, customer: fromNumber });
+        const memLimitRaw = Number((biz as any)?.memory_message_limit);
+        const memLimit = Number.isFinite(memLimitRaw) ? Math.max(0, Math.min(50, memLimitRaw)) : 10;
+        const conversationHistory = memLimit > 0
+          ? await fetchConversationHistory(admin, sessionId, fromNumber, messageId || null, memLimit)
+          : [];
+        console.log("[ai-reply] conversation history loaded", { count: conversationHistory.length, limit: memLimit, customer: fromNumber });
 
         const memoryInstruction = `\n\nCONVERSATION MEMORY RULES:\n- The previous turns of this WhatsApp chat are provided as message history above.\n- Use that history to remember which products were already shown / discussed with this customer.\n- If the customer says things like "order korte chai" / "ata nibo" / "price koto" / "ar ekta dao" without naming a product, refer to the most recently discussed product from history (especially any product details you sent earlier after an image match).\n- Never ask the customer to repeat info (name, address, product) they already provided in the history.\n- Maintain natural conversation continuity; do not greet again if you already greeted in this chat.`;
 

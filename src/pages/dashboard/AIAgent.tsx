@@ -134,6 +134,7 @@ const defaultBusiness = {
   temperature: 0.7,
   message_batching_enabled: false,
   batch_wait_seconds: 10,
+  memory_message_limit: 10,
   instructions: DEFAULT_INSTRUCTIONS,
 };
 
@@ -215,6 +216,7 @@ const AIAgent = () => {
           temperature: typeof (biz as any).temperature === "number" ? Number((biz as any).temperature) : 0.7,
           batch_wait_seconds: typeof (biz as any).batch_wait_seconds === "number" ? Number((biz as any).batch_wait_seconds) : 10,
           message_batching_enabled: (biz as any).message_batching_enabled === true,
+          memory_message_limit: typeof (biz as any).memory_message_limit === "number" ? Number((biz as any).memory_message_limit) : 10,
           instructions: ((biz as any).instructions ?? DEFAULT_INSTRUCTIONS) as string,
         });
       }
@@ -631,7 +633,27 @@ RULES:
                   <p className="text-xs text-muted-foreground mt-1">
                     কত সেকেন্ড অপেক্ষা করার পর reply দেবে। এই সময়ের মধ্যে customer একাধিক message পাঠালে সব একসাথে answer দেবে।
                   </p>
+              </div>
+
+              <div className="rounded-lg border border-border bg-background/40 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="min-w-0">
+                    <Label className="text-sm font-medium">AI Memory (last messages remembered)</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      AI Agent customer-এর সাথে আগের কত-টা message মনে রাখবে। 0 = memory off (প্রতিটি reply fresh)। বেশি দিলে context ভালো বুঝবে কিন্তু token খরচ বাড়বে।
+                    </p>
+                  </div>
+                  <span className="text-sm font-mono text-primary shrink-0 ml-3">{business.memory_message_limit}</span>
                 </div>
+                <Slider
+                  value={[business.memory_message_limit]}
+                  min={0}
+                  max={50}
+                  step={1}
+                  onValueChange={(v) => setBusiness({ ...business, memory_message_limit: v[0] })}
+                  onValueCommit={(v) => persistBusinessPatch({ memory_message_limit: v[0] })}
+                />
+              </div>
               </div>
 
               <div>
