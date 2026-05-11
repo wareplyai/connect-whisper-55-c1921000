@@ -134,6 +134,7 @@ const defaultBusiness = {
   temperature: 0.7,
   message_batching_enabled: false,
   batch_wait_seconds: 10,
+  memory_message_limit: 10,
   instructions: DEFAULT_INSTRUCTIONS,
 };
 
