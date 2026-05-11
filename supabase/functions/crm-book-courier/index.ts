@@ -147,8 +147,8 @@ Deno.serve(async (req) => {
       const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
         global: { headers: { Authorization: authHeader } },
       });
-      const { data } = await userClient.auth.getClaims(authHeader.replace("Bearer ", ""));
-      userId = data?.claims?.sub || null;
+      const { data: userData } = await userClient.auth.getUser(authHeader.replace("Bearer ", ""));
+      userId = userData?.user?.id || null;
     }
     if (!userId) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
