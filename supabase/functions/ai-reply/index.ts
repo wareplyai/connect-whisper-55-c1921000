@@ -2023,7 +2023,45 @@ Deno.serve(async (req) => {
           : [];
         console.log("[ai-reply] conversation history loaded", { count: conversationHistory.length, limit: memLimit, customer: fromNumber });
 
-        const memoryInstruction = `\n\nCONVERSATION MEMORY RULES:\n- The previous turns of this WhatsApp chat are provided as message history above.\n- Use that history to remember which products were already shown / discussed with this customer.\n- If the customer says things like "order korte chai" / "ata nibo" / "price koto" / "ar ekta dao" without naming a product, refer to the most recently discussed product from history (especially any product details you sent earlier after an image match).\n- Never ask the customer to repeat info (name, address, product) they already provided in the history.\n- Maintain natural conversation continuity; do not greet again if you already greeted in this chat.`;
+        // Look up the most recently image-matched product for this customer.
+        // The matched product lives in `product_images` (NOT `products`), so the
+        // AI's PRODUCT CATALOG won't know about it on follow-up turns. We inject
+        // it explicitly so questions like "Dam koto?" / "ata nibo" still work.
+        let recentMatchedProductBlock = "";
+        if (!matchedProduct) {
+          try {
+            const { data: lastMatchLog } = await admin
+              .from("message_logs")
+              .select("payload, created_at")
+              .eq("session_id", sessionId)
+              .eq("to_number", fromNumber)
+              .contains("payload", { source: "product_image_match" })
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            const lastProductId = (lastMatchLog as any)?.payload?.product_id;
+            if (lastProductId) {
+              const { data: pImg } = await admin
+                .from("product_images")
+                .select("id, product_name, product_price, product_description, product_image_url")
+                .eq("id", lastProductId)
+                .maybeSingle();
+              if (pImg) {
+                recentMatchedProductBlock =
+                  `\n\n📌 RECENTLY MATCHED PRODUCT (from an earlier image this customer sent — customer is most likely still asking about THIS):\n` +
+                  `- Name: "${(pImg as any).product_name}"\n` +
+                  ((pImg as any).product_price ? `- Price: ${(pImg as any).product_price}\n` : "") +
+                  ((pImg as any).product_description ? `- Description: ${String((pImg as any).product_description).slice(0, 300)}\n` : "") +
+                  `\nIMPORTANT: This product is NOT in the PRODUCT CATALOG above — it was identified from the customer's photo earlier. Treat it as a real, available product. If the customer asks about price / availability / details / wants to order WITHOUT naming a product, assume they mean THIS product and answer using the details above. Never say "I don't have info about this product" — you DO have it right here.`;
+                console.log("[ai-reply] injected recently matched product context", { product_id: lastProductId, name: (pImg as any).product_name });
+              }
+            }
+          } catch (e) {
+            console.log("[ai-reply] recent match lookup failed:", (e as Error)?.message);
+          }
+        }
+
+        const memoryInstruction = `\n\nCONVERSATION MEMORY RULES:\n- The previous turns of this WhatsApp chat are provided as message history above.\n- Use that history to remember which products were already shown / discussed with this customer.\n- If the customer says things like "order korte chai" / "ata nibo" / "dam koto" / "price koto" / "ar ekta dao" without naming a product, refer to the most recently discussed product (see RECENTLY MATCHED PRODUCT block if present, otherwise the last product mentioned in history).\n- NEVER ask the customer to repeat info (name, address, product) they already provided in the history.\n- NEVER reply "I don't have info about this product" / "এই পণ্যের তথ্য নেই" if a RECENTLY MATCHED PRODUCT block is provided above — use those details directly.\n- Maintain natural conversation continuity; do not greet again if you already greeted in this chat.`;
 
         reply = await callAI({
           platform: keyRow.platform,
@@ -2033,7 +2071,7 @@ Deno.serve(async (req) => {
             "deepseek-chat"
           ),
           apiKey,
-          systemPrompt: finalSystemPrompt + memoryInstruction,
+          systemPrompt: finalSystemPrompt + recentMatchedProductBlock + memoryInstruction,
           userMessage: finalUserMessage,
           history: conversationHistory,
           maxTokens: Number((biz as any)?.max_tokens) || 2000,
