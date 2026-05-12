@@ -43,7 +43,7 @@ export const guides: Record<string, Guide> = {
           Sessions represent a connected WhatsApp number. Create one with the <Code>POST /api/whatsapp-sessions</Code>{" "}
           endpoint:
         </P>
-        <Pre>{`curl -X POST "https://www.wareplyai.com/api/whatsapp-sessions" \\
+        <Pre>{`curl -X POST "https://api.wareplyai.com/api/whatsapp-sessions" \\
   -H "Authorization: Bearer YOUR_PERSONAL_ACCESS_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{ "name": "My Bot", "phone_number": "+1234567890" }'`}</Pre>
