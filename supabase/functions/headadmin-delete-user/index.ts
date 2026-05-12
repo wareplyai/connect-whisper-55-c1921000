@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
 
     // Delete the auth user (forces sign-out everywhere)
     const { error: delErr } = await admin.auth.admin.deleteUser(user_id);
-    if (delErr) {
+    if (delErr && !/user not found/i.test(delErr.message)) {
       return new Response(JSON.stringify({ error: delErr.message }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
