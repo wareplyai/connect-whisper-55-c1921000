@@ -80,7 +80,7 @@ Deno.test("falls back to body.from when no trusted jid present", () => {
 
 Deno.test("read receipt gateway base also tries root when WHATSAPP_GATEWAY_URL contains /waapi", () => {
   assertEquals(
-    gatewayBaseVariants("https://alvi-waapi.duckdns.org/waapi"),
-    ["https://alvi-waapi.duckdns.org/waapi", "https://alvi-waapi.duckdns.org"],
+    gatewayBaseVariants("https://api.wareplyai.com"),
+    ["https://api.wareplyai.com", "https://api.wareplyai.com"],
   );
 });

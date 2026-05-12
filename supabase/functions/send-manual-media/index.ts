@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     if (!session) return json({ error: "Session not found" }, 404);
     if (session.user_id !== userId) return json({ error: "Not authorized" }, 403);
 
-    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org/waapi";
+    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com";
     const to = String(toNumber).replace(/\D/g, "") || toNumber;
 
     const headers: Record<string, string> = { "Content-Type": "application/json" };

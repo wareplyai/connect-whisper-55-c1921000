@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       sessionId = s.id; apiToken = s.api_token;
     }
 
-    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org/waapi";
+    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com";
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
     let gatewayOk = false; let gatewayError: string | null = null;
