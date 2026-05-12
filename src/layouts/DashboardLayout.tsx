@@ -48,15 +48,19 @@ const DashboardLayout = () => {
   const { profile, isAdmin, signOut } = useAuth();
   const { access } = useFeatureAccess();
   const crmUnread = useCrmUnreadCount();
-  const visibleNav = nav.filter((n) => {
-    if (n.to === "/dashboard/ai-agent") return access.ai_agent;
-    if (n.to === "/dashboard/auto-replies") return access.auto_replies;
-    if (n.to === "/dashboard/abandoned-cart") return access.abandoned_cart;
-    if (n.to === "/dashboard/products") return access.products;
-    if (n.to === "/dashboard/product-image-match") return access.product_image_match;
-    if (n.to === "/dashboard/woocommerce") return access.woocommerce;
-    return true;
-  });
+  const featureMap: Record<string, FeatureKey> = {
+    "/dashboard/ai-agent": "ai_agent",
+    "/dashboard/auto-replies": "auto_replies",
+    "/dashboard/abandoned-cart": "abandoned_cart",
+    "/dashboard/products": "products",
+    "/dashboard/product-image-match": "product_image_match",
+    "/dashboard/woocommerce": "woocommerce",
+  };
+  const isLocked = (to: string) => {
+    const fk = featureMap[to];
+    return fk ? !access[fk] : false;
+  };
+  const visibleNav = nav;
   const location = useLocation();
   const navigate = useNavigate();
   const [ecomOpen, setEcomOpen] = useState<boolean>(() => {
