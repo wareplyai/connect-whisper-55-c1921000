@@ -66,13 +66,15 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
-    const { data: userData, error: uErr } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
-    if (uErr || !userData?.user?.id) {
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: uErr } = await supabase.auth.getClaims(token);
+    const userId = claimsData?.claims?.sub;
+    if (uErr || !userId) {
+      console.error("ai-key-manager auth error:", uErr);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = userData.user.id;
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
