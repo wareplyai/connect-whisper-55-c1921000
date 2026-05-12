@@ -124,11 +124,15 @@ const AutoReplies = () => {
       user_id: profile.id,
     };
 
-    const { error } = editing.id
-      ? await supabase.from("auto_reply_rules").update(payload).eq("id", editing.id)
-      : await supabase.from("auto_reply_rules").insert(payload);
-
-    if (error) { toast.error(friendlyError(error)); return; }
+    if (editing.id) {
+      const { error } = await supabase.from("auto_reply_rules").update(payload).eq("id", editing.id);
+      if (error) { toast.error(friendlyError(error)); return; }
+    } else {
+      await disableAIIfOn();
+      const { error } = await supabase.from("auto_reply_rules").insert(payload);
+      if (error) { toast.error(friendlyError(error)); return; }
+      if (payload.is_active) await setReplyMode("auto_reply");
+    }
     toast.success(editing.id ? "Rule updated" : "Rule created");
     setOpen(false);
     load();
