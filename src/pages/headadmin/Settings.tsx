@@ -24,6 +24,31 @@ export default function HeadAdminSettings() {
   });
   const [confirm, setConfirm] = useState<null | "logs" | "sessions">(null);
 
+  // Bulk delete user messages
+  const [users, setUsers] = useState<Array<{ id: string; email: string; full_name: string | null }>>([]);
+  const today = new Date().toISOString().slice(0, 10);
+  const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const [bulk, setBulk] = useState({ user_id: "", from_date: monthAgo, to_date: today, scope: "all" });
+  const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  useEffect(() => {
+    supabase.from("profiles").select("id,email,full_name").order("email").then(({ data }) => {
+      setUsers((data as any) || []);
+    });
+  }, []);
+
+  const runBulkDelete = async () => {
+    if (!bulk.user_id) { toast.error("Select a user"); return; }
+    setBulkLoading(true);
+    const { data, error } = await supabase.functions.invoke("headadmin-delete-user-messages", { body: bulk });
+    setBulkLoading(false);
+    setBulkConfirm(false);
+    if (error) { toast.error(error.message); return; }
+    const d = (data as any)?.deleted || {};
+    toast.success(`Deleted: logs=${d.message_logs ?? 0}, incoming=${d.incoming_messages ?? 0}`);
+  };
+
   const saveProfile = async () => {
     if (!headAdmin) return;
     await supabase.from("headadmin").update({ name: profile.name, email: profile.email }).eq("id", headAdmin.id);
