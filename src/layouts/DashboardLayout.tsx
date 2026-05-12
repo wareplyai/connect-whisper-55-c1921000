@@ -55,6 +55,7 @@ const DashboardLayout = () => {
     "/dashboard/products": "products",
     "/dashboard/product-image-match": "product_image_match",
     "/dashboard/woocommerce": "woocommerce",
+    "/dashboard/behavior": "behavior",
   };
   const isLocked = (to: string) => {
     const fk = featureMap[to];

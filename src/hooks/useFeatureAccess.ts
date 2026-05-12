@@ -9,7 +9,8 @@ export type FeatureKey =
   | "ecommerce"
   | "products"
   | "product_image_match"
-  | "woocommerce";
+  | "woocommerce"
+  | "behavior";
 
 const DEFAULTS: Record<FeatureKey, boolean> = {
   ai_agent: true,
@@ -19,6 +20,7 @@ const DEFAULTS: Record<FeatureKey, boolean> = {
   products: true,
   product_image_match: true,
   woocommerce: true,
+  behavior: true,
 };
 
 export function useFeatureAccess() {
