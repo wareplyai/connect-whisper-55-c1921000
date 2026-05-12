@@ -65,31 +65,41 @@ Deno.serve(async (req) => {
     toEnd.setHours(23, 59, 59, 999);
     const toIso = toEnd.toISOString();
 
-    const result: Record<string, number> = {};
+    const result: Record<string, number> = { message_logs: 0, incoming_messages: 0 };
     const targetScope = scope || "all";
+    const BATCH = 500;
+    const MAX_MS = 50_000; // stay under edge function/statement timeout
+    const started = Date.now();
+    let truncated = false;
+
+    const batchDelete = async (
+      table: "message_logs" | "incoming_messages",
+      tsCol: "created_at" | "received_at",
+    ) => {
+      while (true) {
+        if (Date.now() - started > MAX_MS) { truncated = true; return; }
+        const { data: ids, error: selErr } = await admin
+          .from(table)
+          .select("id")
+          .eq("user_id", user_id)
+          .gte(tsCol, fromIso)
+          .lte(tsCol, toIso)
+          .limit(BATCH);
+        if (selErr) throw selErr;
+        if (!ids || ids.length === 0) return;
+        const idList = ids.map((r: any) => r.id);
+        const { error: delErr } = await admin.from(table).delete().in("id", idList);
+        if (delErr) throw delErr;
+        result[table] += idList.length;
+        if (idList.length < BATCH) return;
+      }
+    };
 
     if (targetScope === "all" || targetScope === "message_logs") {
-      const { data, error, count } = await admin
-        .from("message_logs")
-        .delete({ count: "exact" })
-        .eq("user_id", user_id)
-        .gte("created_at", fromIso)
-        .lte("created_at", toIso)
-        .select("id");
-      if (error) throw error;
-      result.message_logs = count ?? data?.length ?? 0;
+      await batchDelete("message_logs", "created_at");
     }
-
     if (targetScope === "all" || targetScope === "incoming_messages") {
-      const { data, error, count } = await admin
-        .from("incoming_messages")
-        .delete({ count: "exact" })
-        .eq("user_id", user_id)
-        .gte("received_at", fromIso)
-        .lte("received_at", toIso)
-        .select("id");
-      if (error) throw error;
-      result.incoming_messages = count ?? data?.length ?? 0;
+      await batchDelete("incoming_messages", "received_at");
     }
 
     await admin.from("activity_logs").insert({
@@ -101,7 +111,7 @@ Deno.serve(async (req) => {
       metadata: { from: fromIso, to: toIso, scope: targetScope, deleted: result },
     });
 
-    return new Response(JSON.stringify({ success: true, deleted: result }), {
+    return new Response(JSON.stringify({ success: true, deleted: result, truncated }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
