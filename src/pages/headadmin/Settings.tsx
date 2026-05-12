@@ -184,6 +184,22 @@ export default function HeadAdminSettings() {
           <DialogFooter><Button variant="outline" onClick={() => setConfirm(null)}>Cancel</Button><Button variant="destructive" onClick={danger}>Confirm</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={bulkConfirm} onOpenChange={setBulkConfirm}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Delete messages permanently?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This will permanently delete <strong>{bulk.scope}</strong> for the selected user
+            between <strong>{bulk.from_date}</strong> and <strong>{bulk.to_date}</strong>. Cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkConfirm(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={runBulkDelete} disabled={bulkLoading}>
+              {bulkLoading ? "Deleting..." : "Yes, delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
