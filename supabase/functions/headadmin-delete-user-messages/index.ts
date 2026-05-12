@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
       metadata: { from: fromIso, to: toIso, scope: targetScope, deleted: result },
     });
 
-    return new Response(JSON.stringify({ success: true, deleted: result }), {
+    return new Response(JSON.stringify({ success: true, deleted: result, truncated }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
