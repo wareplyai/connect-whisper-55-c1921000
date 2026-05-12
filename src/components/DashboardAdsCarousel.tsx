@@ -46,7 +46,12 @@ export const DashboardAdsCarousel = () => {
   return (
     <div className="hidden lg:block relative w-[320px] h-[120px] rounded-xl overflow-hidden border border-emerald-400/20 bg-black/20 shadow-[0_8px_30px_-10px_hsl(142_70%_30%/0.5)] group">
       {ad.link_url ? (
-        <a href={ad.link_url} target="_blank" rel="noopener noreferrer" className="block">
+        <a
+          href={/^https?:\/\//i.test(ad.link_url) ? ad.link_url : `https://${ad.link_url}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+        >
           {inner}
         </a>
       ) : inner}
