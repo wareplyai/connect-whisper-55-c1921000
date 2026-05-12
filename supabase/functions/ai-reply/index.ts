@@ -725,7 +725,7 @@ async function resolveFromGatewayMessageInfo(opts: {
 }
 
 export function gatewayBaseVariants(gateway: string): string[] {
-  const clean = String(gateway || "https://alvi-waapi.duckdns.org/waapi").replace(/\/+$/, "");
+  const clean = String(gateway || "https://api.wareplyai.com").replace(/\/+$/, "");
   const variants = [clean];
   try {
     const url = new URL(clean);
@@ -1165,7 +1165,7 @@ Deno.serve(async (req) => {
       return jsonResp({ error: "Invalid webhook secret" }, 401);
     }
 
-    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org/waapi";
+    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com";
     const rawPayload = (body?.raw_payload as Record<string, unknown> | undefined) || {};
     const rawKey = (rawPayload?.key as Record<string, unknown> | undefined) || {};
 

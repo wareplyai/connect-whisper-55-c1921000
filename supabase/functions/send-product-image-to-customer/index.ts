@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
       return json({ error: "Session/product owner mismatch" }, 403);
     }
 
-    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org/waapi";
+    const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com";
     const candidate = String(to).replace(/\D/g, "") || String(to);
     const captionText = caption ||
       `🛍️ ${product.name}\n💰 মূল্য: ৳${product.price}${product.description ? `\n📝 ${product.description}` : ""}`;

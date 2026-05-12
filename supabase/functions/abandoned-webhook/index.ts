@@ -37,7 +37,7 @@ function normalizePhone(raw: string, country: string): string {
 }
 
 async function sendWhatsApp(sessionId: string, apiToken: string | null, phone: string, message: string) {
-  const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://alvi-waapi.duckdns.org/waapi";
+  const GATEWAY = Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com";
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
   const r = await fetch(`${GATEWAY}/api/session/${sessionId}/send`, {

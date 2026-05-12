@@ -36,7 +36,7 @@ export function CodeTabs({ snippets, defaultLang = "Bash" }: { snippets: Snippet
 }
 
 export function buildSnippets(method: string, path: string, body?: Record<string, unknown>): Snippet[] {
-  const url = `https://www.wareplyai.com${path}`;
+  const url = `https://api.wareplyai.com${path}`;
   const json = body ? JSON.stringify(body, null, 2) : "";
   const hasBody = !!body;
 
