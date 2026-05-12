@@ -113,6 +113,56 @@ export default function HeadAdminSettings() {
         <div className="mt-4"><Button onClick={savePlatform}>Save Settings</Button></div>
       </Card>
 
+      <Card className="p-5 bg-card border-border">
+        <div className="flex items-center gap-2 mb-4">
+          <Trash2 className="h-5 w-5 text-primary" />
+          <h3 className="text-sm font-semibold">Bulk Delete User Messages</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Select a user and date range. Permanently removes message_logs and incoming_messages
+          to free Supabase storage.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <Label>User</Label>
+            <Select value={bulk.user_id} onValueChange={(v) => setBulk({ ...bulk, user_id: v })}>
+              <SelectTrigger><SelectValue placeholder="Select user..." /></SelectTrigger>
+              <SelectContent>
+                {users.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.email} {u.full_name ? `(${u.full_name})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>From Date</Label>
+            <Input type="date" value={bulk.from_date} onChange={(e) => setBulk({ ...bulk, from_date: e.target.value })} />
+          </div>
+          <div>
+            <Label>To Date</Label>
+            <Input type="date" value={bulk.to_date} onChange={(e) => setBulk({ ...bulk, to_date: e.target.value })} />
+          </div>
+          <div className="md:col-span-2">
+            <Label>Scope</Label>
+            <Select value={bulk.scope} onValueChange={(v) => setBulk({ ...bulk, scope: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All (logs + incoming)</SelectItem>
+                <SelectItem value="message_logs">Message Logs only</SelectItem>
+                <SelectItem value="incoming_messages">Incoming Messages only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="mt-4">
+          <Button variant="destructive" onClick={() => setBulkConfirm(true)} disabled={!bulk.user_id || bulkLoading}>
+            {bulkLoading ? "Deleting..." : "Delete Messages"}
+          </Button>
+        </div>
+      </Card>
+
       <Card className="p-5 bg-destructive/5 border-destructive/30">
         <div className="flex items-center gap-2 mb-4"><AlertTriangle className="h-5 w-5 text-destructive" /><h3 className="text-sm font-semibold text-destructive">Danger Zone</h3></div>
         <div className="space-y-3">
