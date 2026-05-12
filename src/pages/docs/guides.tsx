@@ -79,7 +79,7 @@ export const guides: Record<string, Guide> = {
           {" "}<strong>Sessions</strong> page (per-session <Code>api_token</Code>).
         </CalloutBox>
 
-        <CalloutBox type="success" title="✨ Universal API (Recommended) — No Session ID needed!">
+        <CalloutBox type="tip" title="✨ Universal API (Recommended) — No Session ID needed!">
           Just use your <Code>api_token</Code> — the system auto-detects your session. Perfect for n8n, Zapier, Make.
           Base URL: <Code>https://mjbxpjaxczoycrcjajio.supabase.co/functions/v1</Code>
         </CalloutBox>
