@@ -46,7 +46,12 @@ export default function HeadAdminSettings() {
     setBulkConfirm(false);
     if (error) { toast.error(error.message); return; }
     const d = (data as any)?.deleted || {};
-    toast.success(`Deleted: logs=${d.message_logs ?? 0}, incoming=${d.incoming_messages ?? 0}`);
+    const msg = `Deleted: logs=${d.message_logs ?? 0}, incoming=${d.incoming_messages ?? 0}`;
+    if ((data as any)?.truncated) {
+      toast.warning(msg + " — more remain, click Delete again to continue.");
+    } else {
+      toast.success(msg);
+    }
   };
 
   const saveProfile = async () => {
