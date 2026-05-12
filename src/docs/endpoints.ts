@@ -19,6 +19,7 @@ export type EndpointDoc = {
   title: string;
   method: HttpMethod;
   path: string;
+  baseUrl?: string;
   oneLiner: string;
   description: string;
   authNote?: "session" | "personal";
