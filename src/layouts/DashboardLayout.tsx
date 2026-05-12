@@ -136,6 +136,19 @@ const DashboardLayout = () => {
               );
             })}
 
+            {!access.ecommerce && (
+              <div
+                aria-disabled="true"
+                title="Locked — contact admin to enable"
+                className={`${linkBase} ${linkIdle} opacity-50 cursor-not-allowed select-none`}
+              >
+                <span className="grid place-items-center h-7 w-7 rounded-lg bg-white/[0.03] text-emerald-200/70">
+                  <ShoppingBasket className="h-4 w-4" />
+                </span>
+                <span className="flex-1">E-Commerce</span>
+                <Lock className="h-3.5 w-3.5 text-emerald-200/60" />
+              </div>
+            )}
             {access.ecommerce && (
               <>
                 <button
