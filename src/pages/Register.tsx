@@ -23,7 +23,7 @@ const Register = () => {
     if (!agree) return toast.error("Please accept the Terms and Privacy Policy");
     if (password !== confirm) return toast.error("Passwords do not match");
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -36,6 +36,12 @@ const Register = () => {
       return toast.error(friendlyError(error));
     }
     setLoading(false);
+    // If email confirmation is enabled, no session is returned on signUp
+    if (!data.session) {
+      toast.success("Confirmation email sent! Please check your inbox and click the link to activate your account.");
+      nav("/login");
+      return;
+    }
     toast.success("Account created!");
     nav("/dashboard");
   };
