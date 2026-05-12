@@ -2,16 +2,28 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type FeatureKey = "ai_agent" | "auto_replies" | "abandoned_cart" | "ecommerce";
+export type FeatureKey =
+  | "ai_agent"
+  | "auto_replies"
+  | "abandoned_cart"
+  | "ecommerce"
+  | "products"
+  | "product_image_match"
+  | "woocommerce";
+
+const DEFAULTS: Record<FeatureKey, boolean> = {
+  ai_agent: true,
+  auto_replies: true,
+  abandoned_cart: true,
+  ecommerce: true,
+  products: true,
+  product_image_match: true,
+  woocommerce: true,
+};
 
 export function useFeatureAccess() {
   const { user } = useAuth();
-  const [access, setAccess] = useState<Record<FeatureKey, boolean>>({
-    ai_agent: true,
-    auto_replies: true,
-    abandoned_cart: true,
-    ecommerce: true,
-  });
+  const [access, setAccess] = useState<Record<FeatureKey, boolean>>({ ...DEFAULTS });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,7 +39,7 @@ export function useFeatureAccess() {
           : Promise.resolve({ data: [] as any[] }),
       ]);
       if (cancelled) return;
-      const result: Record<FeatureKey, boolean> = { ai_agent: true, auto_replies: true, abandoned_cart: true, ecommerce: true };
+      const result: Record<FeatureKey, boolean> = { ...DEFAULTS };
       (globals || []).forEach((g: any) => {
         if (g.feature in result) result[g.feature as FeatureKey] = !!g.show_to_users;
       });
