@@ -118,7 +118,7 @@ export const guides: Record<string, Guide> = {
         <hr className="my-8 border-border" />
 
         <H2>Advanced — Direct Gateway (Session ID required)</H2>
-        <P className="text-sm text-muted-foreground">Use these only if you need bulk-send or session listing — otherwise use Universal endpoints above.</P>
+        <P>Use these only if you need bulk-send or session listing — otherwise use Universal endpoints above.</P>
 
         <H2>Authentication</H2>
         <P>Every request must include this header:</P>
