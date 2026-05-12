@@ -22,7 +22,7 @@ const apiKey = 'your_api_key_here';
 
 // Example of sending a text message with an image
 const response = await axios.post(
-  'https://wareplyai.com/api/send-message',
+  'https://api.wareplyai.com/api/session/{sessionId}/send',
   {
     // Message details including recipient and content
     to: '1234567890',
@@ -43,7 +43,7 @@ use GuzzleHttp\\Client;
 $apiKey = 'your_api_key_here';
 
 // Example of sending a text message
-$response = (new Client())->post('https://wareplyai.com/api/send-message', [
+$response = (new Client())->post('https://api.wareplyai.com/api/session/{sessionId}/send', [
     'headers' => [
         // Authorization header with Bearer token
         'Authorization' => 'Bearer ' . $apiKey
@@ -61,7 +61,7 @@ api_key = 'your_api_key_here'
 
 # Example of sending a location message
 response = httpx.post(
-    'https://wareplyai.com/api/send-message',
+    'https://api.wareplyai.com/api/session/{sessionId}/send',
     json={
         # Recipient and location data
         'to': '1234567890',
@@ -95,7 +95,7 @@ var payload = new StringContent(
 );
 
 var response = await client.PostAsync(
-    "https://wareplyai.com/api/send-message",
+    "https://api.wareplyai.com/api/session/{sessionId}/send",
     payload
 );`,
   Java: `import kong.unirest.Unirest;
@@ -105,7 +105,7 @@ import org.json.JSONObject;
 String apiKey = "your_api_key_here";
 
 // Example of sending a video message
-var response = Unirest.post("https://wareplyai.com/api/send-message")
+var response = Unirest.post("https://api.wareplyai.com/api/session/{sessionId}/send")
     .header("Authorization", "Bearer " + apiKey)
     .body(new JSONObject()
         // Recipient and video URL
@@ -116,7 +116,7 @@ var response = Unirest.post("https://wareplyai.com/api/send-message")
 API_KEY="your_api_key_here"
 
 # Example of sending a text message
-curl -X POST https://wareplyai.com/api/send-message \\
+curl -X POST https://api.wareplyai.com/api/session/{sessionId}/send \\
   -H "Authorization: Bearer $API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
