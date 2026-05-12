@@ -79,6 +79,47 @@ export const guides: Record<string, Guide> = {
           {" "}<strong>Sessions</strong> page (per-session <Code>api_token</Code>).
         </CalloutBox>
 
+        <CalloutBox type="tip" title="✨ Universal API (Recommended) — No Session ID needed!">
+          Just use your <Code>api_token</Code> — the system auto-detects your session. Perfect for n8n, Zapier, Make.
+          Base URL: <Code>https://mjbxpjaxczoycrcjajio.supabase.co/functions/v1</Code>
+        </CalloutBox>
+
+        <H2>🚀 Universal Endpoints (Token Only)</H2>
+        <P>Send Text:</P>
+        <Pre>{`curl -X POST "https://mjbxpjaxczoycrcjajio.supabase.co/functions/v1/wa-send-text" \\
+  -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "to": "8801XXXXXXXXX", "message": "Hello!" }'`}</Pre>
+
+        <P>Send Image:</P>
+        <Pre>{`curl -X POST "https://mjbxpjaxczoycrcjajio.supabase.co/functions/v1/wa-send-image" \\
+  -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "to": "8801XXXXXXXXX", "imageUrl": "https://your-image.jpg", "caption": "Hi" }'`}</Pre>
+
+        <P>Send Voice:</P>
+        <Pre>{`curl -X POST "https://mjbxpjaxczoycrcjajio.supabase.co/functions/v1/wa-send-voice" \\
+  -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "to": "8801XXXXXXXXX", "audioUrl": "https://your-audio.ogg" }'`}</Pre>
+
+        <P>Send Video:</P>
+        <Pre>{`curl -X POST "https://mjbxpjaxczoycrcjajio.supabase.co/functions/v1/wa-send-video" \\
+  -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "to": "8801XXXXXXXXX", "videoUrl": "https://your-video.mp4", "caption": "Hi" }'`}</Pre>
+
+        <P>Send Document / PDF:</P>
+        <Pre>{`curl -X POST "https://mjbxpjaxczoycrcjajio.supabase.co/functions/v1/wa-send-document" \\
+  -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "to": "8801XXXXXXXXX", "documentUrl": "https://your-file.pdf", "filename": "invoice.pdf" }'`}</Pre>
+
+        <hr className="my-8 border-border" />
+
+        <H2>Advanced — Direct Gateway (Session ID required)</H2>
+        <P>Use these only if you need bulk-send or session listing — otherwise use Universal endpoints above.</P>
+
         <H2>Authentication</H2>
         <P>Every request must include this header:</P>
         <Pre>{`Authorization: Bearer YOUR_SESSION_API_TOKEN`}</Pre>

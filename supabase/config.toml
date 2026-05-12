@@ -50,3 +50,18 @@ verify_jwt = false
 
 [functions.send-product-image-to-customer]
 verify_jwt = false
+
+[functions.wa-send-text]
+verify_jwt = false
+
+[functions.wa-send-image]
+verify_jwt = false
+
+[functions.wa-send-voice]
+verify_jwt = false
+
+[functions.wa-send-video]
+verify_jwt = false
+
+[functions.wa-send-document]
+verify_jwt = false
