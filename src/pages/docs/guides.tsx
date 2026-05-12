@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { CalloutBox } from "@/components/docs/CalloutBox";
 import { CodeTabs, buildSnippets } from "@/components/docs/CodeTabs";
+import { CopyButton } from "@/components/docs/CopyButton";
 
 type Guide = { category: string; title: string; intro: string; content: ReactNode };
 
@@ -10,9 +11,12 @@ const Code = ({ children }: { children: ReactNode }) => (
   <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px] text-info">{children}</code>
 );
 const Pre = ({ children }: { children: string }) => (
-  <pre className="my-4 overflow-x-auto rounded-lg border bg-code p-4 font-mono text-[13px] leading-relaxed text-code-foreground">
-    <code>{children}</code>
-  </pre>
+  <div className="group relative my-4 overflow-hidden rounded-lg border bg-code">
+    <CopyButton text={children} className="absolute right-2 top-2 z-10 bg-code/80 backdrop-blur hover:bg-code" />
+    <pre className="overflow-x-auto p-4 pr-20 font-mono text-[13px] leading-relaxed text-code-foreground">
+      <code>{children}</code>
+    </pre>
+  </div>
 );
 const UL = ({ children }: { children: ReactNode }) => <ul className="mb-3 list-disc space-y-1.5 pl-6 text-[15px] text-foreground/90">{children}</ul>;
 const OL = ({ children }: { children: ReactNode }) => <ol className="mb-3 list-decimal space-y-1.5 pl-6 text-[15px] text-foreground/90">{children}</ol>;
