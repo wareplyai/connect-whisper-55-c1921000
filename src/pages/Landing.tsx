@@ -262,59 +262,6 @@ const Landing = () => {
         {/* Noise overlay */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 hero-noise mix-blend-overlay opacity-[0.05] dark:opacity-[0.07]" />
 
-        {/* Sweeping curved arc (DevHush-style) */}
-        <svg
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-0 w-full hero-sweep"
-          viewBox="0 0 1440 420"
-          preserveAspectRatio="none"
-          fill="none"
-        >
-          <defs>
-            <linearGradient id="sweepGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0" />
-              <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.95" />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
-            </linearGradient>
-            <linearGradient id="sweepGrad2" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0" />
-              <stop offset="50%" stopColor="hsl(142 70% 70%)" stopOpacity="0.7" />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
-            </linearGradient>
-            <filter id="sweepGlow" x="-10%" y="-50%" width="120%" height="200%">
-              <feGaussianBlur stdDeviation="14" />
-            </filter>
-          </defs>
-          {/* Soft glow underlay */}
-          <path
-            d="M0,180 C360,420 1080,420 1440,180 L1440,420 L0,420 Z"
-            fill="hsl(var(--primary) / 0.18)"
-            filter="url(#sweepGlow)"
-          />
-          {/* Main curve stroke */}
-          <path
-            d="M0,200 C360,440 1080,440 1440,200"
-            stroke="url(#sweepGrad)"
-            strokeWidth="3"
-            fill="none"
-          />
-          {/* Highlight curve */}
-          <path
-            d="M0,210 C360,430 1080,430 1440,210"
-            stroke="url(#sweepGrad2)"
-            strokeWidth="1.5"
-            fill="none"
-            opacity="0.8"
-          />
-          {/* Faint outer arc */}
-          <path
-            d="M0,150 C380,420 1060,420 1440,150"
-            stroke="hsl(var(--primary) / 0.18)"
-            strokeWidth="1"
-            fill="none"
-          />
-        </svg>
-
         {/* Bottom fade into page */}
         <div
           aria-hidden="true"
