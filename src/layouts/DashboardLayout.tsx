@@ -97,24 +97,44 @@ const DashboardLayout = () => {
         <div className="relative z-10 flex-1 min-h-0 px-3 py-4 flex flex-col overflow-y-auto scrollbar-thin">
           <p className="px-3 mb-2 text-[10px] uppercase tracking-[0.18em] font-semibold text-emerald-300/60">Platform</p>
           <nav className="space-y-1">
-            {visibleNav.map((n) => (
-              <NavLink
-                key={n.to}
-                to={n.to}
-                end={n.end}
-                className={({ isActive }) => `${linkBase} ${isActive ? linkActive : linkIdle}`}
-              >
-                {({ isActive }) => (
-                  <>
-                    {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-gradient-to-b from-emerald-300 to-emerald-500 shadow-[0_0_12px_hsl(150_80%_55%/0.8)]" />}
-                    <span className={`grid place-items-center h-7 w-7 rounded-lg transition-all ${isActive ? "bg-emerald-400/20 text-emerald-200" : "bg-white/[0.03] text-emerald-200/70 group-hover:bg-white/[0.06] group-hover:text-emerald-100"}`}>
+            {visibleNav.map((n) => {
+              const locked = isLocked(n.to);
+              if (locked) {
+                return (
+                  <div
+                    key={n.to}
+                    aria-disabled="true"
+                    title="Locked — contact admin to enable"
+                    className={`${linkBase} ${linkIdle} opacity-50 cursor-not-allowed select-none`}
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <span className="grid place-items-center h-7 w-7 rounded-lg bg-white/[0.03] text-emerald-200/70">
                       <n.icon className="h-4 w-4" />
                     </span>
                     <span className="flex-1">{n.label}</span>
-                  </>
-                )}
-              </NavLink>
-            ))}
+                    <Lock className="h-3.5 w-3.5 text-emerald-200/60" />
+                  </div>
+                );
+              }
+              return (
+                <NavLink
+                  key={n.to}
+                  to={n.to}
+                  end={n.end}
+                  className={({ isActive }) => `${linkBase} ${isActive ? linkActive : linkIdle}`}
+                >
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-gradient-to-b from-emerald-300 to-emerald-500 shadow-[0_0_12px_hsl(150_80%_55%/0.8)]" />}
+                      <span className={`grid place-items-center h-7 w-7 rounded-lg transition-all ${isActive ? "bg-emerald-400/20 text-emerald-200" : "bg-white/[0.03] text-emerald-200/70 group-hover:bg-white/[0.06] group-hover:text-emerald-100"}`}>
+                        <n.icon className="h-4 w-4" />
+                      </span>
+                      <span className="flex-1">{n.label}</span>
+                    </>
+                  )}
+                </NavLink>
+              );
+            })}
 
             {access.ecommerce && (
               <>
