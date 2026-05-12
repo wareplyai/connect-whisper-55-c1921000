@@ -15,6 +15,9 @@ verify_jwt = false
 [functions.headadmin-delete-user]
 verify_jwt = false
 
+[functions.headadmin-delete-user-messages]
+verify_jwt = false
+
 [functions.headadmin-update-user-plan]
 verify_jwt = false
 

@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useHeadAdmin } from "@/contexts/HeadAdminContext";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
 
 export default function HeadAdminSettings() {
   const { headAdmin, refresh } = useHeadAdmin();
@@ -22,6 +23,31 @@ export default function HeadAdminSettings() {
     };
   });
   const [confirm, setConfirm] = useState<null | "logs" | "sessions">(null);
+
+  // Bulk delete user messages
+  const [users, setUsers] = useState<Array<{ id: string; email: string; full_name: string | null }>>([]);
+  const today = new Date().toISOString().slice(0, 10);
+  const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const [bulk, setBulk] = useState({ user_id: "", from_date: monthAgo, to_date: today, scope: "all" });
+  const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  useEffect(() => {
+    supabase.from("profiles").select("id,email,full_name").order("email").then(({ data }) => {
+      setUsers((data as any) || []);
+    });
+  }, []);
+
+  const runBulkDelete = async () => {
+    if (!bulk.user_id) { toast.error("Select a user"); return; }
+    setBulkLoading(true);
+    const { data, error } = await supabase.functions.invoke("headadmin-delete-user-messages", { body: bulk });
+    setBulkLoading(false);
+    setBulkConfirm(false);
+    if (error) { toast.error(error.message); return; }
+    const d = (data as any)?.deleted || {};
+    toast.success(`Deleted: logs=${d.message_logs ?? 0}, incoming=${d.incoming_messages ?? 0}`);
+  };
 
   const saveProfile = async () => {
     if (!headAdmin) return;
@@ -87,6 +113,56 @@ export default function HeadAdminSettings() {
         <div className="mt-4"><Button onClick={savePlatform}>Save Settings</Button></div>
       </Card>
 
+      <Card className="p-5 bg-card border-border">
+        <div className="flex items-center gap-2 mb-4">
+          <Trash2 className="h-5 w-5 text-primary" />
+          <h3 className="text-sm font-semibold">Bulk Delete User Messages</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Select a user and date range. Permanently removes message_logs and incoming_messages
+          to free Supabase storage.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <Label>User</Label>
+            <Select value={bulk.user_id} onValueChange={(v) => setBulk({ ...bulk, user_id: v })}>
+              <SelectTrigger><SelectValue placeholder="Select user..." /></SelectTrigger>
+              <SelectContent>
+                {users.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.email} {u.full_name ? `(${u.full_name})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>From Date</Label>
+            <Input type="date" value={bulk.from_date} onChange={(e) => setBulk({ ...bulk, from_date: e.target.value })} />
+          </div>
+          <div>
+            <Label>To Date</Label>
+            <Input type="date" value={bulk.to_date} onChange={(e) => setBulk({ ...bulk, to_date: e.target.value })} />
+          </div>
+          <div className="md:col-span-2">
+            <Label>Scope</Label>
+            <Select value={bulk.scope} onValueChange={(v) => setBulk({ ...bulk, scope: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All (logs + incoming)</SelectItem>
+                <SelectItem value="message_logs">Message Logs only</SelectItem>
+                <SelectItem value="incoming_messages">Incoming Messages only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="mt-4">
+          <Button variant="destructive" onClick={() => setBulkConfirm(true)} disabled={!bulk.user_id || bulkLoading}>
+            {bulkLoading ? "Deleting..." : "Delete Messages"}
+          </Button>
+        </div>
+      </Card>
+
       <Card className="p-5 bg-destructive/5 border-destructive/30">
         <div className="flex items-center gap-2 mb-4"><AlertTriangle className="h-5 w-5 text-destructive" /><h3 className="text-sm font-semibold text-destructive">Danger Zone</h3></div>
         <div className="space-y-3">
@@ -106,6 +182,22 @@ export default function HeadAdminSettings() {
           <DialogHeader><DialogTitle>Are you absolutely sure?</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">This action cannot be undone.</p>
           <DialogFooter><Button variant="outline" onClick={() => setConfirm(null)}>Cancel</Button><Button variant="destructive" onClick={danger}>Confirm</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkConfirm} onOpenChange={setBulkConfirm}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Delete messages permanently?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This will permanently delete <strong>{bulk.scope}</strong> for the selected user
+            between <strong>{bulk.from_date}</strong> and <strong>{bulk.to_date}</strong>. Cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkConfirm(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={runBulkDelete} disabled={bulkLoading}>
+              {bulkLoading ? "Deleting..." : "Yes, delete"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
