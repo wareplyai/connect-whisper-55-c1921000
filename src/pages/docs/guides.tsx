@@ -61,7 +61,7 @@ export const guides: Record<string, Guide> = {
 
         <H2>5. Send your first message</H2>
         <P>Once connected, use your session API key to send a text message:</P>
-        <CodeTabs snippets={buildSnippets("POST", "/api/send-message", { to: "+1234567890", text: "Hello world!" })} />
+        <CodeTabs snippets={buildSnippets("POST", "/api/session/{sessionId}/send", { to: "8801712345678", message: "Hello world!" })} />
 
         <CalloutBox type="tip">You're done — every other endpoint follows the same pattern. Browse the sidebar to explore.</CalloutBox>
       </>
