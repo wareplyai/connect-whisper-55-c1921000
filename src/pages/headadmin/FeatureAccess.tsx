@@ -11,12 +11,12 @@ type FeatureKey = "ai_agent" | "auto_replies" | "abandoned_cart" | "ecommerce" |
 const FEATURES: { key: FeatureKey; label: string; icon: any }[] = [
   { key: "ai_agent", label: "AI Agent", icon: Bot },
   { key: "auto_replies", label: "Auto-Replies", icon: MessageSquareText },
-  { key: "abandoned_cart", label: "Incomplete (Abandoned Cart)", icon: ShoppingBag },
-  { key: "ecommerce", label: "E-Commerce (CRM Suite)", icon: ShoppingBasket },
+  { key: "abandoned_cart", label: "Incomplete", icon: ShoppingBag },
+  { key: "ecommerce", label: "E-Commerce", icon: ShoppingBasket },
   { key: "products", label: "Products", icon: Package },
-  { key: "product_image_match", label: "Product Image Match", icon: ImageIcon },
+  { key: "product_image_match", label: "Image Match", icon: ImageIcon },
   { key: "woocommerce", label: "WooCommerce", icon: ShoppingCart },
-  { key: "behavior", label: "Behavior & Anti-Ban", icon: ShieldCheck },
+  { key: "behavior", label: "Behavior", icon: ShieldCheck },
 ];
 
 const DEFAULT_GLOBALS: Record<FeatureKey, boolean> = { ai_agent: true, auto_replies: true, abandoned_cart: true, ecommerce: true, products: true, product_image_match: true, woocommerce: true, behavior: true };
