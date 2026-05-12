@@ -19,6 +19,7 @@ export type EndpointDoc = {
   title: string;
   method: HttpMethod;
   path: string;
+  baseUrl?: string;
   oneLiner: string;
   description: string;
   authNote?: "session" | "personal";
@@ -272,49 +273,55 @@ export const endpoints: EndpointDoc[] = [
   },
   {
     slug: "messages/send-text", category: "Messages", title: "Send Text Message",
-    method: "POST", path: "/api/send-message",
+    method: "POST", path: "/v1/wa-send-text", baseUrl: "https://send.wareplyai.com",
     oneLiner: "Sends a plain text message to a recipient.",
-    description: "Sends a plain text WhatsApp message. The text content is provided in the `text` field. Required when no media, contact or location is sent.",
-    ...sendStandard("/api/send-message", [
-      { name: "text", type: "string", required: true, description: "The text content of the message. Required if no media/contact/location is sent." },
-    ], { text: "Hello from WaReply AI!" }),
+    description: "Sends a plain text WhatsApp message via the Universal API. Auth uses your session `api_token` — no session ID needed (auto-detected from token).",
+    authNote: "session",
+    ...sendStandard("/v1/wa-send-text", [
+      { name: "message", type: "string", required: true, description: "The text content of the message." },
+    ], { message: "Hello from WaReply AI!" }),
   },
   {
     slug: "messages/send-image", category: "Messages", title: "Send Image Message",
-    method: "POST", path: "/api/send-message",
+    method: "POST", path: "/v1/wa-send-image", baseUrl: "https://send.wareplyai.com",
     oneLiner: "Sends a message with an image attached via a URL.",
-    description: "Sends an image message. The image is referenced by a publicly reachable URL passed in `imageUrl`. An optional caption can be included as `text`.",
-    ...sendStandard("/api/send-message", [
+    description: "Sends an image message via the Universal API. The image is referenced by a publicly reachable URL passed in `imageUrl`. An optional caption can be included.",
+    authNote: "session",
+    ...sendStandard("/v1/wa-send-image", [
       { name: "imageUrl", type: "string", required: true, description: "Public URL of the image to send." },
-      { name: "text", type: "string", required: false, description: "Optional caption for the image." },
-    ], { imageUrl: "https://example.com/image.jpg", text: "Look at this!" }),
+      { name: "caption", type: "string", required: false, description: "Optional caption for the image." },
+    ], { imageUrl: "https://example.com/image.jpg", caption: "Look at this!" }),
   },
   {
     slug: "messages/send-video", category: "Messages", title: "Send Video Message",
-    method: "POST", path: "/api/send-message",
+    method: "POST", path: "/v1/wa-send-video", baseUrl: "https://send.wareplyai.com",
     oneLiner: "Sends a message with a video attached via a URL.",
-    description: "Sends a video message via a publicly reachable URL. Optionally include a caption with the `text` field.",
-    ...sendStandard("/api/send-message", [
+    description: "Sends a video message via the Universal API. The video must be reachable via a public URL. Optionally include a caption.",
+    authNote: "session",
+    ...sendStandard("/v1/wa-send-video", [
       { name: "videoUrl", type: "string", required: true, description: "Public URL of the video file." },
-      { name: "text", type: "string", required: false, description: "Optional caption." },
-    ], { videoUrl: "https://example.com/video.mp4" }),
+      { name: "caption", type: "string", required: false, description: "Optional caption." },
+    ], { videoUrl: "https://example.com/video.mp4", caption: "Watch this!" }),
   },
   {
     slug: "messages/send-document", category: "Messages", title: "Send Document Message",
-    method: "POST", path: "/api/send-message",
+    method: "POST", path: "/v1/wa-send-document", baseUrl: "https://send.wareplyai.com",
     oneLiner: "Sends a message with a document attached via a URL.",
-    description: "Sends a document message. The document is referenced by URL. Provide the optional `fileName` field to control the filename shown to the recipient.",
-    ...sendStandard("/api/send-message", [
+    description: "Sends a document (PDF/DOC/etc.) via the Universal API. Provide a public URL plus an optional `filename` shown to the recipient.",
+    authNote: "session",
+    ...sendStandard("/v1/wa-send-document", [
       { name: "documentUrl", type: "string", required: true, description: "Public URL of the document." },
-      { name: "fileName", type: "string", required: false, description: "Filename shown to the recipient." },
-    ], { documentUrl: "https://example.com/file.pdf", fileName: "Invoice.pdf" }),
+      { name: "filename", type: "string", required: false, description: "Filename shown to the recipient." },
+      { name: "caption", type: "string", required: false, description: "Optional caption." },
+    ], { documentUrl: "https://example.com/file.pdf", filename: "Invoice.pdf", caption: "Your invoice" }),
   },
   {
     slug: "messages/send-audio", category: "Messages", title: "Send Audio Message",
-    method: "POST", path: "/api/send-message",
-    oneLiner: "Sends a message with an audio file attached via a URL.",
-    description: "Sends an audio message. The audio file must be reachable via the supplied URL. Use OGG/Opus for voice notes for best compatibility.",
-    ...sendStandard("/api/send-message", [
+    method: "POST", path: "/v1/wa-send-voice", baseUrl: "https://send.wareplyai.com",
+    oneLiner: "Sends a voice / audio message via a URL.",
+    description: "Sends a voice note via the Universal API. The audio file must be reachable via the supplied URL. Use OGG/Opus or MP3 for best compatibility.",
+    authNote: "session",
+    ...sendStandard("/v1/wa-send-voice", [
       { name: "audioUrl", type: "string", required: true, description: "Public URL of the audio file." },
     ], { audioUrl: "https://example.com/voice.ogg" }),
   },

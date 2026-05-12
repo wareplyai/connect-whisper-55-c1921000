@@ -30,7 +30,7 @@ export default function DocsPage() {
   }
 
   if (ep) {
-    const snippets = buildSnippets(ep.method, ep.path, ep.exampleBody);
+    const snippets = buildSnippets(ep.method, ep.path, ep.exampleBody, ep.baseUrl);
     return (
       <article>
         <PageBreadcrumb category={ep.category} />
