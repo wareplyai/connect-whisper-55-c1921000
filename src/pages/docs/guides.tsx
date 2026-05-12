@@ -81,36 +81,36 @@ export const guides: Record<string, Guide> = {
 
         <CalloutBox type="tip" title="✨ Universal API (Recommended) — No Session ID needed!">
           Just use your <Code>api_token</Code> — the system auto-detects your session. Perfect for n8n, Zapier, Make.
-          Base URL: <Code>https://api.wareplyai.com/v1</Code>
+          Base URL: <Code>https://send.wareplyai.com/v1</Code>
         </CalloutBox>
 
         <H2>🚀 Universal Endpoints (Token Only)</H2>
         <P>Send Text:</P>
-        <Pre>{`curl -X POST "https://api.wareplyai.com/v1/wa-send-text" \\
+        <Pre>{`curl -X POST "https://send.wareplyai.com/v1/wa-send-text" \\
   -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{ "to": "8801XXXXXXXXX", "message": "Hello!" }'`}</Pre>
 
         <P>Send Image:</P>
-        <Pre>{`curl -X POST "https://api.wareplyai.com/v1/wa-send-image" \\
+        <Pre>{`curl -X POST "https://send.wareplyai.com/v1/wa-send-image" \\
   -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{ "to": "8801XXXXXXXXX", "imageUrl": "https://your-image.jpg", "caption": "Hi" }'`}</Pre>
 
         <P>Send Voice:</P>
-        <Pre>{`curl -X POST "https://api.wareplyai.com/v1/wa-send-voice" \\
+        <Pre>{`curl -X POST "https://send.wareplyai.com/v1/wa-send-voice" \\
   -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{ "to": "8801XXXXXXXXX", "audioUrl": "https://your-audio.ogg" }'`}</Pre>
 
         <P>Send Video:</P>
-        <Pre>{`curl -X POST "https://api.wareplyai.com/v1/wa-send-video" \\
+        <Pre>{`curl -X POST "https://send.wareplyai.com/v1/wa-send-video" \\
   -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{ "to": "8801XXXXXXXXX", "videoUrl": "https://your-video.mp4", "caption": "Hi" }'`}</Pre>
 
         <P>Send Document / PDF:</P>
-        <Pre>{`curl -X POST "https://api.wareplyai.com/v1/wa-send-document" \\
+        <Pre>{`curl -X POST "https://send.wareplyai.com/v1/wa-send-document" \\
   -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{ "to": "8801XXXXXXXXX", "documentUrl": "https://your-file.pdf", "filename": "invoice.pdf" }'`}</Pre>
