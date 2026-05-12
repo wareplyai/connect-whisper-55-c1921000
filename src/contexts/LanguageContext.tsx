@@ -28,7 +28,7 @@ export const translations: Dict = {
     en: "Send unlimited messages, manage multiple sessions, and power smart AI-driven conversations — all without per-message fees or complicated setup.",
     bn: "আনলিমিটেড মেসেজ পাঠান, একাধিক সেশন ম্যানেজ করুন এবং স্মার্ট AI-চালিত কথোপকথন চালান — কোনো পার-মেসেজ ফি বা জটিল সেটআপ ছাড়াই।",
   },
-  "hero.cta.trial": { en: "Start Your Free Trial", bn: "ফ্রি ট্রায়াল শুরু করুন" },
+  "hero.cta.trial": { en: "Get Started", bn: "শুরু করুন" },
   "hero.cta.docs": { en: "View API Docs", bn: "API ডকস দেখুন" },
   "hero.trust.noCard": { en: "No credit card required", bn: "ক্রেডিট কার্ড লাগবে না" },
   "hero.trust.trial": { en: "3-day free trial", bn: "৩ দিনের ফ্রি ট্রায়াল" },
