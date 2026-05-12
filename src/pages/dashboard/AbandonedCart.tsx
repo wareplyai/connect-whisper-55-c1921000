@@ -109,7 +109,8 @@ export default function AbandonedCart() {
     toast({ title: `${label} copied` });
   };
 
-  const webhookUrl = conn ? `${SUPABASE_URL}/functions/v1/abandoned-webhook?token=${conn.webhook_secret}` : "";
+  const BRAND_BACKEND = (import.meta.env.VITE_BACKEND_URL as string) || "https://api.wareplyai.com";
+  const webhookUrl = conn ? `${BRAND_BACKEND}/webhook/abandoned-cart?token=${conn.webhook_secret}` : "";
   const incomplete = orders.filter((o) => o.status === "incomplete");
   const completed = orders.filter((o) => o.status === "completed");
 
