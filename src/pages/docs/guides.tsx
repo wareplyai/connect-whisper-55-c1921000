@@ -81,7 +81,7 @@ export const guides: Record<string, Guide> = {
 
         <CalloutBox type="tip" title="✨ Universal API (Recommended) — No Session ID needed!">
           Just use your <Code>api_token</Code> — the system auto-detects your session. Perfect for n8n, Zapier, Make.
-          Base URL: <Code>https://mjbxpjaxczoycrcjajio.supabase.co/functions/v1</Code>
+          Base URL: <Code>https://api.wareplyai.com/v1</Code>
         </CalloutBox>
 
         <H2>🚀 Universal Endpoints (Token Only)</H2>
