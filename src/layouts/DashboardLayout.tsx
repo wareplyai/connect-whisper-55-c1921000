@@ -51,6 +51,9 @@ const DashboardLayout = () => {
     if (n.to === "/dashboard/ai-agent") return access.ai_agent;
     if (n.to === "/dashboard/auto-replies") return access.auto_replies;
     if (n.to === "/dashboard/abandoned-cart") return access.abandoned_cart;
+    if (n.to === "/dashboard/products") return access.products;
+    if (n.to === "/dashboard/product-image-match") return access.product_image_match;
+    if (n.to === "/dashboard/woocommerce") return access.woocommerce;
     return true;
   });
   const location = useLocation();
