@@ -120,7 +120,7 @@ const App = () => (
                 <Route path="payments" element={<Payments />} />
                 <Route path="auto-replies" element={<FeatureGuard feature="auto_replies"><AutoReplies /></FeatureGuard>} />
                 <Route path="ai-agent" element={<FeatureGuard feature="ai_agent"><AIAgent /></FeatureGuard>} />
-                <Route path="behavior" element={<BehaviorSettings />} />
+                <Route path="behavior" element={<FeatureGuard feature="behavior"><BehaviorSettings /></FeatureGuard>} />
                 <Route path="products" element={<FeatureGuard feature="products"><Products /></FeatureGuard>} />
                 <Route path="product-image-match" element={<FeatureGuard feature="product_image_match"><ProductImageMatch /></FeatureGuard>} />
                 <Route path="woocommerce" element={<FeatureGuard feature="woocommerce"><WooCommerce /></FeatureGuard>} />
