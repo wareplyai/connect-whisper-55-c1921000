@@ -14,6 +14,7 @@ export const navigation: NavCategory[] = [
     label: "Getting Started",
     items: [
       { title: "Getting Started with WaReply AI", slug: "getting-started/intro" },
+      { title: "Working API Curls (Quick Reference)", slug: "getting-started/working-curls", isNew: true },
       { title: "Using Our API with Postman", slug: "getting-started/postman" },
       { title: "How To Receive Messages and Media", slug: "getting-started/receive-messages" },
       { title: "Model Context Protocol (MCP) Integration", slug: "getting-started/mcp", isNew: true },
