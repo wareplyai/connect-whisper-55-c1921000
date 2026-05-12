@@ -121,9 +121,9 @@ const App = () => (
                 <Route path="auto-replies" element={<FeatureGuard feature="auto_replies"><AutoReplies /></FeatureGuard>} />
                 <Route path="ai-agent" element={<FeatureGuard feature="ai_agent"><AIAgent /></FeatureGuard>} />
                 <Route path="behavior" element={<BehaviorSettings />} />
-                <Route path="products" element={<Products />} />
-                <Route path="product-image-match" element={<ProductImageMatch />} />
-                <Route path="woocommerce" element={<WooCommerce />} />
+                <Route path="products" element={<FeatureGuard feature="products"><Products /></FeatureGuard>} />
+                <Route path="product-image-match" element={<FeatureGuard feature="product_image_match"><ProductImageMatch /></FeatureGuard>} />
+                <Route path="woocommerce" element={<FeatureGuard feature="woocommerce"><WooCommerce /></FeatureGuard>} />
                 <Route path="abandoned-cart" element={<FeatureGuard feature="abandoned_cart"><AbandonedCart /></FeatureGuard>} />
                 <Route path="crm" element={<CRMDashboard />} />
                 <Route path="crm/orders" element={<CRMOrders />} />
