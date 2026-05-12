@@ -2,7 +2,7 @@
 const BASE_URL =
   import.meta.env.VITE_GATEWAY_URL ||
   import.meta.env.VITE_BACKEND_URL ||
-  "https://alvi-waapi.duckdns.org/waapi";
+  "https://api.wareplyai.com";
 
 async function request<T = any>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
