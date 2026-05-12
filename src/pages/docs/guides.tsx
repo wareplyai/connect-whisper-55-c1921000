@@ -63,6 +63,134 @@ export const guides: Record<string, Guide> = {
       </>
     ),
   },
+  "getting-started/working-curls": {
+    category: "Getting Started",
+    title: "Working API Curls (Quick Reference)",
+    intro:
+      "Copy-paste ready curl commands for every supported endpoint on the WaReply AI WhatsApp gateway. Replace {sessionId} and the Bearer token with your own values.",
+    content: (
+      <>
+        <CalloutBox type="tip" title="Base URL">
+          All requests use <Code>https://api.wareplyai.com</Code>. Your session API token is found on the
+          {" "}<strong>Sessions</strong> page (per-session <Code>api_token</Code>).
+        </CalloutBox>
+
+        <H2>Authentication</H2>
+        <P>Every request must include this header:</P>
+        <Pre>{`Authorization: Bearer YOUR_SESSION_API_TOKEN`}</Pre>
+
+        <H2>1. Send Text Message</H2>
+        <Pre>{`curl -X POST "https://api.wareplyai.com/api/session/{sessionId}/send" \\
+  -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "to": "8801XXXXXXXXX",
+    "message": "Hello! This is a test message."
+  }'`}</Pre>
+
+        <H2>2. Send Image</H2>
+        <Pre>{`curl -X POST "https://api.wareplyai.com/api/session/{sessionId}/send-image" \\
+  -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "to": "8801XXXXXXXXX",
+    "imageUrl": "https://your-image-url.jpg",
+    "caption": "Optional caption here"
+  }'`}</Pre>
+
+        <H2>3. Send Voice</H2>
+        <Pre>{`curl -X POST "https://api.wareplyai.com/api/session/{sessionId}/send-voice" \\
+  -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "to": "8801XXXXXXXXX",
+    "audioUrl": "https://your-audio-url.ogg"
+  }'`}</Pre>
+
+        <H2>4. Send Video</H2>
+        <Pre>{`curl -X POST "https://api.wareplyai.com/api/session/{sessionId}/send-video" \\
+  -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "to": "8801XXXXXXXXX",
+    "videoUrl": "https://your-video-url.mp4",
+    "caption": "Optional caption"
+  }'`}</Pre>
+
+        <H2>5. Send Document</H2>
+        <Pre>{`curl -X POST "https://api.wareplyai.com/api/session/{sessionId}/send-document" \\
+  -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "to": "8801XXXXXXXXX",
+    "documentUrl": "https://your-file-url.pdf",
+    "filename": "document.pdf",
+    "caption": "Optional caption"
+  }'`}</Pre>
+
+        <H2>6. Send Bulk Messages (with delay)</H2>
+        <Pre>{`curl -X POST "https://api.wareplyai.com/api/session/{sessionId}/send-bulk" \\
+  -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "recipients": ["8801XXXXXXXXX", "8801XXXXXXXXX"],
+    "message": "Hello! Bulk message test.",
+    "delay": 10
+  }'`}</Pre>
+
+        <H2>7. Bulk Send Image</H2>
+        <Pre>{`curl -X POST "https://api.wareplyai.com/api/session/{sessionId}/send-bulk" \\
+  -H "Authorization: Bearer YOUR_SESSION_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "recipients": ["8801XXXXXXXXX", "8801XXXXXXXXX"],
+    "imageUrl": "https://your-image-url.jpg",
+    "caption": "Product offer!",
+    "delay": 10
+  }'`}</Pre>
+
+        <H2>8. Check Session Status</H2>
+        <Pre>{`curl -X GET "https://api.wareplyai.com/api/session/{sessionId}/status" \\
+  -H "Authorization: Bearer YOUR_SESSION_API_TOKEN"`}</Pre>
+
+        <H2>9. List All Sessions</H2>
+        <Pre>{`curl -X GET "https://api.wareplyai.com/api/sessions" \\
+  -H "Authorization: Bearer YOUR_SESSION_API_TOKEN"`}</Pre>
+
+        <H2>10. Health Check</H2>
+        <Pre>{`curl -X GET "https://api.wareplyai.com/health"`}</Pre>
+
+        <H2>n8n / Make / Zapier Integration</H2>
+        <P>Use an <strong>HTTP Request</strong> node with these settings:</P>
+        <UL>
+          <li><strong>Method:</strong> POST</li>
+          <li><strong>URL:</strong> <Code>https://api.wareplyai.com/api/session/&#123;sessionId&#125;/send</Code></li>
+          <li><strong>Header:</strong> <Code>Authorization: Bearer YOUR_SESSION_API_TOKEN</Code></li>
+          <li><strong>Body (JSON):</strong></li>
+        </UL>
+        <Pre>{`{
+  "to": "{{ $json.phone }}",
+  "message": "{{ $json.message }}"
+}`}</Pre>
+
+        <H2>Important Notes</H2>
+        <UL>
+          <li><strong>Phone format:</strong> <Code>8801XXXXXXXXX</Code> — no <Code>+</Code> sign, no spaces.</li>
+          <li>All media URLs must be publicly accessible.</li>
+          <li><strong>Image formats:</strong> jpg, jpeg, png, webp, gif</li>
+          <li><strong>Video format:</strong> mp4</li>
+          <li><strong>Audio format:</strong> ogg, mp3</li>
+          <li><strong>Document formats:</strong> pdf, docx, xlsx, csv, zip</li>
+          <li><strong>Bulk delay:</strong> 10 seconds is the recommended minimum.</li>
+          <li><strong>Bulk recipients:</strong> max 100 per request.</li>
+        </UL>
+
+        <CalloutBox type="warning" title="Keep your token safe">
+          Never commit your session API token to public repositories or expose it in frontend code.
+        </CalloutBox>
+      </>
+    ),
+  },
   "getting-started/postman": {
     category: "Getting Started",
     title: "Using Our API with Postman",
