@@ -1612,11 +1612,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    const webhookImageUrl = isImageMessage
-      ? (imageUrl || bodyMediaUrl || await findRecentWhatsappImageUrl(admin, fromNumber) || "")
+    const storedMessage = messageId ? await admin
+      .from("incoming_messages")
+      .select("media_url, image_url, mimetype, caption, image_caption")
+      .eq("id", messageId)
+      .maybeSingle() : { data: null };
+    const storedMediaUrl = String((storedMessage as any)?.data?.media_url || (storedMessage as any)?.data?.image_url || "").trim();
+    const effectiveImageMessage = isImageMessage || /^image\//i.test(String((storedMessage as any)?.data?.mimetype || ""));
+    const webhookImageUrl = effectiveImageMessage
+      ? (storedMediaUrl || imageUrl || bodyMediaUrl || await findRecentWhatsappImageUrl(admin, fromNumber) || "")
       : "";
     const webhookMediaUrl = bodyMediaUrl || webhookImageUrl || "";
-    const webhookMimetype = imageMimetype || findMimetype(body) || (isImageMessage ? "image/jpeg" : null);
+    const webhookMimetype = imageMimetype || String((storedMessage as any)?.data?.mimetype || "") || findMimetype(body) || (effectiveImageMessage ? "image/jpeg" : null);
     const webhookMediaKey = findStringByKeys(body, ["mediaKey", "media_key"]);
     const webhookDirectPath = findStringByKeys(body, ["directPath", "direct_path"]);
     const webhookSourceMessageId = String(
@@ -1642,19 +1649,19 @@ Deno.serve(async (req) => {
         from_number: fromNumber,
         message: messageText,
         message_text: messageText,
-        message_type: messageType,
+        message_type: effectiveImageMessage ? "image" : messageType,
         media_url: webhookMediaUrl || null,
         mediaUrl: webhookMediaUrl || null,
         image_url: webhookImageUrl || null,
         imageUrl: webhookImageUrl || null,
         mimetype: webhookMimetype,
-        media_type: isImageMessage ? "image" : messageType,
+        media_type: effectiveImageMessage ? "image" : messageType,
         mediaKey: webhookMediaKey,
         media_key: webhookMediaKey,
         directPath: webhookDirectPath,
         direct_path: webhookDirectPath,
-        caption: imageCaption || null,
-        image_caption: imageCaption || null,
+        caption: imageCaption || (storedMessage as any)?.data?.caption || null,
+        image_caption: imageCaption || (storedMessage as any)?.data?.image_caption || null,
         is_group: isGroup,
         received_at: new Date().toISOString(),
         raw_payload: body.raw_payload ?? body,
