@@ -1996,8 +1996,11 @@ Deno.serve(async (req) => {
             .eq("id", ruleHit.id);
           await admin.from("message_logs").insert({
             user_id: userId, session_id: sessionId, to_number: sendResult.to,
-            message_type: "text", payload: { text: reply, auto_reply: true, source: "keyword_rule", rule_id: ruleHit.id },
+            message_type: ruleImageUrl ? "image" : "text",
+            payload: { text: reply, auto_reply: true, source: "keyword_rule", rule_id: ruleHit.id, image_url: ruleImageUrl || null, gateway_response: sendResult.data },
             status: "sent",
+            image_url: ruleImageUrl || null,
+            image_caption: ruleImageUrl ? reply : null,
           });
         }
         return jsonResp({ ok: true, reply, sent: sendResult.ok, send_error: sendResult.error, sent_to: sendResult.to, source: "keyword_rule", rule_id: ruleHit.id, message_id: messageId });
