@@ -653,34 +653,34 @@ const Landing = () => {
               { icon: MessageSquare, title: t("how.s2.t"), desc: t("how.s2.d") },
               { icon: BarChart3, title: t("how.s3.t"), desc: t("how.s3.d") },
             ].map((s, i) => (
-              <div
-                key={i}
-                className="hiw-card group relative rounded-2xl border border-border bg-card/60 backdrop-blur p-7 overflow-hidden transition-all duration-500 hover:border-primary/50 hover:-translate-y-1 hover:shadow-[0_20px_60px_-20px_hsl(var(--primary)/0.4)]"
-                style={{ animationDelay: `${i * 0.15}s` }}
-              >
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 hiw-shimmer pointer-events-none" />
-                <div className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <div key={i} className="relative group" style={{ animationDelay: `${i * 0.15}s` }}>
+                <div
+                  className="hiw-card relative rounded-2xl border border-border bg-card/60 backdrop-blur p-7 overflow-hidden transition-all duration-500 group-hover:border-primary/50 group-hover:-translate-y-1 group-hover:shadow-[0_20px_60px_-20px_hsl(var(--primary)/0.4)]"
+                >
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 hiw-shimmer pointer-events-none" />
+                  <div className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
-                <div className="absolute top-5 right-5 text-5xl font-bold text-primary/10 group-hover:text-primary/20 transition-colors leading-none select-none">
-                  0{i + 1}
-                </div>
-
-                <div className="relative inline-flex">
-                  <div className="hiw-ring relative grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30">
-                    <s.icon className="h-6 w-6 text-primary hiw-icon-float" />
+                  <div className="absolute top-5 right-5 text-5xl font-bold text-primary/10 group-hover:text-primary/20 transition-colors leading-none select-none">
+                    0{i + 1}
                   </div>
-                </div>
 
-                <h3 className="mt-6 font-semibold text-xl tracking-tight">{s.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+                  <div className="relative inline-flex">
+                    <div className="hiw-ring relative grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30">
+                      <s.icon className="h-6 w-6 text-primary hiw-icon-float" />
+                    </div>
+                  </div>
+
+                  <h3 className="mt-6 font-semibold text-xl tracking-tight">{s.title}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+                </div>
 
                 {i < 2 && (
-                  <div className="hidden md:flex absolute top-1/2 -right-5 -translate-y-1/2 z-10 h-10 w-10 items-center justify-center rounded-full bg-background border border-border text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <div className="hidden md:flex absolute top-1/2 -right-5 -translate-y-1/2 z-10 h-10 w-10 items-center justify-center rounded-full bg-background border border-border text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
                     <ArrowRight className="h-4 w-4" />
                   </div>
                 )}
-
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
               </div>
             ))}
           </div>
