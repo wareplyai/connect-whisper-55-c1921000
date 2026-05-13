@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
       session_id,
       to_number: candidate,
       message_type: "image",
-      payload: { url: product.image_url, caption: captionText, source: "ai_product_image", product_id: product.id },
+      payload: { url: product.image_url, caption: captionText, source: "ai_product_image", product_id: product.id, gateway_response: okData },
       status: "sent",
       image_url: product.image_url,
       image_caption: captionText,
