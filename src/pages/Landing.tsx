@@ -18,111 +18,132 @@ import dashboardPreview from "@/assets/dashboard-preview.png";
 const codeSamples: Record<string, string> = {
   JS: `import axios from 'axios';
 
-// Your API key for authentication
-const apiKey = 'your_api_key_here';
+// Your API token from WaReply AI dashboard
+const apiToken = 'YOUR_API_TOKEN';
 
-// Example of sending a text message with an image
+// Send a text message via WaReply AI gateway
 const response = await axios.post(
-  'https://api.wareplyai.com/api/session/{sessionId}/send',
+  'https://send.wareplyai.com/v1/wa-send-text',
   {
-    // Message details including recipient and content
-    to: '1234567890',
-    text: 'Hello from WaReply AI!',
-    imageUrl: 'https://example.com/images/image.png'
+    to: '8801712345678',
+    message: 'Hello from WaReply AI!'
   },
   {
     headers: {
-      // Authorization header with Bearer token
-      Authorization: \`Bearer \${apiKey}\`
+      Authorization: \`Bearer \${apiToken}\`,
+      'Content-Type': 'application/json'
     }
   }
+);
+
+// Send an image
+await axios.post(
+  'https://send.wareplyai.com/v1/wa-send-image',
+  {
+    to: '8801712345678',
+    imageUrl: 'https://your-image.jpg',
+    caption: 'এটা একটা ছবি'
+  },
+  { headers: { Authorization: \`Bearer \${apiToken}\` } }
 );`,
   PHP: `<?php
 use GuzzleHttp\\Client;
 
-// Your API key for authentication
-$apiKey = 'your_api_key_here';
+// Your API token from WaReply AI dashboard
+$apiToken = 'YOUR_API_TOKEN';
 
-// Example of sending a text message
-$response = (new Client())->post('https://api.wareplyai.com/api/session/{sessionId}/send', [
+// Send a text message
+$response = (new Client())->post('https://send.wareplyai.com/v1/wa-send-text', [
     'headers' => [
-        // Authorization header with Bearer token
-        'Authorization' => 'Bearer ' . $apiKey
+        'Authorization' => 'Bearer ' . $apiToken,
+        'Content-Type'  => 'application/json'
     ],
     'json' => [
-        // Recipient and message content
-        'to' => '1234567890',
-        'text' => 'Hello from WaReply AI!'
+        'to'      => '8801712345678',
+        'message' => 'Hello from WaReply AI!'
     ]
 ]);`,
-  Python: `import httpx
+  Python: `import requests
 
-# Your API key for authentication
-api_key = 'your_api_key_here'
+# Your API token from WaReply AI dashboard
+api_token = 'YOUR_API_TOKEN'
 
-# Example of sending a location message
-response = httpx.post(
-    'https://api.wareplyai.com/api/session/{sessionId}/send',
+# Send a text message
+response = requests.post(
+    'https://send.wareplyai.com/v1/wa-send-text',
     json={
-        # Recipient and location data
-        'to': '1234567890',
-        'location': {
-            'latitude': 37.7749,
-            'longitude': -122.4194
-        }
+        'to': '8801712345678',
+        'message': 'Hello from WaReply AI!'
     },
     headers={
-        # Authorization header with Bearer token
-        'Authorization': f'Bearer {api_key}'
+        'Authorization': f'Bearer {api_token}',
+        'Content-Type': 'application/json'
     }
-)`,
+)
+print(response.json())`,
   "C#": `using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 
-// Your API key for authentication
-string apiKey = "your_api_key_here";
+// Your API token from WaReply AI dashboard
+string apiToken = "YOUR_API_TOKEN";
 
 var client = new HttpClient();
 client.DefaultRequestHeaders.Authorization =
-    // Authorization header with Bearer token
-    new AuthenticationHeaderValue("Bearer", apiKey);
+    new AuthenticationHeaderValue("Bearer", apiToken);
 
-// Example of sending a text message
 var payload = new StringContent(
-    "{\\"to\\":\\"1234567890\\",\\"text\\":\\"Hello from WaReply AI!\\"}",
+    "{\\"to\\":\\"8801712345678\\",\\"message\\":\\"Hello from WaReply AI!\\"}",
     Encoding.UTF8,
     "application/json"
 );
 
 var response = await client.PostAsync(
-    "https://api.wareplyai.com/api/session/{sessionId}/send",
+    "https://send.wareplyai.com/v1/wa-send-text",
     payload
 );`,
   Java: `import kong.unirest.Unirest;
 import org.json.JSONObject;
 
-// Your API key for authentication
-String apiKey = "your_api_key_here";
+// Your API token from WaReply AI dashboard
+String apiToken = "YOUR_API_TOKEN";
 
-// Example of sending a video message
-var response = Unirest.post("https://api.wareplyai.com/api/session/{sessionId}/send")
-    .header("Authorization", "Bearer " + apiKey)
+var response = Unirest.post("https://send.wareplyai.com/v1/wa-send-text")
+    .header("Authorization", "Bearer " + apiToken)
+    .header("Content-Type", "application/json")
     .body(new JSONObject()
-        // Recipient and video URL
-        .put("to", "1234567890")
-        .put("videoUrl", "https://example.com/videos/video.mp4"))
+        .put("to", "8801712345678")
+        .put("message", "Hello from WaReply AI!"))
     .asJson();`,
-  cURL: `# Your API key for authentication
-API_KEY="your_api_key_here"
+  cURL: `# Your API token from WaReply AI dashboard
+API_TOKEN="YOUR_API_TOKEN"
 
-# Example of sending a text message
-curl -X POST https://api.wareplyai.com/api/session/{sessionId}/send \\
-  -H "Authorization: Bearer $API_KEY" \\
+# Send a text message
+curl -X POST "https://send.wareplyai.com/v1/wa-send-text" \\
+  -H "Authorization: Bearer $API_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "to": "1234567890",
-    "text": "Hello from WaReply AI!"
+    "to": "8801712345678",
+    "message": "Hello from WaReply AI!"
+  }'
+
+# Send an image
+curl -X POST "https://send.wareplyai.com/v1/wa-send-image" \\
+  -H "Authorization: Bearer $API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "to": "8801712345678",
+    "imageUrl": "https://your-image.jpg",
+    "caption": "এটা একটা ছবি"
+  }'
+
+# Send voice/audio
+curl -X POST "https://send.wareplyai.com/v1/wa-send-voice" \\
+  -H "Authorization: Bearer $API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "to": "8801712345678",
+    "audioUrl": "https://your-audio.mp3"
   }'`,
 };
 
