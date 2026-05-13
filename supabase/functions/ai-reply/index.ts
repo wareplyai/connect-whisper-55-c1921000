@@ -419,6 +419,21 @@ function findMimetype(value: unknown, depth = 0): string | null {
   return null;
 }
 
+function findStringByKeys(value: unknown, keys: string[], depth = 0): string | null {
+  if (depth > 8 || value == null) return null;
+  if (typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  const wanted = new Set(keys.map((k) => k.toLowerCase()));
+  for (const [key, val] of Object.entries(obj)) {
+    if (wanted.has(key.toLowerCase()) && typeof val === "string" && val.trim()) return val.trim();
+  }
+  for (const val of Object.values(obj)) {
+    const found = findStringByKeys(val, keys, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
 // Best-effort: ask the Baileys gateway for the media bytes of a given message id.
 // Returns a data: URL we can pass to the vision model, or null if every endpoint fails.
 async function fetchGatewayMediaDataUrl(opts: {
@@ -1581,6 +1596,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    const webhookImageUrl = isImageMessage
+      ? (imageUrl || bodyMediaUrl || await findRecentWhatsappImageUrl(admin, fromNumber) || "")
+      : "";
+    const webhookMediaUrl = bodyMediaUrl || webhookImageUrl || "";
+    const webhookMimetype = imageMimetype || findMimetype(body) || (isImageMessage ? "image/jpeg" : null);
+    const webhookMediaKey = findStringByKeys(body, ["mediaKey", "media_key"]);
+    const webhookDirectPath = findStringByKeys(body, ["directPath", "direct_path"]);
+    const webhookSourceMessageId = String(
+      (body as any).message_id || (body as any).messageId || (rawKey as any)?.id || (rawPayload as any)?.messageId || ""
+    ).trim() || null;
+    const webhookRemoteJid = String(
+      (body as any).target_jid || (body as any).remoteJid || (rawKey as any)?.remoteJid || (rawPayload as any)?.remoteJid || ""
+    ).trim() || null;
+
     await deliverUserWebhook({
       admin,
       session,
@@ -1589,11 +1618,27 @@ Deno.serve(async (req) => {
       payload: {
         session_id: sessionId,
         message_id: messageId,
+        source_message_id: webhookSourceMessageId,
+        whatsapp_message_id: webhookSourceMessageId,
+        target_jid: webhookRemoteJid,
+        remote_jid: webhookRemoteJid,
         from: fromNumber,
         from_number: fromNumber,
         message: messageText,
         message_text: messageText,
         message_type: messageType,
+        media_url: webhookMediaUrl || null,
+        mediaUrl: webhookMediaUrl || null,
+        image_url: webhookImageUrl || null,
+        imageUrl: webhookImageUrl || null,
+        mimetype: webhookMimetype,
+        media_type: isImageMessage ? "image" : messageType,
+        mediaKey: webhookMediaKey,
+        media_key: webhookMediaKey,
+        directPath: webhookDirectPath,
+        direct_path: webhookDirectPath,
+        caption: imageCaption || null,
+        image_caption: imageCaption || null,
         is_group: isGroup,
         received_at: new Date().toISOString(),
         raw_payload: body.raw_payload ?? body,
