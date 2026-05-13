@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Edit, X, Plus, Loader2, Star } from "lucide-react";
+import { Edit, X, Plus, Loader2, Star, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
 
 type Plan = {
   id: string;
