@@ -468,8 +468,10 @@ function extractQuotedMessageId(value: unknown, depth = 0): string | null {
 }
 
 async function findQuotedOrRecentOutgoingImage(admin: any, sessionId: string, fromNumber: string, quotedMessageId?: string | null) {
+  const qid = String(quotedMessageId || "").trim();
+  // 1) Outgoing images we sent to this customer (message_logs)
   try {
-    const base = admin
+    const { data } = await admin
       .from("message_logs")
       .select("id, image_url, image_caption, payload, created_at, message_type")
       .eq("session_id", sessionId)
@@ -477,28 +479,67 @@ async function findQuotedOrRecentOutgoingImage(admin: any, sessionId: string, fr
       .not("image_url", "is", null)
       .order("created_at", { ascending: false })
       .limit(20);
-    const { data } = await base;
     const rows = Array.isArray(data) ? data : [];
-    if (!rows.length) return null;
-    const qid = String(quotedMessageId || "").trim();
+    if (rows.length) {
+      const matched = qid ? rows.find((row: any) => {
+        const p = row?.payload || {};
+        const ids = [p.gateway_message_id, p.message_id, p.id, p.key?.id, p.result?.key?.id, p.result?.id, p.gateway_response?.key?.id, p.gateway_response?.id];
+        return ids.some((id) => id && String(id) === qid);
+      }) : null;
+      const row = matched || rows[0];
+      if (row?.image_url) {
+        return {
+          image_url: row.image_url,
+          caption: row.image_caption || row.payload?.caption || null,
+          message_log_id: row.id,
+          matched_by_quote: Boolean(matched),
+          quoted_message_id: qid || null,
+          source: "outgoing_message_logs",
+        };
+      }
+    }
+  } catch (e) {
+    console.log("[ai-reply] outgoing image lookup failed:", (e as Error)?.message);
+  }
+
+  // 2) Most recent INCOMING image from the same customer (incoming_messages).
+  // Covers: customer earlier sent product photo, now follows up with text like
+  // "ata koto" / "dam koto" without re-attaching the image.
+  try {
+    const { data } = await admin
+      .from("incoming_messages")
+      .select("id, image_url, media_url, image_caption, caption, mimetype, received_at, raw_payload")
+      .eq("session_id", sessionId)
+      .eq("from_number", fromNumber)
+      .or("image_url.not.is.null,media_url.not.is.null")
+      .order("received_at", { ascending: false })
+      .limit(20);
+    const rows = Array.isArray(data) ? data : [];
     const matched = qid ? rows.find((row: any) => {
-      const p = row?.payload || {};
-      const ids = [p.gateway_message_id, p.message_id, p.id, p.key?.id, p.result?.key?.id, p.result?.id, p.gateway_response?.key?.id, p.gateway_response?.id];
+      const r = row?.raw_payload || {};
+      const ids = [row?.id, r.message_id, r.messageId, r.id, r.key?.id, r.rawKey?.id];
       return ids.some((id) => id && String(id) === qid);
     }) : null;
-    const row = matched || rows[0];
-    if (!row?.image_url) return null;
-    return {
-      image_url: row.image_url,
-      caption: row.image_caption || row.payload?.caption || null,
-      message_log_id: row.id,
-      matched_by_quote: Boolean(matched),
-      quoted_message_id: qid || null,
-    };
+    const row = matched || rows.find((r: any) => {
+      const url = String(r?.image_url || r?.media_url || "");
+      const mt = String(r?.mimetype || "");
+      return /\.(jpe?g|png|webp|gif|bmp|heic)(\?|$)/i.test(url) || /^image\//i.test(mt);
+    });
+    const url = String(row?.image_url || row?.media_url || "").trim();
+    if (url) {
+      return {
+        image_url: url,
+        caption: row?.image_caption || row?.caption || null,
+        message_log_id: row?.id || null,
+        matched_by_quote: Boolean(matched),
+        quoted_message_id: qid || null,
+        source: "incoming_messages",
+      };
+    }
   } catch (e) {
-    console.log("[ai-reply] quoted/recent outgoing image lookup failed:", (e as Error)?.message);
-    return null;
+    console.log("[ai-reply] incoming image lookup failed:", (e as Error)?.message);
   }
+  return null;
 }
 
 // Best-effort: ask the Baileys gateway for the media bytes of a given message id.
