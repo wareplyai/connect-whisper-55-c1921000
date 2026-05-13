@@ -448,6 +448,59 @@ function normalizeIncomingMessageType(body: Record<string, unknown>, rawType: un
   return current || "text";
 }
 
+function extractQuotedMessageId(value: unknown, depth = 0): string | null {
+  if (depth > 8 || value == null || typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  for (const key of ["stanzaId", "quotedMessageId", "quoted_message_id", "quotedMsgId", "quoted_msg_id"]) {
+    const v = obj[key];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  const context = (obj.contextInfo || obj.context_info || obj.quoted || obj.quotedMessageContext) as unknown;
+  if (context && typeof context === "object") {
+    const found = extractQuotedMessageId(context, depth + 1);
+    if (found) return found;
+  }
+  for (const child of Object.values(obj)) {
+    const found = extractQuotedMessageId(child, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+async function findQuotedOrRecentOutgoingImage(admin: any, sessionId: string, fromNumber: string, quotedMessageId?: string | null) {
+  try {
+    const base = admin
+      .from("message_logs")
+      .select("id, image_url, image_caption, payload, created_at, message_type")
+      .eq("session_id", sessionId)
+      .eq("to_number", fromNumber)
+      .not("image_url", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    const { data } = await base;
+    const rows = Array.isArray(data) ? data : [];
+    if (!rows.length) return null;
+    const qid = String(quotedMessageId || "").trim();
+    const matched = qid ? rows.find((row: any) => {
+      const p = row?.payload || {};
+      const ids = [p.gateway_message_id, p.message_id, p.id, p.key?.id, p.result?.key?.id, p.result?.id, p.gateway_response?.key?.id, p.gateway_response?.id];
+      return ids.some((id) => id && String(id) === qid);
+    }) : null;
+    const row = matched || rows[0];
+    if (!row?.image_url) return null;
+    return {
+      image_url: row.image_url,
+      caption: row.image_caption || row.payload?.caption || null,
+      message_log_id: row.id,
+      matched_by_quote: Boolean(matched),
+      quoted_message_id: qid || null,
+    };
+  } catch (e) {
+    console.log("[ai-reply] quoted/recent outgoing image lookup failed:", (e as Error)?.message);
+    return null;
+  }
+}
+
 // Best-effort: ask the Baileys gateway for the media bytes of a given message id.
 // Returns a data: URL we can pass to the vision model, or null if every endpoint fails.
 async function fetchGatewayMediaDataUrl(opts: {
