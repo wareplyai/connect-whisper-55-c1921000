@@ -1596,6 +1596,14 @@ Deno.serve(async (req) => {
       }
     }
 
+    const webhookImageUrl = isImageMessage
+      ? (imageUrl || bodyMediaUrl || findRecentWhatsappImageUrl(admin, fromNumber))
+      : "";
+    const webhookMediaUrl = bodyMediaUrl || webhookImageUrl || "";
+    const webhookMimetype = imageMimetype || findMimetype(body) || (isImageMessage ? "image/jpeg" : null);
+    const webhookMediaKey = findStringByKeys(body, ["mediaKey", "media_key"]);
+    const webhookDirectPath = findStringByKeys(body, ["directPath", "direct_path"]);
+
     await deliverUserWebhook({
       admin,
       session,
@@ -1609,6 +1617,18 @@ Deno.serve(async (req) => {
         message: messageText,
         message_text: messageText,
         message_type: messageType,
+        media_url: webhookMediaUrl || null,
+        mediaUrl: webhookMediaUrl || null,
+        image_url: webhookImageUrl || null,
+        imageUrl: webhookImageUrl || null,
+        mimetype: webhookMimetype,
+        media_type: isImageMessage ? "image" : messageType,
+        mediaKey: webhookMediaKey,
+        media_key: webhookMediaKey,
+        directPath: webhookDirectPath,
+        direct_path: webhookDirectPath,
+        caption: imageCaption || null,
+        image_caption: imageCaption || null,
         is_group: isGroup,
         received_at: new Date().toISOString(),
         raw_payload: body.raw_payload ?? body,
