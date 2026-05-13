@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useLanguage } from "@/contexts/LanguageContext";
+import dashboardPreview from "@/assets/dashboard-preview.png";
 
 const codeSamples: Record<string, string> = {
   JS: `import axios from 'axios';
@@ -555,6 +556,84 @@ const Landing = () => {
                 <div className="mt-1 text-xs text-muted-foreground">{s.l}</div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* DASHBOARD PREVIEW */}
+      <section className="relative container py-20 md:py-28">
+        <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[520px] w-[920px] max-w-full rounded-full bg-primary/15 blur-[140px]" />
+          <div className="absolute top-10 left-1/4 h-72 w-72 rounded-full bg-primary/10 blur-[120px]" />
+          <div className="absolute bottom-10 right-1/4 h-72 w-72 rounded-full bg-[hsl(142_70%_42%)]/10 blur-[120px]" />
+        </div>
+
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-4">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            Live Dashboard
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight leading-[1.1]">
+            Your AI Command Center,{" "}
+            <span className="text-gradient">Beautifully Crafted</span>
+          </h2>
+          <p className="mt-4 text-muted-foreground">
+            Monitor conversations, orders, and customer signals in real-time from a single, premium dashboard.
+          </p>
+        </div>
+
+        <div className="relative mx-auto max-w-6xl group">
+          {/* Outer glow */}
+          <div className="absolute -inset-4 md:-inset-6 rounded-[28px] bg-gradient-to-br from-primary/40 via-primary/10 to-[hsl(142_70%_42%)]/30 blur-2xl opacity-60 group-hover:opacity-90 transition-opacity duration-700" />
+
+          {/* Browser frame */}
+          <div className="relative rounded-2xl md:rounded-[20px] border border-border/70 bg-card/80 backdrop-blur-xl shadow-[0_40px_120px_-20px_rgba(0,0,0,0.7)] overflow-hidden transition-transform duration-500 group-hover:-translate-y-1">
+            {/* Title bar */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60 bg-gradient-to-b from-background/80 to-background/40">
+              <div className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-full bg-red-500/90" />
+                <span className="h-3 w-3 rounded-full bg-yellow-500/90" />
+                <span className="h-3 w-3 rounded-full bg-green-500/90" />
+              </div>
+              <div className="hidden sm:flex flex-1 justify-center">
+                <div className="flex items-center gap-2 rounded-md bg-background/60 border border-border/50 px-3 py-1 text-[11px] text-muted-foreground">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  app.wareplyai.com/dashboard
+                </div>
+              </div>
+              <div className="w-12 hidden sm:block" />
+            </div>
+
+            {/* Image */}
+            <div className="relative">
+              <img
+                src={dashboardPreview}
+                alt="WaReply AI dashboard preview showing live message throughput, AI activity stream and order analytics"
+                loading="lazy"
+                className="block w-full h-auto"
+              />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent" />
+            </div>
+          </div>
+
+          {/* Floating mini-badges */}
+          <div className="hidden md:flex absolute -left-6 top-20 items-center gap-2 rounded-xl border border-border bg-card/90 backdrop-blur-md px-3 py-2 shadow-xl shadow-primary/10 hero-rise">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/15 text-primary">
+              <Bot className="h-4 w-4" />
+            </div>
+            <div>
+              <div className="text-[11px] font-semibold leading-tight">AI Engine</div>
+              <div className="text-[10px] text-muted-foreground">Online &amp; replying</div>
+            </div>
+          </div>
+          <div className="hidden md:flex absolute -right-6 bottom-24 items-center gap-2 rounded-xl border border-border bg-card/90 backdrop-blur-md px-3 py-2 shadow-xl shadow-primary/10 hero-rise">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-[hsl(142_70%_42%)]/15 text-[hsl(142_70%_42%)]">
+              <LineChart className="h-4 w-4" />
+            </div>
+            <div>
+              <div className="text-[11px] font-semibold leading-tight">100% Success</div>
+              <div className="text-[10px] text-muted-foreground">Last 7 days</div>
+            </div>
           </div>
         </div>
       </section>
