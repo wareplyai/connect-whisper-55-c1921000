@@ -1035,7 +1035,9 @@ Deno.serve(async (req) => {
     const sessionId = String(body.session_id || body.sessionId || "").trim();
     let rawText = String(body.message || body.text || body.message_text || "").trim();
     const isGroup = Boolean(body.is_group ?? body.isGroup ?? false) || hasGroupJid(body);
-    let messageType = String(body.message_type || "text");
+    let messageType = normalizeIncomingMessageType(body, body.message_type || body.messageType || body.type, rawText);
+    (body as any).message_type = messageType;
+    (body as any).media_type = messageType;
     const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false) ||
       hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
