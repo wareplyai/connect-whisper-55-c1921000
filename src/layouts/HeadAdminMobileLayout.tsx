@@ -9,6 +9,7 @@ import {
   subscribeToPush,
   unsubscribeFromPush,
 } from "@/lib/pushNotifications";
+import { attachHeadAdminPwaManifest } from "@/lib/pwaManifest";
 
 const tabs = [
   { to: "/headadmin/m", label: "Home", icon: Home, end: true },
