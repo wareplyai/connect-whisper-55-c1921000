@@ -419,6 +419,21 @@ function findMimetype(value: unknown, depth = 0): string | null {
   return null;
 }
 
+function findStringByKeys(value: unknown, keys: string[], depth = 0): string | null {
+  if (depth > 8 || value == null) return null;
+  if (typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  const wanted = new Set(keys.map((k) => k.toLowerCase()));
+  for (const [key, val] of Object.entries(obj)) {
+    if (wanted.has(key.toLowerCase()) && typeof val === "string" && val.trim()) return val.trim();
+  }
+  for (const val of Object.values(obj)) {
+    const found = findStringByKeys(val, keys, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
 // Best-effort: ask the Baileys gateway for the media bytes of a given message id.
 // Returns a data: URL we can pass to the vision model, or null if every endpoint fails.
 async function fetchGatewayMediaDataUrl(opts: {
