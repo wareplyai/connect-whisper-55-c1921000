@@ -1603,6 +1603,12 @@ Deno.serve(async (req) => {
     const webhookMimetype = imageMimetype || findMimetype(body) || (isImageMessage ? "image/jpeg" : null);
     const webhookMediaKey = findStringByKeys(body, ["mediaKey", "media_key"]);
     const webhookDirectPath = findStringByKeys(body, ["directPath", "direct_path"]);
+    const webhookSourceMessageId = String(
+      (body as any).message_id || (body as any).messageId || (rawKey as any)?.id || (rawPayload as any)?.messageId || ""
+    ).trim() || null;
+    const webhookRemoteJid = String(
+      (body as any).target_jid || (body as any).remoteJid || (rawKey as any)?.remoteJid || (rawPayload as any)?.remoteJid || ""
+    ).trim() || null;
 
     await deliverUserWebhook({
       admin,
@@ -1612,6 +1618,10 @@ Deno.serve(async (req) => {
       payload: {
         session_id: sessionId,
         message_id: messageId,
+        source_message_id: webhookSourceMessageId,
+        whatsapp_message_id: webhookSourceMessageId,
+        target_jid: webhookRemoteJid,
+        remote_jid: webhookRemoteJid,
         from: fromNumber,
         from_number: fromNumber,
         message: messageText,
