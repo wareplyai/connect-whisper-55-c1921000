@@ -29,9 +29,11 @@ export default function HeadAdminMobileLayout() {
     root.classList.remove("light");
     root.classList.add("dark");
     root.style.colorScheme = "dark";
+    const detachManifest = attachHeadAdminPwaManifest();
     return () => {
       root.className = prevClasses;
       root.style.colorScheme = prevColorScheme;
+      detachManifest();
     };
   }, []);
 
