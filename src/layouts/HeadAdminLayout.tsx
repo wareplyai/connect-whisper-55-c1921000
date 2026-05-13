@@ -69,6 +69,8 @@ export default function HeadAdminLayout() {
     n.end ? location.pathname === n.to : location.pathname.startsWith(n.to)
   );
 
+  useEffect(() => attachHeadAdminPwaManifest(), []);
+
   return (
     <div className="min-h-screen flex bg-background text-foreground">
       {/* Sidebar */}
