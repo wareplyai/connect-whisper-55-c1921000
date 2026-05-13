@@ -1597,7 +1597,7 @@ Deno.serve(async (req) => {
     }
 
     const webhookImageUrl = isImageMessage
-      ? (imageUrl || bodyMediaUrl || findRecentWhatsappImageUrl(admin, fromNumber))
+      ? (imageUrl || bodyMediaUrl || await findRecentWhatsappImageUrl(admin, fromNumber) || "")
       : "";
     const webhookMediaUrl = bodyMediaUrl || webhookImageUrl || "";
     const webhookMimetype = imageMimetype || findMimetype(body) || (isImageMessage ? "image/jpeg" : null);
