@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Edit, X, Plus, Loader2, Star } from "lucide-react";
+import { Edit, X, Plus, Loader2, Star, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
 
 type Plan = {
   id: string;
@@ -31,6 +31,17 @@ export default function HAPlanPricing() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Plan | null>(null);
   const [newFeature, setNewFeature] = useState("");
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  const reorderFeatures = (from: number, to: number) => {
+    if (!editing) return;
+    const features = [...(editing.features || [])];
+    if (from < 0 || from >= features.length || to < 0 || to >= features.length) return;
+    const [moved] = features.splice(from, 1);
+    features.splice(to, 0, moved);
+    setEditing({ ...editing, features });
+  };
 
   const load = async () => {
     setLoading(true);
@@ -132,13 +143,30 @@ export default function HAPlanPricing() {
               <div><Label>Button Label (CTA)</Label><Input value={editing.cta_label || ""} onChange={(e) => setEditing({ ...editing, cta_label: e.target.value })} placeholder="Choose Plan" /></div>
               <div>
                 <Label>Features</Label>
+                <p className="text-xs text-muted-foreground mt-0.5 mb-2">Drag to reorder, or use the up/down arrows.</p>
                 <div className="space-y-1 mt-1">
-                  {(editing.features || []).map((f, i) => (
-                    <div key={i} className="flex items-center gap-2 rounded-lg border border-border px-2 py-1 text-sm">
-                      <span className="flex-1">{f}</span>
-                      <button onClick={() => setEditing({ ...editing, features: editing.features!.filter((_, j) => j !== i) })}><X className="h-3 w-3" /></button>
-                    </div>
-                  ))}
+                  {(editing.features || []).map((f, i) => {
+                    const isDragging = dragIndex === i;
+                    const isOver = overIndex === i && dragIndex !== null && dragIndex !== i;
+                    return (
+                      <div
+                        key={i}
+                        draggable
+                        onDragStart={(e) => { setDragIndex(i); e.dataTransfer.effectAllowed = "move"; }}
+                        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (overIndex !== i) setOverIndex(i); }}
+                        onDragLeave={() => { if (overIndex === i) setOverIndex(null); }}
+                        onDrop={(e) => { e.preventDefault(); if (dragIndex !== null && dragIndex !== i) reorderFeatures(dragIndex, i); setDragIndex(null); setOverIndex(null); }}
+                        onDragEnd={() => { setDragIndex(null); setOverIndex(null); }}
+                        className={`flex items-center gap-2 rounded-lg border px-2 py-1 text-sm transition ${isDragging ? "opacity-40 border-primary" : isOver ? "border-primary bg-primary/5" : "border-border"}`}
+                      >
+                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing shrink-0" />
+                        <span className="flex-1">{f}</span>
+                        <button type="button" disabled={i === 0} onClick={() => reorderFeatures(i, i - 1)} className="p-1 rounded hover:bg-muted disabled:opacity-30" title="Move up"><ArrowUp className="h-3 w-3" /></button>
+                        <button type="button" disabled={i === (editing.features || []).length - 1} onClick={() => reorderFeatures(i, i + 1)} className="p-1 rounded hover:bg-muted disabled:opacity-30" title="Move down"><ArrowDown className="h-3 w-3" /></button>
+                        <button type="button" onClick={() => setEditing({ ...editing, features: editing.features!.filter((_, j) => j !== i) })} className="p-1 rounded hover:bg-muted" title="Remove"><X className="h-3 w-3" /></button>
+                      </div>
+                    );
+                  })}
                   <div className="flex gap-2">
                     <Input value={newFeature} onChange={(e) => setNewFeature(e.target.value)} placeholder="Add feature" />
                     <Button size="sm" onClick={() => { if (newFeature.trim()) { setEditing({ ...editing, features: [...(editing.features || []), newFeature.trim()] }); setNewFeature(""); } }}><Plus className="h-3 w-3" /></Button>
