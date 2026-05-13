@@ -9,6 +9,8 @@ import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useQuickStats } from "@/hooks/useHeadAdminStats";
 import { NotificationBell } from "@/components/headadmin/NotificationBell";
+import { useEffect } from "react";
+import { attachHeadAdminPwaManifest } from "@/lib/pwaManifest";
 
 const navGroups = [
   {
