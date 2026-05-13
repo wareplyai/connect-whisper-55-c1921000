@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
       session_id: sessionId,
       to_number: to,
       message_type: messageType,
-      payload: { url, caption: caption || null, filename: filename || null, kind, source: "manual" },
+      payload: { url, caption: caption || null, filename: filename || null, kind, source: "manual", gateway_response: data },
       status: "sent",
       image_url: kind === "image" ? url : null,
       image_caption: caption || null,
