@@ -434,6 +434,20 @@ function findStringByKeys(value: unknown, keys: string[], depth = 0): string | n
   return null;
 }
 
+function normalizeIncomingMessageType(body: Record<string, unknown>, rawType: unknown, messageText: string): string {
+  const current = String(rawType || "").trim().toLowerCase();
+  const mediaUrl = String((body as any).media_url || (body as any).mediaUrl || (body as any).image_url || (body as any).imageUrl || "").trim();
+  const mime = String(findStringByKeys(body, ["mimetype", "mime_type", "contentType", "content_type"]) || "").toLowerCase();
+
+  if (/image|photo|picture/.test(current) || /^image\//.test(mime) || payloadLooksLikeImage(body) || !!findImageUrl(body)) return "image";
+  if (/audio|voice|ptt/.test(current) || /^audio\//.test(mime) || /\.(ogg|oga|mp3|m4a|wav|aac)(\?|$)/i.test(mediaUrl)) return "audio";
+  if (/video/.test(current) || /^video\//.test(mime) || /\.(mp4|mov|webm|mkv)(\?|$)/i.test(mediaUrl)) return "video";
+  if (/document|file/.test(current) || /application\//.test(mime) || /\.(pdf|docx?|xlsx?|pptx?|csv|txt|zip)(\?|$)/i.test(mediaUrl)) return "document";
+  if (current && !["other", "unknown", "message"].includes(current)) return current;
+  if (messageText.trim() && !mediaUrl) return "text";
+  return current || "text";
+}
+
 // Best-effort: ask the Baileys gateway for the media bytes of a given message id.
 // Returns a data: URL we can pass to the vision model, or null if every endpoint fails.
 async function fetchGatewayMediaDataUrl(opts: {
@@ -1021,7 +1035,9 @@ Deno.serve(async (req) => {
     const sessionId = String(body.session_id || body.sessionId || "").trim();
     let rawText = String(body.message || body.text || body.message_text || "").trim();
     const isGroup = Boolean(body.is_group ?? body.isGroup ?? false) || hasGroupJid(body);
-    let messageType = String(body.message_type || "text");
+    let messageType = normalizeIncomingMessageType(body, body.message_type || body.messageType || body.type, rawText);
+    (body as any).message_type = messageType;
+    (body as any).media_type = messageType;
     const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false) ||
       hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
@@ -1596,11 +1612,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    const webhookImageUrl = isImageMessage
-      ? (imageUrl || bodyMediaUrl || await findRecentWhatsappImageUrl(admin, fromNumber) || "")
+    const storedMessage = messageId ? await admin
+      .from("incoming_messages")
+      .select("media_url, image_url, mimetype, caption, image_caption")
+      .eq("id", messageId)
+      .maybeSingle() : { data: null };
+    const storedMediaUrl = String((storedMessage as any)?.data?.media_url || (storedMessage as any)?.data?.image_url || "").trim();
+    const effectiveImageMessage = isImageMessage || /^image\//i.test(String((storedMessage as any)?.data?.mimetype || ""));
+    const webhookImageUrl = effectiveImageMessage
+      ? (storedMediaUrl || imageUrl || bodyMediaUrl || await findRecentWhatsappImageUrl(admin, fromNumber) || "")
       : "";
     const webhookMediaUrl = bodyMediaUrl || webhookImageUrl || "";
-    const webhookMimetype = imageMimetype || findMimetype(body) || (isImageMessage ? "image/jpeg" : null);
+    const webhookMimetype = imageMimetype || String((storedMessage as any)?.data?.mimetype || "") || findMimetype(body) || (effectiveImageMessage ? "image/jpeg" : null);
     const webhookMediaKey = findStringByKeys(body, ["mediaKey", "media_key"]);
     const webhookDirectPath = findStringByKeys(body, ["directPath", "direct_path"]);
     const webhookSourceMessageId = String(
@@ -1626,19 +1649,19 @@ Deno.serve(async (req) => {
         from_number: fromNumber,
         message: messageText,
         message_text: messageText,
-        message_type: messageType,
+        message_type: effectiveImageMessage ? "image" : messageType,
         media_url: webhookMediaUrl || null,
         mediaUrl: webhookMediaUrl || null,
         image_url: webhookImageUrl || null,
         imageUrl: webhookImageUrl || null,
         mimetype: webhookMimetype,
-        media_type: isImageMessage ? "image" : messageType,
+        media_type: effectiveImageMessage ? "image" : messageType,
         mediaKey: webhookMediaKey,
         media_key: webhookMediaKey,
         directPath: webhookDirectPath,
         direct_path: webhookDirectPath,
-        caption: imageCaption || null,
-        image_caption: imageCaption || null,
+        caption: imageCaption || (storedMessage as any)?.data?.caption || null,
+        image_caption: imageCaption || (storedMessage as any)?.data?.image_caption || null,
         is_group: isGroup,
         received_at: new Date().toISOString(),
         raw_payload: body.raw_payload ?? body,
