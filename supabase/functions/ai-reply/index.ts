@@ -434,6 +434,20 @@ function findStringByKeys(value: unknown, keys: string[], depth = 0): string | n
   return null;
 }
 
+function normalizeIncomingMessageType(body: Record<string, unknown>, rawType: unknown, messageText: string): string {
+  const current = String(rawType || "").trim().toLowerCase();
+  const mediaUrl = String((body as any).media_url || (body as any).mediaUrl || (body as any).image_url || (body as any).imageUrl || "").trim();
+  const mime = String(findStringByKeys(body, ["mimetype", "mime_type", "contentType", "content_type"]) || "").toLowerCase();
+
+  if (/image|photo|picture/.test(current) || /^image\//.test(mime) || payloadLooksLikeImage(body) || !!findImageUrl(body)) return "image";
+  if (/audio|voice|ptt/.test(current) || /^audio\//.test(mime) || /\.(ogg|oga|mp3|m4a|wav|aac)(\?|$)/i.test(mediaUrl)) return "audio";
+  if (/video/.test(current) || /^video\//.test(mime) || /\.(mp4|mov|webm|mkv)(\?|$)/i.test(mediaUrl)) return "video";
+  if (/document|file/.test(current) || /application\//.test(mime) || /\.(pdf|docx?|xlsx?|pptx?|csv|txt|zip)(\?|$)/i.test(mediaUrl)) return "document";
+  if (current && !["other", "unknown", "message"].includes(current)) return current;
+  if (messageText.trim() && !mediaUrl) return "text";
+  return current || "text";
+}
+
 // Best-effort: ask the Baileys gateway for the media bytes of a given message id.
 // Returns a data: URL we can pass to the vision model, or null if every endpoint fails.
 async function fetchGatewayMediaDataUrl(opts: {
