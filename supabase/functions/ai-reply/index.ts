@@ -1357,6 +1357,27 @@ Deno.serve(async (req) => {
     }
     const incomingMessageKey = resolveIncomingMessageKey(body, fromNumber);
 
+    // WhatsApp "reply to image" often arrives as a plain text message with only
+    // contextInfo.stanzaId and no media_url. Recover the image we previously sent
+    // to this customer so n8n/webhooks and AI still know which product "ata" means.
+    const quotedMessageId = extractQuotedMessageId(body);
+    let quotedOutgoingImage: Awaited<ReturnType<typeof findQuotedOrRecentOutgoingImage>> = null;
+    if (!imageUrl && messageText && !isImageMessage) {
+      quotedOutgoingImage = await findQuotedOrRecentOutgoingImage(admin, sessionId, fromNumber, quotedMessageId);
+      if (quotedOutgoingImage?.image_url) {
+        imageUrl = quotedOutgoingImage.image_url;
+        isImageMessage = true;
+        imageCaption = imageCaption || quotedOutgoingImage.caption;
+        messageType = "image";
+        (body as any).message_type = "image";
+        (body as any).media_type = "image";
+        (body as any).quoted_message_id = quotedOutgoingImage.quoted_message_id;
+        (body as any).quoted_image_url = quotedOutgoingImage.image_url;
+        (body as any).quoted_image_caption = quotedOutgoingImage.caption;
+        console.log("[ai-reply] recovered quoted/recent outgoing image", quotedOutgoingImage);
+      }
+    }
+
     // Per-customer mode: ai (default) | human (manual only) | auto_reply (keyword rules only)
     const { data: customerSetting } = await admin
       .from("customer_reply_settings")
