@@ -9,6 +9,7 @@ import {
   subscribeToPush,
   unsubscribeFromPush,
 } from "@/lib/pushNotifications";
+import { attachHeadAdminPwaManifest } from "@/lib/pwaManifest";
 
 const tabs = [
   { to: "/headadmin/m", label: "Home", icon: Home, end: true },
@@ -28,9 +29,11 @@ export default function HeadAdminMobileLayout() {
     root.classList.remove("light");
     root.classList.add("dark");
     root.style.colorScheme = "dark";
+    const detachManifest = attachHeadAdminPwaManifest();
     return () => {
       root.className = prevClasses;
       root.style.colorScheme = prevColorScheme;
+      detachManifest();
     };
   }, []);
 

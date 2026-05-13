@@ -9,6 +9,8 @@ import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useQuickStats } from "@/hooks/useHeadAdminStats";
 import { NotificationBell } from "@/components/headadmin/NotificationBell";
+import { useEffect } from "react";
+import { attachHeadAdminPwaManifest } from "@/lib/pwaManifest";
 
 const navGroups = [
   {
@@ -66,6 +68,8 @@ export default function HeadAdminLayout() {
   const current = allItems.find((n) =>
     n.end ? location.pathname === n.to : location.pathname.startsWith(n.to)
   );
+
+  useEffect(() => attachHeadAdminPwaManifest(), []);
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
