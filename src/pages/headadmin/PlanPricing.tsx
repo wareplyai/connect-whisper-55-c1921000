@@ -31,6 +31,17 @@ export default function HAPlanPricing() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Plan | null>(null);
   const [newFeature, setNewFeature] = useState("");
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  const reorderFeatures = (from: number, to: number) => {
+    if (!editing) return;
+    const features = [...(editing.features || [])];
+    if (from < 0 || from >= features.length || to < 0 || to >= features.length) return;
+    const [moved] = features.splice(from, 1);
+    features.splice(to, 0, moved);
+    setEditing({ ...editing, features });
+  };
 
   const load = async () => {
     setLoading(true);
