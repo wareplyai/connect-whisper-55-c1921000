@@ -349,6 +349,22 @@ const SessionDetail = () => {
   const connected = s.status === "connected";
   const totalPages = Math.max(1, Math.ceil(totalLogs / PAGE_SIZE));
 
+  const SEND_BASE = "https://send.wareplyai.com/v1";
+  const curlCmd = (() => {
+    const toVal = to || "+1234567890";
+    const auth = `  -H "Authorization: Bearer ${s.api_token}" \\\n  -H "Content-Type: application/json" \\`;
+    if (msgType === "image") {
+      const body = JSON.stringify({ to: toVal, imageUrl: text || "https://your-image.jpg", caption: "" });
+      return `curl -X POST "${SEND_BASE}/wa-send-image" \\\n${auth}\n  -d '${body}'`;
+    }
+    if (msgType === "document") {
+      const body = JSON.stringify({ to: toVal, documentUrl: text || "https://your-file.pdf", filename: "file.pdf" });
+      return `curl -X POST "${SEND_BASE}/wa-send-document" \\\n${auth}\n  -d '${body}'`;
+    }
+    const body = JSON.stringify({ to: toVal, message: text || "Hello!" });
+    return `curl -X POST "${SEND_BASE}/wa-send-text" \\\n${auth}\n  -d '${body}'`;
+  })();
+
   return (
     <div className="space-y-6">
       <Link to="/dashboard/sessions" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
@@ -467,9 +483,8 @@ const SessionDetail = () => {
                     <Label className="text-xs">cURL Command</Label>
                     <button
                       type="button"
-                      onClick={() => {
-                        const cmd = `curl -X POST "${BACKEND_URL}/api/session/${s.id}/send" \\\n  -H "Authorization: Bearer ${s.api_token}" \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify({ to: to || "+1234567890", message: text || "Hello!" })}'`;
-                        navigator.clipboard.writeText(cmd);
+                       onClick={() => {
+                        navigator.clipboard.writeText(curlCmd);
                         toast.success("Copied!");
                       }}
                       className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
@@ -478,10 +493,7 @@ const SessionDetail = () => {
                     </button>
                   </div>
                   <pre className="rounded-lg bg-[#0d0d0d] text-foreground/90 p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">
-{`curl -X POST "${BACKEND_URL}/api/session/${s.id}/send" \\
-  -H "Authorization: Bearer ${s.api_token}" \\
-  -H "Content-Type: application/json" \\
-  -d '${JSON.stringify({ to: to || "+1234567890", message: text || "Hello!" })}'`}
+{curlCmd}
                   </pre>
                 </div>
               </TabsContent>
