@@ -462,7 +462,6 @@ const SessionDetail = () => {
               </TabsContent>
 
               <TabsContent value="test" className="space-y-3 mt-4">
-                {(() => { return null; })()}
                 <div><Label>To (with country code)</Label><Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="+1234567890" className="mt-1.5" /></div>
                 <div>
                   <Label>Type</Label>
