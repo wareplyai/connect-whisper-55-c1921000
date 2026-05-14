@@ -1586,12 +1586,6 @@ Deno.serve(async (req) => {
             } catch (e: any) {
               error = e?.name === "AbortError" ? "timeout" : (e?.message || "fetch failed");
             }
-            await ptAdmin.from("webhook_logs").insert({
-              session_id: ptSes.id,
-              event_type: ev,
-              delivered,
-              payload: { mode: "passthrough", forwarded_to: externalUrl, error, original: passthroughBody },
-            }).then(() => {}, () => {});
             return jsonResp({ ok: delivered, mode: "passthrough", forwarded_to: externalUrl, error });
           }
         }
