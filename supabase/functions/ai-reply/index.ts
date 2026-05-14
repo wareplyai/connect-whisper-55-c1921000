@@ -1393,7 +1393,9 @@ Deno.serve(async (req) => {
                   })
                 : null;
               const effectiveQuotedMessageIdForLookup = ptQuotedMessageId || gatewayQuoted?.quotedMessageId || null;
-              const quotedImage = await findQuotedOrRecentOutgoingImage(ptAdmin, ptSes.id, ptCustomer, effectiveQuotedMessageIdForLookup);
+              const quotedImage = effectiveQuotedMessageIdForLookup
+                ? await findQuotedOrRecentOutgoingImage(ptAdmin, ptSes.id, ptCustomer, effectiveQuotedMessageIdForLookup)
+                : null;
               const existingQuotedImageUrl = String((body as any)?.quoted_image_url || (body as any)?.quotedImageUrl || "").trim();
               const quotedGatewayMedia = gatewayQuoted?.imageUrl || ((!quotedImage?.image_url && !existingQuotedImageUrl && effectiveQuotedMessageIdForLookup)
                 ? await fetchGatewayMediaDataUrl({
