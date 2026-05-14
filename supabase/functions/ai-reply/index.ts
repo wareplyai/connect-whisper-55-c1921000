@@ -1381,16 +1381,27 @@ Deno.serve(async (req) => {
             const ptQuotedMessageId = extractQuotedMessageId(body);
             let passthroughBody: Record<string, unknown> = body as Record<string, unknown>;
             if (ptCustomer) {
-              const quotedImage = await findQuotedOrRecentOutgoingImage(ptAdmin, ptSes.id, ptCustomer, ptQuotedMessageId);
+              const ptRemoteJid = findStringByKeys(body, ["remoteJid", "remote_jid", "target_jid"]) || `${ptCustomer}@s.whatsapp.net`;
+              const gatewayQuoted = !ptQuotedMessageId
+                ? await fetchGatewayQuotedImageFromRecentMessage({
+                    gateway: Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com",
+                    sessionId: ptSes.id,
+                    customerNumber: ptCustomer,
+                    remoteJid: ptRemoteJid,
+                    messageText: String((body as any)?.message || (body as any)?.message_text || (body as any)?.text || ""),
+                  })
+                : null;
+              const effectiveQuotedMessageIdForLookup = ptQuotedMessageId || gatewayQuoted?.quotedMessageId || null;
+              const quotedImage = await findQuotedOrRecentOutgoingImage(ptAdmin, ptSes.id, ptCustomer, effectiveQuotedMessageIdForLookup);
               const existingQuotedImageUrl = String((body as any)?.quoted_image_url || (body as any)?.quotedImageUrl || "").trim();
-              const quotedGatewayMedia = (!quotedImage?.image_url && !existingQuotedImageUrl && ptQuotedMessageId)
+              const quotedGatewayMedia = gatewayQuoted?.imageUrl || ((!quotedImage?.image_url && !existingQuotedImageUrl && effectiveQuotedMessageIdForLookup)
                 ? await fetchGatewayMediaDataUrl({
                     gateway: Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com",
                     sessionId: ptSes.id,
-                    messageId: ptQuotedMessageId,
-                    remoteJid: findStringByKeys(body, ["remoteJid", "remote_jid", "target_jid"]) || undefined,
+                    messageId: effectiveQuotedMessageIdForLookup,
+                    remoteJid: ptRemoteJid || undefined,
                   })
-                : null;
+                : null);
               const effectiveQuotedImageUrl = quotedImage?.image_url || existingQuotedImageUrl || quotedGatewayMedia || null;
               const incomingMediaUrl = String((body as any)?.media_url || (body as any)?.mediaUrl || (body as any)?.image_url || (body as any)?.imageUrl || "").trim();
               const effectiveMediaUrl = incomingMediaUrl || effectiveQuotedImageUrl || null;
@@ -1404,13 +1415,13 @@ Deno.serve(async (req) => {
                 ...(body as Record<string, unknown>),
                 message_type: effectiveMessageType,
                 media_type: effectiveQuotedImageUrl ? "image" : ((body as any)?.media_type || effectiveMessageType),
-                quoted_message_id: ptQuotedMessageId || quotedImage?.quoted_message_id || null,
+                quoted_message_id: effectiveQuotedMessageIdForLookup || quotedImage?.quoted_message_id || null,
                 quoted_image_url: effectiveQuotedImageUrl,
                 quotedImageUrl: effectiveQuotedImageUrl,
-                quoted_image_caption: quotedImage?.caption || null,
+                quoted_image_caption: quotedImage?.caption || gatewayQuoted?.caption || null,
                 quoted_message_log_id: quotedImage?.message_log_id || null,
-                quoted_image_matched: Boolean(quotedImage?.matched_by_quote || quotedGatewayMedia || existingQuotedImageUrl),
-                quoted_image_source: quotedImage?.source || (quotedGatewayMedia ? "gateway_quoted_media" : (existingQuotedImageUrl ? "payload_quoted_image_url" : null)),
+                quoted_image_matched: Boolean(quotedImage?.matched_by_quote || quotedGatewayMedia || existingQuotedImageUrl || gatewayQuoted),
+                quoted_image_source: quotedImage?.source || (gatewayQuoted ? gatewayQuoted.source : (quotedGatewayMedia ? "gateway_quoted_media" : (existingQuotedImageUrl ? "payload_quoted_image_url" : null))),
                 image_url: effectiveMediaUrl,
                 imageUrl: effectiveMediaUrl,
                 media_url: effectiveMediaUrl,
@@ -1423,7 +1434,7 @@ Deno.serve(async (req) => {
                   mediaUrl: effectiveMediaUrl,
                   image_url: effectiveMediaUrl,
                   imageUrl: effectiveMediaUrl,
-                  quoted_message_id: ptQuotedMessageId || quotedImage?.quoted_message_id || null,
+                  quoted_message_id: effectiveQuotedMessageIdForLookup || quotedImage?.quoted_message_id || null,
                   quoted_image_url: effectiveQuotedImageUrl,
                 } : (body as any)?.raw_payload,
               };
