@@ -1204,19 +1204,26 @@ Deno.serve(async (req) => {
             let passthroughBody: Record<string, unknown> = body as Record<string, unknown>;
             if (ptCustomer) {
               const quotedImage = await findQuotedOrRecentOutgoingImage(ptAdmin, ptSes.id, ptCustomer, ptQuotedMessageId);
-              if (quotedImage?.image_url) {
-                passthroughBody = {
-                  ...(body as Record<string, unknown>),
-                  message_type: (body as any)?.message_type || "other",
-                  quoted_message_id: ptQuotedMessageId || quotedImage.quoted_message_id,
-                  quoted_image_url: quotedImage.image_url,
-                  quoted_image_caption: quotedImage.caption,
-                  quoted_message_log_id: quotedImage.message_log_id,
-                  quoted_image_matched: quotedImage.matched_by_quote,
-                  image_url: (body as any)?.image_url || (body as any)?.imageUrl || null,
-                  media_url: (body as any)?.media_url || (body as any)?.mediaUrl || null,
-                };
-              }
+              const quotedGatewayMedia = (!quotedImage?.image_url && ptQuotedMessageId)
+                ? await fetchGatewayMediaDataUrl({
+                    gateway: Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com",
+                    sessionId: ptSes.id,
+                    messageId: ptQuotedMessageId,
+                    remoteJid: findStringByKeys(body, ["remoteJid", "remote_jid", "target_jid"]),
+                  })
+                : null;
+              passthroughBody = {
+                ...(body as Record<string, unknown>),
+                message_type: (body as any)?.message_type || "other",
+                quoted_message_id: ptQuotedMessageId || quotedImage?.quoted_message_id || null,
+                quoted_image_url: quotedImage?.image_url || quotedGatewayMedia || null,
+                quoted_image_caption: quotedImage?.caption || null,
+                quoted_message_log_id: quotedImage?.message_log_id || null,
+                quoted_image_matched: Boolean(quotedImage?.matched_by_quote || quotedGatewayMedia),
+                quoted_image_source: quotedImage?.source || (quotedGatewayMedia ? "gateway_quoted_media" : null),
+                image_url: (body as any)?.image_url || (body as any)?.imageUrl || null,
+                media_url: (body as any)?.media_url || (body as any)?.mediaUrl || null,
+              };
             }
             let delivered = false;
             let error: string | null = null;
