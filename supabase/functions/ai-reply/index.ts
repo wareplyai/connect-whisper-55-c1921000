@@ -1776,7 +1776,7 @@ Deno.serve(async (req) => {
     let quotedOutgoingImage: Awaited<ReturnType<typeof findQuotedOrRecentOutgoingImage>> = null;
     let quotedGatewayImageUrl: string | null = null;
     if (!imageUrl && messageText && !isImageMessage && (quotedMessageId || bodyQuotedImageUrl)) {
-      if (quotedMessageId) quotedOutgoingImage = await findQuotedOrRecentOutgoingImage(admin, sessionId, fromNumber, quotedMessageId);
+      if (quotedMessageId && !bodyQuotedImageUrl) quotedOutgoingImage = await findQuotedOrRecentOutgoingImage(admin, sessionId, fromNumber, quotedMessageId);
       if (!bodyQuotedImageUrl && quotedMessageId && !quotedOutgoingImage?.image_url) {
         quotedGatewayImageUrl = await fetchGatewayMediaDataUrl({
           gateway: GATEWAY,
