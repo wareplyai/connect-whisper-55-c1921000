@@ -575,6 +575,7 @@ async function findQuotedOrRecentOutgoingImage(admin: any, sessionId: string, fr
         caption: row?.image_caption || row?.caption || null,
         message_log_id: row?.id || null,
         matched_by_quote: Boolean(matched),
+        has_quote: Boolean(qid),
         quoted_message_id: qid || null,
         source: "incoming_messages",
       };
