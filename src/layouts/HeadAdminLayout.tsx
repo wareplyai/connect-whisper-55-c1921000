@@ -2,7 +2,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Smartphone, DollarSign, MessageSquare,
   Bell, ScrollText, Settings, LogOut, CreditCard, Receipt, Tags, Search,
-  ChevronDown, Zap, ToggleRight, SmartphoneCharging, Megaphone,
+  ChevronDown, Zap, ToggleRight, SmartphoneCharging, Megaphone, HardDrive,
 } from "lucide-react";
 import { useHeadAdmin } from "@/contexts/HeadAdminContext";
 import { Logo } from "@/components/Logo";
@@ -20,6 +20,7 @@ const navGroups = [
       { to: "/headadmin/users", label: "Users", icon: Users },
       { to: "/headadmin/sessions", label: "Sessions", icon: Smartphone },
       { to: "/headadmin/messages", label: "Messages", icon: MessageSquare },
+      { to: "/headadmin/user-storage", label: "User Storage", icon: HardDrive },
     ],
   },
   {
@@ -49,6 +50,7 @@ const allItems = [
   { to: "/headadmin/users", label: "Users" },
   { to: "/headadmin/sessions", label: "Sessions" },
   { to: "/headadmin/messages", label: "Messages" },
+  { to: "/headadmin/user-storage", label: "User Storage" },
   { to: "/headadmin/revenue", label: "Revenue" },
   { to: "/headadmin/payments", label: "Payments" },
   { to: "/headadmin/payment-methods", label: "Methods" },
