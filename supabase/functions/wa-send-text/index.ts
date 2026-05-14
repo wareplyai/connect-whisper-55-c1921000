@@ -1,7 +1,14 @@
 // POST /functions/v1/wa-send-text
 // Body: { to: string, message: string }
 // Header: Authorization: Bearer <session.api_token>
-import { corsHeaders, json, resolveSession, forwardToGateway } from "../_shared/wa-proxy.ts";
+import {
+  corsHeaders,
+  json,
+  resolveSession,
+  forwardToGateway,
+  enforceAccountProtection,
+  applySendPreferences,
+} from "../_shared/wa-proxy.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -11,8 +18,19 @@ Deno.serve(async (req) => {
     const { to, message, text, typing } = await req.json().catch(() => ({}));
     const msg = message ?? text;
     if (!to || !msg) return json({ error: "to and message are required" }, 400);
-    // Normalize: keep digits only (gateway appends @s.whatsapp.net) so customer phone shows correctly.
+
+    const protectionResp = await enforceAccountProtection(r.admin, r.session);
+    if (protectionResp) return protectionResp;
+
     const toNorm = String(to).includes("@") ? String(to) : (String(to).replace(/\D/g, "") || String(to));
+
+    await applySendPreferences({
+      session: r.session,
+      to: toNorm,
+      messageLength: String(msg).length,
+      showTyping: typing !== false,
+    });
+
     const out = await forwardToGateway(r.session.id, r.session.api_token, "send", {
       to: toNorm,
       message: msg,
