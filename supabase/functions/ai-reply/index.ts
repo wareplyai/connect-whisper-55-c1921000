@@ -442,6 +442,17 @@ function findStringByKeys(value: unknown, keys: string[], depth = 0): string | n
   return null;
 }
 
+function extractQuotedMediaUrl(value: unknown): string {
+  return String(
+    (value as any)?.quotedMediaUrl ||
+    (value as any)?.quoted_media_url ||
+    (value as any)?.quoted_image_url ||
+    (value as any)?.quotedImageUrl ||
+    findStringByKeys(value, ["quotedMediaUrl", "quoted_media_url", "quoted_image_url", "quotedImageUrl"]) ||
+    ""
+  ).trim();
+}
+
 function normalizeIncomingMessageType(body: Record<string, unknown>, rawType: unknown, messageText: string): string {
   const current = String(rawType || "").trim().toLowerCase();
   const mediaUrl = String((body as any).media_url || (body as any).mediaUrl || (body as any).image_url || (body as any).imageUrl || "").trim();
@@ -1392,11 +1403,11 @@ Deno.serve(async (req) => {
                     messageText: String((body as any)?.message || (body as any)?.message_text || (body as any)?.text || ""),
                   })
                 : null;
+              const existingQuotedImageUrl = extractQuotedMediaUrl(body);
               const effectiveQuotedMessageIdForLookup = ptQuotedMessageId || gatewayQuoted?.quotedMessageId || null;
-              const quotedImage = effectiveQuotedMessageIdForLookup
+              const quotedImage = (effectiveQuotedMessageIdForLookup && !existingQuotedImageUrl && !gatewayQuoted?.imageUrl)
                 ? await findQuotedOrRecentOutgoingImage(ptAdmin, ptSes.id, ptCustomer, effectiveQuotedMessageIdForLookup)
                 : null;
-              const existingQuotedImageUrl = String((body as any)?.quoted_image_url || (body as any)?.quotedImageUrl || "").trim();
               const quotedGatewayMedia = gatewayQuoted?.imageUrl || ((!quotedImage?.image_url && !existingQuotedImageUrl && effectiveQuotedMessageIdForLookup)
                 ? await fetchGatewayMediaDataUrl({
                     gateway: Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com",
@@ -1761,11 +1772,11 @@ Deno.serve(async (req) => {
     // contextInfo.stanzaId and no media_url. Recover the image we previously sent
     // to this customer so n8n/webhooks and AI still know which product "ata" means.
     const quotedMessageId = extractQuotedMessageId(body);
-    const bodyQuotedImageUrl = String((body as any).quoted_image_url || (body as any).quotedImageUrl || "").trim();
+    const bodyQuotedImageUrl = extractQuotedMediaUrl(body);
     let quotedOutgoingImage: Awaited<ReturnType<typeof findQuotedOrRecentOutgoingImage>> = null;
     let quotedGatewayImageUrl: string | null = null;
     if (!imageUrl && messageText && !isImageMessage && (quotedMessageId || bodyQuotedImageUrl)) {
-      if (quotedMessageId) quotedOutgoingImage = await findQuotedOrRecentOutgoingImage(admin, sessionId, fromNumber, quotedMessageId);
+      if (quotedMessageId && !bodyQuotedImageUrl) quotedOutgoingImage = await findQuotedOrRecentOutgoingImage(admin, sessionId, fromNumber, quotedMessageId);
       if (!bodyQuotedImageUrl && quotedMessageId && !quotedOutgoingImage?.image_url) {
         quotedGatewayImageUrl = await fetchGatewayMediaDataUrl({
           gateway: GATEWAY,
