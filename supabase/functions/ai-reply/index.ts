@@ -1366,7 +1366,7 @@ Deno.serve(async (req) => {
         );
         const { data: ptSes } = await ptAdmin
           .from("sessions")
-          .select("id, webhook_secret, enable_webhook, forward_webhook_url, webhook_url")
+          .select("id, webhook_secret, api_token, enable_webhook, forward_webhook_url, webhook_url")
           .eq("id", ptSessionId)
           .maybeSingle();
         if (ptSes && ptSes.webhook_secret === ptSecret && ptSes.enable_webhook) {
@@ -1386,6 +1386,7 @@ Deno.serve(async (req) => {
                 ? await fetchGatewayQuotedImageFromRecentMessage({
                     gateway: Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com",
                     sessionId: ptSes.id,
+                    apiToken: ptSes.api_token,
                     customerNumber: ptCustomer,
                     remoteJid: ptRemoteJid,
                     messageText: String((body as any)?.message || (body as any)?.message_text || (body as any)?.text || ""),
@@ -1398,6 +1399,7 @@ Deno.serve(async (req) => {
                 ? await fetchGatewayMediaDataUrl({
                     gateway: Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com",
                     sessionId: ptSes.id,
+                    apiToken: ptSes.api_token,
                     messageId: effectiveQuotedMessageIdForLookup,
                     remoteJid: ptRemoteJid || undefined,
                   })
