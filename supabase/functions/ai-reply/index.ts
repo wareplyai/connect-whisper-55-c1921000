@@ -1404,7 +1404,7 @@ Deno.serve(async (req) => {
                   })
                 : null;
               const effectiveQuotedMessageIdForLookup = ptQuotedMessageId || gatewayQuoted?.quotedMessageId || null;
-              const quotedImage = effectiveQuotedMessageIdForLookup
+              const quotedImage = (effectiveQuotedMessageIdForLookup && !existingQuotedImageUrl && !gatewayQuoted?.imageUrl)
                 ? await findQuotedOrRecentOutgoingImage(ptAdmin, ptSes.id, ptCustomer, effectiveQuotedMessageIdForLookup)
                 : null;
               const existingQuotedImageUrl = extractQuotedMediaUrl(body);
