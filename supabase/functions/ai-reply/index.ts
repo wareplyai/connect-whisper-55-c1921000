@@ -1124,6 +1124,77 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     console.log("INCOMING PAYLOAD:", JSON.stringify(body).slice(0, 2000));
+
+    // ============================================================
+    // PASSTHROUGH MODE — when user has set their own external webhook URL
+    // (n8n / make / custom), we forward the RAW payload as-is and SKIP
+    // every built-in step: no DB writes, no AI reply, no auto-reply,
+    // no CRM bot, no media decryption, no inbox storage. The user's
+    // own automation is fully responsible for handling the message.
+    // ============================================================
+    try {
+      const ptSessionId = String((body as any)?.session_id || (body as any)?.sessionId || "").trim();
+      const ptSecret =
+        req.headers.get("x-webhook-secret") ||
+        (req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "");
+      if (ptSessionId && ptSecret) {
+        const ptAdmin = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        );
+        const { data: ptSes } = await ptAdmin
+          .from("sessions")
+          .select("id, webhook_secret, enable_webhook, forward_webhook_url, webhook_url")
+          .eq("id", ptSessionId)
+          .maybeSingle();
+        if (ptSes && ptSes.webhook_secret === ptSecret && ptSes.enable_webhook) {
+          const externalUrl = String(
+            ptSes.forward_webhook_url ||
+            (isInternalAiReplyWebhook(String(ptSes.webhook_url || "")) ? "" : ptSes.webhook_url) ||
+            ""
+          ).trim();
+          if (externalUrl && !isInternalAiReplyWebhook(externalUrl)) {
+            const ev = String((body as any)?.event || "messages.received");
+            let delivered = false;
+            let error: string | null = null;
+            try {
+              const ctrl = new AbortController();
+              const to = setTimeout(() => ctrl.abort(), 15_000);
+              const r = await fetch(externalUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "User-Agent": "WaReplyAI-Webhook/1.0",
+                  "X-WaReply-Event": ev,
+                  "X-WaReply-Session": ptSes.id,
+                  "X-WaReply-Mode": "passthrough",
+                },
+                body: JSON.stringify(body),
+                signal: ctrl.signal,
+              });
+              clearTimeout(to);
+              delivered = r.ok;
+              if (!r.ok) error = `HTTP ${r.status}`;
+            } catch (e: any) {
+              error = e?.name === "AbortError" ? "timeout" : (e?.message || "fetch failed");
+            }
+            await ptAdmin.from("webhook_logs").insert({
+              session_id: ptSes.id,
+              event_type: ev,
+              delivered,
+              payload: { mode: "passthrough", forwarded_to: externalUrl, error, original: body },
+            }).then(() => {}, () => {});
+            return jsonResp({ ok: delivered, mode: "passthrough", forwarded_to: externalUrl, error });
+          }
+        }
+      }
+    } catch (e) {
+      console.log("[passthrough] check failed, falling through to built-in:", (e as Error)?.message);
+    }
+    // ============================================================
+    // END PASSTHROUGH — below is the original built-in pipeline.
+    // ============================================================
+
     console.log("media_url value:", (body as any)?.media_url ?? null);
     console.log("message_type:", (body as any)?.message_type ?? null);
     const sessionId = String(body.session_id || body.sessionId || "").trim();
