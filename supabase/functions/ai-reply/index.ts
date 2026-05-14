@@ -477,6 +477,11 @@ function extractQuotedMessageId(value: unknown, depth = 0): string | null {
 
 function collectPossibleMessageIds(value: unknown, out = new Set<string>(), depth = 0): Set<string> {
   if (depth > 8 || value == null) return out;
+  if (typeof value === "string" || typeof value === "number") {
+    const id = String(value).trim();
+    if (id && id.length <= 200 && /[A-Za-z0-9]/.test(id)) out.add(id);
+    return out;
+  }
   if (Array.isArray(value)) {
     for (const item of value.slice(0, 50)) collectPossibleMessageIds(item, out, depth + 1);
     return out;
@@ -492,6 +497,17 @@ function collectPossibleMessageIds(value: unknown, out = new Set<string>(), dept
     collectPossibleMessageIds(child, out, depth + 1);
   }
   return out;
+}
+
+function messageIdMatches(candidate: unknown, quotedId: string): boolean {
+  const a = String(candidate || "").trim();
+  const b = String(quotedId || "").trim();
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const strip = (v: string) => v.replace(/@.+$/, "").replace(/^wamid\./i, "").trim();
+  const sa = strip(a);
+  const sb = strip(b);
+  return Boolean(sa && sb && (sa === sb || sa.endsWith(sb) || sb.endsWith(sa)));
 }
 
 async function findQuotedOrRecentOutgoingImage(admin: any, sessionId: string, fromNumber: string, quotedMessageId?: string | null) {
@@ -510,15 +526,16 @@ async function findQuotedOrRecentOutgoingImage(admin: any, sessionId: string, fr
       const matched = qid ? rows.find((row: any) => {
         const p = row?.payload || {};
         const ids = [p.gateway_message_id, p.message_id, p.id, p.key?.id, p.result?.key?.id, p.result?.id, p.gateway_response?.key?.id, p.gateway_response?.id, ...collectPossibleMessageIds(p.gateway_response || p)];
-        return ids.some((id) => id && String(id) === qid);
+        return ids.some((id) => messageIdMatches(id, qid));
       }) : null;
-      const row = matched || rows[0];
+      const row = matched || (!qid ? rows[0] : null);
       if (row?.image_url) {
         return {
           image_url: row.image_url,
           caption: row.image_caption || row.payload?.caption || null,
           message_log_id: row.id,
           matched_by_quote: Boolean(matched),
+          has_quote: Boolean(qid),
           quoted_message_id: qid || null,
           source: "outgoing_message_logs",
         };
@@ -543,14 +560,14 @@ async function findQuotedOrRecentOutgoingImage(admin: any, sessionId: string, fr
     const rows = Array.isArray(data) ? data : [];
     const matched = qid ? rows.find((row: any) => {
       const r = row?.raw_payload || {};
-      const ids = [row?.id, r.message_id, r.messageId, r.id, r.key?.id, r.rawKey?.id];
-      return ids.some((id) => id && String(id) === qid);
+      const ids = [row?.id, r.message_id, r.messageId, r.id, r.key?.id, r.rawKey?.id, ...collectPossibleMessageIds(r)];
+      return ids.some((id) => messageIdMatches(id, qid));
     }) : null;
-    const row = matched || rows.find((r: any) => {
+    const row = matched || (!qid ? rows.find((r: any) => {
       const url = String(r?.image_url || r?.media_url || "");
       const mt = String(r?.mimetype || "");
       return /\.(jpe?g|png|webp|gif|bmp|heic)(\?|$)/i.test(url) || /^image\//i.test(mt);
-    });
+    }) : null);
     const url = String(row?.image_url || row?.media_url || "").trim();
     if (url) {
       return {
