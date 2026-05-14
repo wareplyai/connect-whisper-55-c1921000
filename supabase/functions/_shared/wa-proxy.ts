@@ -74,10 +74,15 @@ export async function enforceAccountProtection(
       const elapsed = Date.now() - last;
       if (elapsed < ACCOUNT_PROTECTION_WINDOW_MS) {
         const retryAfter = Math.ceil((ACCOUNT_PROTECTION_WINDOW_MS - elapsed) / 1000);
+        const combined = `${ACCOUNT_PROTECTION_ERROR_TITLE}. ${ACCOUNT_PROTECTION_ERROR_DETAIL}`;
         return new Response(
           JSON.stringify({
-            error: ACCOUNT_PROTECTION_ERROR_TITLE,
+            error: combined,
+            title: ACCOUNT_PROTECTION_ERROR_TITLE,
             message: ACCOUNT_PROTECTION_ERROR_DETAIL,
+            detail: ACCOUNT_PROTECTION_ERROR_DETAIL,
+            description: ACCOUNT_PROTECTION_ERROR_DETAIL,
+            hint: ACCOUNT_PROTECTION_ERROR_DETAIL,
             account_protection: true,
             retry_after_seconds: retryAfter,
           }),
