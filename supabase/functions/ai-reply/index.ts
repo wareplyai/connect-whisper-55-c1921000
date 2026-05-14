@@ -1790,6 +1790,38 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (!imageUrl && messageText && !isImageMessage && !quotedMessageId && !bodyQuotedImageUrl) {
+      const gatewayQuoted = await fetchGatewayQuotedImageFromRecentMessage({
+        gateway: GATEWAY,
+        sessionId,
+        apiToken: session.api_token,
+        customerNumber: fromNumber,
+        remoteJid: String((body as any).target_jid || (body as any).remoteJid || (rawKey as any)?.remoteJid || (rawPayload as any)?.remoteJid || `${fromNumber}@s.whatsapp.net`).trim(),
+        messageText,
+      });
+      const recoveredQuotedUrl = gatewayQuoted?.imageUrl || (gatewayQuoted?.quotedMessageId
+        ? await fetchGatewayMediaDataUrl({
+            gateway: GATEWAY,
+            sessionId,
+            apiToken: session.api_token,
+            messageId: gatewayQuoted.quotedMessageId,
+            remoteJid: String((body as any).target_jid || (body as any).remoteJid || (rawKey as any)?.remoteJid || (rawPayload as any)?.remoteJid || `${fromNumber}@s.whatsapp.net`).trim(),
+          })
+        : null);
+      if (recoveredQuotedUrl) {
+        imageUrl = recoveredQuotedUrl;
+        isImageMessage = true;
+        imageCaption = imageCaption || gatewayQuoted?.caption || null;
+        messageType = "image";
+        (body as any).message_type = "image";
+        (body as any).media_type = "image";
+        (body as any).quoted_message_id = gatewayQuoted?.quotedMessageId || null;
+        (body as any).quoted_image_url = recoveredQuotedUrl;
+        (body as any).quoted_image_caption = gatewayQuoted?.caption || null;
+        console.log("[ai-reply] recovered quoted image from gateway recent message", gatewayQuoted);
+      }
+    }
+
     // Per-customer mode: ai (default) | human (manual only) | auto_reply (keyword rules only)
     const { data: customerSetting } = await admin
       .from("customer_reply_settings")
