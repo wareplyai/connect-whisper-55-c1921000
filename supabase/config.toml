@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.wa-send-document]
 verify_jwt = false
+
+[functions.wa-download-media]
+verify_jwt = false
