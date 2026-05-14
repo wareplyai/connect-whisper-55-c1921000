@@ -24,6 +24,14 @@ function b64decode(s: string): Uint8Array {
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
   return bytes;
 }
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.slice(i, i + chunk));
+  }
+  return btoa(binary);
+}
 async function decryptKey(payload: string): Promise<string> {
   const [ivB64, ctB64] = payload.split(".");
   const key = await getCryptoKey();
