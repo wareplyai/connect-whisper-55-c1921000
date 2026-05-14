@@ -1514,10 +1514,7 @@ Deno.serve(async (req) => {
                 : null;
               const existingQuotedImageUrl = extractQuotedMediaUrl(body);
               const effectiveQuotedMessageIdForLookup = ptQuotedMessageId || gatewayQuoted?.quotedMessageId || null;
-              const quotedImage = (effectiveQuotedMessageIdForLookup && !existingQuotedImageUrl && !gatewayQuoted?.imageUrl)
-                ? await findQuotedOrRecentOutgoingImage(ptAdmin, ptSes.id, ptCustomer, effectiveQuotedMessageIdForLookup)
-                : null;
-              const quotedGatewayMedia = gatewayQuoted?.imageUrl || ((!quotedImage?.image_url && !existingQuotedImageUrl && effectiveQuotedMessageIdForLookup)
+              const quotedGatewayMedia = gatewayQuoted?.imageUrl || ((!existingQuotedImageUrl && effectiveQuotedMessageIdForLookup)
                 ? await fetchGatewayMediaDataUrl({
                     gateway: Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com",
                     sessionId: ptSes.id,
@@ -1526,41 +1523,44 @@ Deno.serve(async (req) => {
                     remoteJid: ptRemoteJid || undefined,
                   })
                 : null);
-              const effectiveQuotedImageUrl = quotedImage?.image_url || existingQuotedImageUrl || quotedGatewayMedia || null;
+              const effectiveQuotedImageUrl = selectWebhookMediaUrl(body, existingQuotedImageUrl, quotedGatewayMedia);
               const incomingMediaUrl = String((body as any)?.media_url || (body as any)?.mediaUrl || (body as any)?.image_url || (body as any)?.imageUrl || "").trim();
-              const effectiveMediaUrl = incomingMediaUrl || effectiveQuotedImageUrl || null;
-              const effectiveMessageType = effectiveQuotedImageUrl && !incomingMediaUrl
+              const effectiveMediaUrl = selectWebhookMediaUrl(body, incomingMediaUrl, effectiveQuotedImageUrl);
+              const webhookImageMessage = buildWebhookImageMessage(body, effectiveMediaUrl || effectiveQuotedImageUrl || null);
+              const sanitizedBody = sanitizeSupabaseStorageUrls(body, effectiveMediaUrl || effectiveQuotedImageUrl || null) as Record<string, unknown>;
+              const effectiveMessageType = (effectiveQuotedImageUrl || effectiveMediaUrl || webhookImageMessage) && !incomingMediaUrl
                 ? "image"
                 : String((body as any)?.message_type || (body as any)?.messageType || "other");
               const rawPayload = (body as any)?.raw_payload && typeof (body as any).raw_payload === "object"
                 ? (body as any).raw_payload
                 : null;
               passthroughBody = {
-                ...(body as Record<string, unknown>),
+                ...sanitizedBody,
                 message_type: effectiveMessageType,
-                media_type: effectiveQuotedImageUrl ? "image" : ((body as any)?.media_type || effectiveMessageType),
-                quoted_message_id: effectiveQuotedMessageIdForLookup || quotedImage?.quoted_message_id || null,
-                quoted_image_url: effectiveQuotedImageUrl,
-                quotedImageUrl: effectiveQuotedImageUrl,
-                quoted_image_caption: quotedImage?.caption || gatewayQuoted?.caption || null,
-                quoted_message_log_id: quotedImage?.message_log_id || null,
-                quoted_image_matched: Boolean(quotedImage?.matched_by_quote || quotedGatewayMedia || existingQuotedImageUrl || gatewayQuoted),
-                quoted_image_source: quotedImage?.source || (gatewayQuoted ? gatewayQuoted.source : (quotedGatewayMedia ? "gateway_quoted_media" : (existingQuotedImageUrl ? "payload_quoted_image_url" : null))),
-                image_url: effectiveMediaUrl,
-                imageUrl: effectiveMediaUrl,
-                media_url: effectiveMediaUrl,
-                mediaUrl: effectiveMediaUrl,
-                raw_payload: rawPayload && effectiveQuotedImageUrl ? {
-                  ...rawPayload,
+                media_type: (effectiveQuotedImageUrl || effectiveMediaUrl || webhookImageMessage) ? "image" : ((body as any)?.media_type || effectiveMessageType),
+                quoted_message_id: effectiveQuotedMessageIdForLookup || null,
+                quoted_image_url: effectiveQuotedImageUrl || null,
+                quotedImageUrl: effectiveQuotedImageUrl || null,
+                quoted_image_caption: gatewayQuoted?.caption || null,
+                quoted_image_matched: Boolean(quotedGatewayMedia || existingQuotedImageUrl || gatewayQuoted),
+                quoted_image_source: gatewayQuoted ? gatewayQuoted.source : (quotedGatewayMedia ? "gateway_quoted_media" : (existingQuotedImageUrl ? "payload_quoted_image_url" : null)),
+                image_url: effectiveMediaUrl || null,
+                imageUrl: effectiveMediaUrl || null,
+                media_url: effectiveMediaUrl || null,
+                mediaUrl: effectiveMediaUrl || null,
+                ...(webhookImageMessage ? { imageMessage: webhookImageMessage } : {}),
+                raw_payload: rawPayload && (effectiveQuotedImageUrl || effectiveMediaUrl || webhookImageMessage) ? {
+                  ...(sanitizeSupabaseStorageUrls(rawPayload, effectiveMediaUrl || effectiveQuotedImageUrl || null) as Record<string, unknown>),
                   message_type: "image",
                   media_type: "image",
-                  media_url: effectiveMediaUrl,
-                  mediaUrl: effectiveMediaUrl,
-                  image_url: effectiveMediaUrl,
-                  imageUrl: effectiveMediaUrl,
+                  media_url: effectiveMediaUrl || null,
+                  mediaUrl: effectiveMediaUrl || null,
+                  image_url: effectiveMediaUrl || null,
+                  imageUrl: effectiveMediaUrl || null,
                   quoted_message_id: effectiveQuotedMessageIdForLookup || quotedImage?.quoted_message_id || null,
-                  quoted_image_url: effectiveQuotedImageUrl,
-                } : (body as any)?.raw_payload,
+                  quoted_image_url: effectiveQuotedImageUrl || null,
+                  ...(webhookImageMessage ? { imageMessage: webhookImageMessage } : {}),
+                } : sanitizedBody.raw_payload,
               };
             }
             let delivered = false;
