@@ -1544,19 +1544,30 @@ Deno.serve(async (req) => {
     // to this customer so n8n/webhooks and AI still know which product "ata" means.
     const quotedMessageId = extractQuotedMessageId(body);
     let quotedOutgoingImage: Awaited<ReturnType<typeof findQuotedOrRecentOutgoingImage>> = null;
-    if (!imageUrl && messageText && !isImageMessage) {
+    let quotedGatewayImageUrl: string | null = null;
+    if (!imageUrl && messageText && !isImageMessage && quotedMessageId) {
       quotedOutgoingImage = await findQuotedOrRecentOutgoingImage(admin, sessionId, fromNumber, quotedMessageId);
-      if (quotedOutgoingImage?.image_url) {
-        imageUrl = quotedOutgoingImage.image_url;
+      if (!quotedOutgoingImage?.image_url) {
+        quotedGatewayImageUrl = await fetchGatewayMediaDataUrl({
+          gateway: GATEWAY,
+          sessionId,
+          apiToken: session.api_token,
+          messageId: quotedMessageId,
+          remoteJid: String((body as any).target_jid || (body as any).remoteJid || (rawKey as any)?.remoteJid || (rawPayload as any)?.remoteJid || "").trim(),
+        });
+      }
+      const recoveredQuotedUrl = quotedOutgoingImage?.image_url || quotedGatewayImageUrl;
+      if (recoveredQuotedUrl) {
+        imageUrl = recoveredQuotedUrl;
         isImageMessage = true;
         imageCaption = imageCaption || quotedOutgoingImage.caption;
         messageType = "image";
         (body as any).message_type = "image";
         (body as any).media_type = "image";
-        (body as any).quoted_message_id = quotedOutgoingImage.quoted_message_id;
-        (body as any).quoted_image_url = quotedOutgoingImage.image_url;
-        (body as any).quoted_image_caption = quotedOutgoingImage.caption;
-        console.log("[ai-reply] recovered quoted/recent outgoing image", quotedOutgoingImage);
+        (body as any).quoted_message_id = quotedOutgoingImage?.quoted_message_id || quotedMessageId;
+        (body as any).quoted_image_url = recoveredQuotedUrl;
+        (body as any).quoted_image_caption = quotedOutgoingImage?.caption || null;
+        console.log("[ai-reply] recovered quoted outgoing image", quotedOutgoingImage || { source: "gateway_quoted_media", quoted_message_id: quotedMessageId });
       }
     }
 
