@@ -453,6 +453,115 @@ function extractQuotedMediaUrl(value: unknown): string {
   ).trim();
 }
 
+function isSupabaseStorageUrl(value: string): boolean {
+  const url = String(value || "").trim();
+  if (!/^https?:\/\//i.test(url)) return false;
+  try {
+    const u = new URL(url);
+    return u.hostname.endsWith(".supabase.co") && u.pathname.includes("/storage/v1/object/");
+  } catch {
+    return /\.supabase\.co\/storage\/v1\/object\//i.test(url);
+  }
+}
+
+function isWhatsAppMediaUrl(value: string): boolean {
+  const url = String(value || "").trim();
+  if (!/^https?:\/\//i.test(url)) return false;
+  try {
+    const u = new URL(url);
+    return u.hostname === "mmg.whatsapp.net" || u.hostname.endsWith(".whatsapp.net");
+  } catch {
+    return /\/\/[^/]*whatsapp\.net\//i.test(url);
+  }
+}
+
+function isWebhookSafeMediaUrl(value: string): boolean {
+  const url = String(value || "").trim();
+  return /^https?:\/\//i.test(url) && !isSupabaseStorageUrl(url);
+}
+
+function extractWhatsappMediaUrl(value: unknown, depth = 0): string | null {
+  if (depth > 10 || value == null) return null;
+  if (typeof value === "string") {
+    const v = value.trim();
+    return isWhatsAppMediaUrl(v) ? v : null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value.slice(0, 80)) {
+      const found = extractWhatsappMediaUrl(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  const preferred = ["url", "mediaUrl", "media_url", "imageUrl", "image_url", "quotedMediaUrl", "quoted_media_url", "quotedImageUrl", "quoted_image_url"];
+  for (const key of preferred) {
+    const found = extractWhatsappMediaUrl(obj[key], depth + 1);
+    if (found) return found;
+  }
+  for (const child of Object.values(obj)) {
+    const found = extractWhatsappMediaUrl(child, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+function firstWebhookSafeMediaUrl(...values: unknown[]): string | null {
+  for (const value of values) {
+    const url = typeof value === "string" ? value.trim() : "";
+    if (url && isWhatsAppMediaUrl(url)) return url;
+  }
+  for (const value of values) {
+    const url = typeof value === "string" ? value.trim() : "";
+    if (url && isWebhookSafeMediaUrl(url)) return url;
+  }
+  return null;
+}
+
+function selectWebhookMediaUrl(payload: unknown, ...candidates: unknown[]): string {
+  return extractWhatsappMediaUrl(payload) || firstWebhookSafeMediaUrl(...candidates) || "";
+}
+
+function sanitizeSupabaseStorageUrls(value: unknown, replacementUrl: string | null, depth = 0): unknown {
+  if (depth > 10 || value == null) return value;
+  if (typeof value === "string") {
+    return isSupabaseStorageUrl(value) ? (replacementUrl || null) : value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeSupabaseStorageUrls(item, replacementUrl, depth + 1));
+  }
+  if (typeof value !== "object") return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    out[key] = sanitizeSupabaseStorageUrls(child, replacementUrl, depth + 1);
+  }
+  return out;
+}
+
+function findImageMessageObject(value: unknown, depth = 0): Record<string, unknown> | null {
+  if (depth > 10 || value == null || typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  for (const [key, child] of Object.entries(obj)) {
+    const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (normalized === "imagemessage" && child && typeof child === "object") {
+      return child as Record<string, unknown>;
+    }
+  }
+  for (const child of Object.values(obj)) {
+    const found = findImageMessageObject(child, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+function buildWebhookImageMessage(payload: unknown, mediaUrl: string | null): Record<string, unknown> | null {
+  const source = findImageMessageObject(payload);
+  const cleaned = source ? sanitizeSupabaseStorageUrls(source, mediaUrl || null) as Record<string, unknown> : null;
+  if (cleaned || mediaUrl) return { ...(cleaned || {}), ...(mediaUrl ? { url: mediaUrl } : {}) };
+  return null;
+}
+
 function normalizeIncomingMessageType(body: Record<string, unknown>, rawType: unknown, messageText: string): string {
   const current = String(rawType || "").trim().toLowerCase();
   const mediaUrl = String((body as any).media_url || (body as any).mediaUrl || (body as any).image_url || (body as any).imageUrl || "").trim();
@@ -1405,10 +1514,7 @@ Deno.serve(async (req) => {
                 : null;
               const existingQuotedImageUrl = extractQuotedMediaUrl(body);
               const effectiveQuotedMessageIdForLookup = ptQuotedMessageId || gatewayQuoted?.quotedMessageId || null;
-              const quotedImage = (effectiveQuotedMessageIdForLookup && !existingQuotedImageUrl && !gatewayQuoted?.imageUrl)
-                ? await findQuotedOrRecentOutgoingImage(ptAdmin, ptSes.id, ptCustomer, effectiveQuotedMessageIdForLookup)
-                : null;
-              const quotedGatewayMedia = gatewayQuoted?.imageUrl || ((!quotedImage?.image_url && !existingQuotedImageUrl && effectiveQuotedMessageIdForLookup)
+              const quotedGatewayMedia = gatewayQuoted?.imageUrl || ((!isWebhookSafeMediaUrl(existingQuotedImageUrl) && effectiveQuotedMessageIdForLookup)
                 ? await fetchGatewayMediaDataUrl({
                     gateway: Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com",
                     sessionId: ptSes.id,
@@ -1417,41 +1523,44 @@ Deno.serve(async (req) => {
                     remoteJid: ptRemoteJid || undefined,
                   })
                 : null);
-              const effectiveQuotedImageUrl = quotedImage?.image_url || existingQuotedImageUrl || quotedGatewayMedia || null;
+              const effectiveQuotedImageUrl = selectWebhookMediaUrl(body, existingQuotedImageUrl, quotedGatewayMedia);
               const incomingMediaUrl = String((body as any)?.media_url || (body as any)?.mediaUrl || (body as any)?.image_url || (body as any)?.imageUrl || "").trim();
-              const effectiveMediaUrl = incomingMediaUrl || effectiveQuotedImageUrl || null;
-              const effectiveMessageType = effectiveQuotedImageUrl && !incomingMediaUrl
+              const effectiveMediaUrl = selectWebhookMediaUrl(body, incomingMediaUrl, effectiveQuotedImageUrl);
+              const webhookImageMessage = buildWebhookImageMessage(body, effectiveMediaUrl || effectiveQuotedImageUrl || null);
+              const sanitizedBody = sanitizeSupabaseStorageUrls(body, effectiveMediaUrl || effectiveQuotedImageUrl || null) as Record<string, unknown>;
+              const effectiveMessageType = (effectiveQuotedImageUrl || effectiveMediaUrl || webhookImageMessage) && !incomingMediaUrl
                 ? "image"
                 : String((body as any)?.message_type || (body as any)?.messageType || "other");
               const rawPayload = (body as any)?.raw_payload && typeof (body as any).raw_payload === "object"
                 ? (body as any).raw_payload
                 : null;
               passthroughBody = {
-                ...(body as Record<string, unknown>),
+                ...sanitizedBody,
                 message_type: effectiveMessageType,
-                media_type: effectiveQuotedImageUrl ? "image" : ((body as any)?.media_type || effectiveMessageType),
-                quoted_message_id: effectiveQuotedMessageIdForLookup || quotedImage?.quoted_message_id || null,
-                quoted_image_url: effectiveQuotedImageUrl,
-                quotedImageUrl: effectiveQuotedImageUrl,
-                quoted_image_caption: quotedImage?.caption || gatewayQuoted?.caption || null,
-                quoted_message_log_id: quotedImage?.message_log_id || null,
-                quoted_image_matched: Boolean(quotedImage?.matched_by_quote || quotedGatewayMedia || existingQuotedImageUrl || gatewayQuoted),
-                quoted_image_source: quotedImage?.source || (gatewayQuoted ? gatewayQuoted.source : (quotedGatewayMedia ? "gateway_quoted_media" : (existingQuotedImageUrl ? "payload_quoted_image_url" : null))),
-                image_url: effectiveMediaUrl,
-                imageUrl: effectiveMediaUrl,
-                media_url: effectiveMediaUrl,
-                mediaUrl: effectiveMediaUrl,
-                raw_payload: rawPayload && effectiveQuotedImageUrl ? {
-                  ...rawPayload,
+                media_type: (effectiveQuotedImageUrl || effectiveMediaUrl || webhookImageMessage) ? "image" : ((body as any)?.media_type || effectiveMessageType),
+                quoted_message_id: effectiveQuotedMessageIdForLookup || null,
+                quoted_image_url: effectiveQuotedImageUrl || null,
+                quotedImageUrl: effectiveQuotedImageUrl || null,
+                quoted_image_caption: gatewayQuoted?.caption || null,
+                quoted_image_matched: Boolean(quotedGatewayMedia || existingQuotedImageUrl || gatewayQuoted),
+                quoted_image_source: gatewayQuoted ? gatewayQuoted.source : (quotedGatewayMedia ? "gateway_quoted_media" : (existingQuotedImageUrl ? "payload_quoted_image_url" : null)),
+                image_url: effectiveMediaUrl || null,
+                imageUrl: effectiveMediaUrl || null,
+                media_url: effectiveMediaUrl || null,
+                mediaUrl: effectiveMediaUrl || null,
+                ...(webhookImageMessage ? { imageMessage: webhookImageMessage } : {}),
+                raw_payload: rawPayload && (effectiveQuotedImageUrl || effectiveMediaUrl || webhookImageMessage) ? {
+                  ...(sanitizeSupabaseStorageUrls(rawPayload, effectiveMediaUrl || effectiveQuotedImageUrl || null) as Record<string, unknown>),
                   message_type: "image",
                   media_type: "image",
-                  media_url: effectiveMediaUrl,
-                  mediaUrl: effectiveMediaUrl,
-                  image_url: effectiveMediaUrl,
-                  imageUrl: effectiveMediaUrl,
-                  quoted_message_id: effectiveQuotedMessageIdForLookup || quotedImage?.quoted_message_id || null,
-                  quoted_image_url: effectiveQuotedImageUrl,
-                } : (body as any)?.raw_payload,
+                  media_url: effectiveMediaUrl || null,
+                  mediaUrl: effectiveMediaUrl || null,
+                  image_url: effectiveMediaUrl || null,
+                  imageUrl: effectiveMediaUrl || null,
+                  quoted_message_id: effectiveQuotedMessageIdForLookup || null,
+                  quoted_image_url: effectiveQuotedImageUrl || null,
+                  ...(webhookImageMessage ? { imageMessage: webhookImageMessage } : {}),
+                } : sanitizedBody.raw_payload,
               };
             }
             let delivered = false;
@@ -1477,12 +1586,6 @@ Deno.serve(async (req) => {
             } catch (e: any) {
               error = e?.name === "AbortError" ? "timeout" : (e?.message || "fetch failed");
             }
-            await ptAdmin.from("webhook_logs").insert({
-              session_id: ptSes.id,
-              event_type: ev,
-              delivered,
-              payload: { mode: "passthrough", forwarded_to: externalUrl, error, original: passthroughBody },
-            }).then(() => {}, () => {});
             return jsonResp({ ok: delivered, mode: "passthrough", forwarded_to: externalUrl, error });
           }
         }
@@ -2146,12 +2249,11 @@ Deno.serve(async (req) => {
       .select("media_url, image_url, mimetype, caption, image_caption")
       .eq("id", messageId)
       .maybeSingle() : { data: null };
-    const storedMediaUrl = String((storedMessage as any)?.data?.media_url || (storedMessage as any)?.data?.image_url || "").trim();
     const effectiveImageMessage = isImageMessage || /^image\//i.test(String((storedMessage as any)?.data?.mimetype || ""));
-    const webhookImageUrl = effectiveImageMessage
-      ? (storedMediaUrl || imageUrl || bodyMediaUrl || (!quotedMessageId ? await findRecentWhatsappImageUrl(admin, fromNumber) : "") || "")
-      : "";
-    const webhookMediaUrl = bodyMediaUrl || webhookImageUrl || "";
+    const webhookImageUrl = effectiveImageMessage ? selectWebhookMediaUrl(body, bodyMediaUrl, imageUrl) : "";
+    const webhookMediaUrl = webhookImageUrl || "";
+    const webhookQuotedImageUrl = firstWebhookSafeMediaUrl(bodyQuotedImageUrl, quotedGatewayImageUrl, quotedOutgoingImage?.image_url);
+    const webhookImageMessage = effectiveImageMessage ? buildWebhookImageMessage(body, webhookMediaUrl || webhookQuotedImageUrl || null) : null;
     const webhookMimetype = imageMimetype || String((storedMessage as any)?.data?.mimetype || "") || findMimetype(body) || (effectiveImageMessage ? "image/jpeg" : null);
     const webhookMediaKey = findStringByKeys(body, ["mediaKey", "media_key"]);
     const webhookDirectPath = findStringByKeys(body, ["directPath", "direct_path"]);
@@ -2183,6 +2285,7 @@ Deno.serve(async (req) => {
         mediaUrl: webhookMediaUrl || null,
         image_url: webhookImageUrl || null,
         imageUrl: webhookImageUrl || null,
+        ...(webhookImageMessage ? { imageMessage: webhookImageMessage } : {}),
         mimetype: webhookMimetype,
         media_type: effectiveImageMessage ? "image" : messageType,
         mediaKey: webhookMediaKey,
@@ -2190,8 +2293,8 @@ Deno.serve(async (req) => {
         directPath: webhookDirectPath,
         direct_path: webhookDirectPath,
         quoted_message_id: quotedMessageId,
-        quoted_image_url: bodyQuotedImageUrl || quotedOutgoingImage?.image_url || quotedGatewayImageUrl || null,
-        quotedImageUrl: bodyQuotedImageUrl || quotedOutgoingImage?.image_url || quotedGatewayImageUrl || null,
+        quoted_image_url: webhookQuotedImageUrl,
+        quotedImageUrl: webhookQuotedImageUrl,
         quoted_image_caption: quotedOutgoingImage?.caption || null,
         quoted_message_log_id: quotedOutgoingImage?.message_log_id || null,
         quoted_image_matched: Boolean(quotedOutgoingImage?.matched_by_quote || quotedGatewayImageUrl || bodyQuotedImageUrl),
