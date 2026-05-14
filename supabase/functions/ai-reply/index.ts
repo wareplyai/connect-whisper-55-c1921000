@@ -453,6 +453,115 @@ function extractQuotedMediaUrl(value: unknown): string {
   ).trim();
 }
 
+function isSupabaseStorageUrl(value: string): boolean {
+  const url = String(value || "").trim();
+  if (!/^https?:\/\//i.test(url)) return false;
+  try {
+    const u = new URL(url);
+    return u.hostname.endsWith(".supabase.co") && u.pathname.includes("/storage/v1/object/");
+  } catch {
+    return /\.supabase\.co\/storage\/v1\/object\//i.test(url);
+  }
+}
+
+function isWhatsAppMediaUrl(value: string): boolean {
+  const url = String(value || "").trim();
+  if (!/^https?:\/\//i.test(url)) return false;
+  try {
+    const u = new URL(url);
+    return u.hostname === "mmg.whatsapp.net" || u.hostname.endsWith(".whatsapp.net");
+  } catch {
+    return /\/\/[^/]*whatsapp\.net\//i.test(url);
+  }
+}
+
+function isWebhookSafeMediaUrl(value: string): boolean {
+  const url = String(value || "").trim();
+  return /^https?:\/\//i.test(url) && !isSupabaseStorageUrl(url);
+}
+
+function extractWhatsappMediaUrl(value: unknown, depth = 0): string | null {
+  if (depth > 10 || value == null) return null;
+  if (typeof value === "string") {
+    const v = value.trim();
+    return isWhatsAppMediaUrl(v) ? v : null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value.slice(0, 80)) {
+      const found = extractWhatsappMediaUrl(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  const preferred = ["url", "mediaUrl", "media_url", "imageUrl", "image_url", "quotedMediaUrl", "quoted_media_url", "quotedImageUrl", "quoted_image_url"];
+  for (const key of preferred) {
+    const found = extractWhatsappMediaUrl(obj[key], depth + 1);
+    if (found) return found;
+  }
+  for (const child of Object.values(obj)) {
+    const found = extractWhatsappMediaUrl(child, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+function firstWebhookSafeMediaUrl(...values: unknown[]): string | null {
+  for (const value of values) {
+    const url = typeof value === "string" ? value.trim() : "";
+    if (url && isWhatsAppMediaUrl(url)) return url;
+  }
+  for (const value of values) {
+    const url = typeof value === "string" ? value.trim() : "";
+    if (url && isWebhookSafeMediaUrl(url)) return url;
+  }
+  return null;
+}
+
+function selectWebhookMediaUrl(payload: unknown, ...candidates: unknown[]): string {
+  return extractWhatsappMediaUrl(payload) || firstWebhookSafeMediaUrl(...candidates) || "";
+}
+
+function sanitizeSupabaseStorageUrls(value: unknown, replacementUrl: string | null, depth = 0): unknown {
+  if (depth > 10 || value == null) return value;
+  if (typeof value === "string") {
+    return isSupabaseStorageUrl(value) ? (replacementUrl || null) : value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeSupabaseStorageUrls(item, replacementUrl, depth + 1));
+  }
+  if (typeof value !== "object") return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    out[key] = sanitizeSupabaseStorageUrls(child, replacementUrl, depth + 1);
+  }
+  return out;
+}
+
+function findImageMessageObject(value: unknown, depth = 0): Record<string, unknown> | null {
+  if (depth > 10 || value == null || typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  for (const [key, child] of Object.entries(obj)) {
+    const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (normalized === "imagemessage" && child && typeof child === "object") {
+      return child as Record<string, unknown>;
+    }
+  }
+  for (const child of Object.values(obj)) {
+    const found = findImageMessageObject(child, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+function buildWebhookImageMessage(payload: unknown, mediaUrl: string | null): Record<string, unknown> | null {
+  const source = findImageMessageObject(payload);
+  const cleaned = source ? sanitizeSupabaseStorageUrls(source, mediaUrl || null) as Record<string, unknown> : null;
+  if (cleaned || mediaUrl) return { ...(cleaned || {}), ...(mediaUrl ? { url: mediaUrl } : {}) };
+  return null;
+}
+
 function normalizeIncomingMessageType(body: Record<string, unknown>, rawType: unknown, messageText: string): string {
   const current = String(rawType || "").trim().toLowerCase();
   const mediaUrl = String((body as any).media_url || (body as any).mediaUrl || (body as any).image_url || (body as any).imageUrl || "").trim();
