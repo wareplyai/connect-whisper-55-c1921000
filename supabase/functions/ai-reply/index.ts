@@ -1403,11 +1403,11 @@ Deno.serve(async (req) => {
                     messageText: String((body as any)?.message || (body as any)?.message_text || (body as any)?.text || ""),
                   })
                 : null;
+              const existingQuotedImageUrl = extractQuotedMediaUrl(body);
               const effectiveQuotedMessageIdForLookup = ptQuotedMessageId || gatewayQuoted?.quotedMessageId || null;
               const quotedImage = (effectiveQuotedMessageIdForLookup && !existingQuotedImageUrl && !gatewayQuoted?.imageUrl)
                 ? await findQuotedOrRecentOutgoingImage(ptAdmin, ptSes.id, ptCustomer, effectiveQuotedMessageIdForLookup)
                 : null;
-              const existingQuotedImageUrl = extractQuotedMediaUrl(body);
               const quotedGatewayMedia = gatewayQuoted?.imageUrl || ((!quotedImage?.image_url && !existingQuotedImageUrl && effectiveQuotedMessageIdForLookup)
                 ? await fetchGatewayMediaDataUrl({
                     gateway: Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com",
