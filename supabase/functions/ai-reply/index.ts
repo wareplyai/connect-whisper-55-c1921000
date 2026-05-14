@@ -625,7 +625,7 @@ async function fetchGatewayMediaDataUrl(opts: {
 
       if (ctype.startsWith("image/")) {
         const buf = new Uint8Array(await res.arrayBuffer());
-        const b64 = btoa(String.fromCharCode(...buf));
+        const b64 = bytesToBase64(buf);
         console.log(`[gateway-media] got binary ${ctype} from ${c.url} (${buf.length} bytes)`);
         return `data:${ctype};base64,${b64}`;
       }
