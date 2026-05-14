@@ -2255,12 +2255,11 @@ Deno.serve(async (req) => {
       .select("media_url, image_url, mimetype, caption, image_caption")
       .eq("id", messageId)
       .maybeSingle() : { data: null };
-    const storedMediaUrl = String((storedMessage as any)?.data?.media_url || (storedMessage as any)?.data?.image_url || "").trim();
     const effectiveImageMessage = isImageMessage || /^image\//i.test(String((storedMessage as any)?.data?.mimetype || ""));
-    const webhookImageUrl = effectiveImageMessage
-      ? (storedMediaUrl || imageUrl || bodyMediaUrl || (!quotedMessageId ? await findRecentWhatsappImageUrl(admin, fromNumber) : "") || "")
-      : "";
-    const webhookMediaUrl = bodyMediaUrl || webhookImageUrl || "";
+    const webhookImageUrl = effectiveImageMessage ? selectWebhookMediaUrl(body, bodyMediaUrl, imageUrl) : "";
+    const webhookMediaUrl = webhookImageUrl || "";
+    const webhookQuotedImageUrl = firstWebhookSafeMediaUrl(bodyQuotedImageUrl, quotedGatewayImageUrl, quotedOutgoingImage?.image_url);
+    const webhookImageMessage = effectiveImageMessage ? buildWebhookImageMessage(body, webhookMediaUrl || webhookQuotedImageUrl || null) : null;
     const webhookMimetype = imageMimetype || String((storedMessage as any)?.data?.mimetype || "") || findMimetype(body) || (effectiveImageMessage ? "image/jpeg" : null);
     const webhookMediaKey = findStringByKeys(body, ["mediaKey", "media_key"]);
     const webhookDirectPath = findStringByKeys(body, ["directPath", "direct_path"]);
@@ -2292,6 +2291,7 @@ Deno.serve(async (req) => {
         mediaUrl: webhookMediaUrl || null,
         image_url: webhookImageUrl || null,
         imageUrl: webhookImageUrl || null,
+        ...(webhookImageMessage ? { imageMessage: webhookImageMessage } : {}),
         mimetype: webhookMimetype,
         media_type: effectiveImageMessage ? "image" : messageType,
         mediaKey: webhookMediaKey,
@@ -2299,8 +2299,8 @@ Deno.serve(async (req) => {
         directPath: webhookDirectPath,
         direct_path: webhookDirectPath,
         quoted_message_id: quotedMessageId,
-        quoted_image_url: bodyQuotedImageUrl || quotedOutgoingImage?.image_url || quotedGatewayImageUrl || null,
-        quotedImageUrl: bodyQuotedImageUrl || quotedOutgoingImage?.image_url || quotedGatewayImageUrl || null,
+        quoted_image_url: webhookQuotedImageUrl,
+        quotedImageUrl: webhookQuotedImageUrl,
         quoted_image_caption: quotedOutgoingImage?.caption || null,
         quoted_message_log_id: quotedOutgoingImage?.message_log_id || null,
         quoted_image_matched: Boolean(quotedOutgoingImage?.matched_by_quote || quotedGatewayImageUrl || bodyQuotedImageUrl),
