@@ -1209,7 +1209,7 @@ Deno.serve(async (req) => {
                     gateway: Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com",
                     sessionId: ptSes.id,
                     messageId: ptQuotedMessageId,
-                    remoteJid: findStringByKeys(body, ["remoteJid", "remote_jid", "target_jid"]),
+                    remoteJid: findStringByKeys(body, ["remoteJid", "remote_jid", "target_jid"]) || undefined,
                   })
                 : null;
               passthroughBody = {
