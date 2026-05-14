@@ -1560,7 +1560,7 @@ Deno.serve(async (req) => {
       if (recoveredQuotedUrl) {
         imageUrl = recoveredQuotedUrl;
         isImageMessage = true;
-        imageCaption = imageCaption || quotedOutgoingImage.caption;
+        imageCaption = imageCaption || quotedOutgoingImage?.caption || null;
         messageType = "image";
         (body as any).message_type = "image";
         (body as any).media_type = "image";
