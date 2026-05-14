@@ -475,6 +475,178 @@ function extractQuotedMessageId(value: unknown, depth = 0): string | null {
   return null;
 }
 
+function normalizeTextForCompare(value: unknown): string {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[\s\u200b\u200c\u200d]+/g, " ")
+    .replace(/^[\s"'`]+|[\s"'`]+$/g, "")
+    .trim();
+}
+
+function extractMessageTextDeep(value: unknown, depth = 0): string {
+  if (depth > 7 || value == null) return "";
+  if (typeof value === "string") return "";
+  if (Array.isArray(value)) {
+    for (const item of value.slice(0, 25)) {
+      const found = extractMessageTextDeep(item, depth + 1);
+      if (found) return found;
+    }
+    return "";
+  }
+  if (typeof value !== "object") return "";
+  const obj = value as Record<string, unknown>;
+  const directKeys = ["conversation", "text", "message", "message_text", "body", "caption"];
+  for (const key of directKeys) {
+    const child = obj[key];
+    if (typeof child === "string" && child.trim()) return child.trim();
+  }
+  const nested = [
+    (obj.message as any)?.conversation,
+    (obj.message as any)?.extendedTextMessage?.text,
+    (obj.message as any)?.imageMessage?.caption,
+    (obj.extendedTextMessage as any)?.text,
+    (obj.imageMessage as any)?.caption,
+  ];
+  for (const child of nested) {
+    if (typeof child === "string" && child.trim()) return child.trim();
+  }
+  for (const child of Object.values(obj)) {
+    const found = extractMessageTextDeep(child, depth + 1);
+    if (found) return found;
+  }
+  return "";
+}
+
+function messageLooksFromMe(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const obj = value as Record<string, unknown>;
+  if (obj.fromMe === true || obj.from_me === true || obj.is_from_me === true) return true;
+  const key = (obj.key || obj.rawKey) as Record<string, unknown> | undefined;
+  return key?.fromMe === true || key?.from_me === true;
+}
+
+function collectMessageLikeObjects(value: unknown, out: unknown[] = [], seen = new Set<unknown>(), depth = 0): unknown[] {
+  if (depth > 8 || value == null) return out;
+  if (Array.isArray(value)) {
+    for (const item of value.slice(0, 100)) collectMessageLikeObjects(item, out, seen, depth + 1);
+    return out;
+  }
+  if (typeof value !== "object") return out;
+  if (seen.has(value)) return out;
+  seen.add(value);
+  const obj = value as Record<string, unknown>;
+  const hasMessageShape = Boolean(
+    obj.key || obj.rawKey || obj.message || obj.contextInfo || obj.context_info ||
+    obj.quoted || obj.quotedMessage || obj.extendedTextMessage || obj.imageMessage ||
+    obj.messageTimestamp || obj.message_id || obj.messageId || obj.id
+  );
+  if (hasMessageShape) out.push(value);
+  for (const child of Object.values(obj)) collectMessageLikeObjects(child, out, seen, depth + 1);
+  return out;
+}
+
+function extractQuotedImageCandidate(value: unknown, depth = 0): {
+  quotedMessageId: string | null;
+  imageUrl: string | null;
+  caption: string | null;
+  source: string;
+} | null {
+  if (depth > 9 || value == null || typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  const contexts = [obj.contextInfo, obj.context_info, obj.quotedMessageContext, obj.quoted].filter(Boolean);
+  for (const context of contexts) {
+    if (!context || typeof context !== "object") continue;
+    const ctx = context as Record<string, unknown>;
+    const quotedMessageId = String(
+      ctx.stanzaId || ctx.quotedMessageId || ctx.quoted_message_id || ctx.id || ctx.messageId || ""
+    ).trim() || null;
+    const quotedMessage = (ctx.quotedMessage || ctx.message || ctx.quoted_message || ctx.quoted) as Record<string, unknown> | undefined;
+    const imageUrl = findImageUrl(quotedMessage || ctx);
+    const caption = findCaption(quotedMessage || ctx);
+    if (quotedMessageId || imageUrl || payloadLooksLikeImage(quotedMessage || ctx)) {
+      return { quotedMessageId, imageUrl, caption, source: "gateway_recent_message_context" };
+    }
+  }
+  const directQuoted = (obj.quotedMessage || obj.quoted_message) as Record<string, unknown> | undefined;
+  if (directQuoted) {
+    const quotedMessageId = String(obj.stanzaId || obj.quotedMessageId || obj.messageId || obj.id || "").trim() || null;
+    const imageUrl = findImageUrl(directQuoted);
+    const caption = findCaption(directQuoted);
+    if (quotedMessageId || imageUrl || payloadLooksLikeImage(directQuoted)) {
+      return { quotedMessageId, imageUrl, caption, source: "gateway_recent_message_context" };
+    }
+  }
+  for (const child of Object.values(obj)) {
+    const found = extractQuotedImageCandidate(child, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+async function fetchGatewayQuotedImageFromRecentMessage(opts: {
+  gateway: string; sessionId: string; apiToken?: string | null;
+  remoteJid?: string | null; customerNumber?: string | null; messageText?: string | null;
+}): Promise<{ quotedMessageId: string | null; imageUrl: string | null; caption: string | null; source: string } | null> {
+  const { gateway, sessionId, apiToken, customerNumber, messageText } = opts;
+  const digits = digitsOnly(customerNumber || "");
+  const remoteJid = String(opts.remoteJid || (digits ? `${digits}@s.whatsapp.net` : "")).trim();
+  if (!remoteJid) return null;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+  const jid = encodeURIComponent(remoteJid);
+  const expectedText = normalizeTextForCompare(messageText || "");
+
+  const attempts: Array<{ url: string; method: "GET" | "POST"; body?: unknown }> = [];
+  for (const base of gatewayBaseVariants(gateway)) {
+    attempts.push(
+      { url: `${base}/api/session/${sessionId}/messages?chatId=${jid}&limit=20`, method: "GET" },
+      { url: `${base}/api/session/${sessionId}/messages?jid=${jid}&limit=20`, method: "GET" },
+      { url: `${base}/api/session/${sessionId}/chats/${jid}/messages?limit=20`, method: "GET" },
+      { url: `${base}/api/session/${sessionId}/chat/${jid}/messages?limit=20`, method: "GET" },
+      { url: `${base}/api/session/${sessionId}/messages`, method: "POST", body: { chatId: remoteJid, jid: remoteJid, remoteJid, limit: 20 } },
+    );
+  }
+
+  for (const attempt of attempts) {
+    try {
+      const init: RequestInit = { method: attempt.method, headers: { ...headers } };
+      if (attempt.method === "POST") init.body = JSON.stringify(attempt.body || {});
+      const res = await fetch(attempt.url, init);
+      if (!res.ok) continue;
+      const data = await res.json().catch(() => null);
+      if (!data) continue;
+      const messages = collectMessageLikeObjects(data);
+      const preferred = messages.filter((msg) => {
+        if (messageLooksFromMe(msg)) return false;
+        const candidateText = normalizeTextForCompare(extractMessageTextDeep(msg));
+        if (!expectedText) return true;
+        return candidateText === expectedText || candidateText.includes(expectedText) || expectedText.includes(candidateText);
+      });
+      for (const msg of [...preferred, ...messages]) {
+        const quoted = extractQuotedImageCandidate(msg);
+        if (!quoted) continue;
+        let imageUrl = quoted.imageUrl;
+        if (!imageUrl && quoted.quotedMessageId) {
+          imageUrl = await fetchGatewayMediaDataUrl({
+            gateway,
+            sessionId,
+            apiToken,
+            messageId: quoted.quotedMessageId,
+            remoteJid,
+          });
+        }
+        if (quoted.quotedMessageId || imageUrl) {
+          console.log("[gateway-quote] recovered quoted context", { source: attempt.url, quoted_message_id: quoted.quotedMessageId, has_image: !!imageUrl });
+          return { ...quoted, imageUrl };
+        }
+      }
+    } catch (e) {
+      console.log("[gateway-quote] recent message lookup failed:", (e as Error)?.message);
+    }
+  }
+  return null;
+}
+
 function collectPossibleMessageIds(value: unknown, out = new Set<string>(), depth = 0): Set<string> {
   if (depth > 8 || value == null) return out;
   if (typeof value === "string" || typeof value === "number") {
