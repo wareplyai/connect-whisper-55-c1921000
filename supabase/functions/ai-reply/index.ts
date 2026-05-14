@@ -1173,6 +1173,25 @@ Deno.serve(async (req) => {
           ).trim();
           if (externalUrl && !isInternalAiReplyWebhook(externalUrl)) {
             const ev = String((body as any)?.event || "messages.received");
+            const ptCustomer = resolveCustomerNumber(body as Record<string, unknown>, null) || digitsOnly((body as any)?.from_number || (body as any)?.from);
+            const ptQuotedMessageId = extractQuotedMessageId(body);
+            let passthroughBody: Record<string, unknown> = body as Record<string, unknown>;
+            if (ptCustomer) {
+              const quotedImage = await findQuotedOrRecentOutgoingImage(ptAdmin, ptSes.id, ptCustomer, ptQuotedMessageId);
+              if (quotedImage?.image_url) {
+                passthroughBody = {
+                  ...(body as Record<string, unknown>),
+                  message_type: (body as any)?.message_type || "other",
+                  quoted_message_id: ptQuotedMessageId || quotedImage.quoted_message_id,
+                  quoted_image_url: quotedImage.image_url,
+                  quoted_image_caption: quotedImage.caption,
+                  quoted_message_log_id: quotedImage.message_log_id,
+                  quoted_image_matched: quotedImage.matched_by_quote,
+                  image_url: (body as any)?.image_url || (body as any)?.imageUrl || null,
+                  media_url: (body as any)?.media_url || (body as any)?.mediaUrl || null,
+                };
+              }
+            }
             let delivered = false;
             let error: string | null = null;
             try {
@@ -1187,7 +1206,7 @@ Deno.serve(async (req) => {
                   "X-WaReply-Session": ptSes.id,
                   "X-WaReply-Mode": "passthrough",
                 },
-                body: JSON.stringify(body),
+                body: JSON.stringify(passthroughBody),
                 signal: ctrl.signal,
               });
               clearTimeout(to);
@@ -1200,7 +1219,7 @@ Deno.serve(async (req) => {
               session_id: ptSes.id,
               event_type: ev,
               delivered,
-              payload: { mode: "passthrough", forwarded_to: externalUrl, error, original: body },
+              payload: { mode: "passthrough", forwarded_to: externalUrl, error, original: passthroughBody },
             }).then(() => {}, () => {});
             return jsonResp({ ok: delivered, mode: "passthrough", forwarded_to: externalUrl, error });
           }
