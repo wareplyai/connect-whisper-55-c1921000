@@ -467,23 +467,41 @@ function extractQuotedMessageId(value: unknown, depth = 0): string | null {
   return null;
 }
 
+function collectPossibleMessageIds(value: unknown, out = new Set<string>(), depth = 0): Set<string> {
+  if (depth > 8 || value == null) return out;
+  if (Array.isArray(value)) {
+    for (const item of value.slice(0, 50)) collectPossibleMessageIds(item, out, depth + 1);
+    return out;
+  }
+  if (typeof value !== "object") return out;
+  const idKeys = new Set(["id", "messageid", "message_id", "whatsappmessageid", "whatsapp_message_id", "stanzaid"]);
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    const normalized = key.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    if (idKeys.has(normalized) && (typeof child === "string" || typeof child === "number")) {
+      const id = String(child).trim();
+      if (id && id.length <= 200) out.add(id);
+    }
+    collectPossibleMessageIds(child, out, depth + 1);
+  }
+  return out;
+}
+
 async function findQuotedOrRecentOutgoingImage(admin: any, sessionId: string, fromNumber: string, quotedMessageId?: string | null) {
   const qid = String(quotedMessageId || "").trim();
   // 1) Outgoing images we sent to this customer (message_logs)
   try {
     const { data } = await admin
       .from("message_logs")
-      .select("id, image_url, image_caption, payload, created_at, message_type")
+      .select("id, to_number, image_url, image_caption, payload, created_at, message_type")
       .eq("session_id", sessionId)
-      .eq("to_number", fromNumber)
       .not("image_url", "is", null)
       .order("created_at", { ascending: false })
-      .limit(20);
-    const rows = Array.isArray(data) ? data : [];
+      .limit(60);
+    const rows = (Array.isArray(data) ? data : []).filter((row: any) => samePhone(row?.to_number, fromNumber));
     if (rows.length) {
       const matched = qid ? rows.find((row: any) => {
         const p = row?.payload || {};
-        const ids = [p.gateway_message_id, p.message_id, p.id, p.key?.id, p.result?.key?.id, p.result?.id, p.gateway_response?.key?.id, p.gateway_response?.id];
+        const ids = [p.gateway_message_id, p.message_id, p.id, p.key?.id, p.result?.key?.id, p.result?.id, p.gateway_response?.key?.id, p.gateway_response?.id, ...collectPossibleMessageIds(p.gateway_response || p)];
         return ids.some((id) => id && String(id) === qid);
       }) : null;
       const row = matched || rows[0];
