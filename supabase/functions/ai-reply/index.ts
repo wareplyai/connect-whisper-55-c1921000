@@ -24,6 +24,14 @@ function b64decode(s: string): Uint8Array {
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
   return bytes;
 }
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.slice(i, i + chunk));
+  }
+  return btoa(binary);
+}
 async function decryptKey(payload: string): Promise<string> {
   const [ivB64, ctB64] = payload.split(".");
   const key = await getCryptoKey();
@@ -469,6 +477,11 @@ function extractQuotedMessageId(value: unknown, depth = 0): string | null {
 
 function collectPossibleMessageIds(value: unknown, out = new Set<string>(), depth = 0): Set<string> {
   if (depth > 8 || value == null) return out;
+  if (typeof value === "string" || typeof value === "number") {
+    const id = String(value).trim();
+    if (id && id.length <= 200 && /[A-Za-z0-9]/.test(id)) out.add(id);
+    return out;
+  }
   if (Array.isArray(value)) {
     for (const item of value.slice(0, 50)) collectPossibleMessageIds(item, out, depth + 1);
     return out;
@@ -484,6 +497,17 @@ function collectPossibleMessageIds(value: unknown, out = new Set<string>(), dept
     collectPossibleMessageIds(child, out, depth + 1);
   }
   return out;
+}
+
+function messageIdMatches(candidate: unknown, quotedId: string): boolean {
+  const a = String(candidate || "").trim();
+  const b = String(quotedId || "").trim();
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const strip = (v: string) => v.replace(/@.+$/, "").replace(/^wamid\./i, "").trim();
+  const sa = strip(a);
+  const sb = strip(b);
+  return Boolean(sa && sb && (sa === sb || sa.endsWith(sb) || sb.endsWith(sa)));
 }
 
 async function findQuotedOrRecentOutgoingImage(admin: any, sessionId: string, fromNumber: string, quotedMessageId?: string | null) {
@@ -502,15 +526,16 @@ async function findQuotedOrRecentOutgoingImage(admin: any, sessionId: string, fr
       const matched = qid ? rows.find((row: any) => {
         const p = row?.payload || {};
         const ids = [p.gateway_message_id, p.message_id, p.id, p.key?.id, p.result?.key?.id, p.result?.id, p.gateway_response?.key?.id, p.gateway_response?.id, ...collectPossibleMessageIds(p.gateway_response || p)];
-        return ids.some((id) => id && String(id) === qid);
+        return ids.some((id) => messageIdMatches(id, qid));
       }) : null;
-      const row = matched || rows[0];
+      const row = matched || (!qid ? rows[0] : null);
       if (row?.image_url) {
         return {
           image_url: row.image_url,
           caption: row.image_caption || row.payload?.caption || null,
           message_log_id: row.id,
           matched_by_quote: Boolean(matched),
+          has_quote: Boolean(qid),
           quoted_message_id: qid || null,
           source: "outgoing_message_logs",
         };
@@ -535,14 +560,14 @@ async function findQuotedOrRecentOutgoingImage(admin: any, sessionId: string, fr
     const rows = Array.isArray(data) ? data : [];
     const matched = qid ? rows.find((row: any) => {
       const r = row?.raw_payload || {};
-      const ids = [row?.id, r.message_id, r.messageId, r.id, r.key?.id, r.rawKey?.id];
-      return ids.some((id) => id && String(id) === qid);
+      const ids = [row?.id, r.message_id, r.messageId, r.id, r.key?.id, r.rawKey?.id, ...collectPossibleMessageIds(r)];
+      return ids.some((id) => messageIdMatches(id, qid));
     }) : null;
-    const row = matched || rows.find((r: any) => {
+    const row = matched || (!qid ? rows.find((r: any) => {
       const url = String(r?.image_url || r?.media_url || "");
       const mt = String(r?.mimetype || "");
       return /\.(jpe?g|png|webp|gif|bmp|heic)(\?|$)/i.test(url) || /^image\//i.test(mt);
-    });
+    }) : null);
     const url = String(row?.image_url || row?.media_url || "").trim();
     if (url) {
       return {
@@ -550,6 +575,7 @@ async function findQuotedOrRecentOutgoingImage(admin: any, sessionId: string, fr
         caption: row?.image_caption || row?.caption || null,
         message_log_id: row?.id || null,
         matched_by_quote: Boolean(matched),
+        has_quote: Boolean(qid),
         quoted_message_id: qid || null,
         source: "incoming_messages",
       };
@@ -599,7 +625,7 @@ async function fetchGatewayMediaDataUrl(opts: {
 
       if (ctype.startsWith("image/")) {
         const buf = new Uint8Array(await res.arrayBuffer());
-        const b64 = btoa(String.fromCharCode(...buf));
+        const b64 = bytesToBase64(buf);
         console.log(`[gateway-media] got binary ${ctype} from ${c.url} (${buf.length} bytes)`);
         return `data:${ctype};base64,${b64}`;
       }
@@ -1178,19 +1204,26 @@ Deno.serve(async (req) => {
             let passthroughBody: Record<string, unknown> = body as Record<string, unknown>;
             if (ptCustomer) {
               const quotedImage = await findQuotedOrRecentOutgoingImage(ptAdmin, ptSes.id, ptCustomer, ptQuotedMessageId);
-              if (quotedImage?.image_url) {
-                passthroughBody = {
-                  ...(body as Record<string, unknown>),
-                  message_type: (body as any)?.message_type || "other",
-                  quoted_message_id: ptQuotedMessageId || quotedImage.quoted_message_id,
-                  quoted_image_url: quotedImage.image_url,
-                  quoted_image_caption: quotedImage.caption,
-                  quoted_message_log_id: quotedImage.message_log_id,
-                  quoted_image_matched: quotedImage.matched_by_quote,
-                  image_url: (body as any)?.image_url || (body as any)?.imageUrl || null,
-                  media_url: (body as any)?.media_url || (body as any)?.mediaUrl || null,
-                };
-              }
+              const quotedGatewayMedia = (!quotedImage?.image_url && ptQuotedMessageId)
+                ? await fetchGatewayMediaDataUrl({
+                    gateway: Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com",
+                    sessionId: ptSes.id,
+                    messageId: ptQuotedMessageId,
+                    remoteJid: findStringByKeys(body, ["remoteJid", "remote_jid", "target_jid"]) || undefined,
+                  })
+                : null;
+              passthroughBody = {
+                ...(body as Record<string, unknown>),
+                message_type: (body as any)?.message_type || "other",
+                quoted_message_id: ptQuotedMessageId || quotedImage?.quoted_message_id || null,
+                quoted_image_url: quotedImage?.image_url || quotedGatewayMedia || null,
+                quoted_image_caption: quotedImage?.caption || null,
+                quoted_message_log_id: quotedImage?.message_log_id || null,
+                quoted_image_matched: Boolean(quotedImage?.matched_by_quote || quotedGatewayMedia),
+                quoted_image_source: quotedImage?.source || (quotedGatewayMedia ? "gateway_quoted_media" : null),
+                image_url: (body as any)?.image_url || (body as any)?.imageUrl || null,
+                media_url: (body as any)?.media_url || (body as any)?.mediaUrl || null,
+              };
             }
             let delivered = false;
             let error: string | null = null;
@@ -1511,19 +1544,30 @@ Deno.serve(async (req) => {
     // to this customer so n8n/webhooks and AI still know which product "ata" means.
     const quotedMessageId = extractQuotedMessageId(body);
     let quotedOutgoingImage: Awaited<ReturnType<typeof findQuotedOrRecentOutgoingImage>> = null;
-    if (!imageUrl && messageText && !isImageMessage) {
+    let quotedGatewayImageUrl: string | null = null;
+    if (!imageUrl && messageText && !isImageMessage && quotedMessageId) {
       quotedOutgoingImage = await findQuotedOrRecentOutgoingImage(admin, sessionId, fromNumber, quotedMessageId);
-      if (quotedOutgoingImage?.image_url) {
-        imageUrl = quotedOutgoingImage.image_url;
+      if (!quotedOutgoingImage?.image_url) {
+        quotedGatewayImageUrl = await fetchGatewayMediaDataUrl({
+          gateway: GATEWAY,
+          sessionId,
+          apiToken: session.api_token,
+          messageId: quotedMessageId,
+          remoteJid: String((body as any).target_jid || (body as any).remoteJid || (rawKey as any)?.remoteJid || (rawPayload as any)?.remoteJid || "").trim(),
+        });
+      }
+      const recoveredQuotedUrl = quotedOutgoingImage?.image_url || quotedGatewayImageUrl;
+      if (recoveredQuotedUrl) {
+        imageUrl = recoveredQuotedUrl;
         isImageMessage = true;
-        imageCaption = imageCaption || quotedOutgoingImage.caption;
+        imageCaption = imageCaption || quotedOutgoingImage?.caption || null;
         messageType = "image";
         (body as any).message_type = "image";
         (body as any).media_type = "image";
-        (body as any).quoted_message_id = quotedOutgoingImage.quoted_message_id;
-        (body as any).quoted_image_url = quotedOutgoingImage.image_url;
-        (body as any).quoted_image_caption = quotedOutgoingImage.caption;
-        console.log("[ai-reply] recovered quoted/recent outgoing image", quotedOutgoingImage);
+        (body as any).quoted_message_id = quotedOutgoingImage?.quoted_message_id || quotedMessageId;
+        (body as any).quoted_image_url = recoveredQuotedUrl;
+        (body as any).quoted_image_caption = quotedOutgoingImage?.caption || null;
+        console.log("[ai-reply] recovered quoted outgoing image", quotedOutgoingImage || { source: "gateway_quoted_media", quoted_message_id: quotedMessageId });
       }
     }
 
@@ -1668,7 +1712,7 @@ Deno.serve(async (req) => {
         (typeof (body as any).media_filename === "string" && (body as any).media_filename) ||
         (typeof (body as any).filename === "string" && (body as any).filename) ||
         null;
-      if (isImageMessage && !payloadMediaUrl) {
+      if (isImageMessage && !payloadMediaUrl && !quotedMessageId) {
         payloadMediaUrl = await findRecentWhatsappImageUrl(admin, fromNumber);
         if (payloadMediaUrl && !imageUrl) imageUrl = payloadMediaUrl;
       }
@@ -1843,7 +1887,7 @@ Deno.serve(async (req) => {
     const storedMediaUrl = String((storedMessage as any)?.data?.media_url || (storedMessage as any)?.data?.image_url || "").trim();
     const effectiveImageMessage = isImageMessage || /^image\//i.test(String((storedMessage as any)?.data?.mimetype || ""));
     const webhookImageUrl = effectiveImageMessage
-      ? (storedMediaUrl || imageUrl || bodyMediaUrl || await findRecentWhatsappImageUrl(admin, fromNumber) || "")
+      ? (storedMediaUrl || imageUrl || bodyMediaUrl || (!quotedMessageId ? await findRecentWhatsappImageUrl(admin, fromNumber) : "") || "")
       : "";
     const webhookMediaUrl = bodyMediaUrl || webhookImageUrl || "";
     const webhookMimetype = imageMimetype || String((storedMessage as any)?.data?.mimetype || "") || findMimetype(body) || (effectiveImageMessage ? "image/jpeg" : null);
@@ -1884,10 +1928,11 @@ Deno.serve(async (req) => {
         directPath: webhookDirectPath,
         direct_path: webhookDirectPath,
         quoted_message_id: quotedMessageId,
-        quoted_image_url: quotedOutgoingImage?.image_url || null,
+        quoted_image_url: quotedOutgoingImage?.image_url || quotedGatewayImageUrl || null,
         quoted_image_caption: quotedOutgoingImage?.caption || null,
         quoted_message_log_id: quotedOutgoingImage?.message_log_id || null,
-        quoted_image_matched: quotedOutgoingImage?.matched_by_quote || false,
+        quoted_image_matched: Boolean(quotedOutgoingImage?.matched_by_quote || quotedGatewayImageUrl),
+        quoted_image_source: quotedOutgoingImage?.source || (quotedGatewayImageUrl ? "gateway_quoted_media" : null),
         caption: imageCaption || (storedMessage as any)?.data?.caption || null,
         image_caption: imageCaption || (storedMessage as any)?.data?.image_caption || null,
         is_group: isGroup,
