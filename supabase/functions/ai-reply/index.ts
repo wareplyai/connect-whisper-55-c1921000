@@ -1712,7 +1712,7 @@ Deno.serve(async (req) => {
         (typeof (body as any).media_filename === "string" && (body as any).media_filename) ||
         (typeof (body as any).filename === "string" && (body as any).filename) ||
         null;
-      if (isImageMessage && !payloadMediaUrl) {
+      if (isImageMessage && !payloadMediaUrl && !quotedMessageId) {
         payloadMediaUrl = await findRecentWhatsappImageUrl(admin, fromNumber);
         if (payloadMediaUrl && !imageUrl) imageUrl = payloadMediaUrl;
       }
@@ -1887,7 +1887,7 @@ Deno.serve(async (req) => {
     const storedMediaUrl = String((storedMessage as any)?.data?.media_url || (storedMessage as any)?.data?.image_url || "").trim();
     const effectiveImageMessage = isImageMessage || /^image\//i.test(String((storedMessage as any)?.data?.mimetype || ""));
     const webhookImageUrl = effectiveImageMessage
-      ? (storedMediaUrl || imageUrl || bodyMediaUrl || await findRecentWhatsappImageUrl(admin, fromNumber) || "")
+      ? (storedMediaUrl || imageUrl || bodyMediaUrl || (!quotedMessageId ? await findRecentWhatsappImageUrl(admin, fromNumber) : "") || "")
       : "";
     const webhookMediaUrl = bodyMediaUrl || webhookImageUrl || "";
     const webhookMimetype = imageMimetype || String((storedMessage as any)?.data?.mimetype || "") || findMimetype(body) || (effectiveImageMessage ? "image/jpeg" : null);
