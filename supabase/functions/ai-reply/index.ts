@@ -1514,7 +1514,7 @@ Deno.serve(async (req) => {
                 : null;
               const existingQuotedImageUrl = extractQuotedMediaUrl(body);
               const effectiveQuotedMessageIdForLookup = ptQuotedMessageId || gatewayQuoted?.quotedMessageId || null;
-              const quotedGatewayMedia = gatewayQuoted?.imageUrl || ((!existingQuotedImageUrl && effectiveQuotedMessageIdForLookup)
+              const quotedGatewayMedia = gatewayQuoted?.imageUrl || ((!isWebhookSafeMediaUrl(existingQuotedImageUrl) && effectiveQuotedMessageIdForLookup)
                 ? await fetchGatewayMediaDataUrl({
                     gateway: Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com",
                     sessionId: ptSes.id,
@@ -1557,7 +1557,7 @@ Deno.serve(async (req) => {
                   mediaUrl: effectiveMediaUrl || null,
                   image_url: effectiveMediaUrl || null,
                   imageUrl: effectiveMediaUrl || null,
-                  quoted_message_id: effectiveQuotedMessageIdForLookup || quotedImage?.quoted_message_id || null,
+                  quoted_message_id: effectiveQuotedMessageIdForLookup || null,
                   quoted_image_url: effectiveQuotedImageUrl || null,
                   ...(webhookImageMessage ? { imageMessage: webhookImageMessage } : {}),
                 } : sanitizedBody.raw_payload,
