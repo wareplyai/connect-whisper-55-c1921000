@@ -1325,6 +1325,7 @@ export type Database = {
           image_caption: string | null
           image_url: string | null
           incoming_message_id: string | null
+          message_id: string | null
           message_type: string
           mimetype: string | null
           payload: Json | null
@@ -1343,6 +1344,7 @@ export type Database = {
           image_caption?: string | null
           image_url?: string | null
           incoming_message_id?: string | null
+          message_id?: string | null
           message_type?: string
           mimetype?: string | null
           payload?: Json | null
@@ -1361,6 +1363,7 @@ export type Database = {
           image_caption?: string | null
           image_url?: string | null
           incoming_message_id?: string | null
+          message_id?: string | null
           message_type?: string
           mimetype?: string | null
           payload?: Json | null

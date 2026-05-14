@@ -475,6 +475,178 @@ function extractQuotedMessageId(value: unknown, depth = 0): string | null {
   return null;
 }
 
+function normalizeTextForCompare(value: unknown): string {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[\s\u200b\u200c\u200d]+/g, " ")
+    .replace(/^[\s"'`]+|[\s"'`]+$/g, "")
+    .trim();
+}
+
+function extractMessageTextDeep(value: unknown, depth = 0): string {
+  if (depth > 7 || value == null) return "";
+  if (typeof value === "string") return "";
+  if (Array.isArray(value)) {
+    for (const item of value.slice(0, 25)) {
+      const found = extractMessageTextDeep(item, depth + 1);
+      if (found) return found;
+    }
+    return "";
+  }
+  if (typeof value !== "object") return "";
+  const obj = value as Record<string, unknown>;
+  const directKeys = ["conversation", "text", "message", "message_text", "body", "caption"];
+  for (const key of directKeys) {
+    const child = obj[key];
+    if (typeof child === "string" && child.trim()) return child.trim();
+  }
+  const nested = [
+    (obj.message as any)?.conversation,
+    (obj.message as any)?.extendedTextMessage?.text,
+    (obj.message as any)?.imageMessage?.caption,
+    (obj.extendedTextMessage as any)?.text,
+    (obj.imageMessage as any)?.caption,
+  ];
+  for (const child of nested) {
+    if (typeof child === "string" && child.trim()) return child.trim();
+  }
+  for (const child of Object.values(obj)) {
+    const found = extractMessageTextDeep(child, depth + 1);
+    if (found) return found;
+  }
+  return "";
+}
+
+function messageLooksFromMe(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const obj = value as Record<string, unknown>;
+  if (obj.fromMe === true || obj.from_me === true || obj.is_from_me === true) return true;
+  const key = (obj.key || obj.rawKey) as Record<string, unknown> | undefined;
+  return key?.fromMe === true || key?.from_me === true;
+}
+
+function collectMessageLikeObjects(value: unknown, out: unknown[] = [], seen = new Set<unknown>(), depth = 0): unknown[] {
+  if (depth > 8 || value == null) return out;
+  if (Array.isArray(value)) {
+    for (const item of value.slice(0, 100)) collectMessageLikeObjects(item, out, seen, depth + 1);
+    return out;
+  }
+  if (typeof value !== "object") return out;
+  if (seen.has(value)) return out;
+  seen.add(value);
+  const obj = value as Record<string, unknown>;
+  const hasMessageShape = Boolean(
+    obj.key || obj.rawKey || obj.message || obj.contextInfo || obj.context_info ||
+    obj.quoted || obj.quotedMessage || obj.extendedTextMessage || obj.imageMessage ||
+    obj.messageTimestamp || obj.message_id || obj.messageId || obj.id
+  );
+  if (hasMessageShape) out.push(value);
+  for (const child of Object.values(obj)) collectMessageLikeObjects(child, out, seen, depth + 1);
+  return out;
+}
+
+function extractQuotedImageCandidate(value: unknown, depth = 0): {
+  quotedMessageId: string | null;
+  imageUrl: string | null;
+  caption: string | null;
+  source: string;
+} | null {
+  if (depth > 9 || value == null || typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  const contexts = [obj.contextInfo, obj.context_info, obj.quotedMessageContext, obj.quoted].filter(Boolean);
+  for (const context of contexts) {
+    if (!context || typeof context !== "object") continue;
+    const ctx = context as Record<string, unknown>;
+    const quotedMessageId = String(
+      ctx.stanzaId || ctx.quotedMessageId || ctx.quoted_message_id || ctx.id || ctx.messageId || ""
+    ).trim() || null;
+    const quotedMessage = (ctx.quotedMessage || ctx.message || ctx.quoted_message || ctx.quoted) as Record<string, unknown> | undefined;
+    const imageUrl = findImageUrl(quotedMessage || ctx);
+    const caption = findCaption(quotedMessage || ctx);
+    if (quotedMessageId || imageUrl || payloadLooksLikeImage(quotedMessage || ctx)) {
+      return { quotedMessageId, imageUrl, caption, source: "gateway_recent_message_context" };
+    }
+  }
+  const directQuoted = (obj.quotedMessage || obj.quoted_message) as Record<string, unknown> | undefined;
+  if (directQuoted) {
+    const quotedMessageId = String(obj.stanzaId || obj.quotedMessageId || obj.messageId || obj.id || "").trim() || null;
+    const imageUrl = findImageUrl(directQuoted);
+    const caption = findCaption(directQuoted);
+    if (quotedMessageId || imageUrl || payloadLooksLikeImage(directQuoted)) {
+      return { quotedMessageId, imageUrl, caption, source: "gateway_recent_message_context" };
+    }
+  }
+  for (const child of Object.values(obj)) {
+    const found = extractQuotedImageCandidate(child, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+async function fetchGatewayQuotedImageFromRecentMessage(opts: {
+  gateway: string; sessionId: string; apiToken?: string | null;
+  remoteJid?: string | null; customerNumber?: string | null; messageText?: string | null;
+}): Promise<{ quotedMessageId: string | null; imageUrl: string | null; caption: string | null; source: string } | null> {
+  const { gateway, sessionId, apiToken, customerNumber, messageText } = opts;
+  const digits = digitsOnly(customerNumber || "");
+  const remoteJid = String(opts.remoteJid || (digits ? `${digits}@s.whatsapp.net` : "")).trim();
+  if (!remoteJid) return null;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+  const jid = encodeURIComponent(remoteJid);
+  const expectedText = normalizeTextForCompare(messageText || "");
+
+  const attempts: Array<{ url: string; method: "GET" | "POST"; body?: unknown }> = [];
+  for (const base of gatewayBaseVariants(gateway)) {
+    attempts.push(
+      { url: `${base}/api/session/${sessionId}/messages?chatId=${jid}&limit=20`, method: "GET" },
+      { url: `${base}/api/session/${sessionId}/messages?jid=${jid}&limit=20`, method: "GET" },
+      { url: `${base}/api/session/${sessionId}/chats/${jid}/messages?limit=20`, method: "GET" },
+      { url: `${base}/api/session/${sessionId}/chat/${jid}/messages?limit=20`, method: "GET" },
+      { url: `${base}/api/session/${sessionId}/messages`, method: "POST", body: { chatId: remoteJid, jid: remoteJid, remoteJid, limit: 20 } },
+    );
+  }
+
+  for (const attempt of attempts) {
+    try {
+      const init: RequestInit = { method: attempt.method, headers: { ...headers } };
+      if (attempt.method === "POST") init.body = JSON.stringify(attempt.body || {});
+      const res = await fetch(attempt.url, init);
+      if (!res.ok) continue;
+      const data = await res.json().catch(() => null);
+      if (!data) continue;
+      const messages = collectMessageLikeObjects(data);
+      const preferred = messages.filter((msg) => {
+        if (messageLooksFromMe(msg)) return false;
+        const candidateText = normalizeTextForCompare(extractMessageTextDeep(msg));
+        if (!expectedText) return true;
+        return candidateText === expectedText || candidateText.includes(expectedText) || expectedText.includes(candidateText);
+      });
+      for (const msg of [...preferred, ...messages]) {
+        const quoted = extractQuotedImageCandidate(msg);
+        if (!quoted) continue;
+        let imageUrl = quoted.imageUrl;
+        if (!imageUrl && quoted.quotedMessageId) {
+          imageUrl = await fetchGatewayMediaDataUrl({
+            gateway,
+            sessionId,
+            apiToken,
+            messageId: quoted.quotedMessageId,
+            remoteJid,
+          });
+        }
+        if (quoted.quotedMessageId || imageUrl) {
+          console.log("[gateway-quote] recovered quoted context", { source: attempt.url, quoted_message_id: quoted.quotedMessageId, has_image: !!imageUrl });
+          return { ...quoted, imageUrl };
+        }
+      }
+    } catch (e) {
+      console.log("[gateway-quote] recent message lookup failed:", (e as Error)?.message);
+    }
+  }
+  return null;
+}
+
 function collectPossibleMessageIds(value: unknown, out = new Set<string>(), depth = 0): Set<string> {
   if (depth > 8 || value == null) return out;
   if (typeof value === "string" || typeof value === "number") {
@@ -1194,7 +1366,7 @@ Deno.serve(async (req) => {
         );
         const { data: ptSes } = await ptAdmin
           .from("sessions")
-          .select("id, webhook_secret, enable_webhook, forward_webhook_url, webhook_url")
+          .select("id, webhook_secret, api_token, enable_webhook, forward_webhook_url, webhook_url")
           .eq("id", ptSessionId)
           .maybeSingle();
         if (ptSes && ptSes.webhook_secret === ptSecret && ptSes.enable_webhook) {
@@ -1209,16 +1381,31 @@ Deno.serve(async (req) => {
             const ptQuotedMessageId = extractQuotedMessageId(body);
             let passthroughBody: Record<string, unknown> = body as Record<string, unknown>;
             if (ptCustomer) {
-              const quotedImage = await findQuotedOrRecentOutgoingImage(ptAdmin, ptSes.id, ptCustomer, ptQuotedMessageId);
+              const ptRemoteJid = findStringByKeys(body, ["remoteJid", "remote_jid", "target_jid"]) || `${ptCustomer}@s.whatsapp.net`;
+              const gatewayQuoted = !ptQuotedMessageId
+                ? await fetchGatewayQuotedImageFromRecentMessage({
+                    gateway: Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com",
+                    sessionId: ptSes.id,
+                    apiToken: ptSes.api_token,
+                    customerNumber: ptCustomer,
+                    remoteJid: ptRemoteJid,
+                    messageText: String((body as any)?.message || (body as any)?.message_text || (body as any)?.text || ""),
+                  })
+                : null;
+              const effectiveQuotedMessageIdForLookup = ptQuotedMessageId || gatewayQuoted?.quotedMessageId || null;
+              const quotedImage = effectiveQuotedMessageIdForLookup
+                ? await findQuotedOrRecentOutgoingImage(ptAdmin, ptSes.id, ptCustomer, effectiveQuotedMessageIdForLookup)
+                : null;
               const existingQuotedImageUrl = String((body as any)?.quoted_image_url || (body as any)?.quotedImageUrl || "").trim();
-              const quotedGatewayMedia = (!quotedImage?.image_url && !existingQuotedImageUrl && ptQuotedMessageId)
+              const quotedGatewayMedia = gatewayQuoted?.imageUrl || ((!quotedImage?.image_url && !existingQuotedImageUrl && effectiveQuotedMessageIdForLookup)
                 ? await fetchGatewayMediaDataUrl({
                     gateway: Deno.env.get("WHATSAPP_GATEWAY_URL") || "https://api.wareplyai.com",
                     sessionId: ptSes.id,
-                    messageId: ptQuotedMessageId,
-                    remoteJid: findStringByKeys(body, ["remoteJid", "remote_jid", "target_jid"]) || undefined,
+                    apiToken: ptSes.api_token,
+                    messageId: effectiveQuotedMessageIdForLookup,
+                    remoteJid: ptRemoteJid || undefined,
                   })
-                : null;
+                : null);
               const effectiveQuotedImageUrl = quotedImage?.image_url || existingQuotedImageUrl || quotedGatewayMedia || null;
               const incomingMediaUrl = String((body as any)?.media_url || (body as any)?.mediaUrl || (body as any)?.image_url || (body as any)?.imageUrl || "").trim();
               const effectiveMediaUrl = incomingMediaUrl || effectiveQuotedImageUrl || null;
@@ -1232,13 +1419,13 @@ Deno.serve(async (req) => {
                 ...(body as Record<string, unknown>),
                 message_type: effectiveMessageType,
                 media_type: effectiveQuotedImageUrl ? "image" : ((body as any)?.media_type || effectiveMessageType),
-                quoted_message_id: ptQuotedMessageId || quotedImage?.quoted_message_id || null,
+                quoted_message_id: effectiveQuotedMessageIdForLookup || quotedImage?.quoted_message_id || null,
                 quoted_image_url: effectiveQuotedImageUrl,
                 quotedImageUrl: effectiveQuotedImageUrl,
-                quoted_image_caption: quotedImage?.caption || null,
+                quoted_image_caption: quotedImage?.caption || gatewayQuoted?.caption || null,
                 quoted_message_log_id: quotedImage?.message_log_id || null,
-                quoted_image_matched: Boolean(quotedImage?.matched_by_quote || quotedGatewayMedia || existingQuotedImageUrl),
-                quoted_image_source: quotedImage?.source || (quotedGatewayMedia ? "gateway_quoted_media" : (existingQuotedImageUrl ? "payload_quoted_image_url" : null)),
+                quoted_image_matched: Boolean(quotedImage?.matched_by_quote || quotedGatewayMedia || existingQuotedImageUrl || gatewayQuoted),
+                quoted_image_source: quotedImage?.source || (gatewayQuoted ? gatewayQuoted.source : (quotedGatewayMedia ? "gateway_quoted_media" : (existingQuotedImageUrl ? "payload_quoted_image_url" : null))),
                 image_url: effectiveMediaUrl,
                 imageUrl: effectiveMediaUrl,
                 media_url: effectiveMediaUrl,
@@ -1251,7 +1438,7 @@ Deno.serve(async (req) => {
                   mediaUrl: effectiveMediaUrl,
                   image_url: effectiveMediaUrl,
                   imageUrl: effectiveMediaUrl,
-                  quoted_message_id: ptQuotedMessageId || quotedImage?.quoted_message_id || null,
+                  quoted_message_id: effectiveQuotedMessageIdForLookup || quotedImage?.quoted_message_id || null,
                   quoted_image_url: effectiveQuotedImageUrl,
                 } : (body as any)?.raw_payload,
               };
@@ -1600,6 +1787,38 @@ Deno.serve(async (req) => {
         (body as any).quoted_image_url = recoveredQuotedUrl;
         (body as any).quoted_image_caption = quotedOutgoingImage?.caption || null;
         console.log("[ai-reply] recovered quoted outgoing image", quotedOutgoingImage || { source: bodyQuotedImageUrl ? "payload_quoted_image_url" : "gateway_quoted_media", quoted_message_id: quotedMessageId });
+      }
+    }
+
+    if (!imageUrl && messageText && !isImageMessage && !quotedMessageId && !bodyQuotedImageUrl) {
+      const gatewayQuoted = await fetchGatewayQuotedImageFromRecentMessage({
+        gateway: GATEWAY,
+        sessionId,
+        apiToken: session.api_token,
+        customerNumber: fromNumber,
+        remoteJid: String((body as any).target_jid || (body as any).remoteJid || (rawKey as any)?.remoteJid || (rawPayload as any)?.remoteJid || `${fromNumber}@s.whatsapp.net`).trim(),
+        messageText,
+      });
+      const recoveredQuotedUrl = gatewayQuoted?.imageUrl || (gatewayQuoted?.quotedMessageId
+        ? await fetchGatewayMediaDataUrl({
+            gateway: GATEWAY,
+            sessionId,
+            apiToken: session.api_token,
+            messageId: gatewayQuoted.quotedMessageId,
+            remoteJid: String((body as any).target_jid || (body as any).remoteJid || (rawKey as any)?.remoteJid || (rawPayload as any)?.remoteJid || `${fromNumber}@s.whatsapp.net`).trim(),
+          })
+        : null);
+      if (recoveredQuotedUrl) {
+        imageUrl = recoveredQuotedUrl;
+        isImageMessage = true;
+        imageCaption = imageCaption || gatewayQuoted?.caption || null;
+        messageType = "image";
+        (body as any).message_type = "image";
+        (body as any).media_type = "image";
+        (body as any).quoted_message_id = gatewayQuoted?.quotedMessageId || null;
+        (body as any).quoted_image_url = recoveredQuotedUrl;
+        (body as any).quoted_image_caption = gatewayQuoted?.caption || null;
+        console.log("[ai-reply] recovered quoted image from gateway recent message", gatewayQuoted);
       }
     }
 
