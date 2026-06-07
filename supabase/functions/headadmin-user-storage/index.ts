@@ -72,22 +72,15 @@ Deno.serve(async (req) => {
         return m;
       };
 
-      const [productsAll, imageMatch, incoming] = await Promise.all([
-        admin.from("products").select("user_id, source"),
-        admin.from("image_match_logs").select("user_id"),
+      const [productsAll, incoming] = await Promise.all([
+        admin.from("products").select("user_id"),
         admin.from("incoming_messages").select("user_id, message_type"),
       ]);
 
       const prodTotal = new Map<string, number>();
-      const prodWoo = new Map<string, number>();
-      const prodManual = new Map<string, number>();
       for (const r of (productsAll.data || []) as any[]) {
         prodTotal.set(r.user_id, (prodTotal.get(r.user_id) || 0) + 1);
-        if (r.source === "woocommerce") prodWoo.set(r.user_id, (prodWoo.get(r.user_id) || 0) + 1);
-        else prodManual.set(r.user_id, (prodManual.get(r.user_id) || 0) + 1);
       }
-      const matchMap = new Map<string, number>();
-      for (const r of (imageMatch.data || []) as any[]) matchMap.set(r.user_id, (matchMap.get(r.user_id) || 0) + 1);
       const incTotal = new Map<string, number>();
       const incMedia = new Map<string, number>();
       for (const r of (incoming.data || []) as any[]) {
@@ -105,9 +98,6 @@ Deno.serve(async (req) => {
           ...s,
           total_bytes: s.chat_media_bytes + s.product_images_bytes,
           products_total: prodTotal.get(p.id) || 0,
-          products_woo: prodWoo.get(p.id) || 0,
-          products_manual: prodManual.get(p.id) || 0,
-          image_match_count: matchMap.get(p.id) || 0,
           incoming_total: incTotal.get(p.id) || 0,
           incoming_media: incMedia.get(p.id) || 0,
         };
@@ -155,18 +145,6 @@ Deno.serve(async (req) => {
       }
       if (scope === "product_images_storage" || scope === "all") {
         result.product_images_storage = await deleteFolder("product-images");
-      }
-      if (scope === "image_match_logs" || scope === "all") {
-        const { count } = await admin.from("image_match_logs").delete({ count: "exact" }).eq("user_id", user_id);
-        result.image_match_logs = count || 0;
-      }
-      if (scope === "products_woo" || scope === "all") {
-        const { count } = await admin.from("products").delete({ count: "exact" }).eq("user_id", user_id).eq("source", "woocommerce");
-        result.products_woo = count || 0;
-      }
-      if (scope === "products_manual") {
-        const { count } = await admin.from("products").delete({ count: "exact" }).eq("user_id", user_id).neq("source", "woocommerce");
-        result.products_manual = count || 0;
       }
       if (scope === "products_all" || scope === "all") {
         const { count } = await admin.from("products").delete({ count: "exact" }).eq("user_id", user_id);
