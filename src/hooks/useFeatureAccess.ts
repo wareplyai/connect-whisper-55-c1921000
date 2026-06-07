@@ -6,20 +6,14 @@ export type FeatureKey =
   | "ai_agent"
   | "auto_replies"
   | "abandoned_cart"
-  | "ecommerce"
   | "products"
-  | "product_image_match"
-  | "woocommerce"
   | "behavior";
 
 const DEFAULTS: Record<FeatureKey, boolean> = {
   ai_agent: true,
   auto_replies: true,
   abandoned_cart: true,
-  ecommerce: true,
   products: true,
-  product_image_match: true,
-  woocommerce: true,
   behavior: true,
 };
 

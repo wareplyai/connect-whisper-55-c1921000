@@ -1,41 +1,24 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, MessageCircle, Receipt, MessageSquareText, Bot, ShieldCheck, MessageSquare, Package, ShoppingCart, ShoppingBag, Briefcase, Users, Inbox as InboxIcon, ClipboardList, Truck, RotateCcw, BadgeDollarSign, Sparkles, Megaphone, Settings as SettingsIcon, ChevronDown, ShoppingBasket, Lock } from "lucide-react";
+import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, Receipt, MessageSquareText, Bot, ShieldCheck, MessageSquare, Package, ShoppingBag, Lock } from "lucide-react";
 import { FeatureKey } from "@/hooks/useFeatureAccess";
-import { useState } from "react";
 import { TrialBanner } from "@/components/TrialBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
-import { useCrmUnreadCount } from "@/hooks/useCrmUnreadCount";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/dashboard/all-orders", label: "All Orders", icon: ClipboardList },
   { to: "/dashboard/sessions", label: "Sessions", icon: Smartphone },
   { to: "/dashboard/inbox", label: "Inbox", icon: MessageSquare },
   { to: "/dashboard/auto-replies", label: "Auto-Replies", icon: MessageSquareText },
   { to: "/dashboard/ai-agent", label: "AI Agent", icon: Bot },
   { to: "/dashboard/behavior", label: "Behavior & Anti-Ban", icon: ShieldCheck },
   { to: "/dashboard/products", label: "Products", icon: Package },
-  { to: "/dashboard/product-image-match", label: "Product Image Match", icon: Package },
-  { to: "/dashboard/woocommerce", label: "WooCommerce", icon: ShoppingCart },
   { to: "/dashboard/abandoned-cart", label: "Incomplete", icon: ShoppingBag },
   { to: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
   { to: "/dashboard/payments", label: "My Payments", icon: Receipt },
-];
-
-const ecommerceNav = [
-  { to: "/dashboard/crm", label: "CRM Dashboard", icon: Briefcase, end: true },
-  { to: "/dashboard/crm/orders", label: "CRM Orders", icon: ClipboardList },
-  { to: "/dashboard/crm/leads", label: "CRM Leads", icon: Users },
-  { to: "/dashboard/crm/courier", label: "CRM Courier", icon: Truck },
-  { to: "/dashboard/crm/returns", label: "CRM Returns", icon: RotateCcw },
-  { to: "/dashboard/crm/cod", label: "CRM COD", icon: BadgeDollarSign },
-  { to: "/dashboard/crm/nurturing", label: "CRM AI Nurturing", icon: Sparkles },
-  { to: "/dashboard/crm/broadcast", label: "CRM Broadcast", icon: Megaphone },
-  { to: "/dashboard/crm/settings", label: "CRM Settings", icon: SettingsIcon },
 ];
 
 const resources = [
@@ -47,14 +30,11 @@ const resources = [
 const DashboardLayout = () => {
   const { profile, isAdmin, signOut } = useAuth();
   const { access } = useFeatureAccess();
-  const crmUnread = useCrmUnreadCount();
   const featureMap: Record<string, FeatureKey> = {
     "/dashboard/ai-agent": "ai_agent",
     "/dashboard/auto-replies": "auto_replies",
     "/dashboard/abandoned-cart": "abandoned_cart",
     "/dashboard/products": "products",
-    "/dashboard/product-image-match": "product_image_match",
-    "/dashboard/woocommerce": "woocommerce",
     "/dashboard/behavior": "behavior",
   };
   const isLocked = (to: string) => {
@@ -64,18 +44,6 @@ const DashboardLayout = () => {
   const visibleNav = nav;
   const location = useLocation();
   const navigate = useNavigate();
-  const [ecomOpen, setEcomOpen] = useState<boolean>(() => {
-    const stored = typeof window !== "undefined" ? localStorage.getItem("sidebar:ecommerce-open") : null;
-    if (stored !== null) return stored === "1";
-    return true;
-  });
-  const ecomActive = ecommerceNav.some((n) => location.pathname === n.to || (!n.end && location.pathname.startsWith(n.to)));
-  const ecomExpanded = ecomOpen || ecomActive;
-  const toggleEcom = () => {
-    const next = !ecomOpen;
-    setEcomOpen(next);
-    try { localStorage.setItem("sidebar:ecommerce-open", next ? "1" : "0"); } catch {}
-  };
   const handleSignOut = async () => {
     await signOut();
     navigate("/", { replace: true });
@@ -136,57 +104,6 @@ const DashboardLayout = () => {
                 </NavLink>
               );
             })}
-
-            {!access.ecommerce && (
-              <div
-                aria-disabled="true"
-                title="Locked — contact admin to enable"
-                className={`${linkBase} ${linkIdle} opacity-50 cursor-not-allowed select-none`}
-              >
-                <span className="grid place-items-center h-7 w-7 rounded-lg bg-white/[0.03] text-emerald-200/70">
-                  <ShoppingBasket className="h-4 w-4" />
-                </span>
-                <span className="flex-1">E-Commerce</span>
-                <Lock className="h-3.5 w-3.5 text-emerald-200/60" />
-              </div>
-            )}
-            {access.ecommerce && (
-              <>
-                <button
-                  type="button"
-                  onClick={toggleEcom}
-                  aria-expanded={ecomExpanded}
-                  className={`w-full ${linkBase} ${ecomActive ? "text-white bg-white/[0.04]" : linkIdle}`}
-                >
-                  <span className={`grid place-items-center h-7 w-7 rounded-lg transition-all ${ecomActive ? "bg-emerald-400/20 text-emerald-200" : "bg-white/[0.03] text-emerald-200/70"}`}>
-                    <ShoppingBasket className="h-4 w-4" />
-                  </span>
-                  <span className="flex-1 text-left">E-Commerce</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform text-emerald-300/60 ${ecomExpanded ? "rotate-0" : "-rotate-90"}`} />
-                </button>
-                {ecomExpanded && (
-                  <div className="ml-4 pl-3 border-l border-emerald-400/15 space-y-1 mt-1">
-                    {ecommerceNav.map((n) => (
-                      <NavLink
-                        key={n.to}
-                        to={n.to}
-                        end={n.end}
-                        className={({ isActive }) => `${linkBase} py-2 ${isActive ? linkActive : linkIdle}`}
-                      >
-                        {({ isActive }) => (
-                          <>
-                            <span className={`grid place-items-center h-6 w-6 rounded-md transition-all ${isActive ? "bg-emerald-400/20 text-emerald-200" : "bg-white/[0.03] text-emerald-200/70 group-hover:bg-white/[0.06]"}`}>
-                              <n.icon className="h-3.5 w-3.5" />
-                            </span>
-                            <span className="flex-1 text-[13px]">{n.label}</span>
-                          </>
-                        )}
-                      </NavLink>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
 
             {isAdmin && (
               <NavLink

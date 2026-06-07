@@ -3,13 +3,7 @@ project_id = "mjbxpjaxczoycrcjajio"
 [functions.sms-receive]
 verify_jwt = false
 
-[functions.create-order]
-verify_jwt = false
-
 [functions.verify-payment]
-verify_jwt = false
-
-[functions.order-status]
 verify_jwt = false
 
 [functions.headadmin-delete-user]
@@ -27,29 +21,8 @@ verify_jwt = false
 [functions.tag-product-image]
 verify_jwt = false
 
-[functions.woo-webhook]
-verify_jwt = false
-
-[functions.crm-woo-order-webhook]
-verify_jwt = false
-
-[functions.crm-whatsapp-webhook]
-verify_jwt = false
-
-[functions.crm-book-courier]
-verify_jwt = false
-
-[functions.crm-cod-send]
-verify_jwt = false
-
 [functions.send-manual-media]
 verify_jwt = true
-
-[functions.match-product-image]
-verify_jwt = false
-
-[functions.send-product-image-to-customer]
-verify_jwt = false
 
 [functions.wa-send-text]
 verify_jwt = false
