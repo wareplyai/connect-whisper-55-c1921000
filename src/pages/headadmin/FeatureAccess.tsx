@@ -4,22 +4,19 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Bot, MessageSquareText, Search, ShoppingBag, ShoppingBasket, Package, ShoppingCart, Image as ImageIcon, ShieldCheck } from "lucide-react";
+import { Bot, MessageSquareText, Search, ShoppingBag, Package, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
-type FeatureKey = "ai_agent" | "auto_replies" | "abandoned_cart" | "ecommerce" | "products" | "product_image_match" | "woocommerce" | "behavior";
+type FeatureKey = "ai_agent" | "auto_replies" | "abandoned_cart" | "products" | "behavior";
 const FEATURES: { key: FeatureKey; label: string; icon: any }[] = [
   { key: "ai_agent", label: "AI Agent", icon: Bot },
   { key: "auto_replies", label: "Auto-Replies", icon: MessageSquareText },
   { key: "abandoned_cart", label: "Incomplete", icon: ShoppingBag },
-  { key: "ecommerce", label: "E-Commerce", icon: ShoppingBasket },
   { key: "products", label: "Products", icon: Package },
-  { key: "product_image_match", label: "Image Match", icon: ImageIcon },
-  { key: "woocommerce", label: "WooCommerce", icon: ShoppingCart },
   { key: "behavior", label: "Behavior", icon: ShieldCheck },
 ];
 
-const DEFAULT_GLOBALS: Record<FeatureKey, boolean> = { ai_agent: true, auto_replies: true, abandoned_cart: true, ecommerce: true, products: true, product_image_match: true, woocommerce: true, behavior: true };
+const DEFAULT_GLOBALS: Record<FeatureKey, boolean> = { ai_agent: true, auto_replies: true, abandoned_cart: true, products: true, behavior: true };
 
 export default function FeatureAccess() {
   const [globals, setGlobals] = useState<Record<FeatureKey, boolean>>({ ...DEFAULT_GLOBALS });

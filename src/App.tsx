@@ -36,20 +36,7 @@ import Inbox from "./pages/dashboard/Inbox";
 import AIAgent from "./pages/dashboard/AIAgent";
 import BehaviorSettings from "./pages/dashboard/BehaviorSettings";
 import Products from "./pages/dashboard/Products";
-import ProductImageMatch from "./pages/dashboard/ProductImageMatch";
-import WooCommerce from "./pages/dashboard/WooCommerce";
 import AbandonedCart from "./pages/dashboard/AbandonedCart";
-import CRMDashboard from "./pages/dashboard/crm/CRMDashboard";
-import CRMOrders from "./pages/dashboard/crm/CRMOrders";
-import AllOrders from "./pages/dashboard/AllOrders";
-
-import CRMLeads from "./pages/dashboard/crm/CRMLeads";
-import CRMCourier from "./pages/dashboard/crm/CRMCourier";
-import CRMReturns from "./pages/dashboard/crm/CRMReturns";
-import CRMCod from "./pages/dashboard/crm/CRMCod";
-import CRMNurturing from "./pages/dashboard/crm/CRMNurturing";
-import CRMBroadcast from "./pages/dashboard/crm/CRMBroadcast";
-import CRMSettings from "./pages/dashboard/crm/CRMSettings";
 import AdminPanel from "./pages/admin/AdminPanel";
 import HAPayments from "./pages/headadmin/Payments";
 import HAPaymentMethods from "./pages/headadmin/PaymentMethods";
@@ -123,20 +110,7 @@ const App = () => (
                 <Route path="ai-agent" element={<FeatureGuard feature="ai_agent"><AIAgent /></FeatureGuard>} />
                 <Route path="behavior" element={<FeatureGuard feature="behavior"><BehaviorSettings /></FeatureGuard>} />
                 <Route path="products" element={<FeatureGuard feature="products"><Products /></FeatureGuard>} />
-                <Route path="product-image-match" element={<FeatureGuard feature="product_image_match"><ProductImageMatch /></FeatureGuard>} />
-                <Route path="woocommerce" element={<FeatureGuard feature="woocommerce"><WooCommerce /></FeatureGuard>} />
                 <Route path="abandoned-cart" element={<FeatureGuard feature="abandoned_cart"><AbandonedCart /></FeatureGuard>} />
-                <Route path="crm" element={<CRMDashboard />} />
-                <Route path="crm/orders" element={<CRMOrders />} />
-                <Route path="all-orders" element={<AllOrders />} />
-                
-                <Route path="crm/leads" element={<CRMLeads />} />
-                <Route path="crm/courier" element={<CRMCourier />} />
-                <Route path="crm/returns" element={<CRMReturns />} />
-                <Route path="crm/cod" element={<CRMCod />} />
-                <Route path="crm/nurturing" element={<CRMNurturing />} />
-                <Route path="crm/broadcast" element={<CRMBroadcast />} />
-                <Route path="crm/settings" element={<CRMSettings />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>

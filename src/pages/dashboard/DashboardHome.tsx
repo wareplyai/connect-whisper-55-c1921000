@@ -5,8 +5,8 @@ import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
-  CreditCard, CheckCircle2, MessageSquare, Wifi, Package, ShoppingCart,
-  TrendingUp, Clock, AlertCircle, Sparkles, Bot, Activity, ArrowUpRight, Zap,
+  CreditCard, CheckCircle2, MessageSquare, Wifi,
+  AlertCircle, Sparkles, Bot, Activity, ArrowUpRight, Zap,
 } from "lucide-react";
 import { CartesianGrid, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
@@ -22,8 +22,6 @@ const DashboardHome = () => {
   const [failed, setFailed] = useState<any[]>([]);
   const [chart, setChart] = useState<{ day: string; sent: number; failed: number; pending: number }[]>([]);
   const [stats, setStats] = useState({ total: 0, sent: 0, failed: 0, pending: 0 });
-  const [wooStats, setWooStats] = useState({ totalProducts: 0, totalOrders: 0, todayOrders: 0, todayRevenue: 0 });
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [aStats, setAStats] = useState({ received: 0, incomplete: 0, completed: 0, sent: 0 });
   const [aRecent, setARecent] = useState<any[]>([]);
 
@@ -36,25 +34,6 @@ const DashboardHome = () => {
     const c: any = conn || {};
     setAStats({ received: c.total_received || 0, incomplete: c.total_incomplete || 0, completed: c.total_completed || 0, sent: c.total_sent || 0 });
     setARecent((rows as any) || []);
-  };
-
-  const loadWoo = async (uid: string) => {
-    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-    const [{ count: productCount }, { count: orderCount }, { data: todayRows }, { data: recent }] = await Promise.all([
-      supabase.from("products").select("id", { count: "exact", head: true }).eq("user_id", uid),
-      supabase.from("woo_orders").select("id", { count: "exact", head: true }).eq("user_id", uid),
-      supabase.from("woo_orders").select("total").eq("user_id", uid).gte("created_at", startOfDay.toISOString()),
-      supabase.from("woo_orders").select("id,order_number,status,total,currency,customer_name,customer_phone,created_at,confirmation_sent")
-        .eq("user_id", uid).order("created_at", { ascending: false }).limit(8),
-    ]);
-    const todayRevenue = (todayRows || []).reduce((s: number, r: any) => s + (Number(r.total) || 0), 0);
-    setWooStats({
-      totalProducts: productCount || 0,
-      totalOrders: orderCount || 0,
-      todayOrders: (todayRows || []).length,
-      todayRevenue,
-    });
-    setRecentOrders(recent || []);
   };
 
   useEffect(() => {
@@ -112,24 +91,17 @@ const DashboardHome = () => {
       }
       setChart(days);
 
-      await loadWoo(profile.id);
       await loadAbandoned(profile.id);
     })();
 
     if (!profile?.id) return;
     const channel = supabase
-      .channel(`woo-orders-${profile.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "woo_orders", filter: `user_id=eq.${profile.id}` }, () => {
-        loadWoo(profile.id);
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "products", filter: `user_id=eq.${profile.id}` }, () => {
-        loadWoo(profile.id);
-      })
+      .channel(`dash-home-${profile.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "abandoned_orders", filter: `user_id=eq.${profile.id}` }, () => {
         loadAbandoned(profile.id);
       })
       .subscribe();
-    const interval = setInterval(() => { loadWoo(profile.id); loadAbandoned(profile.id); }, 30000);
+    const interval = setInterval(() => { loadAbandoned(profile.id); }, 30000);
     return () => { supabase.removeChannel(channel); clearInterval(interval); };
   }, [profile]);
 
