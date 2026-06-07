@@ -215,21 +215,6 @@ const DashboardHome = () => {
         </SectionWrap>
       )}
 
-      {/* WooCommerce */}
-      <SectionWrap
-        title="WooCommerce"
-        subtitle="Live commerce intelligence"
-        icon={ShoppingCart}
-        tone="primary"
-        action={<Link to="/dashboard/woocommerce">Manage</Link>}
-      >
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <MiniStat label="Total Products" value={wooStats.totalProducts} icon={Package} tone="primary" />
-          <MiniStat label="Total Orders" value={wooStats.totalOrders} icon={ShoppingCart} tone="primary" />
-          <MiniStat label="Today's Orders" value={wooStats.todayOrders} icon={Clock} tone="info" />
-          <MiniStat label="Today's Revenue" value={wooStats.todayRevenue.toFixed(2)} icon={TrendingUp} tone="success" />
-        </div>
-      </SectionWrap>
 
       {/* Chart + Activity */}
       <div className="grid lg:grid-cols-5 gap-4">
