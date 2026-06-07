@@ -2154,95 +2154,8 @@ Deno.serve(async (req) => {
       }).eq("id", messageId);
     }
 
-    // ===== Product Image Recognition (perceptual hash match) =====
-    // If customer sent an image and we have a usable URL, try matching against
-    // the user's product catalog before falling through to AI/keyword routing.
+    // Product image matching removed.
     let matchedProduct: any = null;
-    if (isImageMessage && imageUrl && messageId) {
-      try {
-        console.log("[ai-reply] calling match-product-image", {
-          message_id: messageId,
-          image_url: imageUrl,
-          media_url: bodyMediaUrl || imageUrl,
-          image_url_kind: imageUrl.startsWith("data:") ? "data-url" : "url",
-          image_base64_length: imageUrl.startsWith("data:") ? (imageUrl.split(",").pop()?.length || 0) : 0,
-        });
-        const matchRes = await fetch(
-          `${Deno.env.get("SUPABASE_URL")}/functions/v1/match-product-image`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-            },
-            body: JSON.stringify({ image_url: imageUrl, user_id: userId }),
-          },
-        );
-        const matchData = await matchRes.json().catch(() => ({}));
-        console.log("match result:", matchData);
-        console.log("[ai-reply] product-image match:", {
-          http_status: matchRes.status,
-          match: !!matchData?.match,
-          confidence: matchData?.confidence || null,
-          idx: matchData?.ai_index ?? matchData?.index ?? null,
-          product_id: matchData?.product?.id || null,
-          reason: matchData?.reason || null,
-          raw: matchData,
-        });
-
-        if (matchData?.match && matchData.product) {
-          const p = matchData.product;
-          matchedProduct = p;
-
-          // If the customer also sent text along with the image, don't auto-reply
-          // here — let the AI handle the question with the matched product as
-          // context. We just store `matchedProduct` and continue down the flow.
-          if (messageText) {
-            console.log("[ai-reply] image+text — deferring to AI with product context", { product_id: p.id });
-          } else {
-            const reply =
-              `✅ আমরা এই পণ্যটি চিনতে পেরেছি!\n\n` +
-              `🛍️ পণ্যের নাম: ${p.name}\n` +
-              (p.price ? `💰 মূল্য: ${p.price}\n` : "") +
-              (p.description ? `📝 বিবরণ: ${p.description}\n` : "") +
-              `\nঅর্ডার করতে চাইলে জানান!`;
-
-            const sendResult = await sendViaGateway({
-              gateway: GATEWAY,
-              sessionId,
-              apiToken: session.api_token,
-              to: fromNumber,
-              message: reply,
-              showTyping: aiEnabled ? aiTyping : sessionTyping,
-              accountProtection,
-            });
-            await admin.from("incoming_messages").update({
-              reply_text: reply,
-              reply_sent: sendResult.ok,
-              delivery_status: sendResult.ok ? "sent" : "failed",
-              reply_error: sendResult.ok ? null : sendResult.error,
-              processed_at: new Date().toISOString(),
-              reply_attempted_at: new Date().toISOString(),
-              reply_sent_at: sendResult.ok ? new Date().toISOString() : null,
-            }).eq("id", messageId);
-            if (sendResult.ok) {
-              await admin.from("message_logs").insert({
-                user_id: userId, session_id: sessionId, to_number: sendResult.to,
-                message_type: "text",
-                payload: { text: reply, source: "product_image_match", product_id: p.id, distance: matchData.distance },
-                status: "sent",
-              });
-            }
-            return jsonResp({
-              ok: true, reply, sent: sendResult.ok, source: "product_image_match",
-              distance: matchData.distance, message_id: messageId,
-            });
-          }
-        }
-      } catch (e) {
-        console.log("[ai-reply] product-image match failed:", (e as Error)?.message);
-      }
-    }
 
     const storedMessage = messageId ? await admin
       .from("incoming_messages")
@@ -2747,43 +2660,8 @@ Deno.serve(async (req) => {
           : [];
         console.log("[ai-reply] conversation history loaded", { count: conversationHistory.length, limit: memLimit, customer: fromNumber });
 
-        // Look up the most recently image-matched product for this customer.
-        // The matched product lives in `product_images` (NOT `products`), so the
-        // AI's PRODUCT CATALOG won't know about it on follow-up turns. We inject
-        // it explicitly so questions like "Dam koto?" / "ata nibo" still work.
-        let recentMatchedProductBlock = "";
-        if (!matchedProduct) {
-          try {
-            const { data: lastMatchLog } = await admin
-              .from("message_logs")
-              .select("payload, created_at")
-              .eq("session_id", sessionId)
-              .eq("to_number", fromNumber)
-              .contains("payload", { source: "product_image_match" })
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            const lastProductId = (lastMatchLog as any)?.payload?.product_id;
-            if (lastProductId) {
-              const { data: pImg } = await admin
-                .from("product_images")
-                .select("id, product_name, product_price, product_description, product_image_url")
-                .eq("id", lastProductId)
-                .maybeSingle();
-              if (pImg) {
-                recentMatchedProductBlock =
-                  `\n\n📌 RECENTLY MATCHED PRODUCT (from an earlier image this customer sent — customer is most likely still asking about THIS):\n` +
-                  `- Name: "${(pImg as any).product_name}"\n` +
-                  ((pImg as any).product_price ? `- Price: ${(pImg as any).product_price}\n` : "") +
-                  ((pImg as any).product_description ? `- Description: ${String((pImg as any).product_description).slice(0, 300)}\n` : "") +
-                  `\nIMPORTANT: This product is NOT in the PRODUCT CATALOG above — it was identified from the customer's photo earlier. Treat it as a real, available product. If the customer asks about price / availability / details / wants to order WITHOUT naming a product, assume they mean THIS product and answer using the details above. Never say "I don't have info about this product" — you DO have it right here.`;
-                console.log("[ai-reply] injected recently matched product context", { product_id: lastProductId, name: (pImg as any).product_name });
-              }
-            }
-          } catch (e) {
-            console.log("[ai-reply] recent match lookup failed:", (e as Error)?.message);
-          }
-        }
+        // Recently matched product context removed (product image match feature removed).
+        const recentMatchedProductBlock = "";
 
         const memoryInstruction = `\n\nCONVERSATION MEMORY RULES:\n- The previous turns of this WhatsApp chat are provided as message history above.\n- Use that history to remember which products were already shown / discussed with this customer.\n- If the customer says things like "order korte chai" / "ata nibo" / "dam koto" / "price koto" / "ar ekta dao" without naming a product, refer to the most recently discussed product (see RECENTLY MATCHED PRODUCT block if present, otherwise the last product mentioned in history).\n- NEVER ask the customer to repeat info (name, address, product) they already provided in the history.\n- NEVER reply "I don't have info about this product" / "এই পণ্যের তথ্য নেই" if a RECENTLY MATCHED PRODUCT block is provided above — use those details directly.\n- Maintain natural conversation continuity; do not greet again if you already greeted in this chat.`;
 
