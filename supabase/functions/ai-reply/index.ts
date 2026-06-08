@@ -2579,6 +2579,24 @@ Deno.serve(async (req) => {
     let reply = "";
 
     // ---- Image-message branch: vision describe + product match (image-only) ----
+    // Only fire the "image received but couldn't open" fallback when there is REAL
+    // image evidence on THIS incoming event (mimetype image/* OR a media/image URL
+    // in the body). Without this guard, stray payloads that merely embed a quoted
+    // image context (or duplicate gateway notifications) get classified as image
+    // messages with no imageUrl and trigger a spurious fallback reply right after
+    // the normal text answer — see customer report on 2026-06-08.
+    const currentMime = String(findStringByKeys(body, ["mimetype", "mime_type", "contentType", "content_type"]) || "").toLowerCase();
+    const hasRealIncomingImage = !!bodyMediaUrl || /^image\//.test(currentMime);
+    if (isImageMessage && !imageUrl && !useTextFlow && !hasRealIncomingImage) {
+      console.log("[ai-reply] skipping image-fallback: no real image evidence on this event", { isImageMessage, hasRealIncomingImage, messageType });
+      if (messageId) {
+        await admin.from("incoming_messages").update({
+          reply_error: "skipped: image flag set but no real image on event",
+          processed_at: new Date().toISOString(),
+        }).eq("id", messageId);
+      }
+      return jsonResp({ ok: true, skipped: "no_real_image_evidence" });
+    }
     if (isImageMessage && !imageUrl && !useTextFlow) {
       reply = "ছবি receive করেছি ✅ কিন্তু এই মুহূর্তে ছবিটা analyze করা সম্ভব হচ্ছে না। দয়া করে product টির নাম / রঙ / size text এ লিখে পাঠান, আমি match করে details দিচ্ছি।\n\nGot your image but couldn't open it right now — please describe the product in text (name / color / size).";
     } else if (isImageMessage && imageUrl && !useTextFlow) {
