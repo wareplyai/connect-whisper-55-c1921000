@@ -2593,6 +2593,7 @@ Deno.serve(async (req) => {
         await admin.from("incoming_messages").update({
           reply_error: "skipped: image flag set but no real image on event",
           processed_at: new Date().toISOString(),
+          delivery_status: "skipped",
         }).eq("id", messageId);
       }
       return jsonResp({ ok: true, skipped: "no_real_image_evidence" });
