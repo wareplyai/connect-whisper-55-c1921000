@@ -41,9 +41,12 @@ export const HeadAdminProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      setLoading(true);
-      setTimeout(() => load(), 0);
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      // Only reload on real sign-in/sign-out. Ignore TOKEN_REFRESHED / USER_UPDATED
+      // to prevent the whole headadmin UI flashing "Loading..." every hour.
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "INITIAL_SESSION") {
+        setTimeout(() => load(), 0);
+      }
     });
     load();
     return () => sub.subscription.unsubscribe();
