@@ -184,6 +184,15 @@ const Inbox = () => {
     const phoneTail = selected.phone_number.replace(/\D/g, "").slice(-9);
     const inc = incoming
       .filter((m) => m.session_id === selected.session_id && m.from_number === selected.phone_number)
+      .filter((m) => {
+        // Hide phantom "skipped" rows that have no real content (image flag set
+        // but no actual image / text / media on the event).
+        const hasText = !!(m.message_text || (m as any).caption || m.image_caption);
+        const hasMedia = !!((m as any).image_url || (m as any).media_url);
+        const isSkipped = (m as any).delivery_status === "skipped";
+        if (isSkipped && !hasText && !hasMedia) return false;
+        return true;
+      })
       .map((m) => {
         const mt = (m as any).message_type as string | null;
         const rawPayload = (m as any).raw_payload as any;
