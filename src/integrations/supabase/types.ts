@@ -1239,6 +1239,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_active: boolean
+          max_products: number
           max_sessions: number
           plan: string
         }
@@ -1248,6 +1249,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_active?: boolean
+          max_products?: number
           max_sessions?: number
           plan?: string
         }
@@ -1257,6 +1259,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_active?: boolean
+          max_products?: number
           max_sessions?: number
           plan?: string
         }

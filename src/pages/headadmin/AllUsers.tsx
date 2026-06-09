@@ -83,7 +83,8 @@ export default function AllUsers() {
     await supabase.from("profiles").update({
       full_name: u.full_name, email: u.email,
       max_sessions: u.max_sessions, is_active: u.is_active,
-    }).eq("id", u.id);
+      max_products: Number(u.max_products) || 10,
+    } as any).eq("id", u.id);
 
     // If plan changed, sync subscription via edge function
     const original = users.find((x) => x.id === u.id);
@@ -270,6 +271,16 @@ export default function AllUsers() {
                 </Select>
               </div>
               <div><Label>Max Sessions</Label><Input type="number" value={editUser.max_sessions} onChange={(e) => setEditUser({ ...editUser, max_sessions: Number(e.target.value) })} /></div>
+              <div>
+                <Label>Max Products (image uploads)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={editUser.max_products ?? 10}
+                  onChange={(e) => setEditUser({ ...editUser, max_products: Number(e.target.value) })}
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">Default 10. Set higher to allow this user to upload more product images.</p>
+              </div>
             </div>
           )}
           <DialogFooter><Button variant="outline" onClick={() => setEditUser(null)}>Cancel</Button><Button onClick={saveEdit}>Save</Button></DialogFooter>
