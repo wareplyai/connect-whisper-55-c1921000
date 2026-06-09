@@ -415,9 +415,6 @@ export default function Products() {
       <Badge variant="secondary" className="text-[10px] gap-1">
         <Camera className="size-3" /> Image Match: Auto
       </Badge>
-      <Button size="sm" variant="outline" onClick={() => retag(p)}>
-        <RefreshCw className="size-3 mr-1" /> Re-tag
-      </Button>
       <Button size="sm" variant="destructive" onClick={() => handleDelete(p)}>
         <Trash2 className="size-3 mr-1" /> Delete
       </Button>
