@@ -83,7 +83,8 @@ export default function AllUsers() {
     await supabase.from("profiles").update({
       full_name: u.full_name, email: u.email,
       max_sessions: u.max_sessions, is_active: u.is_active,
-    }).eq("id", u.id);
+      max_products: Number(u.max_products) || 10,
+    } as any).eq("id", u.id);
 
     // If plan changed, sync subscription via edge function
     const original = users.find((x) => x.id === u.id);
