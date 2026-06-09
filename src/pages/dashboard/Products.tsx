@@ -225,11 +225,19 @@ export default function Products() {
       if (productId) {
         supabase.functions.invoke("tag-product-image", { body: { productId } }).then(({ error }) => {
           if (error) toast.error("Auto-tag failed: " + error.message);
-          else { toast.success("AI tags generated"); load(); }
+          else { load(); }
         });
+        // Auto add to Image Match silently
+        autoAddToImageMatch({
+          id: productId,
+          name: form.name.trim(),
+          price: Number(form.price) || 0,
+          description: form.description.trim() || null,
+          image_url: pub.publicUrl,
+        }).then(() => load()).catch(() => {});
       }
 
-      toast.success("Product added — AI tagging in background");
+      toast.success("Product added — AI tagging & Image Match in background");
       reset();
       setAddOpen(false);
       load();
@@ -244,6 +252,10 @@ export default function Products() {
     if (!confirm(`Delete "${p.name}"?`)) return;
     if (p.image_path) {
       await supabase.storage.from("product-images").remove([p.image_path]);
+    }
+    // Remove matching Image Match entry to free up the limit
+    if (user) {
+      await supabase.from("product_images" as any).delete().eq("user_id", user.id).eq("product_name", p.name);
     }
     await supabase.from("products" as any).delete().eq("id", p.id);
     toast.success("Deleted");
@@ -314,9 +326,17 @@ export default function Products() {
       if (imageChanged) {
         supabase.functions.invoke("tag-product-image", { body: { productId: edit.product.id } }).then(({ error }) => {
           if (error) toast.error("Auto-tag failed: " + error.message);
-          else { toast.success("AI tags regenerated"); load(); }
+          else { load(); }
         });
       }
+      // Always re-sync to Image Match (name/price/desc/image may have changed)
+      autoAddToImageMatch({
+        id: edit.product.id,
+        name: edit.name.trim(),
+        price: Number(edit.price) || 0,
+        description: edit.description.trim() || null,
+        image_url,
+      }).catch(() => {});
 
       toast.success("Product updated");
       setEdit({ ...edit, open: false });
@@ -336,53 +356,53 @@ export default function Products() {
     });
   };
 
-  const addToImageMatch = async (p: Product) => {
-    if (!user) return;
-    if (!p.image_url) return toast.error("Product has no image");
-    if (matchStatus[p.id] === "loading") return;
-    setMatchStatusFor(p.id, "loading");
+  const autoAddToImageMatch = async (p: { id: string; name: string; price: number; description: string | null; image_url: string | null }) => {
+    if (!user || !p.image_url) return;
     try {
-      const { count } = await supabase
-        .from("product_images" as any)
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id);
-      if ((count || 0) >= IMAGE_MATCH_MAX) {
-        toast.error(`Max ${IMAGE_MATCH_MAX} products allowed in Image Match`);
-        setMatchStatusFor(p.id, "error");
-        setTimeout(() => setMatchStatusFor(p.id, null), 2000);
-        return;
-      }
       const { data: existing } = await supabase
         .from("product_images" as any)
         .select("id")
         .eq("user_id", user.id)
         .eq("product_name", p.name)
         .maybeSingle();
-      if (existing) {
-        toast.info("Already in Image Match");
-        setMatchStatusFor(p.id, "success");
-        setTimeout(() => setMatchStatusFor(p.id, null), 2000);
-        return;
-      }
 
       const hash = await hashFromUrl(p.image_url);
-      const { error: insErr } = await supabase
-        .from("product_images" as any)
-        .insert({
-          user_id: user.id,
-          product_name: p.name,
-          product_price: p.price ? String(p.price) : null,
-          product_description: p.description || null,
-          product_image_url: p.image_url,
-          image_hash: hash,
-        } as any);
-      if (insErr) throw insErr;
-      toast.success("Added to Image Match!");
+      const payload: any = {
+        product_name: p.name,
+        product_price: p.price ? String(p.price) : null,
+        product_description: p.description || null,
+        product_image_url: p.image_url,
+        image_hash: hash,
+      };
+
+      if (existing) {
+        await supabase.from("product_images" as any).update(payload).eq("id", (existing as any).id);
+      } else {
+        const { count } = await supabase
+          .from("product_images" as any)
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id);
+        if ((count || 0) >= IMAGE_MATCH_MAX) {
+          toast.error(`Image Match limit reached (${IMAGE_MATCH_MAX}). Contact admin to increase.`);
+          return;
+        }
+        await supabase.from("product_images" as any).insert({ user_id: user.id, ...payload });
+      }
+    } catch (e: any) {
+      console.error("auto image match failed", e);
+    }
+  };
+
+  const addToImageMatch = async (p: Product) => {
+    setMatchStatusFor(p.id, "loading");
+    try {
+      await autoAddToImageMatch(p);
       setMatchStatusFor(p.id, "success");
+      toast.success("Synced to Image Match");
       setTimeout(() => setMatchStatusFor(p.id, null), 2000);
     } catch (e: any) {
-      toast.error(e.message || "Failed");
       setMatchStatusFor(p.id, "error");
+      toast.error(e.message || "Failed");
       setTimeout(() => setMatchStatusFor(p.id, null), 2000);
     }
   };
@@ -392,23 +412,9 @@ export default function Products() {
       <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
         <Pencil className="size-3 mr-1" /> Edit
       </Button>
-      {(() => {
-        const s = matchStatus[p.id];
-        return (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={s === "loading"}
-            onClick={() => addToImageMatch(p)}
-            className={s === "success" ? "border-green-500 text-green-600" : s === "error" ? "border-red-500 text-red-600" : ""}
-          >
-            {s === "loading" ? (<><Loader2 className="size-3 mr-1 animate-spin" /> Adding…</>)
-              : s === "success" ? (<><Check className="size-3 mr-1" /> Added!</>)
-              : s === "error" ? (<><X className="size-3 mr-1" /> Failed</>)
-              : (<><Camera className="size-3 mr-1" /> Add to Image Match</>)}
-          </Button>
-        );
-      })()}
+      <Badge variant="secondary" className="text-[10px] gap-1">
+        <Camera className="size-3" /> Image Match: Auto
+      </Badge>
       <Button size="sm" variant="outline" onClick={() => retag(p)}>
         <RefreshCw className="size-3 mr-1" /> Re-tag
       </Button>
