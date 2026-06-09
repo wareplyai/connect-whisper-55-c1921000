@@ -225,11 +225,19 @@ export default function Products() {
       if (productId) {
         supabase.functions.invoke("tag-product-image", { body: { productId } }).then(({ error }) => {
           if (error) toast.error("Auto-tag failed: " + error.message);
-          else { toast.success("AI tags generated"); load(); }
+          else { load(); }
         });
+        // Auto add to Image Match silently
+        autoAddToImageMatch({
+          id: productId,
+          name: form.name.trim(),
+          price: Number(form.price) || 0,
+          description: form.description.trim() || null,
+          image_url: pub.publicUrl,
+        }).then(() => load()).catch(() => {});
       }
 
-      toast.success("Product added — AI tagging in background");
+      toast.success("Product added — AI tagging & Image Match in background");
       reset();
       setAddOpen(false);
       load();
