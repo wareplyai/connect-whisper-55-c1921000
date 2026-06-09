@@ -253,6 +253,10 @@ export default function Products() {
     if (p.image_path) {
       await supabase.storage.from("product-images").remove([p.image_path]);
     }
+    // Remove matching Image Match entry to free up the limit
+    if (user) {
+      await supabase.from("product_images" as any).delete().eq("user_id", user.id).eq("product_name", p.name);
+    }
     await supabase.from("products" as any).delete().eq("id", p.id);
     toast.success("Deleted");
     load();
