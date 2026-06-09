@@ -271,6 +271,16 @@ export default function AllUsers() {
                 </Select>
               </div>
               <div><Label>Max Sessions</Label><Input type="number" value={editUser.max_sessions} onChange={(e) => setEditUser({ ...editUser, max_sessions: Number(e.target.value) })} /></div>
+              <div>
+                <Label>Max Products (image uploads)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={editUser.max_products ?? 10}
+                  onChange={(e) => setEditUser({ ...editUser, max_products: Number(e.target.value) })}
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">Default 10. Set higher to allow this user to upload more product images.</p>
+              </div>
             </div>
           )}
           <DialogFooter><Button variant="outline" onClick={() => setEditUser(null)}>Cancel</Button><Button onClick={saveEdit}>Save</Button></DialogFooter>
