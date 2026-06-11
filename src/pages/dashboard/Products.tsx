@@ -517,25 +517,23 @@ export default function Products() {
                     <img src={p.image_url} alt={p.name} className="w-20 h-20 rounded object-cover flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="font-semibold truncate">{p.name}</div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {p.category || "—"} · Stock: {p.stock}
-                        </div>
-                        {p.description && (
-                          <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{p.description}</p>
-                        )}
-                        <div className="flex items-center gap-2 flex-wrap mt-1">
-                          <Badge variant={p.ai_tags_status === "ready" ? "default" : "secondary"} className="text-[10px]">
-                            AI: {p.ai_tags_status}
-                          </Badge>
-                          {p.ai_tags && p.ai_tags_status === "ready" && (
-                            <span className="text-[10px] text-muted-foreground line-clamp-1">{p.ai_tags}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="font-bold whitespace-nowrap">{p.price}</div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="font-semibold truncate">{p.name}</div>
+                      <div className="font-bold whitespace-nowrap text-primary ml-auto">৳{p.price}</div>
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {p.category || "—"} · Stock: {p.stock}
+                    </div>
+                    {p.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{p.description}</p>
+                    )}
+                    <div className="flex items-center gap-2 flex-wrap mt-1">
+                      <Badge variant={p.ai_tags_status === "ready" ? "default" : "secondary"} className="text-[10px]">
+                        AI: {p.ai_tags_status}
+                      </Badge>
+                      {p.ai_tags && p.ai_tags_status === "ready" && (
+                        <span className="text-[10px] text-muted-foreground line-clamp-1">{p.ai_tags}</span>
+                      )}
                     </div>
                   </div>
                   <div className="flex-shrink-0">
