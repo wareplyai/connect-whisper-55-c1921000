@@ -950,7 +950,7 @@ async function uploadChatMediaImage(
   userId: string,
   sessionId: string,
   source: string,
-): Promise<{ url: string; mime: string } | null> {
+): Promise<{ url: string; mime: string; signedUrl?: string | null } | null> {
   try {
     let bytes: Uint8Array | null = null;
     let mime = "image/jpeg";
@@ -2138,7 +2138,8 @@ Deno.serve(async (req) => {
             mimetype: imageMimetype,
             image_caption: imageCaption,
           }).eq("id", messageId);
-          imageUrl = uploaded.url;
+          // Use the SIGNED url for vision (bucket is private — public URL 404s).
+          imageUrl = uploaded.signedUrl || uploaded.url;
           console.log("[ai-reply] saved chat-media url for message", {
             messageId,
             media_url: uploaded.url,
