@@ -2450,6 +2450,80 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, skipped: "session_not_connected", message_id: messageId });
     }
 
+    // ===== Image + text coalescing =====
+    // Customers often send a product photo and then immediately a short text
+    // ("price koto", "ata ki ase") within a couple of seconds. Without this
+    // block the agent replies twice — once for the image, once for the text.
+    // Strategy:
+    //   1) If THIS message is image-only, wait briefly for a follow-up text
+    //      from the same customer; if one arrives, absorb its text into this
+    //      reply and mark the text row as skipped.
+    //   2) If THIS message is text-only, look back for a very recent image
+    //      from the same customer; if found, treat it as part of this turn
+    //      (run vision match), and mark the image row as skipped.
+    if (aiEnabled && (isImageMessage || messageText)) {
+      try {
+        const coalesceWaitMs = 6000;
+        const coalesceLookbackMs = 15000;
+
+        if (isImageMessage && !messageText && messageId) {
+          await new Promise((r) => setTimeout(r, coalesceWaitMs));
+          const sinceIso = new Date(Date.now() - coalesceWaitMs - 2000).toISOString();
+          const { data: newerText } = await admin
+            .from("incoming_messages")
+            .select("id, message_text, received_at, delivery_status, reply_sent")
+            .eq("session_id", sessionId)
+            .eq("from_number", fromNumber)
+            .gte("received_at", sinceIso)
+            .not("message_text", "is", null)
+            .neq("id", messageId)
+            .order("received_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const newerStr = (newerText as any)?.message_text;
+          if (newerText && typeof newerStr === "string" && newerStr.trim()) {
+            messageText = newerStr.trim();
+            lowerMsg = messageText.toLowerCase();
+            await admin.from("incoming_messages").update({
+              delivery_status: "skipped",
+              reply_error: "coalesced_into_image_reply",
+              processed_at: new Date().toISOString(),
+            }).eq("id", (newerText as any).id);
+            console.log("[ai-reply] coalesced follow-up text into image message", { absorbed: (newerText as any).id, text: messageText });
+          }
+        } else if (!isImageMessage && messageText && !imageUrl && messageId) {
+          const sinceIso = new Date(Date.now() - coalesceLookbackMs).toISOString();
+          const { data: recentImg } = await admin
+            .from("incoming_messages")
+            .select("id, image_url, media_url, image_caption, caption, mimetype, received_at, delivery_status, reply_sent")
+            .eq("session_id", sessionId)
+            .eq("from_number", fromNumber)
+            .gte("received_at", sinceIso)
+            .neq("id", messageId)
+            .or("image_url.not.is.null,media_url.not.is.null")
+            .order("received_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const recImgUrl = (recentImg as any)?.image_url || (recentImg as any)?.media_url;
+          // Only coalesce if image reply hasn't already been sent to the customer
+          const alreadySent = (recentImg as any)?.reply_sent === true || (recentImg as any)?.delivery_status === "sent";
+          if (recImgUrl && !alreadySent) {
+            imageUrl = String(recImgUrl);
+            imageCaption = imageCaption || (recentImg as any).image_caption || (recentImg as any).caption || null;
+            isImageMessage = true;
+            await admin.from("incoming_messages").update({
+              delivery_status: "skipped",
+              reply_error: "coalesced_into_followup_text",
+              processed_at: new Date().toISOString(),
+            }).eq("id", (recentImg as any).id);
+            console.log("[ai-reply] coalesced recent image into follow-up text", { absorbed: (recentImg as any).id, imageUrl });
+          }
+        }
+      } catch (e) {
+        console.log("[ai-reply] coalescing error:", (e as Error)?.message);
+      }
+    }
+
     // ===== Message batching: collect rapid-fire customer messages, reply once =====
     // Safe default: batching is OFF unless the user explicitly enables it.
     // Even when ON, if wait_seconds is 0 we skip batching entirely.
