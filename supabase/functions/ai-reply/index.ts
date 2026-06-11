@@ -2450,6 +2450,79 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, skipped: "session_not_connected", message_id: messageId });
     }
 
+    // ===== Image + text coalescing =====
+    // Customers often send a product photo and then immediately a short text
+    // ("price koto", "ata ki ase") within a couple of seconds. Without this
+    // block the agent replies twice — once for the image, once for the text.
+    // Strategy:
+    //   1) If THIS message is image-only, wait briefly for a follow-up text
+    //      from the same customer; if one arrives, absorb its text into this
+    //      reply and mark the text row as skipped.
+    //   2) If THIS message is text-only, look back for a very recent image
+    //      from the same customer; if found, treat it as part of this turn
+    //      (run vision match), and mark the image row as skipped.
+    if (aiEnabled && (isImageMessage || messageText)) {
+      try {
+        const coalesceWaitMs = 6000;
+        const coalesceLookbackMs = 15000;
+
+        if (isImageMessage && !messageText && messageId) {
+          await new Promise((r) => setTimeout(r, coalesceWaitMs));
+          const sinceIso = new Date(Date.now() - coalesceWaitMs - 2000).toISOString();
+          const { data: newerText } = await admin
+            .from("incoming_messages")
+            .select("id, message_text, received_at, delivery_status, reply_sent")
+            .eq("session_id", sessionId)
+            .eq("from_number", fromNumber)
+            .gte("received_at", sinceIso)
+            .not("message_text", "is", null)
+            .neq("id", messageId)
+            .order("received_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const newerStr = (newerText as any)?.message_text;
+          if (newerText && typeof newerStr === "string" && newerStr.trim()) {
+            messageText = newerStr.trim();
+            await admin.from("incoming_messages").update({
+              delivery_status: "skipped",
+              reply_error: "coalesced_into_image_reply",
+              processed_at: new Date().toISOString(),
+            }).eq("id", (newerText as any).id);
+            console.log("[ai-reply] coalesced follow-up text into image message", { absorbed: (newerText as any).id, text: messageText });
+          }
+        } else if (!isImageMessage && messageText && !imageUrl && messageId) {
+          const sinceIso = new Date(Date.now() - coalesceLookbackMs).toISOString();
+          const { data: recentImg } = await admin
+            .from("incoming_messages")
+            .select("id, image_url, media_url, image_caption, caption, mimetype, received_at, delivery_status, reply_sent")
+            .eq("session_id", sessionId)
+            .eq("from_number", fromNumber)
+            .gte("received_at", sinceIso)
+            .neq("id", messageId)
+            .or("image_url.not.is.null,media_url.not.is.null")
+            .order("received_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const recImgUrl = (recentImg as any)?.image_url || (recentImg as any)?.media_url;
+          // Only coalesce if image reply hasn't already been sent to the customer
+          const alreadySent = (recentImg as any)?.reply_sent === true || (recentImg as any)?.delivery_status === "sent";
+          if (recImgUrl && !alreadySent) {
+            imageUrl = String(recImgUrl);
+            imageCaption = imageCaption || (recentImg as any).image_caption || (recentImg as any).caption || null;
+            isImageMessage = true;
+            await admin.from("incoming_messages").update({
+              delivery_status: "skipped",
+              reply_error: "coalesced_into_followup_text",
+              processed_at: new Date().toISOString(),
+            }).eq("id", (recentImg as any).id);
+            console.log("[ai-reply] coalesced recent image into follow-up text", { absorbed: (recentImg as any).id, imageUrl });
+          }
+        }
+      } catch (e) {
+        console.log("[ai-reply] coalescing error:", (e as Error)?.message);
+      }
+    }
+
     // ===== Message batching: collect rapid-fire customer messages, reply once =====
     // Safe default: batching is OFF unless the user explicitly enables it.
     // Even when ON, if wait_seconds is 0 we skip batching entirely.
@@ -2789,6 +2862,45 @@ Deno.serve(async (req) => {
       ? biz.system_prompt
       : `You are a helpful WhatsApp assistant for ${biz?.name || "this business"}. Reply in the customer's language. Be friendly, concise, human-like.`;
     const systemPrompt = `${baseSystem}${qaContext}${productCatalog}${productInstr}`;
+
+    // If we have an image AND text in this turn (either originally or after
+    // coalescing a recent image+text pair), run vision+match now so the AI
+    // text flow can answer with the matched product details in a single reply.
+    if (isImageMessage && imageUrl && messageText && !matchedProduct && keyRow?.platform === "openai" && apiKey) {
+      try {
+        const desc = await describeImageWithOpenAI(apiKey, imageUrl);
+        const structured = await extractStructuredFromImage({
+          apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption,
+        });
+        if (messageId) {
+          await admin.from("incoming_messages").update({
+            extracted_product_name: structured.product_name,
+            extracted_order_number: structured.order_number,
+            image_analysis: { description: desc, ...structured },
+            image_analyzed_at: new Date().toISOString(),
+          }).eq("id", messageId);
+        }
+        const { data: productRows } = await admin
+          .from("products")
+          .select("id, name, price, description, category, stock, image_url, ai_tags")
+          .eq("user_id", userId)
+          .eq("is_active", true)
+          .limit(500);
+        let best: { score: number; row: any } | null = null;
+        const haystackQuery = [desc, structured.product_name, imageCaption, messageText].filter(Boolean).join(" ");
+        for (const p of productRows || []) {
+          const haystack = [p.name, p.description, p.category, p.ai_tags].filter(Boolean).join(" ");
+          const score = textSimilarity(haystackQuery, haystack);
+          if (!best || score > best.score) best = { score, row: p };
+        }
+        if (best && best.score >= 0.18) {
+          matchedProduct = best.row;
+          console.log("[ai-reply] image+text pre-match", { name: best.row?.name, score: best.score });
+        }
+      } catch (e) {
+        console.log("[ai-reply] image+text pre-match failed:", (e as Error)?.message);
+      }
+    }
 
     // If we have a matched product (image match) and/or text from the customer,
     // route into the regular text-AI flow with extra context. Vision-only describe
