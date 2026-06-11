@@ -41,6 +41,3 @@ verify_jwt = false
 
 [functions.wa-download-media]
 verify_jwt = false
-
-[functions.repair-chat-media]
-verify_jwt = false
