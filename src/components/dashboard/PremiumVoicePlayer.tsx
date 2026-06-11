@@ -50,6 +50,17 @@ export function PremiumVoicePlayer({ src, transcript, outgoing }: Props) {
     };
   }, []);
 
+  // Reload the audio element whenever the source URL changes (e.g. when a
+  // signed URL replaces the initial one) — <audio> does not pick up src
+  // changes on its own.
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    setPlaying(false);
+    setCurrent(0);
+    a.load();
+  }, [src]);
+
   const toggle = () => {
     const a = audioRef.current;
     if (!a) return;
