@@ -944,12 +944,67 @@ async function fetchGatewayMediaDataUrl(opts: {
   return null;
 }
 
+// ---- WhatsApp encrypted media (.enc) decryption -------------------------
+// Media downloaded straight from mmg.whatsapp.net is AES-256-CBC encrypted.
+// The webhook payload carries imageMessage.mediaKey which lets us decrypt:
+// HKDF-SHA256(mediaKey, info="WhatsApp <Type> Keys") -> iv(16)+cipherKey(32)+macKey(32),
+// ciphertext = bytes minus trailing 10-byte MAC.
+function sniffImageMime(bytes: Uint8Array): string | null {
+  if (bytes.length < 12) return null;
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) return "image/jpeg";
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "image/png";
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return "image/gif";
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return "image/webp";
+  return null;
+}
+
+async function decryptWhatsAppMedia(
+  encBytes: Uint8Array,
+  mediaKeyB64: string,
+  mediaType: "image" | "video" | "audio" | "document" = "image",
+): Promise<Uint8Array | null> {
+  try {
+    const keyBin = atob(String(mediaKeyB64).trim());
+    const mediaKey = new Uint8Array(keyBin.length);
+    for (let i = 0; i < keyBin.length; i++) mediaKey[i] = keyBin.charCodeAt(i);
+    if (mediaKey.length !== 32 || encBytes.length <= 26) return null;
+    const infoMap = {
+      image: "WhatsApp Image Keys",
+      video: "WhatsApp Video Keys",
+      audio: "WhatsApp Audio Keys",
+      document: "WhatsApp Document Keys",
+    } as const;
+    const baseKey = await crypto.subtle.importKey("raw", mediaKey, "HKDF", false, ["deriveBits"]);
+    const expanded = new Uint8Array(await crypto.subtle.deriveBits(
+      {
+        name: "HKDF",
+        hash: "SHA-256",
+        salt: new Uint8Array(32),
+        info: new TextEncoder().encode(infoMap[mediaType]),
+      },
+      baseKey,
+      112 * 8,
+    ));
+    const iv = expanded.slice(0, 16);
+    const cipherKeyBytes = expanded.slice(16, 48);
+    const ciphertext = encBytes.slice(0, encBytes.length - 10); // strip 10-byte MAC
+    const cipherKey = await crypto.subtle.importKey("raw", cipherKeyBytes, { name: "AES-CBC" }, false, ["decrypt"]);
+    const plain = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-CBC", iv }, cipherKey, ciphertext));
+    return plain;
+  } catch (e) {
+    console.log("[wa-decrypt] failed:", (e as Error)?.message);
+    return null;
+  }
+}
+
 // Upload an image (data URL or http URL) to the chat-media storage bucket and return its public URL + mimetype.
 async function uploadChatMediaImage(
   admin: any,
   userId: string,
   sessionId: string,
   source: string,
+  mediaKey?: string | null,
 ): Promise<{ url: string; mime: string; signedUrl?: string | null } | null> {
   try {
     let bytes: Uint8Array | null = null;
@@ -966,6 +1021,25 @@ async function uploadChatMediaImage(
       if (!r.ok) return null;
       mime = (r.headers.get("content-type") || "image/jpeg").split(";")[0];
       bytes = new Uint8Array(await r.arrayBuffer());
+      // WhatsApp CDN media is encrypted — decrypt with the payload mediaKey.
+      if (!sniffImageMime(bytes) && mediaKey) {
+        const dec = await decryptWhatsAppMedia(bytes, mediaKey, "image");
+        const decMime = dec ? sniffImageMime(dec) : null;
+        if (dec && decMime) {
+          console.log("[wa-decrypt] decrypted media OK", { encLen: bytes.length, decLen: dec.length, mime: decMime });
+          bytes = dec;
+          mime = decMime;
+        } else {
+          console.log("[wa-decrypt] decryption did not yield a valid image");
+        }
+      }
+      const sniffed = sniffImageMime(bytes);
+      if (sniffed) mime = sniffed;
+      else if (isWhatsAppMediaUrl(source)) {
+        // Still encrypted garbage — don't store an unviewable blob.
+        console.log("[chat-media] refusing to store non-image (likely encrypted) bytes");
+        return null;
+      }
     } else {
       return null;
     }
@@ -2129,7 +2203,15 @@ Deno.serve(async (req) => {
     // chat-media bucket and persist the public URL + mimetype on the message so it shows in the inbox.
     if (messageId && imageUrl) {
       try {
-        const uploaded = await uploadChatMediaImage(admin, userId, sessionId, imageUrl);
+        const incomingMediaKey = String(
+          (body as any)?.imageMessage?.mediaKey ||
+          (body as any)?.quoted_image_mediaKey ||
+          (rawPayload as any)?.imageMessage?.mediaKey ||
+          (rawPayload as any)?.message?.imageMessage?.mediaKey ||
+          findStringByKeys(body, ["mediaKey", "media_key"]) ||
+          ""
+        ).trim() || null;
+        const uploaded = await uploadChatMediaImage(admin, userId, sessionId, imageUrl, incomingMediaKey);
         if (uploaded) {
           imageMimetype = imageMimetype || uploaded.mime;
           await admin.from("incoming_messages").update({
