@@ -197,12 +197,17 @@ const Inbox = () => {
         const mt = (m as any).message_type as string | null;
         const rawPayload = (m as any).raw_payload as any;
         const isAudio = mt === "audio" || mt === "voice" || mt === "ptt";
-        // For audio messages, prefer the original .ogg URL from raw_payload over any
-        // chat-media re-upload that may have happened upstream.
+        // Prefer the stored chat-media URL (decrypted, playable). Fall back to raw_payload
+        // media_url only when it isn't the encrypted WhatsApp CDN URL.
+        const stored = (m as any).media_url as string | null;
         const rawAudioUrl = isAudio && rawPayload && typeof rawPayload === "object"
           ? (rawPayload.media_url || rawPayload.mediaUrl || null)
           : null;
-        const mediaUrl = (rawAudioUrl || (m as any).media_url || null) as string | null;
+        const looksEncrypted = (u: string | null) =>
+          !!u && /mmg\.whatsapp\.net|whatsapp\.net.*\.enc(\?|$)/i.test(u);
+        const mediaUrl = (stored
+          || (rawAudioUrl && !looksEncrypted(rawAudioUrl) ? rawAudioUrl : null)
+          || null) as string | null;
         return {
           id: `i-${m.id}`,
           srcTable: "incoming_messages" as const,
