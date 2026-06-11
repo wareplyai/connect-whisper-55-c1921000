@@ -260,7 +260,7 @@ function payloadLooksLikeImage(value: unknown, depth = 0): boolean {
   const obj = value as Record<string, unknown>;
   for (const k of Object.keys(obj)) {
     const nk = k.toLowerCase();
-    if (nk === "imagemessage" || nk === "image_message") return true;
+    if ((nk === "imagemessage" || nk === "image_message") && obj[k] != null && typeof obj[k] === "object") return true;
     if ((nk === "mimetype" || nk === "mime_type" || nk === "contenttype" || nk === "content_type") && typeof obj[k] === "string" && /^image\//i.test(obj[k] as string)) return true;
     if ((nk === "messagetype" || nk === "message_type" || nk === "type") && typeof obj[k] === "string" && /image|photo|picture/i.test(obj[k] as string)) return true;
   }
