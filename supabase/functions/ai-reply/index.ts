@@ -1790,41 +1790,69 @@ Deno.serve(async (req) => {
       hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
 
-    // ---- Voice / audio messages: transcribe via Lovable AI Gateway, then process as text.
-    // We keep the original audio media_url + message_type so the inbox shows the audio player,
-    // and we expose `transcribed_text` so the inbox can show the transcript under it.
+    // ---- Voice / audio messages: decrypt (if WA CDN), upload to chat-media, then transcribe.
+    // We replace body.media_url with the clean chat-media URL so the inbox can play it,
+    // and expose transcribed_text so the inbox/AI agent can use the transcript as the message text.
     let voiceTranscript = "";
+    let voiceUploadedMime: string | null = null;
     {
       const audioUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
       const lowerType0 = messageType.toLowerCase();
       const isAudio = /audio|voice|ptt/.test(lowerType0);
-      if (audioUrl && isAudio && !rawText) {
+      if (audioUrl && isAudio) {
         try {
-          const transcript = await transcribeVoiceFile(audioUrl);
-          if (transcript) {
-            voiceTranscript = transcript;
-            rawText = transcript;
-            (body as any).message = transcript;
-            (body as any).transcribed_text = transcript;
-            (body as any).original_type = "audio";
-            console.log("[stt] AI agent will reply to transcribed audio for session", sessionId);
-          } else {
-            console.log("[stt] empty transcript for", audioUrl);
+          const admin0 = createClient(
+            Deno.env.get("SUPABASE_URL")!,
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+          );
+          const { data: ses0 } = await admin0.from("sessions")
+            .select("id, user_id")
+            .eq("id", sessionId).maybeSingle();
+          const audioMediaKey = String(
+            (body as any)?.audioMessage?.mediaKey ||
+            (body as any)?.message?.audioMessage?.mediaKey ||
+            findStringByKeys(body, ["mediaKey", "media_key"]) ||
+            ""
+          ).trim() || null;
+          let prefetched: { bytes: Uint8Array; mime: string } | null = null;
+          if (ses0?.user_id) {
+            const uploaded = await uploadChatMediaAudio(admin0, ses0.user_id, sessionId, audioUrl, audioMediaKey);
+            if (uploaded) {
+              (body as any).media_url = uploaded.url;
+              (body as any).mediaUrl = uploaded.url;
+              voiceUploadedMime = uploaded.mime;
+              prefetched = { bytes: uploaded.bytes, mime: uploaded.mime };
+              console.log("[voice] chat-media upload OK", { url: uploaded.url, mime: uploaded.mime, len: uploaded.bytes.length });
+            } else {
+              console.log("[voice] chat-media upload failed; will try transcribing the raw URL");
+            }
+          }
+          if (!rawText) {
+            const transcript = await transcribeVoiceFile(audioUrl, prefetched);
+            if (transcript) {
+              voiceTranscript = transcript;
+              rawText = transcript;
+              (body as any).message = transcript;
+              (body as any).transcribed_text = transcript;
+              (body as any).original_type = "audio";
+              console.log("[stt] AI agent will reply to transcribed audio for session", sessionId);
+            } else {
+              console.log("[stt] empty transcript for", audioUrl);
+            }
           }
         } catch (e) {
-          console.log("[stt] pre-step failed:", (e as Error)?.message);
+          console.log("[voice] pre-step failed:", (e as Error)?.message);
         }
       }
     }
 
-    // ---- Non-image media (audio/video/document) — log to inbox and skip AI reply.
-    // VPS already uploaded the file to Supabase storage and gives us a public media_url.
+    // ---- Non-image media we cannot transcribe (video/document/sticker), or audio when
+    // transcription failed — log to inbox and skip AI reply. media_url is already the
+    // decrypted chat-media URL for audio when uploadChatMediaAudio succeeded.
     {
       const mediaUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
       const lowerType = messageType.toLowerCase();
       const isNonImageMedia = /audio|voice|ptt|video|document|file|sticker/.test(lowerType);
-      // If we already transcribed an audio message above, fall through to AI reply flow
-      // (we still want the audio + transcript saved in the inbox by the normal insert below).
       if (mediaUrl && isNonImageMedia && !voiceTranscript) {
         const admin0 = createClient(
           Deno.env.get("SUPABASE_URL")!,
@@ -1865,11 +1893,13 @@ Deno.serve(async (req) => {
           received_at: new Date().toISOString(),
           media_url: mediaUrl,
           media_filename: filename,
+          mimetype: voiceUploadedMime,
           caption,
         });
         return jsonResp({ ok: true, logged: normType });
       }
     }
+
 
     // ---- Image detection: scan body deeply for any image source (URL/dataURL/base64) ----
     const bodyMediaUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
