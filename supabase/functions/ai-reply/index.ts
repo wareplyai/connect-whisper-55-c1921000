@@ -2863,6 +2863,45 @@ Deno.serve(async (req) => {
       : `You are a helpful WhatsApp assistant for ${biz?.name || "this business"}. Reply in the customer's language. Be friendly, concise, human-like.`;
     const systemPrompt = `${baseSystem}${qaContext}${productCatalog}${productInstr}`;
 
+    // If we have an image AND text in this turn (either originally or after
+    // coalescing a recent image+text pair), run vision+match now so the AI
+    // text flow can answer with the matched product details in a single reply.
+    if (isImageMessage && imageUrl && messageText && !matchedProduct && keyRow?.platform === "openai" && apiKey) {
+      try {
+        const desc = await describeImageWithOpenAI(apiKey, imageUrl);
+        const structured = await extractStructuredFromImage({
+          apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption,
+        });
+        if (messageId) {
+          await admin.from("incoming_messages").update({
+            extracted_product_name: structured.product_name,
+            extracted_order_number: structured.order_number,
+            image_analysis: { description: desc, ...structured },
+            image_analyzed_at: new Date().toISOString(),
+          }).eq("id", messageId);
+        }
+        const { data: productRows } = await admin
+          .from("products")
+          .select("id, name, price, description, category, stock, image_url, ai_tags")
+          .eq("user_id", userId)
+          .eq("is_active", true)
+          .limit(500);
+        let best: { score: number; row: any } | null = null;
+        const haystackQuery = [desc, structured.product_name, imageCaption, messageText].filter(Boolean).join(" ");
+        for (const p of productRows || []) {
+          const haystack = [p.name, p.description, p.category, p.ai_tags].filter(Boolean).join(" ");
+          const score = textSimilarity(haystackQuery, haystack);
+          if (!best || score > best.score) best = { score, row: p };
+        }
+        if (best && best.score >= 0.18) {
+          matchedProduct = best.row;
+          console.log("[ai-reply] image+text pre-match", { name: best.row?.name, score: best.score });
+        }
+      } catch (e) {
+        console.log("[ai-reply] image+text pre-match failed:", (e as Error)?.message);
+      }
+    }
+
     // If we have a matched product (image match) and/or text from the customer,
     // route into the regular text-AI flow with extra context. Vision-only describe
     // path only runs when the customer sent ONLY an image (no text).
