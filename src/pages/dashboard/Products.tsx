@@ -517,10 +517,7 @@ export default function Products() {
                     <img src={p.image_url} alt={p.name} className="w-20 h-20 rounded object-cover flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="font-semibold truncate">{p.name}</div>
-                      <div className="font-bold whitespace-nowrap text-primary ml-auto">৳{p.price}</div>
-                    </div>
+                    <div className="font-semibold truncate">{p.name}</div>
                     <div className="text-xs text-muted-foreground truncate">
                       {p.category || "—"} · Stock: {p.stock}
                     </div>
@@ -536,7 +533,8 @@ export default function Products() {
                       )}
                     </div>
                   </div>
-                  <div className="flex-shrink-0">
+                  <div className="flex-shrink-0 flex flex-col items-end gap-2">
+                    <div className="font-bold whitespace-nowrap text-primary">৳{p.price}</div>
                     <ProductActions p={p} />
                   </div>
                 </div>
