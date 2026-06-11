@@ -47,26 +47,44 @@ async function decryptKey(payload: string): Promise<string> {
 
 // Transcribe a remote .ogg/.mp3/.m4a voice file via Lovable AI Gateway (Gemini).
 // Auto-detects Bangla / English. Returns "" on failure.
-async function transcribeVoiceFile(audioUrl: string): Promise<string> {
+// Accepts either a URL or pre-fetched (already-decrypted) bytes.
+async function transcribeVoiceFile(
+  audioUrl: string,
+  prefetched?: { bytes: Uint8Array; mime: string } | null,
+): Promise<string> {
   try {
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableKey) {
       console.log("[stt] LOVABLE_API_KEY missing");
       return "";
     }
-    const audioRes = await fetch(audioUrl);
-    if (!audioRes.ok) {
-      console.log("[stt] download failed:", audioRes.status, audioUrl);
-      return "";
+    let buf: Uint8Array;
+    let ctype: string;
+    if (prefetched?.bytes && prefetched.bytes.length > 0) {
+      buf = prefetched.bytes;
+      ctype = (prefetched.mime || "audio/ogg").split(";")[0].trim();
+    } else {
+      const audioRes = await fetch(audioUrl);
+      if (!audioRes.ok) {
+        console.log("[stt] download failed:", audioRes.status, audioUrl);
+        return "";
+      }
+      ctype = (audioRes.headers.get("content-type") || "audio/ogg").split(";")[0].trim();
+      buf = new Uint8Array(await audioRes.arrayBuffer());
     }
-    const ctype = (audioRes.headers.get("content-type") || "audio/ogg").split(";")[0].trim();
-    const buf = new Uint8Array(await audioRes.arrayBuffer());
-    // base64 encode
+    // chunked base64 to avoid stack overflow on large audio
     let bin = "";
-    for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    const CHUNK = 0x8000;
+    for (let i = 0; i < buf.length; i += CHUNK) {
+      bin += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + CHUNK)) as any);
+    }
     const b64 = btoa(bin);
     console.log("[stt] audio bytes:", buf.length, "mime:", ctype);
 
+    const fmt = ctype.includes("mp3") || ctype.includes("mpeg") ? "mp3"
+      : ctype.includes("wav") ? "wav"
+      : ctype.includes("m4a") || ctype.includes("mp4") || ctype.includes("aac") ? "m4a"
+      : "ogg";
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -85,7 +103,7 @@ async function transcribeVoiceFile(audioUrl: string): Promise<string> {
             role: "user",
             content: [
               { type: "text", text: "Transcribe this voice note:" },
-              { type: "input_audio", input_audio: { data: b64, format: ctype.includes("mp3") ? "mp3" : "ogg" } },
+              { type: "input_audio", input_audio: { data: b64, format: fmt } },
             ],
           },
         ],
@@ -97,7 +115,7 @@ async function transcribeVoiceFile(audioUrl: string): Promise<string> {
       return "";
     }
     const text = String(data?.choices?.[0]?.message?.content || "").trim();
-    console.log("[stt] transcribed", text.length, "chars from", audioUrl);
+    console.log("[stt] transcribed", text.length, "chars");
     return text;
   } catch (e) {
     console.log("[stt] exception:", (e as Error)?.message);
