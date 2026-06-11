@@ -2203,7 +2203,15 @@ Deno.serve(async (req) => {
     // chat-media bucket and persist the public URL + mimetype on the message so it shows in the inbox.
     if (messageId && imageUrl) {
       try {
-        const uploaded = await uploadChatMediaImage(admin, userId, sessionId, imageUrl);
+        const incomingMediaKey = String(
+          (body as any)?.imageMessage?.mediaKey ||
+          (body as any)?.quoted_image_mediaKey ||
+          (rawPayload as any)?.imageMessage?.mediaKey ||
+          (rawPayload as any)?.message?.imageMessage?.mediaKey ||
+          findStringByKeys(body, ["mediaKey", "media_key"]) ||
+          ""
+        ).trim() || null;
+        const uploaded = await uploadChatMediaImage(admin, userId, sessionId, imageUrl, incomingMediaKey);
         if (uploaded) {
           imageMimetype = imageMimetype || uploaded.mime;
           await admin.from("incoming_messages").update({
