@@ -47,26 +47,44 @@ async function decryptKey(payload: string): Promise<string> {
 
 // Transcribe a remote .ogg/.mp3/.m4a voice file via Lovable AI Gateway (Gemini).
 // Auto-detects Bangla / English. Returns "" on failure.
-async function transcribeVoiceFile(audioUrl: string): Promise<string> {
+// Accepts either a URL or pre-fetched (already-decrypted) bytes.
+async function transcribeVoiceFile(
+  audioUrl: string,
+  prefetched?: { bytes: Uint8Array; mime: string } | null,
+): Promise<string> {
   try {
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableKey) {
       console.log("[stt] LOVABLE_API_KEY missing");
       return "";
     }
-    const audioRes = await fetch(audioUrl);
-    if (!audioRes.ok) {
-      console.log("[stt] download failed:", audioRes.status, audioUrl);
-      return "";
+    let buf: Uint8Array;
+    let ctype: string;
+    if (prefetched?.bytes && prefetched.bytes.length > 0) {
+      buf = prefetched.bytes;
+      ctype = (prefetched.mime || "audio/ogg").split(";")[0].trim();
+    } else {
+      const audioRes = await fetch(audioUrl);
+      if (!audioRes.ok) {
+        console.log("[stt] download failed:", audioRes.status, audioUrl);
+        return "";
+      }
+      ctype = (audioRes.headers.get("content-type") || "audio/ogg").split(";")[0].trim();
+      buf = new Uint8Array(await audioRes.arrayBuffer());
     }
-    const ctype = (audioRes.headers.get("content-type") || "audio/ogg").split(";")[0].trim();
-    const buf = new Uint8Array(await audioRes.arrayBuffer());
-    // base64 encode
+    // chunked base64 to avoid stack overflow on large audio
     let bin = "";
-    for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    const CHUNK = 0x8000;
+    for (let i = 0; i < buf.length; i += CHUNK) {
+      bin += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + CHUNK)) as any);
+    }
     const b64 = btoa(bin);
     console.log("[stt] audio bytes:", buf.length, "mime:", ctype);
 
+    const fmt = ctype.includes("mp3") || ctype.includes("mpeg") ? "mp3"
+      : ctype.includes("wav") ? "wav"
+      : ctype.includes("m4a") || ctype.includes("mp4") || ctype.includes("aac") ? "m4a"
+      : "ogg";
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -85,7 +103,7 @@ async function transcribeVoiceFile(audioUrl: string): Promise<string> {
             role: "user",
             content: [
               { type: "text", text: "Transcribe this voice note:" },
-              { type: "input_audio", input_audio: { data: b64, format: ctype.includes("mp3") ? "mp3" : "ogg" } },
+              { type: "input_audio", input_audio: { data: b64, format: fmt } },
             ],
           },
         ],
@@ -97,7 +115,7 @@ async function transcribeVoiceFile(audioUrl: string): Promise<string> {
       return "";
     }
     const text = String(data?.choices?.[0]?.message?.content || "").trim();
-    console.log("[stt] transcribed", text.length, "chars from", audioUrl);
+    console.log("[stt] transcribed", text.length, "chars");
     return text;
   } catch (e) {
     console.log("[stt] exception:", (e as Error)?.message);
@@ -1068,6 +1086,88 @@ async function uploadChatMediaImage(
   }
 }
 
+// Sniff common voice container headers. WhatsApp PTT is ogg/opus.
+function sniffAudioMime(bytes: Uint8Array): string | null {
+  if (bytes.length < 12) return null;
+  // OggS
+  if (bytes[0] === 0x4f && bytes[1] === 0x67 && bytes[2] === 0x67 && bytes[3] === 0x53) return "audio/ogg";
+  // ID3 / MP3 frame sync (0xFFEx / 0xFFFx)
+  if (bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) return "audio/mpeg";
+  if (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0) return "audio/mpeg";
+  // RIFF....WAVE
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45) return "audio/wav";
+  // ftyp -> mp4/m4a
+  if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) return "audio/mp4";
+  return null;
+}
+
+// Download (+ decrypt if encrypted WA CDN media) a voice file and upload to chat-media.
+// Returns the stored URL + decrypted bytes (for transcription).
+async function uploadChatMediaAudio(
+  admin: any,
+  userId: string,
+  sessionId: string,
+  source: string,
+  mediaKey?: string | null,
+): Promise<{ url: string; signedUrl: string | null; mime: string; bytes: Uint8Array } | null> {
+  try {
+    if (!/^https?:\/\//i.test(source)) return null;
+    const r = await fetch(source);
+    if (!r.ok) {
+      console.log("[chat-media audio] fetch failed:", r.status);
+      return null;
+    }
+    let mime = (r.headers.get("content-type") || "audio/ogg").split(";")[0];
+    let bytes = new Uint8Array(await r.arrayBuffer());
+
+    // WhatsApp CDN audio is AES-256-CBC encrypted — decrypt with the mediaKey.
+    if (!sniffAudioMime(bytes) && mediaKey) {
+      const dec = await decryptWhatsAppMedia(bytes, mediaKey, "audio");
+      if (dec) {
+        const decMime = sniffAudioMime(dec);
+        console.log("[wa-decrypt] decrypted audio", { encLen: bytes.length, decLen: dec.length, mime: decMime });
+        bytes = dec;
+        if (decMime) mime = decMime;
+        else mime = "audio/ogg";
+      } else {
+        console.log("[wa-decrypt] audio decryption failed");
+      }
+    }
+    const sniffed = sniffAudioMime(bytes);
+    if (sniffed) mime = sniffed;
+    else if (isWhatsAppMediaUrl(source)) {
+      console.log("[chat-media audio] refusing to store undecryptable bytes");
+      return null;
+    }
+
+    const ext = mime.includes("mpeg") ? "mp3"
+      : mime.includes("wav") ? "wav"
+      : mime.includes("mp4") || mime.includes("aac") ? "m4a"
+      : "ogg";
+    const path = `${userId}/${sessionId}/${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await admin.storage.from("chat-media").upload(path, bytes, {
+      contentType: mime,
+      upsert: false,
+    });
+    if (upErr) {
+      console.log("[chat-media audio] upload failed:", upErr.message);
+      return null;
+    }
+    const { data } = admin.storage.from("chat-media").getPublicUrl(path);
+    let signedUrl: string | null = null;
+    try {
+      const { data: s } = await admin.storage.from("chat-media").createSignedUrl(path, 60 * 60);
+      signedUrl = s?.signedUrl || null;
+    } catch { /* non-fatal */ }
+    return { url: data?.publicUrl || "", signedUrl, mime, bytes };
+  } catch (e) {
+    console.log("[chat-media audio] error:", (e as Error)?.message);
+    return null;
+  }
+}
+
+
 async function findRecentWhatsappImageUrl(admin: any, fromNumber: string): Promise<string | null> {
   const digits = String(fromNumber || "").replace(/\D/g, "");
   if (!digits) return null;
@@ -1690,41 +1790,69 @@ Deno.serve(async (req) => {
       hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
 
-    // ---- Voice / audio messages: transcribe via Lovable AI Gateway, then process as text.
-    // We keep the original audio media_url + message_type so the inbox shows the audio player,
-    // and we expose `transcribed_text` so the inbox can show the transcript under it.
+    // ---- Voice / audio messages: decrypt (if WA CDN), upload to chat-media, then transcribe.
+    // We replace body.media_url with the clean chat-media URL so the inbox can play it,
+    // and expose transcribed_text so the inbox/AI agent can use the transcript as the message text.
     let voiceTranscript = "";
+    let voiceUploadedMime: string | null = null;
     {
       const audioUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
       const lowerType0 = messageType.toLowerCase();
       const isAudio = /audio|voice|ptt/.test(lowerType0);
-      if (audioUrl && isAudio && !rawText) {
+      if (audioUrl && isAudio) {
         try {
-          const transcript = await transcribeVoiceFile(audioUrl);
-          if (transcript) {
-            voiceTranscript = transcript;
-            rawText = transcript;
-            (body as any).message = transcript;
-            (body as any).transcribed_text = transcript;
-            (body as any).original_type = "audio";
-            console.log("[stt] AI agent will reply to transcribed audio for session", sessionId);
-          } else {
-            console.log("[stt] empty transcript for", audioUrl);
+          const admin0 = createClient(
+            Deno.env.get("SUPABASE_URL")!,
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+          );
+          const { data: ses0 } = await admin0.from("sessions")
+            .select("id, user_id")
+            .eq("id", sessionId).maybeSingle();
+          const audioMediaKey = String(
+            (body as any)?.audioMessage?.mediaKey ||
+            (body as any)?.message?.audioMessage?.mediaKey ||
+            findStringByKeys(body, ["mediaKey", "media_key"]) ||
+            ""
+          ).trim() || null;
+          let prefetched: { bytes: Uint8Array; mime: string } | null = null;
+          if (ses0?.user_id) {
+            const uploaded = await uploadChatMediaAudio(admin0, ses0.user_id, sessionId, audioUrl, audioMediaKey);
+            if (uploaded) {
+              (body as any).media_url = uploaded.url;
+              (body as any).mediaUrl = uploaded.url;
+              voiceUploadedMime = uploaded.mime;
+              prefetched = { bytes: uploaded.bytes, mime: uploaded.mime };
+              console.log("[voice] chat-media upload OK", { url: uploaded.url, mime: uploaded.mime, len: uploaded.bytes.length });
+            } else {
+              console.log("[voice] chat-media upload failed; will try transcribing the raw URL");
+            }
+          }
+          if (!rawText) {
+            const transcript = await transcribeVoiceFile(audioUrl, prefetched);
+            if (transcript) {
+              voiceTranscript = transcript;
+              rawText = transcript;
+              (body as any).message = transcript;
+              (body as any).transcribed_text = transcript;
+              (body as any).original_type = "audio";
+              console.log("[stt] AI agent will reply to transcribed audio for session", sessionId);
+            } else {
+              console.log("[stt] empty transcript for", audioUrl);
+            }
           }
         } catch (e) {
-          console.log("[stt] pre-step failed:", (e as Error)?.message);
+          console.log("[voice] pre-step failed:", (e as Error)?.message);
         }
       }
     }
 
-    // ---- Non-image media (audio/video/document) — log to inbox and skip AI reply.
-    // VPS already uploaded the file to Supabase storage and gives us a public media_url.
+    // ---- Non-image media we cannot transcribe (video/document/sticker), or audio when
+    // transcription failed — log to inbox and skip AI reply. media_url is already the
+    // decrypted chat-media URL for audio when uploadChatMediaAudio succeeded.
     {
       const mediaUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
       const lowerType = messageType.toLowerCase();
       const isNonImageMedia = /audio|voice|ptt|video|document|file|sticker/.test(lowerType);
-      // If we already transcribed an audio message above, fall through to AI reply flow
-      // (we still want the audio + transcript saved in the inbox by the normal insert below).
       if (mediaUrl && isNonImageMedia && !voiceTranscript) {
         const admin0 = createClient(
           Deno.env.get("SUPABASE_URL")!,
@@ -1765,11 +1893,13 @@ Deno.serve(async (req) => {
           received_at: new Date().toISOString(),
           media_url: mediaUrl,
           media_filename: filename,
+          mimetype: voiceUploadedMime,
           caption,
         });
         return jsonResp({ ok: true, logged: normType });
       }
     }
+
 
     // ---- Image detection: scan body deeply for any image source (URL/dataURL/base64) ----
     const bodyMediaUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
@@ -2185,6 +2315,7 @@ Deno.serve(async (req) => {
         media_filename: payloadFilename,
         caption: payloadCaption,
         image_url: isImageMessage ? payloadMediaUrl : null,
+        mimetype: voiceUploadedMime,
         transcribed_text: voiceTranscript || null,
       };
       const { data: msgRow } = await admin
