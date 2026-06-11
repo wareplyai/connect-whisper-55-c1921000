@@ -950,7 +950,7 @@ async function uploadChatMediaImage(
   userId: string,
   sessionId: string,
   source: string,
-): Promise<{ url: string; mime: string } | null> {
+): Promise<{ url: string; mime: string; signedUrl?: string | null } | null> {
   try {
     let bytes: Uint8Array | null = null;
     let mime = "image/jpeg";
@@ -980,7 +980,14 @@ async function uploadChatMediaImage(
       return null;
     }
     const { data } = admin.storage.from("chat-media").getPublicUrl(path);
-    return data?.publicUrl ? { url: data.publicUrl, mime } : null;
+    // Bucket is PRIVATE: the public URL 404s. Also mint a signed URL so the
+    // vision model can actually download the image.
+    let signedUrl: string | null = null;
+    try {
+      const { data: s } = await admin.storage.from("chat-media").createSignedUrl(path, 60 * 60);
+      signedUrl = s?.signedUrl || null;
+    } catch (_e) { /* non-fatal */ }
+    return data?.publicUrl ? { url: data.publicUrl, mime, signedUrl } : null;
   } catch (e) {
     console.log("[chat-media] error:", (e as Error)?.message);
     return null;
@@ -2131,7 +2138,8 @@ Deno.serve(async (req) => {
             mimetype: imageMimetype,
             image_caption: imageCaption,
           }).eq("id", messageId);
-          imageUrl = uploaded.url;
+          // Use the SIGNED url for vision (bucket is private — public URL 404s).
+          imageUrl = uploaded.signedUrl || uploaded.url;
           console.log("[ai-reply] saved chat-media url for message", {
             messageId,
             media_url: uploaded.url,

@@ -616,7 +616,9 @@ const Inbox = () => {
                           const rawImgSrc = ((m as any).imageUrl as string | null)
                             || (mu && (/image|photo|picture/.test(mt) || /^image\//i.test((m as any).mimetype || "")) ? mu : null);
                           const imgPath = getChatMediaPath(rawImgSrc);
-                          const imgSrc = imgPath ? (signedMediaUrls[imgPath] || rawImgSrc) : rawImgSrc;
+                          // chat-media bucket is private: its "public" URL 404s, so for
+                          // chat-media images only render once the signed URL is ready.
+                          const imgSrc = imgPath ? (signedMediaUrls[imgPath] || null) : rawImgSrc;
                           if (imgSrc) {
                             return (
                               <img
