@@ -300,7 +300,12 @@ const Inbox = () => {
 
   useEffect(() => {
     const urls = conversation
-      .map((m: any) => m.imageUrl || (m.mediaType && /image|photo|picture/i.test(m.mediaType) ? m.mediaUrl : null))
+      .flatMap((m: any) => {
+        const mt = String(m.mediaType || "").toLowerCase();
+        const out: (string | null)[] = [m.imageUrl || null];
+        if (m.mediaUrl && (/image|photo|picture/.test(mt) || /audio|voice|ptt|video|document/.test(mt))) out.push(m.mediaUrl);
+        return out;
+      })
       .filter(Boolean) as string[];
     const missingPaths = Array.from(new Set(urls.map(getChatMediaPath).filter(Boolean) as string[]))
       .filter((path) => !signedMediaUrls[path]);
@@ -646,10 +651,21 @@ const Inbox = () => {
                           }
                           if (mu && (mt === "audio" || mt === "voice" || mt === "ptt")) {
                             const audioPath = getChatMediaPath(mu);
-                            const audioSrc = audioPath ? (signedMediaUrls[audioPath] || mu) : mu;
+                            // chat-media bucket is private: wait for the signed URL,
+                            // never feed the broken "public" URL to the player.
+                            const audioSrc = audioPath ? (signedMediaUrls[audioPath] || null) : mu;
                             const transcript = (m as any).transcribedText as string | null;
+                            if (!audioSrc) {
+                              return (
+                                <div className="mb-1 flex items-center gap-2 rounded-2xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
+                                  Loading voice…
+                                </div>
+                              );
+                            }
                             return (
                               <PremiumVoicePlayer
+                                key={audioSrc}
                                 src={audioSrc}
                                 transcript={transcript}
                                 outgoing={m.kind === "out"}
