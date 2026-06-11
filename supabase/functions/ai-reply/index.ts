@@ -1086,6 +1086,88 @@ async function uploadChatMediaImage(
   }
 }
 
+// Sniff common voice container headers. WhatsApp PTT is ogg/opus.
+function sniffAudioMime(bytes: Uint8Array): string | null {
+  if (bytes.length < 12) return null;
+  // OggS
+  if (bytes[0] === 0x4f && bytes[1] === 0x67 && bytes[2] === 0x67 && bytes[3] === 0x53) return "audio/ogg";
+  // ID3 / MP3 frame sync (0xFFEx / 0xFFFx)
+  if (bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) return "audio/mpeg";
+  if (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0) return "audio/mpeg";
+  // RIFF....WAVE
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45) return "audio/wav";
+  // ftyp -> mp4/m4a
+  if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) return "audio/mp4";
+  return null;
+}
+
+// Download (+ decrypt if encrypted WA CDN media) a voice file and upload to chat-media.
+// Returns the stored URL + decrypted bytes (for transcription).
+async function uploadChatMediaAudio(
+  admin: any,
+  userId: string,
+  sessionId: string,
+  source: string,
+  mediaKey?: string | null,
+): Promise<{ url: string; signedUrl: string | null; mime: string; bytes: Uint8Array } | null> {
+  try {
+    if (!/^https?:\/\//i.test(source)) return null;
+    const r = await fetch(source);
+    if (!r.ok) {
+      console.log("[chat-media audio] fetch failed:", r.status);
+      return null;
+    }
+    let mime = (r.headers.get("content-type") || "audio/ogg").split(";")[0];
+    let bytes = new Uint8Array(await r.arrayBuffer());
+
+    // WhatsApp CDN audio is AES-256-CBC encrypted — decrypt with the mediaKey.
+    if (!sniffAudioMime(bytes) && mediaKey) {
+      const dec = await decryptWhatsAppMedia(bytes, mediaKey, "audio");
+      if (dec) {
+        const decMime = sniffAudioMime(dec);
+        console.log("[wa-decrypt] decrypted audio", { encLen: bytes.length, decLen: dec.length, mime: decMime });
+        bytes = dec;
+        if (decMime) mime = decMime;
+        else mime = "audio/ogg";
+      } else {
+        console.log("[wa-decrypt] audio decryption failed");
+      }
+    }
+    const sniffed = sniffAudioMime(bytes);
+    if (sniffed) mime = sniffed;
+    else if (isWhatsAppMediaUrl(source)) {
+      console.log("[chat-media audio] refusing to store undecryptable bytes");
+      return null;
+    }
+
+    const ext = mime.includes("mpeg") ? "mp3"
+      : mime.includes("wav") ? "wav"
+      : mime.includes("mp4") || mime.includes("aac") ? "m4a"
+      : "ogg";
+    const path = `${userId}/${sessionId}/${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await admin.storage.from("chat-media").upload(path, bytes, {
+      contentType: mime,
+      upsert: false,
+    });
+    if (upErr) {
+      console.log("[chat-media audio] upload failed:", upErr.message);
+      return null;
+    }
+    const { data } = admin.storage.from("chat-media").getPublicUrl(path);
+    let signedUrl: string | null = null;
+    try {
+      const { data: s } = await admin.storage.from("chat-media").createSignedUrl(path, 60 * 60);
+      signedUrl = s?.signedUrl || null;
+    } catch { /* non-fatal */ }
+    return { url: data?.publicUrl || "", signedUrl, mime, bytes };
+  } catch (e) {
+    console.log("[chat-media audio] error:", (e as Error)?.message);
+    return null;
+  }
+}
+
+
 async function findRecentWhatsappImageUrl(admin: any, fromNumber: string): Promise<string | null> {
   const digits = String(fromNumber || "").replace(/\D/g, "");
   if (!digits) return null;
