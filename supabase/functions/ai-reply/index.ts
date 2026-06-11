@@ -2483,7 +2483,6 @@ Deno.serve(async (req) => {
           const newerStr = (newerText as any)?.message_text;
           if (newerText && typeof newerStr === "string" && newerStr.trim()) {
             messageText = newerStr.trim();
-            lowerMsg = messageText.toLowerCase();
             await admin.from("incoming_messages").update({
               delivery_status: "skipped",
               reply_error: "coalesced_into_image_reply",
