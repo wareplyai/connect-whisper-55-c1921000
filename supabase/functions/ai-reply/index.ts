@@ -2317,7 +2317,6 @@ Deno.serve(async (req) => {
         image_url: isImageMessage ? payloadMediaUrl : null,
         mimetype: voiceUploadedMime,
         transcribed_text: voiceTranscript || null,
-
       };
       const { data: msgRow } = await admin
         .from("incoming_messages")
