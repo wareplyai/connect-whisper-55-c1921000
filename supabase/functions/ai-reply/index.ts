@@ -1543,14 +1543,15 @@ async function sendViaGateway(opts: {
     return { ok: res.ok && !explicitFailure, data, status: res.status };
   };
 
-  // If an image URL is provided, try image-send endpoints first (Baileys gateway).
-  // Try several common payload shapes so we work with most Baileys/WAHA-style gateways.
+  // If an image URL is provided, use the gateway's dedicated image endpoints.
+  // IMPORTANT: never try the generic /send first — it ignores image fields,
+  // sends text-only, and reports success, which silently drops the image.
   if (imageUrl) {
     const imageAttempts: Array<{ path: string; body: Record<string, unknown> }> = [
-      { path: `/api/session/${sessionId}/send`, body: { to: candidate, message, image: { url: imageUrl }, caption: message } },
-      { path: `/api/session/${sessionId}/send`, body: { to: candidate, message, imageUrl, caption: message, type: "image" } },
+      // Proven shape — same as the working wa-send-image edge function.
+      { path: `/api/session/${sessionId}/send-image`, body: { to: candidate, imageUrl, caption: message } },
       { path: `/api/session/${sessionId}/send-image`, body: { to: candidate, url: imageUrl, caption: message } },
-      { path: `/api/session/${sessionId}/sendImage`, body: { to: candidate, url: imageUrl, caption: message } },
+      { path: `/api/session/${sessionId}/sendImage`, body: { to: candidate, imageUrl, url: imageUrl, caption: message } },
       { path: `/api/sendImage`, body: { session: sessionId, chatId: candidate, file: { url: imageUrl }, caption: message } },
     ];
     for (const attempt of imageAttempts) {
@@ -1559,8 +1560,11 @@ async function sendViaGateway(opts: {
           method: "POST", headers, body: JSON.stringify(attempt.body),
         });
         const result = await interpret(res);
+        console.log("[sendViaGateway] image attempt", attempt.path, "->", result.status, result.ok ? "OK" : JSON.stringify(result.data).slice(0, 200));
         if (result.ok) return { ok: true, to: candidate, error: null, data: result.data };
-      } catch { /* try next */ }
+      } catch (e) {
+        console.log("[sendViaGateway] image attempt failed", attempt.path, (e as Error)?.message);
+      }
     }
     // Image attempts failed → fall back to text-only with the URL appended so the
     // customer still receives the link.
