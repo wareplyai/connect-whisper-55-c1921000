@@ -3061,6 +3061,78 @@ Deno.serve(async (req) => {
       return jsonResp({ error: "Empty AI response" }, 502);
     }
 
+    // ---- Attach product image if customer asked for a photo ----
+    // The system prompt promises that asking for "ছবি/photo/pic/দেখাও/দাও/show"
+    // will auto-attach the matching product's image. Implement that here:
+    //   1. detect image-request intent in the customer's text
+    //   2. pick the target product from: matchedProduct → product name mentioned
+    //      in the AI reply → product name in customer text → most-recently-
+    //      mentioned product from chat history
+    //   3. if that product has an image_url, send as image with the AI reply as caption
+    let outgoingImageUrl: string | null = null;
+    let outgoingImageProductId: string | null = null;
+    try {
+      const askText = `${messageText || ""} ${imageCaption || ""}`.toLowerCase();
+      const imageWanted = /(\bছবি\b|\bছবিটা\b|\bছবিটি\b|\bছবিগুলো\b|\bছবিগুল\b|\bছবি\s*দাও\b|\bছবি\s*দেন\b|\bphoto\b|\bpic\b|\bpicture\b|\bimage\b|\bsnap\b|\bdekha[ow]\b|\bdekhao\b|\bdekhaben\b|\bdao\b|\bden\b|\bdeo\b|\bdeben\b|\bshow\b|\bsend\b.*\b(photo|pic|picture|image)\b|\b(photo|pic|picture|image)\b.*\b(send|pathao|patha[ow]|den|dao)\b)/i.test(askText);
+
+      if (imageWanted && (catalogRows || []).length) {
+        const norm = (s: string) => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+        const replyNorm = norm(reply);
+        const askNorm = norm(askText);
+
+        let target: any = matchedProduct || null;
+        if (!target) {
+          // Prefer product whose exact name appears in the AI reply text
+          let best: { row: any; len: number } | null = null;
+          for (const p of catalogRows || []) {
+            const n = norm(p.name);
+            if (!n) continue;
+            if (replyNorm.includes(n) && (!best || n.length > best.len)) best = { row: p, len: n.length };
+          }
+          // Otherwise check the customer's own message
+          if (!best) {
+            for (const p of catalogRows || []) {
+              const n = norm(p.name);
+              if (!n) continue;
+              if (askNorm.includes(n) && (!best || n.length > best.len)) best = { row: p, len: n.length };
+            }
+          }
+          target = best?.row || null;
+        }
+
+        // Fallback: most recently mentioned product across recent history
+        if (!target) {
+          try {
+            const { data: recent } = await admin
+              .from("incoming_messages")
+              .select("message_text, reply_text")
+              .eq("session_id", sessionId)
+              .eq("from_number", fromNumber)
+              .order("received_at", { ascending: false })
+              .limit(15);
+            const blob = norm(((recent || []) as any[]).map((r) => `${r.message_text || ""} ${r.reply_text || ""}`).join(" \n "));
+            let best: { row: any; len: number } | null = null;
+            for (const p of catalogRows || []) {
+              const n = norm(p.name);
+              if (!n) continue;
+              if (blob.includes(n) && (!best || n.length > best.len)) best = { row: p, len: n.length };
+            }
+            target = best?.row || null;
+          } catch { /* ignore */ }
+        }
+
+        if (target?.image_url) {
+          outgoingImageUrl = String(target.image_url);
+          outgoingImageProductId = target.id || null;
+          console.log("[ai-reply] attaching product image", { product: target.name, productId: target.id });
+        } else if (imageWanted) {
+          console.log("[ai-reply] customer asked for image but no product image found");
+        }
+      }
+    } catch (e) {
+      console.log("[ai-reply] product-image attach failed:", (e as Error)?.message);
+    }
+
     // Send the reply back via WhatsApp gateway
     const sendResult = await sendViaGateway({
       gateway: GATEWAY,
@@ -3068,6 +3140,7 @@ Deno.serve(async (req) => {
       apiToken: session.api_token,
       to: fromNumber,
       message: reply,
+      imageUrl: outgoingImageUrl || undefined,
       showTyping: aiTyping,
       accountProtection,
     });
