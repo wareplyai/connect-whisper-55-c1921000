@@ -3167,9 +3167,11 @@ Deno.serve(async (req) => {
     if (sendOk) {
       await admin.from("message_logs").insert({
         user_id: userId, session_id: sessionId, to_number: sendResult.to,
-        message_type: "text",
-        payload: { text: reply, auto_reply: true, source: "ai" },
+        message_type: outgoingImageUrl ? "image" : "text",
+        payload: { text: reply, auto_reply: true, source: "ai", image_url: outgoingImageUrl, product_id: outgoingImageProductId },
         status: "sent",
+        image_url: outgoingImageUrl || null,
+        image_caption: outgoingImageUrl ? reply : null,
       });
     }
 
