@@ -304,22 +304,87 @@ const AIAgent = () => {
   };
 
 
-  const generatePrompt = () => {
+  const generatePrompt = async () => {
     if (!business.name || !business.description) { toast.error("Fill business name & description"); return; }
     const instructionsBlock = (business.instructions || DEFAULT_INSTRUCTIONS).trim();
-    const businessBlock = `You are the official AI assistant for ${business.name}${business.business_type ? ` (${business.business_type})` : ""}.
 
-ABOUT THE BUSINESS:
-${business.description}
+    // Pull product catalog to auto-build a short, ready-to-use answer playbook.
+    let products: any[] = [];
+    if (user) {
+      const { data } = await supabase
+        .from("products")
+        .select("name, price, currency, stock, description, category")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(40);
+      products = data ?? [];
+    }
 
-${business.location ? `Location: ${business.location}\n` : ""}${business.working_hours ? `Working Hours: ${business.working_hours}\n` : ""}${business.contact ? `Contact: ${business.contact}\n` : ""}${business.website ? `Website: ${business.website}\n` : ""}
-RULES:
-- Reply in the customer's language (auto-detect Bangla / English).
-- Be friendly, concise, and human-like. Avoid robotic phrases.
-- Use the knowledge base for accurate answers. If unsure, ask a clarifying question.
-- Never invent prices, stock, or policies that aren't in the knowledge base.
-- Out of scope or sensitive topics → politely redirect to a human agent.`;
-    const prompt = `INSTRUCTIONS FOR THIS CHATBOT\n${instructionsBlock}\n\n---\n\n${TOP_PRIMARY_OBJECTIVE}\n\n---\n\n${businessBlock}`;
+    const fmtPrice = (p: any) => {
+      if (p?.price === null || p?.price === undefined || p?.price === "") return "";
+      const cur = p?.currency || "tk";
+      return `${p.price} ${cur}`;
+    };
+    const productLines = products.length
+      ? products.map((p) => {
+          const parts = [p.name];
+          const price = fmtPrice(p);
+          if (price) parts.push(price);
+          if (p.stock !== null && p.stock !== undefined && p.stock !== "") parts.push(`stock: ${p.stock}`);
+          if (p.category) parts.push(p.category);
+          return `- ${parts.join(" — ")}`;
+        }).join("\n")
+      : "- (No products added yet. Use the Products section to add items.)";
+
+    const businessBlock = `BUSINESS PROFILE
+Name: ${business.name}${business.business_type ? `\nType: ${business.business_type}` : ""}
+About: ${business.description}
+${business.location ? `Location: ${business.location}\n` : ""}${business.working_hours ? `Hours: ${business.working_hours}\n` : ""}${business.contact ? `Contact: ${business.contact}\n` : ""}${business.website ? `Website: ${business.website}\n` : ""}`;
+
+    const catalogBlock = `PRODUCT CATALOG (source of truth — never invent items, prices, or stock)
+${productLines}`;
+
+    const playbookBlock = `ANSWER PLAYBOOK (use these patterns — keep replies short, natural, no emoji)
+
+1. Price asked ("দাম কত" / "price koto" / "how much")
+   → Reply one line: "[Product name] er price [price]."
+   → If multiple products asked: short list, one per line.
+
+2. Stock / availability asked ("ache?" / "in stock?" / "available?")
+   → "Ji, ache." / "Sorry, ekhon nei, kichudin por asbe."
+   → Never guess — only use catalog stock.
+
+3. Product image / picture asked ("chobi den" / "picture" / "image")
+   → Send the matching product photo with a one-line caption only.
+
+4. Delivery / shipping asked
+   → Reply from business info. If not set: "Delivery details ektu por janacchi."
+
+5. Location / address asked
+   → Reply with the location from business info in one line.
+
+6. Working hours asked
+   → Reply with the hours from business info in one line.
+
+7. Contact / phone asked
+   → Share the contact from business info in one line.
+
+8. Order / how to buy
+   → Short step: "Product name, quantity, address — ei tin ta pathan, ami order confirm kore debo."
+
+9. Discount / offer asked
+   → Only mention offers that exist in business info. Otherwise: "Ekhon kono special offer nei."
+
+10. Greeting from customer (Salam / Hi / Hello)
+    → Mirror once (Walaikum Assalam / Hi), then go straight to helping.
+
+11. Off-topic or personal questions
+    → Politely redirect: "Ami ekhane apnake [business name] er bepare help korte parbo."
+
+12. Unknown / missing info
+    → Use the fallback line. Never invent. Offer to connect with the team.`;
+
+    const prompt = `INSTRUCTIONS FOR THIS CHATBOT\n${instructionsBlock}\n\n---\n\n${TOP_PRIMARY_OBJECTIVE}\n\n---\n\n${businessBlock}\n---\n\n${catalogBlock}\n\n---\n\n${playbookBlock}`;
     setBusiness((p) => ({ ...p, system_prompt: prompt }));
     toast.success("System prompt generated — click Save Business Profile");
   };
