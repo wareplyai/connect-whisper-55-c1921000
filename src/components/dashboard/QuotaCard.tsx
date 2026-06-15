@@ -20,16 +20,33 @@ export function QuotaCard() {
 
   useEffect(() => {
     let mounted = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) return user;
       const { data } = await supabase.rpc("get_user_quota_status", { _user_id: user.id });
       const row = Array.isArray(data) ? data[0] : data;
       if (mounted && row) setStatus(row as QuotaStatus);
+      return user;
     };
-    load();
-    const t = setInterval(load, 60_000);
-    return () => { mounted = false; clearInterval(t); };
+    (async () => {
+      const user = await load();
+      if (!user || !mounted) return;
+      channel = supabase
+        .channel(`quota-${user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${user.id}` },
+          () => load()
+        )
+        .subscribe();
+    })();
+    const t = setInterval(load, 15_000);
+    return () => {
+      mounted = false;
+      clearInterval(t);
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   if (!status) return null;
