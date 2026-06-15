@@ -22,6 +22,7 @@ interface Row {
   quota_period_start: string | null;
   quota_period_end: string | null;
   max_tokens: number;
+  tokens_used: number;
 }
 
 export default function ReplyUsage() {
