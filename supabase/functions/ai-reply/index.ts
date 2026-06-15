@@ -162,7 +162,9 @@ async function callAI(opts: {
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data?.error?.message || `AI error ${r.status}`);
-    return data.choices?.[0]?.message?.content?.trim() || "";
+    const text = data.choices?.[0]?.message?.content?.trim() || "";
+    const tokens = Number(data?.usage?.total_tokens) || 0;
+    return { text, tokens } as any;
   }
 
   if (platform === "gemini") {
@@ -187,7 +189,10 @@ async function callAI(opts: {
     );
     const data = await r.json();
     if (!r.ok) throw new Error(data?.error?.message || `Gemini error ${r.status}`);
-    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    const um = data?.usageMetadata || {};
+    const tokens = Number(um.totalTokenCount) || ((Number(um.promptTokenCount) || 0) + (Number(um.candidatesTokenCount) || 0));
+    return { text, tokens } as any;
   }
 
   throw new Error(`Unsupported platform: ${platform}`);
