@@ -63,6 +63,8 @@ const allItems = [
   { to: "/headadmin/payment-methods", label: "Methods" },
   { to: "/headadmin/sms-logs", label: "SMS Auto-Verify" },
   { to: "/headadmin/plan-pricing", label: "Plan Pricing" },
+  { to: "/headadmin/reply-usage", label: "Reply Usage" },
+  { to: "/headadmin/ai-keys", label: "Global AI Keys" },
   { to: "/headadmin/feature-access", label: "Feature Access" },
   { to: "/headadmin/dashboard-ads", label: "Dashboard Ads" },
   { to: "/headadmin/notifications", label: "Notifications" },
