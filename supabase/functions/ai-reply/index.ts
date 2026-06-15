@@ -2933,7 +2933,7 @@ Deno.serve(async (req) => {
           const score = textSimilarity(haystackQuery, haystack);
           if (!best || score > best.score) best = { score, row: p };
         }
-        if (best && best.score >= 0.18) {
+        if (best && best.score >= 0.80) {
           matchedProduct = best.row;
           console.log("[ai-reply] image+text pre-match", { name: best.row?.name, score: best.score });
         }
