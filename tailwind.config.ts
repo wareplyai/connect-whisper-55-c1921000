@@ -14,7 +14,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Sora', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Montserrat', 'Hind Siliguri', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        bangla: ['Hind Siliguri', 'sans-serif'],
+        english: ['Montserrat', 'sans-serif'],
+        sans: ['Hind Siliguri', 'Montserrat', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
