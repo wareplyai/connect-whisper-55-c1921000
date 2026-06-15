@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -9,64 +10,89 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { HeadAdminRoute } from "@/components/HeadAdminRoute";
 import { ScrollToTop } from "@/components/ScrollToTop";
-
-import Landing from "./pages/Landing";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import TrialStarted from "./pages/TrialStarted";
-import Help from "./pages/Help";
-import About from "./pages/About";
-import Status from "./pages/Status";
-import Privacy from "./pages/Privacy";
-import NotFound from "./pages/NotFound";
-import DashboardLayout from "./layouts/DashboardLayout";
-import DashboardHome from "./pages/dashboard/DashboardHome";
-import Sessions from "./pages/dashboard/Sessions";
-import CreateSession from "./pages/dashboard/CreateSession";
-import SessionDetail from "./pages/dashboard/SessionDetail";
-import EditSession from "./pages/dashboard/EditSession";
-import ConnectSession from "./pages/dashboard/ConnectSession";
-import Subscription from "./pages/dashboard/Subscription";
-import Plans from "./pages/dashboard/Plans";
-import Payments from "./pages/dashboard/Payments";
-import AutoReplies from "./pages/dashboard/AutoReplies";
-import Inbox from "./pages/dashboard/Inbox";
-import AIAgent from "./pages/dashboard/AIAgent";
-import BehaviorSettings from "./pages/dashboard/BehaviorSettings";
-import Products from "./pages/dashboard/Products";
-import AbandonedCart from "./pages/dashboard/AbandonedCart";
-import AdminPanel from "./pages/admin/AdminPanel";
-import HAPayments from "./pages/headadmin/Payments";
-import HAPaymentMethods from "./pages/headadmin/PaymentMethods";
-import HAPlanPricing from "./pages/headadmin/PlanPricing";
-
-import HeadAdminLayout from "./layouts/HeadAdminLayout";
-import HeadAdminLogin from "./pages/headadmin/HeadAdminLogin";
-import HeadAdminOverview from "./pages/headadmin/Overview";
-import AllUsers from "./pages/headadmin/AllUsers";
-import AllSessions from "./pages/headadmin/AllSessions";
-import Revenue from "./pages/headadmin/Revenue";
-import AllMessages from "./pages/headadmin/AllMessages";
-import HANotifications from "./pages/headadmin/Notifications";
-import ActivityLogs from "./pages/headadmin/ActivityLogs";
-import HASettings from "./pages/headadmin/Settings";
-import SmsLogs from "./pages/headadmin/SmsLogs";
-import HAFeatureAccess from "./pages/headadmin/FeatureAccess";
-import HADashboardAds from "./pages/headadmin/DashboardAds";
-import HAUserStorage from "./pages/headadmin/UserStorage";
-import HeadAdminMobileLayout from "./layouts/HeadAdminMobileLayout";
-import MobileHome from "./pages/headadmin/mobile/MobileHome";
-import MobileNotifications from "./pages/headadmin/mobile/MobileNotifications";
-import MobilePayments from "./pages/headadmin/mobile/MobilePayments";
-import MobileUsers from "./pages/headadmin/mobile/MobileUsers";
 import { FeatureGuard } from "./components/FeatureGuard";
-import DocsLayout from "./layouts/DocsLayout";
-import DocsIndex from "./pages/docs/DocsIndex";
-import DocsPage from "./pages/docs/DocsPage";
+import { Loader2 } from "lucide-react";
 
-const queryClient = new QueryClient();
+// Public pages — landing is eager (LCP), rest lazy
+import Landing from "./pages/Landing";
+
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const TrialStarted = lazy(() => import("./pages/TrialStarted"));
+const Help = lazy(() => import("./pages/Help"));
+const About = lazy(() => import("./pages/About"));
+const Status = lazy(() => import("./pages/Status"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Dashboard
+const DashboardLayout = lazy(() => import("./layouts/DashboardLayout"));
+const DashboardHome = lazy(() => import("./pages/dashboard/DashboardHome"));
+const Sessions = lazy(() => import("./pages/dashboard/Sessions"));
+const CreateSession = lazy(() => import("./pages/dashboard/CreateSession"));
+const SessionDetail = lazy(() => import("./pages/dashboard/SessionDetail"));
+const EditSession = lazy(() => import("./pages/dashboard/EditSession"));
+const ConnectSession = lazy(() => import("./pages/dashboard/ConnectSession"));
+const Subscription = lazy(() => import("./pages/dashboard/Subscription"));
+const Plans = lazy(() => import("./pages/dashboard/Plans"));
+const Payments = lazy(() => import("./pages/dashboard/Payments"));
+const AutoReplies = lazy(() => import("./pages/dashboard/AutoReplies"));
+const Inbox = lazy(() => import("./pages/dashboard/Inbox"));
+const AIAgent = lazy(() => import("./pages/dashboard/AIAgent"));
+const BehaviorSettings = lazy(() => import("./pages/dashboard/BehaviorSettings"));
+const Products = lazy(() => import("./pages/dashboard/Products"));
+const AbandonedCart = lazy(() => import("./pages/dashboard/AbandonedCart"));
+
+// Admin
+const AdminPanel = lazy(() => import("./pages/admin/AdminPanel"));
+
+// Head admin
+const HAPayments = lazy(() => import("./pages/headadmin/Payments"));
+const HAPaymentMethods = lazy(() => import("./pages/headadmin/PaymentMethods"));
+const HAPlanPricing = lazy(() => import("./pages/headadmin/PlanPricing"));
+const HeadAdminLayout = lazy(() => import("./layouts/HeadAdminLayout"));
+const HeadAdminLogin = lazy(() => import("./pages/headadmin/HeadAdminLogin"));
+const HeadAdminOverview = lazy(() => import("./pages/headadmin/Overview"));
+const AllUsers = lazy(() => import("./pages/headadmin/AllUsers"));
+const AllSessions = lazy(() => import("./pages/headadmin/AllSessions"));
+const Revenue = lazy(() => import("./pages/headadmin/Revenue"));
+const AllMessages = lazy(() => import("./pages/headadmin/AllMessages"));
+const HANotifications = lazy(() => import("./pages/headadmin/Notifications"));
+const ActivityLogs = lazy(() => import("./pages/headadmin/ActivityLogs"));
+const HASettings = lazy(() => import("./pages/headadmin/Settings"));
+const SmsLogs = lazy(() => import("./pages/headadmin/SmsLogs"));
+const HAFeatureAccess = lazy(() => import("./pages/headadmin/FeatureAccess"));
+const HADashboardAds = lazy(() => import("./pages/headadmin/DashboardAds"));
+const HAUserStorage = lazy(() => import("./pages/headadmin/UserStorage"));
+const HeadAdminMobileLayout = lazy(() => import("./layouts/HeadAdminMobileLayout"));
+const MobileHome = lazy(() => import("./pages/headadmin/mobile/MobileHome"));
+const MobileNotifications = lazy(() => import("./pages/headadmin/mobile/MobileNotifications"));
+const MobilePayments = lazy(() => import("./pages/headadmin/mobile/MobilePayments"));
+const MobileUsers = lazy(() => import("./pages/headadmin/mobile/MobileUsers"));
+
+// Docs
+const DocsLayout = lazy(() => import("./layouts/DocsLayout"));
+const DocsIndex = lazy(() => import("./pages/docs/DocsIndex"));
+const DocsPage = lazy(() => import("./pages/docs/DocsPage"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+const RouteFallback = () => (
+  <div className="flex h-screen w-full items-center justify-center">
+    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -78,6 +104,7 @@ const App = () => (
         <AuthProvider>
           <HeadAdminProvider>
             <ScrollToTop />
+            <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
@@ -144,6 +171,7 @@ const App = () => (
 
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </HeadAdminProvider>
         </AuthProvider>
         </LanguageProvider>
