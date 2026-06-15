@@ -40,7 +40,22 @@ export default function ReplyUsage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const channel = supabase
+      .channel("headadmin-reply-usage")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "subscriptions" },
+        () => load()
+      )
+      .subscribe();
+    const t = setInterval(load, 15_000);
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(t);
+    };
+  }, []);
 
   const filtered = rows.filter((r) => {
     if (!search.trim()) return true;
