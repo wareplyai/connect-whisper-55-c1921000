@@ -104,9 +104,12 @@ const Inbox = () => {
     if (!user) return;
     if (showLoader) setLoading(true);
     try {
+      // Only fetch columns the UI needs. Skip huge JSONB columns (match_log,
+      // image_analysis) and cap at 200 most-recent rows for a fast first load.
+      const INCOMING_COLS = "id,session_id,user_id,from_number,message_text,reply_text,reply_sent,delivery_status,received_at,raw_payload,image_url,mimetype,image_caption,media_url,media_filename,caption,message_type,extracted_product_name,extracted_order_number";
       const [incRes, outRes, blRes, paRes] = await Promise.all([
-        supabase.from("incoming_messages").select("*, media_url, message_type").eq("user_id", user.id).order("received_at", { ascending: false }).limit(500),
-        supabase.from("message_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(500),
+        supabase.from("incoming_messages").select(INCOMING_COLS).eq("user_id", user.id).order("received_at", { ascending: false }).limit(200),
+        supabase.from("message_logs").select("id,session_id,to_number,payload,status,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(200),
         supabase.from("blocked_customers" as any).select("id, phone_number, session_id").eq("user_id", user.id),
         supabase.from("customer_reply_settings" as any).select("phone_number, session_id, ai_paused, mode").eq("user_id", user.id),
       ]);
