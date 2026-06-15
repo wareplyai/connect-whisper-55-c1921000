@@ -3262,12 +3262,19 @@ Deno.serve(async (req) => {
 
       // Increment monthly reply quota counter (auto-rolls period if expired)
       try {
-        await admin.rpc("consume_reply_quota", { _user_id: userId });
+        const { data: quotaResult, error: quotaError } = await admin.rpc("consume_reply_quota", { _user_id: userId });
+        if (quotaError) {
+          console.log("[ai-reply] consume_reply_quota failed:", quotaError.message);
+        } else {
+          console.log("[ai-reply] consume_reply_quota ok:", JSON.stringify(quotaResult));
+        }
+
         if (aiTokensUsed > 0) {
-          await admin.rpc("consume_tokens", { _user_id: userId, _tokens: aiTokensUsed });
+          const { error: tokenError } = await admin.rpc("consume_tokens", { _user_id: userId, _tokens: aiTokensUsed });
+          if (tokenError) console.log("[ai-reply] consume_tokens failed:", tokenError.message);
         }
       } catch (qErr) {
-        console.log("[ai-reply] consume_reply_quota failed:", (qErr as Error)?.message);
+        console.log("[ai-reply] quota tracking failed:", (qErr as Error)?.message);
       }
     }
 
