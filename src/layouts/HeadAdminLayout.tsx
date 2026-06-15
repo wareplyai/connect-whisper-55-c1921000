@@ -34,6 +34,13 @@ const navGroups = [
     ],
   },
   {
+    label: "AI & Limits",
+    items: [
+      { to: "/headadmin/reply-usage", label: "Reply Usage", icon: Sparkles },
+      { to: "/headadmin/ai-keys", label: "Global AI Keys", icon: KeyRound },
+    ],
+  },
+  {
     label: "System",
     items: [
       { to: "/headadmin/feature-access", label: "Feature Access", icon: ToggleRight },
