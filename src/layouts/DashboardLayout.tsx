@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, Receipt, MessageSquareText, Bot, ShieldCheck, MessageSquare, Package, ShoppingBag, Lock } from "lucide-react";
 import { FeatureKey } from "@/hooks/useFeatureAccess";
@@ -7,6 +8,7 @@ import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { prefetchRoute, prefetchDashboardRoutes } from "@/lib/routePrefetch";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
