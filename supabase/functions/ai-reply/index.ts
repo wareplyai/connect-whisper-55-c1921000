@@ -2184,14 +2184,15 @@ Deno.serve(async (req) => {
       const isHumanRequest = humanHandoffPatterns.some((re) => re.test(lowerMsg));
       if (isHumanRequest) {
         try {
-          await admin.from("customer_reply_settings").upsert({
+          const { error: handoffError } = await admin.from("customer_reply_settings").upsert({
             user_id: session.user_id,
             session_id: sessionId,
             phone_number: fromNumber,
             mode: "human",
             ai_paused: true,
             paused_at: new Date().toISOString(),
-          }, { onConflict: "session_id,phone_number" });
+          }, { onConflict: "user_id,session_id,phone_number" });
+          if (handoffError) throw handoffError;
           console.log("[ai-reply] auto human handoff triggered for", fromNumber);
         } catch (e) {
           console.error("[ai-reply] failed to set human mode", e);
