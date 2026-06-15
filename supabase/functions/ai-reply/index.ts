@@ -136,7 +136,7 @@ async function callAI(opts: {
   history?: Array<{ role: "user" | "assistant"; content: string }>;
   maxTokens?: number;
   temperature?: number;
-}): Promise<string> {
+}): Promise<{ text: string; tokens: number }> {
   const { platform, model, apiKey, systemPrompt, userMessage } = opts;
   const history = Array.isArray(opts.history) ? opts.history.filter((m) => m && m.content && m.content.trim()) : [];
   const maxTokens = Math.max(50, Math.min(4000, Number(opts.maxTokens) || 2000));
@@ -162,7 +162,9 @@ async function callAI(opts: {
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data?.error?.message || `AI error ${r.status}`);
-    return data.choices?.[0]?.message?.content?.trim() || "";
+    const text = data.choices?.[0]?.message?.content?.trim() || "";
+    const tokens = Number(data?.usage?.total_tokens) || 0;
+    return { text, tokens } as any;
   }
 
   if (platform === "gemini") {
@@ -187,7 +189,10 @@ async function callAI(opts: {
     );
     const data = await r.json();
     if (!r.ok) throw new Error(data?.error?.message || `Gemini error ${r.status}`);
-    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    const um = data?.usageMetadata || {};
+    const tokens = Number(um.totalTokenCount) || ((Number(um.promptTokenCount) || 0) + (Number(um.candidatesTokenCount) || 0));
+    return { text, tokens } as any;
   }
 
   throw new Error(`Unsupported platform: ${platform}`);
@@ -2993,6 +2998,7 @@ Deno.serve(async (req) => {
       : messageText;
 
     let reply = "";
+    let aiTokensUsed = 0;
 
     // ---- Image-message branch: vision describe + product match (image-only) ----
     // Only fire the "image received but couldn't open" fallback when there is REAL
@@ -3100,7 +3106,7 @@ Deno.serve(async (req) => {
 
         const memoryInstruction = `\n\nCONVERSATION MEMORY RULES:\n- The previous turns of this WhatsApp chat are provided as message history above.\n- Use that history to remember which products were already shown / discussed with this customer.\n- If the customer says things like "order korte chai" / "ata nibo" / "dam koto" / "price koto" / "ar ekta dao" without naming a product, refer to the most recently discussed product (see RECENTLY MATCHED PRODUCT block if present, otherwise the last product mentioned in history).\n- NEVER ask the customer to repeat info (name, address, product) they already provided in the history.\n- NEVER reply "I don't have info about this product" / "এই পণ্যের তথ্য নেই" if a RECENTLY MATCHED PRODUCT block is provided above — use those details directly.\n- Maintain natural conversation continuity; do not greet again if you already greeted in this chat.`;
 
-        reply = await callAI({
+        const aiResult = await callAI({
           platform: keyRow.platform,
           model: keyRow.model && keyRow.model !== "default" ? keyRow.model : (
             keyRow.platform === "openai" ? "gpt-4o-mini" :
@@ -3114,6 +3120,8 @@ Deno.serve(async (req) => {
           maxTokens: resolvedMaxTokens || Number((biz as any)?.max_tokens) || 2000,
           temperature: typeof (biz as any)?.temperature === "number" ? Number((biz as any).temperature) : 0.7,
         });
+        reply = aiResult.text;
+        aiTokensUsed = aiResult.tokens || 0;
       } catch (aiErr: any) {
         if (messageId) {
           await admin.from("incoming_messages").update({
@@ -3255,6 +3263,9 @@ Deno.serve(async (req) => {
       // Increment monthly reply quota counter (auto-rolls period if expired)
       try {
         await admin.rpc("consume_reply_quota", { _user_id: userId });
+        if (aiTokensUsed > 0) {
+          await admin.rpc("consume_tokens", { _user_id: userId, _tokens: aiTokensUsed });
+        }
       } catch (qErr) {
         console.log("[ai-reply] consume_reply_quota failed:", (qErr as Error)?.message);
       }

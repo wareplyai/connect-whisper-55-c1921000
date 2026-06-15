@@ -1732,6 +1732,7 @@ export type Database = {
           remaining: number
           replies_used: number
           reply_quota: number
+          tokens_used: number
           user_id: string
         }[]
       }
