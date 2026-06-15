@@ -631,59 +631,26 @@ ${productLines}`;
         ))}
       </section>
 
-      {/* API KEY (encrypted server-side) */}
+      {/* AI Engine — managed by admin */}
       <section className="rounded-xl border border-border bg-card p-5 space-y-4">
         <div className="flex items-center gap-2">
           <KeyRound className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold">AI API Key</h2>
+          <h2 className="font-semibold">AI Engine</h2>
         </div>
 
-        {!savedKey ? (
-          <div className="space-y-3">
-            <div className="grid md:grid-cols-[180px_1fr_auto] gap-2">
-              <Select value={local.manualPlatform} onValueChange={(v) => updateLocal("manualPlatform", v as any)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="gemini">Google Gemini</SelectItem>
-                  <SelectItem value="deepseek">DeepSeek</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                type="password"
-                placeholder="Paste your AI API Key"
-                value={local.apiKey}
-                onChange={(e) => updateLocal("apiKey", e.target.value)}
-              />
-              <Button onClick={saveKey} disabled={savingKey} className="bg-primary text-primary-foreground hover:bg-primary-hover">
-                {savingKey && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}Save
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">🔒 Your key is AES-256 encrypted server-side. Only the last 4 characters are ever shown.</p>
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background/40 p-3">
+          <CheckCircle2 className="h-5 w-5 text-green-500" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">AI is managed by the admin</p>
+            <p className="text-xs text-muted-foreground">
+              আপনার জন্য AI API key এবং model admin panel থেকে configure করা আছে। আপনাকে আলাদা key add করতে হবে না।
+            </p>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background/40 p-3">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Connected to {PLATFORM_LABEL[effectivePlatform]}</p>
-                <p className="text-xs text-muted-foreground">{masked}</p>
-              </div>
-              <Button variant="outline" size="sm" onClick={removeKey}>Remove</Button>
-            </div>
+        </div>
 
-            <div>
-              <Label>Model</Label>
-              <Select value={savedKey.model || modelOptions[0]?.value} onValueChange={updateModel}>
-                <SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger>
-                <SelectContent>
-                  {modelOptions.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Premium tuning panel */}
-            <div className="rounded-xl border border-border bg-gradient-to-br from-primary/5 via-background to-background p-4 space-y-5">
+        <div className="space-y-4">
+          {/* Premium tuning panel */}
+          <div className="rounded-xl border border-border bg-gradient-to-br from-primary/5 via-background to-background p-4 space-y-5">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label className="text-sm font-medium">Temperature</Label>
