@@ -2998,6 +2998,7 @@ Deno.serve(async (req) => {
       : messageText;
 
     let reply = "";
+    let aiTokensUsed = 0;
 
     // ---- Image-message branch: vision describe + product match (image-only) ----
     // Only fire the "image received but couldn't open" fallback when there is REAL
