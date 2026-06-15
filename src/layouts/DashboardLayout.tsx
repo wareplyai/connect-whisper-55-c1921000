@@ -97,6 +97,9 @@ const DashboardLayout = () => {
                   key={n.to}
                   to={n.to}
                   end={n.end}
+                  onMouseEnter={() => prefetchRoute(n.to)}
+                  onTouchStart={() => prefetchRoute(n.to)}
+                  onFocus={() => prefetchRoute(n.to)}
                   className={({ isActive }) => `${linkBase} ${isActive ? linkActive : linkIdle}`}
                 >
                   {({ isActive }) => (
