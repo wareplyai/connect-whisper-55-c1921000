@@ -2171,12 +2171,15 @@ Deno.serve(async (req) => {
     if (customerMode === "ai") {
       const lowerMsg = String(messageText || "").toLowerCase();
       const humanHandoffPatterns: RegExp[] = [
-        // English
-        /\b(human|real\s*(person|agent|human)|live\s*(agent|person|support|chat)|customer\s*(service|support|care)|talk\s*to\s*(a\s*)?(human|person|agent|someone|admin|manager|representative)|speak\s*to\s*(a\s*)?(human|person|agent|admin|manager)|connect\s*me\s*to\s*(a\s*)?(human|agent|admin|manager)|need\s*(a\s*)?(human|agent|admin|manager)|want\s*(a\s*)?(human|agent|admin|manager)|are\s*you\s*(a\s*)?(bot|ai|robot)|is\s*this\s*(a\s*)?(bot|ai|robot)|stop\s*bot|no\s*bot|not\s*(a\s*)?bot)\b/i,
+        // English — broad
+        /\b(human|real\s*(person|agent|human)|live\s*(agent|person|support|chat)|customer\s*(service|support|care)|talk\s*to\s*(a\s*)?(human|person|agent|someone|admin|manager|representative|owner|staff)|speak\s*to\s*(a\s*)?(human|person|agent|admin|manager|owner|staff)|connect\s*(me\s*)?(to|with)\s*(a\s*)?(human|agent|admin|manager|owner|staff)|need\s*(a\s*)?(human|agent|admin|manager|owner|staff)|want\s*(a\s*)?(human|agent|admin|manager|owner|staff)|are\s*you\s*(a\s*)?(bot|ai|robot)|is\s*this\s*(a\s*)?(bot|ai|robot)|stop\s*bot|no\s*bot|not\s*(a\s*)?bot)\b/i,
         // Bangla script
-        /(মানুষ|আসল\s*মানুষ|এডমিন|অ্যাডমিন|এজেন্ট|সাপোর্ট|কাস্টমার\s*কেয়ার|কাস্টমার\s*সাপোর্ট|ম্যানেজার|মালিক|বট\s*নয়|বট\s*না|বটের\s*সাথে\s*কথা\s*বলবো\s*না|মানুষের\s*সাথে\s*কথা\s*বলব|মানুষের\s*সাথে\s*কথা\s*বলতে\s*চাই|রিয়েল\s*এজেন্ট|রিয়েল\s*মানুষ)/i,
-        // Banglish
-        /\b(manush|asol\s*manush|admin\s*(chai|lagbe|den|dao|deo)|agent\s*(chai|lagbe|den|dao|deo|sathe)|support\s*(chai|lagbe|sathe)|manusher\s*sathe|manusher\s*sate|owner\s*(chai|sathe|sate)|malik\s*(chai|sathe|sate)|manager\s*(chai|sathe|sate)|real\s*(manush|agent|admin)|bot\s*na|bot\s*er\s*sathe|bot\s*er\s*sate|tumi\s*ki\s*bot|apni\s*ki\s*bot|eta\s*ki\s*bot)\b/i,
+        /(মানুষ|আসল\s*মানুষ|এডমিন|অ্যাডমিন|এজেন্ট|সাপোর্ট|কাস্টমার\s*কেয়ার|কাস্টমার\s*সাপোর্ট|ম্যানেজার|মালিক|বট\s*নয়|বট\s*না|বটের\s*সাথে|মানুষের\s*সাথে|রিয়েল\s*এজেন্ট|রিয়েল\s*মানুষ|কথা\s*বলতে\s*চাই|কথা\s*বলবো|কথা\s*বলব)/i,
+        // Banglish — any mention of admin/agent/manager/owner/malik/manush/support + talk intent OR with chai/lagbe/sathe/sate/shate
+        /\b(admin|agent|manager|owner|malik|manush|manusher|support|real\s*(manush|agent|admin|person))\b[^\n]{0,40}\b(chai|chy|lagbe|sathe|sate|shate|shate|sange|kotha|bolbo|bolba|bolte|bolte\s*chai|bolte\s*cai|baat|baath|baat\s*korbo|den|dao|deo|dorkar|needed|need|please|plz)\b/i,
+        /\b(kotha|baat|baath)\s*(bol\w*|kor\w*)\b[^\n]{0,40}\b(admin|agent|manager|owner|malik|manush|manusher|real\s*manush|human|support)\b/i,
+        /\b(bot|robot|ai)\s*(na|nay|noy|er\s*sathe|er\s*sate|er\s*shate)\b/i,
+        /\b(tumi|apni|eta|tomra|apnara)\s*ki\s*(bot|robot|ai|manush)\b/i,
       ];
       const isHumanRequest = humanHandoffPatterns.some((re) => re.test(lowerMsg));
       if (isHumanRequest) {
