@@ -3251,6 +3251,13 @@ Deno.serve(async (req) => {
         image_url: outgoingImageUrl || null,
         image_caption: outgoingImageUrl ? reply : null,
       });
+
+      // Increment monthly reply quota counter (auto-rolls period if expired)
+      try {
+        await admin.rpc("consume_reply_quota", { _user_id: userId });
+      } catch (qErr) {
+        console.log("[ai-reply] consume_reply_quota failed:", (qErr as Error)?.message);
+      }
     }
 
     return jsonResp({ ok: true, reply, sent: sendOk, send_error: sendErr, sent_to: sendResult.to, source: "ai", message_id: messageId });
