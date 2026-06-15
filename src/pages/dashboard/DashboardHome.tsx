@@ -11,6 +11,7 @@ import {
 import { CartesianGrid, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
 import { DashboardAdsCarousel } from "@/components/DashboardAdsCarousel";
+import { QuotaCard } from "@/components/dashboard/QuotaCard";
 
 const DashboardHome = () => {
   const { profile } = useAuth();
