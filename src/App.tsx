@@ -88,11 +88,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const RouteFallback = () => (
-  <div className="flex h-screen w-full items-center justify-center">
-    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-  </div>
-);
+const RouteFallback = () => null;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
