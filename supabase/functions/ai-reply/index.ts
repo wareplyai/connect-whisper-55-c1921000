@@ -136,7 +136,7 @@ async function callAI(opts: {
   history?: Array<{ role: "user" | "assistant"; content: string }>;
   maxTokens?: number;
   temperature?: number;
-}): Promise<string> {
+}): Promise<{ text: string; tokens: number }> {
   const { platform, model, apiKey, systemPrompt, userMessage } = opts;
   const history = Array.isArray(opts.history) ? opts.history.filter((m) => m && m.content && m.content.trim()) : [];
   const maxTokens = Math.max(50, Math.min(4000, Number(opts.maxTokens) || 2000));
