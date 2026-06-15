@@ -1512,6 +1512,7 @@ export type Database = {
           replies_used: number
           reply_quota: number | null
           status: string
+          tokens_used: number
           trial_ends_at: string | null
           trial_started_at: string | null
           user_id: string
@@ -1527,6 +1528,7 @@ export type Database = {
           replies_used?: number
           reply_quota?: number | null
           status?: string
+          tokens_used?: number
           trial_ends_at?: string | null
           trial_started_at?: string | null
           user_id: string
@@ -1542,6 +1544,7 @@ export type Database = {
           replies_used?: number
           reply_quota?: number | null
           status?: string
+          tokens_used?: number
           trial_ends_at?: string | null
           trial_started_at?: string | null
           user_id?: string
@@ -1694,6 +1697,10 @@ export type Database = {
           reply_quota: number
         }[]
       }
+      consume_tokens: {
+        Args: { _tokens: number; _user_id: string }
+        Returns: undefined
+      }
       expire_own_trial: { Args: never; Returns: boolean }
       extract_real_customer_number_from_payload: {
         Args: { _payload: Json }
@@ -1839,6 +1846,7 @@ export type Database = {
           replies_used: number
           reply_quota: number | null
           status: string
+          tokens_used: number
           trial_ends_at: string | null
           trial_started_at: string | null
           user_id: string
