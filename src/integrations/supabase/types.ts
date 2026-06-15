@@ -227,33 +227,36 @@ export type Database = {
           encrypted_key: string
           id: string
           is_active: boolean
+          is_global: boolean
           key_last4: string
           model: string
           platform: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
           encrypted_key: string
           id?: string
           is_active?: boolean
+          is_global?: boolean
           key_last4: string
           model: string
           platform: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
           encrypted_key?: string
           id?: string
           is_active?: boolean
+          is_global?: boolean
           key_last4?: string
           model?: string
           platform?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1058,6 +1061,7 @@ export type Database = {
       plan_pricing: {
         Row: {
           cta_label: string | null
+          default_max_tokens: number
           description: string | null
           display_name: string
           features: Json | null
@@ -1070,11 +1074,13 @@ export type Database = {
           price_monthly_bdt: number
           price_yearly: number
           price_yearly_bdt: number
+          reply_quota: number
           sort_order: number
           updated_at: string | null
         }
         Insert: {
           cta_label?: string | null
+          default_max_tokens?: number
           description?: string | null
           display_name: string
           features?: Json | null
@@ -1087,11 +1093,13 @@ export type Database = {
           price_monthly_bdt?: number
           price_yearly: number
           price_yearly_bdt?: number
+          reply_quota?: number
           sort_order?: number
           updated_at?: string | null
         }
         Update: {
           cta_label?: string | null
+          default_max_tokens?: number
           description?: string | null
           display_name?: string
           features?: Json | null
@@ -1104,6 +1112,7 @@ export type Database = {
           price_monthly_bdt?: number
           price_yearly?: number
           price_yearly_bdt?: number
+          reply_quota?: number
           sort_order?: number
           updated_at?: string | null
         }
@@ -1496,7 +1505,12 @@ export type Database = {
           created_at: string
           id: string
           max_sessions: number
+          max_tokens: number | null
           plan: string
+          quota_period_end: string | null
+          quota_period_start: string | null
+          replies_used: number
+          reply_quota: number | null
           status: string
           trial_ends_at: string | null
           trial_started_at: string | null
@@ -1506,7 +1520,12 @@ export type Database = {
           created_at?: string
           id?: string
           max_sessions: number
+          max_tokens?: number | null
           plan: string
+          quota_period_end?: string | null
+          quota_period_start?: string | null
+          replies_used?: number
+          reply_quota?: number | null
           status?: string
           trial_ends_at?: string | null
           trial_started_at?: string | null
@@ -1516,7 +1535,12 @@ export type Database = {
           created_at?: string
           id?: string
           max_sessions?: number
+          max_tokens?: number | null
           plan?: string
+          quota_period_end?: string | null
+          quota_period_start?: string | null
+          replies_used?: number
+          reply_quota?: number | null
           status?: string
           trial_ends_at?: string | null
           trial_started_at?: string | null
@@ -1661,10 +1685,32 @@ export type Database = {
         Returns: boolean
       }
       cleanup_old_data: { Args: never; Returns: undefined }
+      consume_reply_quota: {
+        Args: { _user_id: string }
+        Returns: {
+          allowed: boolean
+          remaining: number
+          replies_used: number
+          reply_quota: number
+        }[]
+      }
       expire_own_trial: { Args: never; Returns: boolean }
       extract_real_customer_number_from_payload: {
         Args: { _payload: Json }
         Returns: string
+      }
+      get_user_max_tokens: { Args: { _user_id: string }; Returns: number }
+      get_user_quota_status: {
+        Args: { _user_id: string }
+        Returns: {
+          max_tokens: number
+          period_end: string
+          period_start: string
+          plan: string
+          remaining: number
+          replies_used: number
+          reply_quota: number
+        }[]
       }
       has_active_service: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
@@ -1673,6 +1719,21 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      headadmin_list_user_usage: {
+        Args: never
+        Returns: {
+          email: string
+          full_name: string
+          max_tokens: number
+          plan: string
+          quota_period_end: string
+          quota_period_start: string
+          remaining: number
+          replies_used: number
+          reply_quota: number
+          user_id: string
+        }[]
       }
       is_headadmin: { Args: { _uid: string }; Returns: boolean }
       is_internal_ai_reply_url: { Args: { _url: string }; Returns: boolean }
@@ -1754,13 +1815,28 @@ export type Database = {
         Returns: string[]
       }
       normalize_whatsapp_phone: { Args: { _phone: string }; Returns: string }
+      resolve_ai_api_key: {
+        Args: { _platform?: string; _user_id: string }
+        Returns: {
+          encrypted_key: string
+          id: string
+          model: string
+          platform: string
+          scope: string
+        }[]
+      }
       start_user_trial: {
         Args: never
         Returns: {
           created_at: string
           id: string
           max_sessions: number
+          max_tokens: number | null
           plan: string
+          quota_period_end: string | null
+          quota_period_start: string | null
+          replies_used: number
+          reply_quota: number | null
           status: string
           trial_ends_at: string | null
           trial_started_at: string | null
