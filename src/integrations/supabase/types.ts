@@ -1660,6 +1660,7 @@ export type Database = {
         Args: { _feature: string; _user_id: string }
         Returns: boolean
       }
+      cleanup_old_data: { Args: never; Returns: undefined }
       expire_own_trial: { Args: never; Returns: boolean }
       extract_real_customer_number_from_payload: {
         Args: { _payload: Json }
