@@ -165,7 +165,10 @@ const App = () => (
                 <Route path="feature-access" element={<HAFeatureAccess />} />
                 <Route path="dashboard-ads" element={<HADashboardAds />} />
                 <Route path="user-storage" element={<HAUserStorage />} />
+                <Route path="reply-usage" element={<HAReplyUsage />} />
+                <Route path="ai-keys" element={<HAAIKeys />} />
               </Route>
+
 
               <Route path="*" element={<NotFound />} />
             </Routes>
