@@ -3013,7 +3013,7 @@ Deno.serve(async (req) => {
             if (!best || score > best.score) best = { score, row: p };
           }
 
-          if (best && best.score >= 0.18) {
+          if (best && best.score >= 0.80) {
             const p = best.row;
             const conf = Math.round(best.score * 100);
             reply = `✅ Match found (${conf}% confidence)\n\n📦 ${p.name}\n💰 Price: ${p.price}\n${p.stock > 0 ? `📊 Stock: ${p.stock}` : "❌ Out of stock"}\n${p.description ? `\n${p.description}` : ""}`;
