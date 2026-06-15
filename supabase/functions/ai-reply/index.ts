@@ -2847,24 +2847,62 @@ Deno.serve(async (req) => {
 
     // From here on: aiEnabled === true
 
-    // Load API key
-    const { data: keyRow } = await admin
-      .from("ai_api_keys")
-      .select("encrypted_key, platform, model")
-      .eq("user_id", userId)
-      .eq("is_active", true)
-      .maybeSingle();
+    // ---- Quota check (monthly reply limit per plan) ----
+    try {
+      const { data: qStatus } = await admin.rpc("get_user_quota_status", { _user_id: userId });
+      const qRow = Array.isArray(qStatus) ? qStatus[0] : qStatus;
+      if (qRow && Number(qRow.reply_quota || 0) > 0 && Number(qRow.remaining || 0) <= 0) {
+        if (messageId) {
+          await admin.from("incoming_messages").update({
+            reply_error: `Monthly reply quota exhausted (${qRow.replies_used}/${qRow.reply_quota})`,
+            delivery_status: "failed",
+            processed_at: new Date().toISOString(),
+          }).eq("id", messageId);
+        }
+        return jsonResp({ error: "quota_exhausted", used: qRow.replies_used, quota: qRow.reply_quota }, 402);
+      }
+    } catch (qErr) {
+      console.log("[ai-reply] quota check failed (continuing):", (qErr as Error)?.message);
+    }
+
+    // Load API key — try user's own first, fallback to global key set by headadmin
+    let keyRow: { encrypted_key: string; platform: string; model: string; scope?: string } | null = null;
+    try {
+      const { data: resolved } = await admin.rpc("resolve_ai_api_key", { _user_id: userId, _platform: null });
+      const r = Array.isArray(resolved) ? resolved[0] : resolved;
+      if (r?.encrypted_key) keyRow = r as any;
+    } catch (rErr) {
+      console.log("[ai-reply] resolve_ai_api_key rpc failed:", (rErr as Error)?.message);
+    }
+    if (!keyRow) {
+      // legacy fallback
+      const { data: legacy } = await admin
+        .from("ai_api_keys")
+        .select("encrypted_key, platform, model")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (legacy) keyRow = legacy as any;
+    }
     if (!keyRow) {
       if (messageId) {
         await admin.from("incoming_messages").update({
-          reply_error: "No active AI API key", delivery_status: "failed",
+          reply_error: "No active AI API key (user or global)", delivery_status: "failed",
           processed_at: new Date().toISOString(),
         }).eq("id", messageId);
       }
-      return jsonResp({ error: "No active AI API key for user" }, 400);
+      return jsonResp({ error: "No active AI API key (user or global)" }, 400);
     }
+    console.log("[ai-reply] using API key scope:", keyRow.scope || "user");
 
     const apiKey = await decryptKey(keyRow.encrypted_key);
+
+    // Resolve max_tokens: per-user override → plan default → 1000
+    let resolvedMaxTokens = 0;
+    try {
+      const { data: mt } = await admin.rpc("get_user_max_tokens", { _user_id: userId });
+      resolvedMaxTokens = Number(mt) || 0;
+    } catch { /* ignore */ }
 
     // Load QA pairs as additional context
     const { data: qaRows } = await admin
@@ -3073,7 +3111,7 @@ Deno.serve(async (req) => {
           systemPrompt: finalSystemPrompt + recentMatchedProductBlock + memoryInstruction,
           userMessage: finalUserMessage,
           history: conversationHistory,
-          maxTokens: Number((biz as any)?.max_tokens) || 2000,
+          maxTokens: resolvedMaxTokens || Number((biz as any)?.max_tokens) || 2000,
           temperature: typeof (biz as any)?.temperature === "number" ? Number((biz as any).temperature) : 0.7,
         });
       } catch (aiErr: any) {
@@ -3213,6 +3251,13 @@ Deno.serve(async (req) => {
         image_url: outgoingImageUrl || null,
         image_caption: outgoingImageUrl ? reply : null,
       });
+
+      // Increment monthly reply quota counter (auto-rolls period if expired)
+      try {
+        await admin.rpc("consume_reply_quota", { _user_id: userId });
+      } catch (qErr) {
+        console.log("[ai-reply] consume_reply_quota failed:", (qErr as Error)?.message);
+      }
     }
 
     return jsonResp({ ok: true, reply, sent: sendOk, send_error: sendErr, sent_to: sendResult.to, source: "ai", message_id: messageId });

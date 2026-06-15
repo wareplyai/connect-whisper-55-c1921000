@@ -2,7 +2,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Smartphone, DollarSign, MessageSquare,
   Bell, ScrollText, Settings, LogOut, CreditCard, Receipt, Tags, Search,
-  ChevronDown, Zap, ToggleRight, SmartphoneCharging, Megaphone, HardDrive,
+  ChevronDown, Zap, ToggleRight, SmartphoneCharging, Megaphone, HardDrive, Sparkles, KeyRound,
 } from "lucide-react";
 import { useHeadAdmin } from "@/contexts/HeadAdminContext";
 import { Logo } from "@/components/Logo";
@@ -34,6 +34,13 @@ const navGroups = [
     ],
   },
   {
+    label: "AI & Limits",
+    items: [
+      { to: "/headadmin/reply-usage", label: "Reply Usage", icon: Sparkles },
+      { to: "/headadmin/ai-keys", label: "Global AI Keys", icon: KeyRound },
+    ],
+  },
+  {
     label: "System",
     items: [
       { to: "/headadmin/feature-access", label: "Feature Access", icon: ToggleRight },
@@ -56,6 +63,8 @@ const allItems = [
   { to: "/headadmin/payment-methods", label: "Methods" },
   { to: "/headadmin/sms-logs", label: "SMS Auto-Verify" },
   { to: "/headadmin/plan-pricing", label: "Plan Pricing" },
+  { to: "/headadmin/reply-usage", label: "Reply Usage" },
+  { to: "/headadmin/ai-keys", label: "Global AI Keys" },
   { to: "/headadmin/feature-access", label: "Feature Access" },
   { to: "/headadmin/dashboard-ads", label: "Dashboard Ads" },
   { to: "/headadmin/notifications", label: "Notifications" },

@@ -179,6 +179,75 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ---------- HEADADMIN-ONLY: global AI keys ----------
+    const requireHeadadmin = async () => {
+      const { data, error } = await admin
+        .from("headadmin")
+        .select("id, is_active")
+        .eq("auth_user_id", userId)
+        .eq("is_active", true)
+        .maybeSingle();
+      return !error && !!data;
+    };
+
+    if (action === "save_global" || action === "get_global" || action === "list_global" || action === "delete_global" || action === "toggle_global") {
+      if (!(await requireHeadadmin())) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (action === "save_global") {
+        const apiKey = String(body.apiKey || "").trim();
+        const platformOverride = body.platform as string | undefined;
+        const model = String(body.model || "").trim();
+        if (!apiKey) return new Response(JSON.stringify({ error: "apiKey required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const platform = (platformOverride as any) || detectPlatform(apiKey);
+        if (!platform) return new Response(JSON.stringify({ error: "Unable to detect platform — pass platform manually" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const encrypted = await encryptKey(apiKey);
+        const last4 = apiKey.slice(-4);
+        // Deactivate previous global keys, insert new one as active
+        await admin.from("ai_api_keys").update({ is_active: false }).is("user_id", null).eq("is_global", true);
+        const { data, error } = await admin.from("ai_api_keys").insert({
+          user_id: null, is_global: true,
+          platform, model: model || "default",
+          encrypted_key: encrypted, key_last4: last4, is_active: true,
+        }).select("id, platform, model, key_last4, is_active, created_at").single();
+        if (error) throw error;
+        return new Response(JSON.stringify({ ok: true, key: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (action === "list_global" || action === "get_global") {
+        const { data, error } = await admin
+          .from("ai_api_keys")
+          .select("id, platform, model, key_last4, is_active, created_at")
+          .is("user_id", null).eq("is_global", true)
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return new Response(JSON.stringify({ keys: data || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (action === "delete_global") {
+        const id = String(body.id || "").trim();
+        if (!id) return new Response(JSON.stringify({ error: "id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const { error } = await admin.from("ai_api_keys").delete().eq("id", id).is("user_id", null).eq("is_global", true);
+        if (error) throw error;
+        return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (action === "toggle_global") {
+        const id = String(body.id || "").trim();
+        const active = !!body.is_active;
+        if (!id) return new Response(JSON.stringify({ error: "id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        if (active) {
+          await admin.from("ai_api_keys").update({ is_active: false }).is("user_id", null).eq("is_global", true);
+        }
+        const { error } = await admin.from("ai_api_keys").update({ is_active: active }).eq("id", id);
+        if (error) throw error;
+        return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
     return new Response(JSON.stringify({ error: "Unknown action" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
