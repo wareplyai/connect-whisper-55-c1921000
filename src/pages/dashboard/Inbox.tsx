@@ -138,6 +138,8 @@ const Inbox = () => {
       .channel(`inbox:${user.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "incoming_messages", filter: `user_id=eq.${user.id}` }, schedule)
       .on("postgres_changes", { event: "*", schema: "public", table: "message_logs", filter: `user_id=eq.${user.id}` }, schedule)
+      .on("postgres_changes", { event: "*", schema: "public", table: "customer_reply_settings", filter: `user_id=eq.${user.id}` }, schedule)
+      .on("postgres_changes", { event: "*", schema: "public", table: "blocked_customers", filter: `user_id=eq.${user.id}` }, schedule)
       .subscribe();
     channelRef.current = ch;
     // Safety-net poll: 30s instead of 10s so the UI doesn't churn / blank.
