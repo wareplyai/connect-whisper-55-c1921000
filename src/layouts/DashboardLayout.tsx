@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, Receipt, MessageSquareText, Bot, ShieldCheck, MessageSquare, Package, ShoppingBag, Lock } from "lucide-react";
 import { FeatureKey } from "@/hooks/useFeatureAccess";
@@ -7,6 +8,7 @@ import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { prefetchRoute, prefetchDashboardRoutes } from "@/lib/routePrefetch";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -50,6 +52,11 @@ const DashboardLayout = () => {
   };
   const crumbs = location.pathname.split("/").filter(Boolean);
 
+  useEffect(() => {
+    prefetchDashboardRoutes();
+  }, []);
+
+
   const linkBase = "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200";
   const linkIdle = "text-emerald-100/70 hover:text-white hover:bg-white/5";
   const linkActive = "text-white bg-gradient-to-r from-emerald-500/25 via-emerald-400/15 to-transparent shadow-[inset_0_1px_0_0_hsl(150_80%_70%/0.15),0_4px_20px_-8px_hsl(150_80%_40%/0.5)] ring-1 ring-emerald-400/20";
@@ -90,6 +97,9 @@ const DashboardLayout = () => {
                   key={n.to}
                   to={n.to}
                   end={n.end}
+                  onMouseEnter={() => prefetchRoute(n.to)}
+                  onTouchStart={() => prefetchRoute(n.to)}
+                  onFocus={() => prefetchRoute(n.to)}
                   className={({ isActive }) => `${linkBase} ${isActive ? linkActive : linkIdle}`}
                 >
                   {({ isActive }) => (
