@@ -761,8 +761,9 @@ ${productLines}`;
               </div>
             </div>
           </div>
-        )}
+        </div>
       </section>
+
 
       {/* BUSINESS INFO (Supabase wired) */}
       <section className="rounded-xl border border-border bg-card p-5 space-y-4">
