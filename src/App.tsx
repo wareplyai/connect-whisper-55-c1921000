@@ -66,6 +66,8 @@ const SmsLogs = lazy(() => import("./pages/headadmin/SmsLogs"));
 const HAFeatureAccess = lazy(() => import("./pages/headadmin/FeatureAccess"));
 const HADashboardAds = lazy(() => import("./pages/headadmin/DashboardAds"));
 const HAUserStorage = lazy(() => import("./pages/headadmin/UserStorage"));
+const HAReplyUsage = lazy(() => import("./pages/headadmin/ReplyUsage"));
+const HAAIKeys = lazy(() => import("./pages/headadmin/AIKeys"));
 const HeadAdminMobileLayout = lazy(() => import("./layouts/HeadAdminMobileLayout"));
 const MobileHome = lazy(() => import("./pages/headadmin/mobile/MobileHome"));
 const MobileNotifications = lazy(() => import("./pages/headadmin/mobile/MobileNotifications"));
