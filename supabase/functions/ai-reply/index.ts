@@ -3111,7 +3111,7 @@ Deno.serve(async (req) => {
           systemPrompt: finalSystemPrompt + recentMatchedProductBlock + memoryInstruction,
           userMessage: finalUserMessage,
           history: conversationHistory,
-          maxTokens: Number((biz as any)?.max_tokens) || 2000,
+          maxTokens: resolvedMaxTokens || Number((biz as any)?.max_tokens) || 2000,
           temperature: typeof (biz as any)?.temperature === "number" ? Number((biz as any).temperature) : 0.7,
         });
       } catch (aiErr: any) {
