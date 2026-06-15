@@ -127,14 +127,15 @@ export default function ReplyUsage() {
               <TableHead>User</TableHead>
               <TableHead>Plan</TableHead>
               <TableHead>Usage</TableHead>
-              <TableHead>Max tokens</TableHead>
+              <TableHead>Tokens used</TableHead>
+              <TableHead>Max tokens / reply</TableHead>
               <TableHead>Period ends</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading && <TableRow><TableCell colSpan={6} className="text-center py-8">Loading…</TableCell></TableRow>}
-            {!loading && filtered.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No users</TableCell></TableRow>}
+            {loading && <TableRow><TableCell colSpan={7} className="text-center py-8">Loading…</TableCell></TableRow>}
+            {!loading && filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No users</TableCell></TableRow>}
             {filtered.map((r) => {
               const pct = r.reply_quota > 0 ? Math.min(100, Math.round((r.replies_used / r.reply_quota) * 100)) : 0;
               return (
@@ -152,6 +153,7 @@ export default function ReplyUsage() {
                     </div>
                     <Progress value={pct} className="h-1.5" />
                   </TableCell>
+                  <TableCell className="tabular-nums font-medium">{Number(r.tokens_used || 0).toLocaleString()}</TableCell>
                   <TableCell>{r.max_tokens.toLocaleString()}</TableCell>
                   <TableCell className="text-xs">
                     {r.quota_period_end ? new Date(r.quota_period_end).toLocaleDateString() : "—"}
