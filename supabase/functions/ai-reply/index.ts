@@ -3001,6 +3001,9 @@ Deno.serve(async (req) => {
 
     let reply = "";
     let aiTokensUsed = 0;
+    let aiPromptTokens = 0;
+    let aiCompletionTokens = 0;
+    let aiModelUsed = "";
 
     // ---- Image-message branch: vision describe + product match (image-only) ----
     // Only fire the "image received but couldn't open" fallback when there is REAL
