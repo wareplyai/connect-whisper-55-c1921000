@@ -260,6 +260,7 @@ export default function ReplyUsage() {
               <TableHead>User</TableHead>
               <TableHead>Plan</TableHead>
               <TableHead>Replies (used / quota)</TableHead>
+              <TableHead className="min-w-[220px]">AI tasks used (global key)</TableHead>
               <TableHead className="text-right">Input tok</TableHead>
               <TableHead className="text-right">Output tok</TableHead>
               <TableHead className="text-right">Total tok</TableHead>
@@ -269,11 +270,13 @@ export default function ReplyUsage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading && <TableRow><TableCell colSpan={9} className="text-center py-8">Loading…</TableCell></TableRow>}
-            {!loading && filtered.length === 0 && <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No users</TableCell></TableRow>}
+            {loading && <TableRow><TableCell colSpan={10} className="text-center py-8">Loading…</TableCell></TableRow>}
+            {!loading && filtered.length === 0 && <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No users</TableCell></TableRow>}
             {filtered.map((r) => {
               const pct = r.reply_quota > 0 ? Math.min(100, Math.round((r.replies_used / r.reply_quota) * 100)) : 0;
               const totalTok = Number(r.prompt_tokens_total || 0) + Number(r.completion_tokens_total || 0);
+              const tasks = Array.isArray(r.task_breakdown) ? r.task_breakdown : [];
+              const globalTasks = Array.isArray(r.global_task_breakdown) ? r.global_task_breakdown : [];
               return (
                 <TableRow key={r.user_id} className="cursor-pointer hover:bg-muted/40" onClick={() => openDetails(r)}>
                   <TableCell>
@@ -288,6 +291,28 @@ export default function ReplyUsage() {
                       <span className="ml-auto">{pct}%</span>
                     </div>
                     <Progress value={pct} className="h-1.5" />
+                  </TableCell>
+                  <TableCell className="min-w-[220px]">
+                    {tasks.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {tasks.map((tb) => {
+                          const meta = taskMeta(tb.task_type);
+                          const gTok = globalTasks.find((g) => g.task_type === tb.task_type)?.total_tokens || 0;
+                          return (
+                            <span
+                              key={tb.task_type}
+                              className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${meta.tone}`}
+                              title={`${meta.label} — ${meta.desc}\nCalls: ${tb.count}\nTokens: ${Number(tb.total_tokens || 0).toLocaleString()}${gTok ? ` (global key: ${gTok.toLocaleString()})` : ""}\nCost: ${fmtUSD(tb.total_cost_usd)}`}
+                            >
+                              {meta.label}
+                              <span className="opacity-70">·{tb.count}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-xs">{Number(r.prompt_tokens_total || 0).toLocaleString()}</TableCell>
                   <TableCell className="text-right tabular-nums text-xs">{Number(r.completion_tokens_total || 0).toLocaleString()}</TableCell>
