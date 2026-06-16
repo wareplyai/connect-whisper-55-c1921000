@@ -269,10 +269,13 @@ export default function ReplyUsage() {
               <p className="text-xs text-muted-foreground mt-1">Overrides plan default. Set 0 to disable AI replies.</p>
             </div>
             <div>
-              <Label>Max tokens per reply</Label>
-              <Input type="number" min={50} max={8000} value={tokens} onChange={(e) => setTokens(e.target.value)} />
-              <p className="text-xs text-muted-foreground mt-1">Caps the AI output length for this user. Output never exceeds this — your API key won't be charged for more output tokens.</p>
+              <Label>Max tokens per reply (TOTAL budget: input + output)</Label>
+              <Input type="number" min={150} max={8000} value={tokens} onChange={(e) => setTokens(e.target.value)} />
+              <p className="text-xs text-muted-foreground mt-1">
+                Hard cap on combined prompt + completion tokens for one reply. If the system prompt + chat history exceeds the budget, the oldest history turns and extra context are trimmed automatically so total usage stays within this limit. Min 150, max 8000.
+              </p>
             </div>
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEdit(null)}>Cancel</Button>
