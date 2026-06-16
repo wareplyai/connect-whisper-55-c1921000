@@ -53,7 +53,8 @@ async function transcribeVoiceFile(
   platform: string,
   audioUrl: string,
   prefetched?: { bytes: Uint8Array; mime: string } | null,
-): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string }> {
+  maxSeconds: number = 60,
+): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string; skipped?: string }> {
   const plat = (platform || "").toLowerCase();
   const fallbackModel = plat === "openai" ? "whisper-1" : "gemini-2.5-flash";
   try {
