@@ -3032,7 +3032,7 @@ Deno.serve(async (req) => {
     // Load product catalog so AI can reference real products in replies.
     const { data: catalogRows } = await admin
       .from("products")
-      .select("id, name, price, description, category, stock, image_url, real_image_urls")
+      .select("id, name, price, description, category, stock, image_url, match_image_urls, real_image_urls")
       .eq("user_id", userId)
       .eq("is_active", true)
       .limit(100);
