@@ -136,7 +136,7 @@ async function callAI(opts: {
   history?: Array<{ role: "user" | "assistant"; content: string }>;
   maxTokens?: number;
   temperature?: number;
-}): Promise<{ text: string; tokens: number }> {
+}): Promise<{ text: string; tokens: number; promptTokens: number; completionTokens: number }> {
   const { platform, model, apiKey, systemPrompt, userMessage } = opts;
   const history = Array.isArray(opts.history) ? opts.history.filter((m) => m && m.content && m.content.trim()) : [];
   const maxTokens = Math.max(50, Math.min(4000, Number(opts.maxTokens) || 2000));
@@ -163,9 +163,9 @@ async function callAI(opts: {
     const data = await r.json();
     if (!r.ok) throw new Error(data?.error?.message || `AI error ${r.status}`);
     const text = data.choices?.[0]?.message?.content?.trim() || "";
-    // Only count completion tokens — max_tokens setting limits output, not prompt
-    const tokens = Number(data?.usage?.completion_tokens) || 0;
-    return { text, tokens } as any;
+    const promptTokens = Number(data?.usage?.prompt_tokens) || 0;
+    const completionTokens = Number(data?.usage?.completion_tokens) || 0;
+    return { text, tokens: completionTokens, promptTokens, completionTokens };
   }
 
   if (platform === "gemini") {
@@ -192,9 +192,9 @@ async function callAI(opts: {
     if (!r.ok) throw new Error(data?.error?.message || `Gemini error ${r.status}`);
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
     const um = data?.usageMetadata || {};
-    // Only count output tokens — max_tokens setting limits output, not prompt
-    const tokens = Number(um.candidatesTokenCount) || 0;
-    return { text, tokens } as any;
+    const promptTokens = Number(um.promptTokenCount) || 0;
+    const completionTokens = Number(um.candidatesTokenCount) || 0;
+    return { text, tokens: completionTokens, promptTokens, completionTokens };
   }
 
   throw new Error(`Unsupported platform: ${platform}`);
