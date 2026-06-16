@@ -315,6 +315,7 @@ export type Database = {
           platform: string
           prompt_tokens: number
           session_id: string | null
+          task_type: string
           total_cost_usd: number
           total_tokens: number
           user_id: string
@@ -334,6 +335,7 @@ export type Database = {
           platform: string
           prompt_tokens?: number
           session_id?: string | null
+          task_type?: string
           total_cost_usd?: number
           total_tokens?: number
           user_id: string
@@ -353,6 +355,7 @@ export type Database = {
           platform?: string
           prompt_tokens?: number
           session_id?: string | null
+          task_type?: string
           total_cost_usd?: number
           total_tokens?: number
           user_id?: string
@@ -1847,6 +1850,7 @@ export type Database = {
           completion_tokens_total: number
           email: string
           full_name: string
+          global_task_breakdown: Json
           last_used_at: string
           max_tokens: number
           plan: string
@@ -1857,6 +1861,7 @@ export type Database = {
           replies_used: number
           reply_count: number
           reply_quota: number
+          task_breakdown: Json
           tokens_used: number
           total_cost_usd: number
           user_id: string
@@ -1891,6 +1896,7 @@ export type Database = {
           prompt_tokens: number
           session_id: string
           session_phone: string
+          task_type: string
           total_cost_usd: number
           total_tokens: number
         }[]

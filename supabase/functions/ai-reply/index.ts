@@ -51,12 +51,13 @@ async function decryptKey(payload: string): Promise<string> {
 async function transcribeVoiceFile(
   audioUrl: string,
   prefetched?: { bytes: Uint8Array; mime: string } | null,
-): Promise<string> {
+): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string }> {
+  const sttModel = "google/gemini-2.5-flash";
   try {
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableKey) {
       console.log("[stt] LOVABLE_API_KEY missing");
-      return "";
+      return { text: "", promptTokens: 0, completionTokens: 0, model: sttModel };
     }
     let buf: Uint8Array;
     let ctype: string;
@@ -67,7 +68,7 @@ async function transcribeVoiceFile(
       const audioRes = await fetch(audioUrl);
       if (!audioRes.ok) {
         console.log("[stt] download failed:", audioRes.status, audioUrl);
-        return "";
+        return { text: "", promptTokens: 0, completionTokens: 0, model: sttModel };
       }
       ctype = (audioRes.headers.get("content-type") || "audio/ogg").split(";")[0].trim();
       buf = new Uint8Array(await audioRes.arrayBuffer());
@@ -92,7 +93,7 @@ async function transcribeVoiceFile(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: sttModel,
         messages: [
           {
             role: "system",
@@ -110,16 +111,18 @@ async function transcribeVoiceFile(
       }),
     });
     const data: any = await r.json().catch(() => ({}));
+    const pt = Number(data?.usage?.prompt_tokens) || 0;
+    const ct = Number(data?.usage?.completion_tokens) || 0;
     if (!r.ok) {
       console.log("[stt] gateway error:", r.status, JSON.stringify(data).slice(0, 400));
-      return "";
+      return { text: "", promptTokens: pt, completionTokens: ct, model: sttModel };
     }
     const text = String(data?.choices?.[0]?.message?.content || "").trim();
     console.log("[stt] transcribed", text.length, "chars");
-    return text;
+    return { text, promptTokens: pt, completionTokens: ct, model: sttModel };
   } catch (e) {
     console.log("[stt] exception:", (e as Error)?.message);
-    return "";
+    return { text: "", promptTokens: 0, completionTokens: 0, model: sttModel };
   }
 }
 
@@ -128,6 +131,62 @@ function jsonResp(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+// Insert a row into ai_usage_logs for ANY AI sub-task (text reply, vision describe,
+// vision match, image extract, voice transcribe). Looks up per-token price from
+// ai_model_pricing and stores cost. Silently swallows errors so it never breaks
+// the user-facing reply flow.
+async function logAiUsage(
+  admin: any,
+  ctx: {
+    userId: string;
+    sessionId?: string | null;
+    messageId?: string | null;
+    fromNumber?: string | null;
+    platform: string;
+    model: string;
+    keyScope?: string | null;
+    taskType: string;
+    promptTokens: number;
+    completionTokens: number;
+  },
+): Promise<void> {
+  try {
+    const pt = Number(ctx.promptTokens) || 0;
+    const ct = Number(ctx.completionTokens) || 0;
+    if (pt + ct <= 0 || !ctx.model) return;
+    const { data: priceRow } = await admin
+      .from("ai_model_pricing")
+      .select("input_price_per_1m_usd, output_price_per_1m_usd")
+      .eq("platform", ctx.platform)
+      .eq("model", ctx.model)
+      .maybeSingle();
+    const inP = Number(priceRow?.input_price_per_1m_usd) || 0;
+    const outP = Number(priceRow?.output_price_per_1m_usd) || 0;
+    const inputCost = (pt / 1_000_000) * inP;
+    const outputCost = (ct / 1_000_000) * outP;
+    await admin.from("ai_usage_logs").insert({
+      user_id: ctx.userId,
+      session_id: ctx.sessionId || null,
+      incoming_message_id: ctx.messageId || null,
+      from_number: ctx.fromNumber || null,
+      platform: ctx.platform,
+      model: ctx.model,
+      key_scope: ctx.keyScope || "user",
+      task_type: ctx.taskType,
+      prompt_tokens: pt,
+      completion_tokens: ct,
+      total_tokens: pt + ct,
+      input_price_per_1m_usd: inP,
+      output_price_per_1m_usd: outP,
+      input_cost_usd: inputCost,
+      output_cost_usd: outputCost,
+      total_cost_usd: inputCost + outputCost,
+    });
+  } catch (e) {
+    console.log("[ai-usage-log] failed:", (e as Error)?.message, "task=", ctx.taskType);
+  }
 }
 
 // Rough token estimator: ~4 chars per token, +4 tokens per message for role overhead
@@ -382,12 +441,16 @@ function textSimilarity(a: string, b: string): number {
   return union === 0 ? 0 : inter / union;
 }
 
-async function describeImageWithOpenAI(apiKey: string, imageUrl: string): Promise<string> {
+async function describeImageWithOpenAI(
+  apiKey: string,
+  imageUrl: string,
+): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string }> {
+  const model = "gpt-4o-mini";
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         {
           role: "system",
@@ -401,7 +464,12 @@ async function describeImageWithOpenAI(apiKey: string, imageUrl: string): Promis
   });
   const data = await r.json();
   if (!r.ok) throw new Error(data?.error?.message || `Vision error ${r.status}`);
-  return (data.choices?.[0]?.message?.content || "").trim();
+  return {
+    text: (data.choices?.[0]?.message?.content || "").trim(),
+    promptTokens: Number(data?.usage?.prompt_tokens) || 0,
+    completionTokens: Number(data?.usage?.completion_tokens) || 0,
+    model,
+  };
 }
 
 // Direct vision-based product matching. Sends the customer image PLUS each
@@ -412,7 +480,8 @@ async function matchProductByVision(
   apiKey: string,
   customerImageUrl: string,
   products: Array<{ id: string; name: string; match_image_urls: string[] | null; image_url: string | null }>,
-): Promise<{ product: any; confidence: number } | null> {
+): Promise<{ product: any; confidence: number; promptTokens: number; completionTokens: number; model: string } | { product: null; promptTokens: number; completionTokens: number; model: string }> {
+  const model = "gpt-4o-mini";
   // Build candidate list: 1 image per product (first match image, or fallback to image_url).
   const candidates = products
     .map((p) => {
@@ -420,7 +489,7 @@ async function matchProductByVision(
       return img ? { id: p.id, name: p.name, img, row: p } : null;
     })
     .filter(Boolean) as Array<{ id: string; name: string; img: string; row: any }>;
-  if (!candidates.length) return null;
+  if (!candidates.length) return { product: null, promptTokens: 0, completionTokens: 0, model };
 
   // OpenAI vision can handle many images; cap at 20 to keep cost/latency sane.
   const slice = candidates.slice(0, 20);
@@ -443,16 +512,18 @@ async function matchProductByVision(
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model,
         response_format: { type: "json_object" },
         messages: [{ role: "user", content }],
         max_tokens: 200,
       }),
     });
     const data = await r.json();
+    const pt = Number(data?.usage?.prompt_tokens) || 0;
+    const ct = Number(data?.usage?.completion_tokens) || 0;
     if (!r.ok) {
       console.log("[vision-match] api error", data?.error?.message || r.status);
-      return null;
+      return { product: null, promptTokens: pt, completionTokens: ct, model };
     }
     const raw = data.choices?.[0]?.message?.content || "{}";
     const parsed = JSON.parse(raw);
@@ -460,12 +531,12 @@ async function matchProductByVision(
     const conf = Math.max(0, Math.min(100, Number(parsed?.confidence) || 0));
     console.log("[vision-match] result", { idx, conf, reason: parsed?.reason });
     if (idx >= 1 && idx <= slice.length && conf >= 55) {
-      return { product: slice[idx - 1].row, confidence: conf };
+      return { product: slice[idx - 1].row, confidence: conf, promptTokens: pt, completionTokens: ct, model };
     }
-    return null;
+    return { product: null, promptTokens: pt, completionTokens: ct, model };
   } catch (e) {
     console.log("[vision-match] failed:", (e as Error)?.message);
-    return null;
+    return { product: null, promptTokens: 0, completionTokens: 0, model };
   }
 }
 
@@ -473,21 +544,22 @@ async function matchProductByVision(
 // Uses OpenAI vision when available; falls back to regex on the caption text.
 async function extractStructuredFromImage(opts: {
   apiKey?: string | null; platform?: string | null; imageUrl?: string | null; caption?: string | null;
-}): Promise<{ product_name: string | null; order_number: string | null }> {
+}): Promise<{ product_name: string | null; order_number: string | null; promptTokens: number; completionTokens: number; model: string }> {
+  const model = "gpt-4o-mini";
   const caption = (opts.caption || "").trim();
   // Regex fallback for order number
   const orderRegex = /(?:order|invoice|inv|#)\s*[:#-]?\s*([A-Z0-9-]{4,20})/i;
   const fallbackOrder = caption.match(orderRegex)?.[1] || null;
 
   if (opts.platform !== "openai" || !opts.apiKey || !opts.imageUrl) {
-    return { product_name: null, order_number: fallbackOrder };
+    return { product_name: null, order_number: fallbackOrder, promptTokens: 0, completionTokens: 0, model };
   }
   try {
     const r = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${opts.apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model,
         response_format: { type: "json_object" },
         messages: [
           {
@@ -507,16 +579,21 @@ async function extractStructuredFromImage(opts: {
       }),
     });
     const data = await r.json();
+    const pt = Number(data?.usage?.prompt_tokens) || 0;
+    const ct = Number(data?.usage?.completion_tokens) || 0;
     if (!r.ok) throw new Error(data?.error?.message || `extract error ${r.status}`);
     const txt = data.choices?.[0]?.message?.content || "{}";
     const parsed = JSON.parse(txt);
     return {
       product_name: parsed.product_name ? String(parsed.product_name).slice(0, 200) : null,
       order_number: (parsed.order_number ? String(parsed.order_number).slice(0, 60) : null) || fallbackOrder,
+      promptTokens: pt,
+      completionTokens: ct,
+      model,
     };
   } catch (e) {
     console.log("[extract-structured] failed:", (e as Error)?.message);
-    return { product_name: null, order_number: fallbackOrder };
+    return { product_name: null, order_number: fallbackOrder, promptTokens: 0, completionTokens: 0, model };
   }
 }
 
@@ -1915,6 +1992,8 @@ Deno.serve(async (req) => {
     // and expose transcribed_text so the inbox/AI agent can use the transcript as the message text.
     let voiceTranscript = "";
     let voiceUploadedMime: string | null = null;
+    // Captured here so we can log STT token usage AFTER `admin`/`userId` exist further down.
+    let pendingSttUsage: { promptTokens: number; completionTokens: number; model: string } | null = null;
     {
       const audioUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
       const lowerType0 = messageType.toLowerCase();
@@ -1948,7 +2027,13 @@ Deno.serve(async (req) => {
             }
           }
           if (!rawText) {
-            const transcript = await transcribeVoiceFile(audioUrl, prefetched);
+            const sttRes = await transcribeVoiceFile(audioUrl, prefetched);
+            pendingSttUsage = {
+              promptTokens: sttRes.promptTokens,
+              completionTokens: sttRes.completionTokens,
+              model: sttRes.model,
+            };
+            const transcript = sttRes.text;
             if (transcript) {
               voiceTranscript = transcript;
               rawText = transcript;
@@ -2342,6 +2427,19 @@ Deno.serve(async (req) => {
     }
 
     const userId = session.user_id;
+
+    // Now that admin + userId + sessionId are known, flush any STT usage captured earlier.
+    if (pendingSttUsage && (pendingSttUsage.promptTokens + pendingSttUsage.completionTokens) > 0) {
+      await logAiUsage(admin, {
+        userId, sessionId, messageId: null, fromNumber,
+        platform: "lovable", model: pendingSttUsage.model, keyScope: "global",
+        taskType: "voice_transcribe",
+        promptTokens: pendingSttUsage.promptTokens,
+        completionTokens: pendingSttUsage.completionTokens,
+      });
+      pendingSttUsage = null;
+    }
+
 
     // Load business profile
     const { data: biz } = await admin
@@ -3057,10 +3155,24 @@ Deno.serve(async (req) => {
     // text flow can answer with the matched product details in a single reply.
     if (isImageMessage && imageUrl && messageText && !matchedProduct && keyRow?.platform === "openai" && apiKey) {
       try {
-        const desc = await describeImageWithOpenAI(apiKey, imageUrl);
-        const structured = await extractStructuredFromImage({
+        const descRes = await describeImageWithOpenAI(apiKey, imageUrl);
+        await logAiUsage(admin, {
+          userId, sessionId, messageId, fromNumber,
+          platform: keyRow.platform, model: descRes.model, keyScope: keyRow.scope || "user",
+          taskType: "image_describe",
+          promptTokens: descRes.promptTokens, completionTokens: descRes.completionTokens,
+        });
+        const desc = descRes.text;
+        const structRes = await extractStructuredFromImage({
           apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption,
         });
+        await logAiUsage(admin, {
+          userId, sessionId, messageId, fromNumber,
+          platform: keyRow.platform, model: structRes.model, keyScope: keyRow.scope || "user",
+          taskType: "image_extract",
+          promptTokens: structRes.promptTokens, completionTokens: structRes.completionTokens,
+        });
+        const structured = { product_name: structRes.product_name, order_number: structRes.order_number };
         if (messageId) {
           await admin.from("incoming_messages").update({
             extracted_product_name: structured.product_name,
@@ -3079,9 +3191,15 @@ Deno.serve(async (req) => {
         // ── Primary: direct vision comparison against each product's match image ──
         try {
           const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any);
+          await logAiUsage(admin, {
+            userId, sessionId, messageId, fromNumber,
+            platform: keyRow.platform, model: vMatch.model, keyScope: keyRow.scope || "user",
+            taskType: "vision_match",
+            promptTokens: vMatch.promptTokens, completionTokens: vMatch.completionTokens,
+          });
           if (vMatch?.product) {
             matchedProduct = vMatch.product;
-            console.log("[ai-reply] image+text vision-match", { name: vMatch.product?.name, conf: vMatch.confidence });
+            console.log("[ai-reply] image+text vision-match", { name: vMatch.product?.name, conf: (vMatch as any).confidence });
           }
         } catch (_e) { /* fall through to text similarity */ }
 
@@ -3149,12 +3267,26 @@ Deno.serve(async (req) => {
         reply = "Sorry, image search needs an OpenAI API key. Please describe the product in text. ছবি match করতে OpenAI key দরকার, দয়া করে product টি text এ describe করুন।";
       } else {
         try {
-          const desc = await describeImageWithOpenAI(apiKey, imageUrl);
+          const descRes = await describeImageWithOpenAI(apiKey, imageUrl);
+          await logAiUsage(admin, {
+            userId, sessionId, messageId, fromNumber,
+            platform: keyRow.platform, model: descRes.model, keyScope: keyRow.scope || "user",
+            taskType: "image_describe",
+            promptTokens: descRes.promptTokens, completionTokens: descRes.completionTokens,
+          });
+          const desc = descRes.text;
 
           // Extract structured fields (product name + order number) and persist them.
-          const structured = await extractStructuredFromImage({
+          const structRes = await extractStructuredFromImage({
             apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption,
           });
+          await logAiUsage(admin, {
+            userId, sessionId, messageId, fromNumber,
+            platform: keyRow.platform, model: structRes.model, keyScope: keyRow.scope || "user",
+            taskType: "image_extract",
+            promptTokens: structRes.promptTokens, completionTokens: structRes.completionTokens,
+          });
+          const structured = { product_name: structRes.product_name, order_number: structRes.order_number };
           if (messageId) {
             await admin.from("incoming_messages").update({
               extracted_product_name: structured.product_name,
@@ -3176,9 +3308,15 @@ Deno.serve(async (req) => {
           let matchedConf = 0;
           try {
             const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any);
+            await logAiUsage(admin, {
+              userId, sessionId, messageId, fromNumber,
+              platform: keyRow.platform, model: vMatch.model, keyScope: keyRow.scope || "user",
+              taskType: "vision_match",
+              promptTokens: vMatch.promptTokens, completionTokens: vMatch.completionTokens,
+            });
             if (vMatch?.product) {
               matched = vMatch.product;
-              matchedConf = vMatch.confidence;
+              matchedConf = (vMatch as any).confidence || 0;
             }
           } catch (_e) { /* fall through */ }
 
@@ -3196,6 +3334,7 @@ Deno.serve(async (req) => {
               matchedConf = Math.round(best.score * 100);
             }
           }
+
 
           if (matched) {
             const p = matched;
@@ -3507,6 +3646,7 @@ Deno.serve(async (req) => {
               platform: keyRow.platform,
               model: aiModelUsed,
               key_scope: keyRow.scope || "user",
+              task_type: "text_reply",
               prompt_tokens: aiPromptTokens,
               completion_tokens: aiCompletionTokens,
               total_tokens: aiPromptTokens + aiCompletionTokens,

@@ -11,6 +11,13 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { RefreshCw, Pencil, RotateCcw, BarChart3, DollarSign, Cpu, Users, Trash2 } from "lucide-react";
 
+interface TaskBreakdownItem {
+  task_type: string;
+  count: number;
+  total_tokens: number;
+  total_cost_usd: number;
+}
+
 interface Row {
   user_id: string;
   email: string | null;
@@ -28,6 +35,8 @@ interface Row {
   total_cost_usd: number;
   reply_count: number;
   last_used_at: string | null;
+  task_breakdown: TaskBreakdownItem[] | null;
+  global_task_breakdown: TaskBreakdownItem[] | null;
 }
 
 interface Totals {
@@ -49,11 +58,43 @@ interface Detail {
   platform: string;
   model: string;
   key_scope: string | null;
+  task_type: string;
   prompt_tokens: number;
   completion_tokens: number;
   total_tokens: number;
   total_cost_usd: number;
 }
+
+const TASK_LABELS: Record<string, { label: string; desc: string; tone: string }> = {
+  text_reply: {
+    label: "Text reply",
+    desc: "Customer-er text question-er AI reply (main chat completion).",
+    tone: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  },
+  image_describe: {
+    label: "Image describe",
+    desc: "Customer-er pathano photo OpenAI vision diye describe kora (keywords).",
+    tone: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+  },
+  vision_match: {
+    label: "Vision match",
+    desc: "Customer-er image-ke catalog product image-er sathe vision diye match kora.",
+    tone: "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300",
+  },
+  image_extract: {
+    label: "Image extract",
+    desc: "Image theke product name / order number extract kora (vision JSON).",
+    tone: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  },
+  voice_transcribe: {
+    label: "Voice → Text",
+    desc: "Voice note Gemini diye Bangla/English text-e transcribe kora.",
+    tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  },
+};
+
+const taskMeta = (t: string) =>
+  TASK_LABELS[t] || { label: t, desc: "", tone: "bg-muted text-foreground" };
 
 const fmtUSD = (n: number) =>
   `$${(Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 6 })}`;
@@ -77,7 +118,7 @@ export default function ReplyUsage() {
       supabase.rpc("headadmin_usage_totals"),
     ]);
     if (error) toast.error(error.message);
-    setRows((data || []) as Row[]);
+    setRows((data || []) as unknown as Row[]);
     if (Array.isArray(t) && t[0]) setTotals(t[0] as Totals);
     setLoading(false);
   };
@@ -219,6 +260,7 @@ export default function ReplyUsage() {
               <TableHead>User</TableHead>
               <TableHead>Plan</TableHead>
               <TableHead>Replies (used / quota)</TableHead>
+              <TableHead className="min-w-[220px]">AI tasks used (global key)</TableHead>
               <TableHead className="text-right">Input tok</TableHead>
               <TableHead className="text-right">Output tok</TableHead>
               <TableHead className="text-right">Total tok</TableHead>
@@ -228,11 +270,13 @@ export default function ReplyUsage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading && <TableRow><TableCell colSpan={9} className="text-center py-8">Loading…</TableCell></TableRow>}
-            {!loading && filtered.length === 0 && <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No users</TableCell></TableRow>}
+            {loading && <TableRow><TableCell colSpan={10} className="text-center py-8">Loading…</TableCell></TableRow>}
+            {!loading && filtered.length === 0 && <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No users</TableCell></TableRow>}
             {filtered.map((r) => {
               const pct = r.reply_quota > 0 ? Math.min(100, Math.round((r.replies_used / r.reply_quota) * 100)) : 0;
               const totalTok = Number(r.prompt_tokens_total || 0) + Number(r.completion_tokens_total || 0);
+              const tasks = Array.isArray(r.task_breakdown) ? r.task_breakdown : [];
+              const globalTasks = Array.isArray(r.global_task_breakdown) ? r.global_task_breakdown : [];
               return (
                 <TableRow key={r.user_id} className="cursor-pointer hover:bg-muted/40" onClick={() => openDetails(r)}>
                   <TableCell>
@@ -247,6 +291,28 @@ export default function ReplyUsage() {
                       <span className="ml-auto">{pct}%</span>
                     </div>
                     <Progress value={pct} className="h-1.5" />
+                  </TableCell>
+                  <TableCell className="min-w-[220px]">
+                    {tasks.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {tasks.map((tb) => {
+                          const meta = taskMeta(tb.task_type);
+                          const gTok = globalTasks.find((g) => g.task_type === tb.task_type)?.total_tokens || 0;
+                          return (
+                            <span
+                              key={tb.task_type}
+                              className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${meta.tone}`}
+                              title={`${meta.label} — ${meta.desc}\nCalls: ${tb.count}\nTokens: ${Number(tb.total_tokens || 0).toLocaleString()}${gTok ? ` (global key: ${gTok.toLocaleString()})` : ""}\nCost: ${fmtUSD(tb.total_cost_usd)}`}
+                            >
+                              {meta.label}
+                              <span className="opacity-70">·{tb.count}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-xs">{Number(r.prompt_tokens_total || 0).toLocaleString()}</TableCell>
                   <TableCell className="text-right tabular-nums text-xs">{Number(r.completion_tokens_total || 0).toLocaleString()}</TableCell>
@@ -316,11 +382,46 @@ export default function ReplyUsage() {
               </Card>
             </div>
 
+            {/* Per-task breakdown for this user */}
+            {Array.isArray(detailUser?.task_breakdown) && (detailUser?.task_breakdown?.length || 0) > 0 && (
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground mb-2">
+                  AI tasks the user-admin spent tokens on
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(detailUser?.task_breakdown || []).map((tb) => {
+                    const meta = taskMeta(tb.task_type);
+                    const gTok = (detailUser?.global_task_breakdown || []).find((g) => g.task_type === tb.task_type)?.total_tokens || 0;
+                    return (
+                      <Card key={tb.task_type} className="p-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${meta.tone}`}>
+                            {meta.label}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground tabular-nums">
+                            {tb.count} calls · {Number(tb.total_tokens || 0).toLocaleString()} tok
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-1">{meta.desc}</div>
+                        <div className="flex items-center justify-between gap-2 mt-1">
+                          <span className="text-[10px] text-muted-foreground">
+                            Global-key tokens: <span className="tabular-nums font-medium">{Number(gTok).toLocaleString()}</span>
+                          </span>
+                          <span className="text-[11px] font-semibold text-emerald-600 tabular-nums">{fmtUSD(tb.total_cost_usd)}</span>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-xs">When</TableHead>
+                    <TableHead className="text-xs">Task</TableHead>
                     <TableHead className="text-xs">From (customer)</TableHead>
                     <TableHead className="text-xs">Session #</TableHead>
                     <TableHead className="text-xs">Model</TableHead>
@@ -332,25 +433,33 @@ export default function ReplyUsage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {detailLoading && <TableRow><TableCell colSpan={9} className="text-center py-6">Loading…</TableCell></TableRow>}
+                  {detailLoading && <TableRow><TableCell colSpan={10} className="text-center py-6">Loading…</TableCell></TableRow>}
                   {!detailLoading && details.length === 0 && (
-                    <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground text-xs">No AI replies yet</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground text-xs">No AI replies yet</TableCell></TableRow>
                   )}
-                  {details.map((d) => (
-                    <TableRow key={d.id}>
-                      <TableCell className="text-xs whitespace-nowrap">{new Date(d.created_at).toLocaleString()}</TableCell>
-                      <TableCell className="text-xs">{d.from_number || "—"}</TableCell>
-                      <TableCell className="text-xs">{d.session_phone || "—"}</TableCell>
-                      <TableCell className="text-xs">{d.platform}/{d.model}</TableCell>
-                      <TableCell className="text-xs">
-                        <Badge variant={d.key_scope === "global" ? "default" : "secondary"} className="text-[10px]">{d.key_scope || "user"}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{d.prompt_tokens.toLocaleString()}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{d.completion_tokens.toLocaleString()}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums font-medium">{d.total_tokens.toLocaleString()}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums font-semibold text-emerald-600">{fmtUSD(d.total_cost_usd)}</TableCell>
-                    </TableRow>
-                  ))}
+                  {details.map((d) => {
+                    const meta = taskMeta(d.task_type || "text_reply");
+                    return (
+                      <TableRow key={d.id}>
+                        <TableCell className="text-xs whitespace-nowrap">{new Date(d.created_at).toLocaleString()}</TableCell>
+                        <TableCell className="text-xs">
+                          <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${meta.tone}`} title={meta.desc}>
+                            {meta.label}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-xs">{d.from_number || "—"}</TableCell>
+                        <TableCell className="text-xs">{d.session_phone || "—"}</TableCell>
+                        <TableCell className="text-xs">{d.platform}/{d.model}</TableCell>
+                        <TableCell className="text-xs">
+                          <Badge variant={d.key_scope === "global" ? "default" : "secondary"} className="text-[10px]">{d.key_scope || "user"}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right text-xs tabular-nums">{d.prompt_tokens.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums">{d.completion_tokens.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums font-medium">{d.total_tokens.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums font-semibold text-emerald-600">{fmtUSD(d.total_cost_usd)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
