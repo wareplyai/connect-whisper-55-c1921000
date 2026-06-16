@@ -3177,6 +3177,34 @@ Deno.serve(async (req) => {
       resolvedMaxTokens = Number(mt) || 0;
     } catch { /* ignore */ }
 
+    // Load headadmin-controlled per-task AI limits (vision detail, max output tokens,
+    // catalog candidate cap). Falls back to safe defaults if the row is missing.
+    let aiLimits = {
+      vision_detail: "low" as "low" | "high" | "auto",
+      image_describe_max_tokens: 150,
+      image_extract_max_tokens: 150,
+      vision_match_max_tokens: 100,
+      vision_match_max_candidates: 8,
+      voice_transcribe_max_seconds: 60,
+      text_reply_max_tokens: 600,
+    };
+    try {
+      const { data: limitsRow } = await admin.rpc("get_ai_task_limits");
+      const r: any = Array.isArray(limitsRow) ? limitsRow[0] : limitsRow;
+      if (r) {
+        aiLimits = {
+          vision_detail: (r.vision_detail || "low") as any,
+          image_describe_max_tokens: Number(r.image_describe_max_tokens) || 150,
+          image_extract_max_tokens: Number(r.image_extract_max_tokens) || 150,
+          vision_match_max_tokens: Number(r.vision_match_max_tokens) || 100,
+          vision_match_max_candidates: Number(r.vision_match_max_candidates) || 8,
+          voice_transcribe_max_seconds: Number(r.voice_transcribe_max_seconds) || 60,
+          text_reply_max_tokens: Number(r.text_reply_max_tokens) || 600,
+        };
+      }
+    } catch { /* ignore — use defaults */ }
+
+
     // Load QA pairs as additional context
     const { data: qaRows } = await admin
       .from("qa_pairs")
