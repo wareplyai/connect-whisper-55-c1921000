@@ -53,7 +53,8 @@ async function transcribeVoiceFile(
   platform: string,
   audioUrl: string,
   prefetched?: { bytes: Uint8Array; mime: string } | null,
-): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string }> {
+  maxSeconds: number = 60,
+): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string; skipped?: string }> {
   const plat = (platform || "").toLowerCase();
   const fallbackModel = plat === "openai" ? "whisper-1" : "gemini-2.5-flash";
   try {
@@ -76,6 +77,16 @@ async function transcribeVoiceFile(
       buf = new Uint8Array(await audioRes.arrayBuffer());
     }
     console.log("[stt] audio bytes:", buf.length, "mime:", ctype, "platform:", plat);
+
+    // Enforce headadmin-configured max duration. WhatsApp Opus voice notes are
+    // ~6-8 KB/sec; we cap at 20 KB/sec to stay safe across codecs. Anything
+    // larger is rejected so a single voice note can never run away on cost.
+    const safeMaxSec = Math.max(1, Math.min(600, Number(maxSeconds) || 60));
+    const maxBytes = safeMaxSec * 20_000;
+    if (buf.length > maxBytes) {
+      console.log("[stt] audio exceeds max duration cap", { bytes: buf.length, maxBytes, maxSeconds: safeMaxSec });
+      return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel, skipped: `audio too long (cap ${safeMaxSec}s)` };
+    }
 
     if (plat === "openai") {
       const ext = ctype.includes("mp3") || ctype.includes("mpeg") ? "mp3"
@@ -129,7 +140,7 @@ async function transcribeVoiceFile(
                 { inline_data: { mime_type: audioMime, data: b64 } },
               ],
             }],
-            generationConfig: { temperature: 0 },
+            generationConfig: { temperature: 0, maxOutputTokens: 500 },
           }),
         },
       );
@@ -2087,7 +2098,15 @@ Deno.serve(async (req) => {
               console.log("[stt] no AI key configured (user or global) — skipping transcription");
             } else {
               const decKey = await decryptKey(sttKey.encrypted_key);
-              const sttRes = await transcribeVoiceFile(decKey, sttKey.platform, audioUrl, prefetched);
+              // Fetch voice_transcribe_max_seconds early so we can hard-cap audio length
+              // before sending bytes to Whisper/Gemini (default 60s).
+              let sttMaxSec = 60;
+              try {
+                const { data: limR } = await admin0.rpc("get_ai_task_limits");
+                const lr: any = Array.isArray(limR) ? limR[0] : limR;
+                if (lr?.voice_transcribe_max_seconds) sttMaxSec = Number(lr.voice_transcribe_max_seconds) || 60;
+              } catch { /* ignore */ }
+              const sttRes = await transcribeVoiceFile(decKey, sttKey.platform, audioUrl, prefetched, sttMaxSec);
               pendingSttUsage = {
                 promptTokens: sttRes.promptTokens,
                 completionTokens: sttRes.completionTokens,
