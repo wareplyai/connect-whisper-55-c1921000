@@ -43,7 +43,7 @@ const DashboardLayout = () => {
     const fk = featureMap[to];
     return fk ? !access[fk] : false;
   };
-  const visibleNav = nav;
+  const visibleNav = nav.filter((n) => !isLocked(n.to));
   const location = useLocation();
   const navigate = useNavigate();
   const handleSignOut = async () => {
