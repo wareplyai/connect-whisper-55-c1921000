@@ -2098,7 +2098,15 @@ Deno.serve(async (req) => {
               console.log("[stt] no AI key configured (user or global) — skipping transcription");
             } else {
               const decKey = await decryptKey(sttKey.encrypted_key);
-              const sttRes = await transcribeVoiceFile(decKey, sttKey.platform, audioUrl, prefetched);
+              // Fetch voice_transcribe_max_seconds early so we can hard-cap audio length
+              // before sending bytes to Whisper/Gemini (default 60s).
+              let sttMaxSec = 60;
+              try {
+                const { data: limR } = await admin0.rpc("get_ai_task_limits");
+                const lr: any = Array.isArray(limR) ? limR[0] : limR;
+                if (lr?.voice_transcribe_max_seconds) sttMaxSec = Number(lr.voice_transcribe_max_seconds) || 60;
+              } catch { /* ignore */ }
+              const sttRes = await transcribeVoiceFile(decKey, sttKey.platform, audioUrl, prefetched, sttMaxSec);
               pendingSttUsage = {
                 promptTokens: sttRes.promptTokens,
                 completionTokens: sttRes.completionTokens,
