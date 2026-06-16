@@ -186,10 +186,18 @@ export default function ReplyUsage() {
           <div className="flex items-center gap-2 text-xs text-muted-foreground"><BarChart3 className="h-3.5 w-3.5" /> Total tokens</div>
           <div className="text-xl font-bold tabular-nums">{Number(totals?.total_tokens || 0).toLocaleString()}</div>
         </Card>
-        <Card className="p-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground"><Users className="h-3.5 w-3.5" /> Active users / replies</div>
+        <Card
+          className="p-3"
+          title={`Active users: ${Number(totals?.active_users || 0)} (users who have used at least 1 reply)\nReplies used: ${Number(totals?.total_replies || 0)} (total replies consumed by those users)`}
+        >
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Users className="h-3.5 w-3.5" /> Active users · Replies used
+          </div>
           <div className="text-xl font-bold tabular-nums">
-            {Number(totals?.active_users || 0)} / {Number(totals?.total_replies || 0)}
+            {Number(totals?.active_users || 0)} <span className="text-muted-foreground font-normal">·</span> {Number(totals?.total_replies || 0)}
+          </div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">
+            {Number(totals?.active_users || 0)} user(s) used {Number(totals?.total_replies || 0)} reply(s)
           </div>
         </Card>
         <Card className="p-3">
