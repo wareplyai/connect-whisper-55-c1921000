@@ -20,6 +20,25 @@ interface GlobalKey {
   created_at: string;
 }
 
+const MODELS: Record<string, string[]> = {
+  openai: [
+    "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
+    "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
+    "o1", "o1-mini", "o3", "o3-mini", "o4-mini",
+    "gpt-5", "gpt-5-mini", "gpt-5-nano",
+  ],
+  gemini: [
+    "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite",
+    "gemini-2.0-flash", "gemini-2.0-flash-lite",
+    "gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.5-flash-8b",
+    "gemini-3-flash-preview", "gemini-3-pro-preview",
+  ],
+  deepseek: [
+    "deepseek-chat", "deepseek-reasoner", "deepseek-coder",
+    "deepseek-v3", "deepseek-v3.1", "deepseek-r1",
+  ],
+};
+
 export default function AIKeys() {
   const [keys, setKeys] = useState<GlobalKey[]>([]);
   const [loading, setLoading] = useState(true);
