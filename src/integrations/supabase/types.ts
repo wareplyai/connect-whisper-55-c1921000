@@ -263,6 +263,102 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_model_pricing: {
+        Row: {
+          created_at: string
+          id: string
+          input_price_per_1m_usd: number
+          is_active: boolean
+          model: string
+          notes: string | null
+          output_price_per_1m_usd: number
+          platform: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          input_price_per_1m_usd?: number
+          is_active?: boolean
+          model: string
+          notes?: string | null
+          output_price_per_1m_usd?: number
+          platform: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          input_price_per_1m_usd?: number
+          is_active?: boolean
+          model?: string
+          notes?: string | null
+          output_price_per_1m_usd?: number
+          platform?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_usage_logs: {
+        Row: {
+          completion_tokens: number
+          created_at: string
+          from_number: string | null
+          id: string
+          incoming_message_id: string | null
+          input_cost_usd: number
+          input_price_per_1m_usd: number
+          key_scope: string | null
+          model: string
+          output_cost_usd: number
+          output_price_per_1m_usd: number
+          platform: string
+          prompt_tokens: number
+          session_id: string | null
+          total_cost_usd: number
+          total_tokens: number
+          user_id: string
+        }
+        Insert: {
+          completion_tokens?: number
+          created_at?: string
+          from_number?: string | null
+          id?: string
+          incoming_message_id?: string | null
+          input_cost_usd?: number
+          input_price_per_1m_usd?: number
+          key_scope?: string | null
+          model: string
+          output_cost_usd?: number
+          output_price_per_1m_usd?: number
+          platform: string
+          prompt_tokens?: number
+          session_id?: string | null
+          total_cost_usd?: number
+          total_tokens?: number
+          user_id: string
+        }
+        Update: {
+          completion_tokens?: number
+          created_at?: string
+          from_number?: string | null
+          id?: string
+          incoming_message_id?: string | null
+          input_cost_usd?: number
+          input_price_per_1m_usd?: number
+          key_scope?: string | null
+          model?: string
+          output_cost_usd?: number
+          output_price_per_1m_usd?: number
+          platform?: string
+          prompt_tokens?: number
+          session_id?: string | null
+          total_cost_usd?: number
+          total_tokens?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       auto_reply_rules: {
         Row: {
           category: string | null
@@ -1736,17 +1832,51 @@ export type Database = {
       headadmin_list_user_usage: {
         Args: never
         Returns: {
+          completion_tokens_total: number
           email: string
           full_name: string
+          last_used_at: string
           max_tokens: number
           plan: string
+          prompt_tokens_total: number
           quota_period_end: string
           quota_period_start: string
           remaining: number
           replies_used: number
+          reply_count: number
           reply_quota: number
           tokens_used: number
+          total_cost_usd: number
           user_id: string
+        }[]
+      }
+      headadmin_usage_totals: {
+        Args: never
+        Returns: {
+          active_model: string
+          active_platform: string
+          active_scope: string
+          active_users: number
+          total_cost_usd: number
+          total_replies: number
+          total_tokens: number
+        }[]
+      }
+      headadmin_user_usage_detail: {
+        Args: { _limit?: number; _user_id: string }
+        Returns: {
+          completion_tokens: number
+          created_at: string
+          from_number: string
+          id: string
+          key_scope: string
+          model: string
+          platform: string
+          prompt_tokens: number
+          session_id: string
+          session_phone: string
+          total_cost_usd: number
+          total_tokens: number
         }[]
       }
       is_headadmin: { Args: { _uid: string }; Returns: boolean }
