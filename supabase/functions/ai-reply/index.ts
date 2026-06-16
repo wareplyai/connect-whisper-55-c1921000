@@ -511,8 +511,12 @@ async function matchProductByVision(
   apiKey: string,
   customerImageUrl: string,
   products: Array<{ id: string; name: string; match_image_urls: string[] | null; image_url: string | null }>,
+  opts?: { detail?: "low" | "high" | "auto"; maxTokens?: number; maxCandidates?: number },
 ): Promise<{ product: any; confidence: number; promptTokens: number; completionTokens: number; model: string } | { product: null; promptTokens: number; completionTokens: number; model: string }> {
   const model = "gpt-4o-mini";
+  const detail = opts?.detail || "low";
+  const maxTokens = Math.max(40, Math.min(400, opts?.maxTokens || 100));
+  const maxCandidates = Math.max(1, Math.min(20, opts?.maxCandidates || 8));
   // Build candidate list: 1 image per product (first match image, or fallback to image_url).
   const candidates = products
     .map((p) => {
@@ -522,8 +526,8 @@ async function matchProductByVision(
     .filter(Boolean) as Array<{ id: string; name: string; img: string; row: any }>;
   if (!candidates.length) return { product: null, promptTokens: 0, completionTokens: 0, model };
 
-  // OpenAI vision can handle many images; cap at 20 to keep cost/latency sane.
-  const slice = candidates.slice(0, 20);
+  // Cap candidate count to control vision token cost.
+  const slice = candidates.slice(0, maxCandidates);
 
   const content: any[] = [
     {
@@ -534,8 +538,8 @@ async function matchProductByVision(
         `Catalog:\n${slice.map((c, i) => `${i + 1}. ${c.name}`).join("\n")}\n\n` +
         `Return STRICT JSON: {"index": <1-based number or 0 if none>, "confidence": <0-100 integer>, "reason": "<short>"}.`,
     },
-    { type: "image_url", image_url: { url: customerImageUrl } },
-    ...slice.map((c) => ({ type: "image_url" as const, image_url: { url: c.img } })),
+    { type: "image_url", image_url: { url: customerImageUrl, detail } },
+    ...slice.map((c) => ({ type: "image_url" as const, image_url: { url: c.img, detail } })),
   ];
 
   try {
@@ -546,7 +550,7 @@ async function matchProductByVision(
         model,
         response_format: { type: "json_object" },
         messages: [{ role: "user", content }],
-        max_tokens: 200,
+        max_tokens: maxTokens,
       }),
     });
     const data = await r.json();
