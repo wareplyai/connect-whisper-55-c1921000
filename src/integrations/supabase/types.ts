@@ -299,6 +299,42 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_task_limits: {
+        Row: {
+          id: boolean
+          image_describe_max_tokens: number
+          image_extract_max_tokens: number
+          text_reply_max_tokens: number
+          updated_at: string
+          vision_detail: string
+          vision_match_max_candidates: number
+          vision_match_max_tokens: number
+          voice_transcribe_max_seconds: number
+        }
+        Insert: {
+          id?: boolean
+          image_describe_max_tokens?: number
+          image_extract_max_tokens?: number
+          text_reply_max_tokens?: number
+          updated_at?: string
+          vision_detail?: string
+          vision_match_max_candidates?: number
+          vision_match_max_tokens?: number
+          voice_transcribe_max_seconds?: number
+        }
+        Update: {
+          id?: boolean
+          image_describe_max_tokens?: number
+          image_extract_max_tokens?: number
+          text_reply_max_tokens?: number
+          updated_at?: string
+          vision_detail?: string
+          vision_match_max_candidates?: number
+          vision_match_max_tokens?: number
+          voice_transcribe_max_seconds?: number
+        }
+        Relationships: []
+      }
       ai_usage_logs: {
         Row: {
           completion_tokens: number
@@ -1823,6 +1859,26 @@ export type Database = {
         Args: { _payload: Json }
         Returns: string
       }
+      get_ai_task_limits: {
+        Args: never
+        Returns: {
+          id: boolean
+          image_describe_max_tokens: number
+          image_extract_max_tokens: number
+          text_reply_max_tokens: number
+          updated_at: string
+          vision_detail: string
+          vision_match_max_candidates: number
+          vision_match_max_tokens: number
+          voice_transcribe_max_seconds: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ai_task_limits"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_user_max_tokens: { Args: { _user_id: string }; Returns: number }
       get_user_quota_status: {
         Args: { _user_id: string }
@@ -1870,6 +1926,34 @@ export type Database = {
       headadmin_purge_user_usage: {
         Args: { _user_id: string }
         Returns: undefined
+      }
+      headadmin_update_ai_task_limits: {
+        Args: {
+          _image_describe_max_tokens: number
+          _image_extract_max_tokens: number
+          _text_reply_max_tokens: number
+          _vision_detail: string
+          _vision_match_max_candidates: number
+          _vision_match_max_tokens: number
+          _voice_transcribe_max_seconds: number
+        }
+        Returns: {
+          id: boolean
+          image_describe_max_tokens: number
+          image_extract_max_tokens: number
+          text_reply_max_tokens: number
+          updated_at: string
+          vision_detail: string
+          vision_match_max_candidates: number
+          vision_match_max_tokens: number
+          voice_transcribe_max_seconds: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ai_task_limits"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       headadmin_usage_totals: {
         Args: never

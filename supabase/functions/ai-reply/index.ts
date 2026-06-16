@@ -472,8 +472,11 @@ function textSimilarity(a: string, b: string): number {
 async function describeImageWithOpenAI(
   apiKey: string,
   imageUrl: string,
+  opts?: { detail?: "low" | "high" | "auto"; maxTokens?: number },
 ): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string }> {
   const model = "gpt-4o-mini";
+  const detail = opts?.detail || "low";
+  const maxTokens = Math.max(40, Math.min(500, opts?.maxTokens || 150));
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -485,9 +488,9 @@ async function describeImageWithOpenAI(
           content:
             "You describe a product photo. Reply with a comma-separated list of 8-15 short keywords (English): object, color, material, style, pattern, brand if visible. Keywords only.",
         },
-        { role: "user", content: [{ type: "image_url", image_url: { url: imageUrl } }] },
+        { role: "user", content: [{ type: "image_url", image_url: { url: imageUrl, detail } }] },
       ],
-      max_tokens: 200,
+      max_tokens: maxTokens,
     }),
   });
   const data = await r.json();
@@ -508,8 +511,12 @@ async function matchProductByVision(
   apiKey: string,
   customerImageUrl: string,
   products: Array<{ id: string; name: string; match_image_urls: string[] | null; image_url: string | null }>,
+  opts?: { detail?: "low" | "high" | "auto"; maxTokens?: number; maxCandidates?: number },
 ): Promise<{ product: any; confidence: number; promptTokens: number; completionTokens: number; model: string } | { product: null; promptTokens: number; completionTokens: number; model: string }> {
   const model = "gpt-4o-mini";
+  const detail = opts?.detail || "low";
+  const maxTokens = Math.max(40, Math.min(400, opts?.maxTokens || 100));
+  const maxCandidates = Math.max(1, Math.min(20, opts?.maxCandidates || 8));
   // Build candidate list: 1 image per product (first match image, or fallback to image_url).
   const candidates = products
     .map((p) => {
@@ -519,8 +526,8 @@ async function matchProductByVision(
     .filter(Boolean) as Array<{ id: string; name: string; img: string; row: any }>;
   if (!candidates.length) return { product: null, promptTokens: 0, completionTokens: 0, model };
 
-  // OpenAI vision can handle many images; cap at 20 to keep cost/latency sane.
-  const slice = candidates.slice(0, 20);
+  // Cap candidate count to control vision token cost.
+  const slice = candidates.slice(0, maxCandidates);
 
   const content: any[] = [
     {
@@ -531,8 +538,8 @@ async function matchProductByVision(
         `Catalog:\n${slice.map((c, i) => `${i + 1}. ${c.name}`).join("\n")}\n\n` +
         `Return STRICT JSON: {"index": <1-based number or 0 if none>, "confidence": <0-100 integer>, "reason": "<short>"}.`,
     },
-    { type: "image_url", image_url: { url: customerImageUrl } },
-    ...slice.map((c) => ({ type: "image_url" as const, image_url: { url: c.img } })),
+    { type: "image_url", image_url: { url: customerImageUrl, detail } },
+    ...slice.map((c) => ({ type: "image_url" as const, image_url: { url: c.img, detail } })),
   ];
 
   try {
@@ -543,7 +550,7 @@ async function matchProductByVision(
         model,
         response_format: { type: "json_object" },
         messages: [{ role: "user", content }],
-        max_tokens: 200,
+        max_tokens: maxTokens,
       }),
     });
     const data = await r.json();
@@ -572,9 +579,12 @@ async function matchProductByVision(
 // Uses OpenAI vision when available; falls back to regex on the caption text.
 async function extractStructuredFromImage(opts: {
   apiKey?: string | null; platform?: string | null; imageUrl?: string | null; caption?: string | null;
+  detail?: "low" | "high" | "auto"; maxTokens?: number;
 }): Promise<{ product_name: string | null; order_number: string | null; promptTokens: number; completionTokens: number; model: string }> {
   const model = "gpt-4o-mini";
   const caption = (opts.caption || "").trim();
+  const detail = opts.detail || "low";
+  const maxTokens = Math.max(40, Math.min(500, opts.maxTokens || 150));
   // Regex fallback for order number
   const orderRegex = /(?:order|invoice|inv|#)\s*[:#-]?\s*([A-Z0-9-]{4,20})/i;
   const fallbackOrder = caption.match(orderRegex)?.[1] || null;
@@ -599,11 +609,11 @@ async function extractStructuredFromImage(opts: {
             role: "user",
             content: [
               { type: "text", text: `Caption: ${caption || "(none)"}\nReturn JSON only.` },
-              { type: "image_url", image_url: { url: opts.imageUrl } },
+              { type: "image_url", image_url: { url: opts.imageUrl, detail } },
             ],
           },
         ],
-        max_tokens: 200,
+        max_tokens: maxTokens,
       }),
     });
     const data = await r.json();
@@ -3167,6 +3177,34 @@ Deno.serve(async (req) => {
       resolvedMaxTokens = Number(mt) || 0;
     } catch { /* ignore */ }
 
+    // Load headadmin-controlled per-task AI limits (vision detail, max output tokens,
+    // catalog candidate cap). Falls back to safe defaults if the row is missing.
+    let aiLimits = {
+      vision_detail: "low" as "low" | "high" | "auto",
+      image_describe_max_tokens: 150,
+      image_extract_max_tokens: 150,
+      vision_match_max_tokens: 100,
+      vision_match_max_candidates: 8,
+      voice_transcribe_max_seconds: 60,
+      text_reply_max_tokens: 600,
+    };
+    try {
+      const { data: limitsRow } = await admin.rpc("get_ai_task_limits");
+      const r: any = Array.isArray(limitsRow) ? limitsRow[0] : limitsRow;
+      if (r) {
+        aiLimits = {
+          vision_detail: (r.vision_detail || "low") as any,
+          image_describe_max_tokens: Number(r.image_describe_max_tokens) || 150,
+          image_extract_max_tokens: Number(r.image_extract_max_tokens) || 150,
+          vision_match_max_tokens: Number(r.vision_match_max_tokens) || 100,
+          vision_match_max_candidates: Number(r.vision_match_max_candidates) || 8,
+          voice_transcribe_max_seconds: Number(r.voice_transcribe_max_seconds) || 60,
+          text_reply_max_tokens: Number(r.text_reply_max_tokens) || 600,
+        };
+      }
+    } catch { /* ignore — use defaults */ }
+
+
     // Load QA pairs as additional context
     const { data: qaRows } = await admin
       .from("qa_pairs")
@@ -3209,7 +3247,7 @@ Deno.serve(async (req) => {
     // text flow can answer with the matched product details in a single reply.
     if (isImageMessage && imageUrl && messageText && !matchedProduct && keyRow?.platform === "openai" && apiKey) {
       try {
-        const descRes = await describeImageWithOpenAI(apiKey, imageUrl);
+        const descRes = await describeImageWithOpenAI(apiKey, imageUrl, { detail: aiLimits.vision_detail, maxTokens: aiLimits.image_describe_max_tokens });
         await logAiUsage(admin, {
           userId, sessionId, messageId, fromNumber,
           platform: keyRow.platform, model: descRes.model, keyScope: keyRow.scope || "user",
@@ -3217,9 +3255,7 @@ Deno.serve(async (req) => {
           promptTokens: descRes.promptTokens, completionTokens: descRes.completionTokens,
         });
         const desc = descRes.text;
-        const structRes = await extractStructuredFromImage({
-          apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption,
-        });
+        const structRes = await extractStructuredFromImage({ apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption, detail: aiLimits.vision_detail, maxTokens: aiLimits.image_extract_max_tokens });
         await logAiUsage(admin, {
           userId, sessionId, messageId, fromNumber,
           platform: keyRow.platform, model: structRes.model, keyScope: keyRow.scope || "user",
@@ -3244,7 +3280,7 @@ Deno.serve(async (req) => {
 
         // ── Primary: direct vision comparison against each product's match image ──
         try {
-          const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any);
+          const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any, { detail: aiLimits.vision_detail, maxTokens: aiLimits.vision_match_max_tokens, maxCandidates: aiLimits.vision_match_max_candidates });
           await logAiUsage(admin, {
             userId, sessionId, messageId, fromNumber,
             platform: keyRow.platform, model: vMatch.model, keyScope: keyRow.scope || "user",
@@ -3321,7 +3357,7 @@ Deno.serve(async (req) => {
         reply = "Sorry, image search needs an OpenAI API key. Please describe the product in text. ছবি match করতে OpenAI key দরকার, দয়া করে product টি text এ describe করুন।";
       } else {
         try {
-          const descRes = await describeImageWithOpenAI(apiKey, imageUrl);
+          const descRes = await describeImageWithOpenAI(apiKey, imageUrl, { detail: aiLimits.vision_detail, maxTokens: aiLimits.image_describe_max_tokens });
           await logAiUsage(admin, {
             userId, sessionId, messageId, fromNumber,
             platform: keyRow.platform, model: descRes.model, keyScope: keyRow.scope || "user",
@@ -3331,9 +3367,7 @@ Deno.serve(async (req) => {
           const desc = descRes.text;
 
           // Extract structured fields (product name + order number) and persist them.
-          const structRes = await extractStructuredFromImage({
-            apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption,
-          });
+          const structRes = await extractStructuredFromImage({ apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption, detail: aiLimits.vision_detail, maxTokens: aiLimits.image_extract_max_tokens });
           await logAiUsage(admin, {
             userId, sessionId, messageId, fromNumber,
             platform: keyRow.platform, model: structRes.model, keyScope: keyRow.scope || "user",
@@ -3361,7 +3395,7 @@ Deno.serve(async (req) => {
           let matched: any = null;
           let matchedConf = 0;
           try {
-            const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any);
+            const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any, { detail: aiLimits.vision_detail, maxTokens: aiLimits.vision_match_max_tokens, maxCandidates: aiLimits.vision_match_max_candidates });
             await logAiUsage(admin, {
               userId, sessionId, messageId, fromNumber,
               platform: keyRow.platform, model: vMatch.model, keyScope: keyRow.scope || "user",
