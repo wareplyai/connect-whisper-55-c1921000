@@ -1,0 +1,1 @@
+UPDATE public.ai_api_keys SET model = 'gpt-4.1-mini' WHERE is_global = true AND model = 'Gpt 4.1 mini';

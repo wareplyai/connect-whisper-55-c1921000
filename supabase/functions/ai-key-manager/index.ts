@@ -200,7 +200,8 @@ Deno.serve(async (req) => {
       if (action === "save_global") {
         const apiKey = String(body.apiKey || "").trim();
         const platformOverride = body.platform as string | undefined;
-        const model = String(body.model || "").trim();
+        const rawModel = String(body.model || "").trim();
+        const model = rawModel ? rawModel.toLowerCase().replace(/\s+/g, "-") : "";
         if (!apiKey) return new Response(JSON.stringify({ error: "apiKey required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         const platform = (platformOverride as any) || detectPlatform(apiKey);
         if (!platform) return new Response(JSON.stringify({ error: "Unable to detect platform — pass platform manually" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
