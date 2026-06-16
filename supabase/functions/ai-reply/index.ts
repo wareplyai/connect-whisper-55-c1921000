@@ -192,7 +192,8 @@ async function callAI(opts: {
     if (!r.ok) throw new Error(data?.error?.message || `Gemini error ${r.status}`);
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
     const um = data?.usageMetadata || {};
-    const tokens = Number(um.totalTokenCount) || ((Number(um.promptTokenCount) || 0) + (Number(um.candidatesTokenCount) || 0));
+    // Only count output tokens — max_tokens setting limits output, not prompt
+    const tokens = Number(um.candidatesTokenCount) || 0;
     return { text, tokens } as any;
   }
 
