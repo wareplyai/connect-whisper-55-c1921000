@@ -130,6 +130,62 @@ function jsonResp(body: unknown, status = 200) {
   });
 }
 
+// Insert a row into ai_usage_logs for ANY AI sub-task (text reply, vision describe,
+// vision match, image extract, voice transcribe). Looks up per-token price from
+// ai_model_pricing and stores cost. Silently swallows errors so it never breaks
+// the user-facing reply flow.
+async function logAiUsage(
+  admin: any,
+  ctx: {
+    userId: string;
+    sessionId?: string | null;
+    messageId?: string | null;
+    fromNumber?: string | null;
+    platform: string;
+    model: string;
+    keyScope?: string | null;
+    taskType: string;
+    promptTokens: number;
+    completionTokens: number;
+  },
+): Promise<void> {
+  try {
+    const pt = Number(ctx.promptTokens) || 0;
+    const ct = Number(ctx.completionTokens) || 0;
+    if (pt + ct <= 0 || !ctx.model) return;
+    const { data: priceRow } = await admin
+      .from("ai_model_pricing")
+      .select("input_price_per_1m_usd, output_price_per_1m_usd")
+      .eq("platform", ctx.platform)
+      .eq("model", ctx.model)
+      .maybeSingle();
+    const inP = Number(priceRow?.input_price_per_1m_usd) || 0;
+    const outP = Number(priceRow?.output_price_per_1m_usd) || 0;
+    const inputCost = (pt / 1_000_000) * inP;
+    const outputCost = (ct / 1_000_000) * outP;
+    await admin.from("ai_usage_logs").insert({
+      user_id: ctx.userId,
+      session_id: ctx.sessionId || null,
+      incoming_message_id: ctx.messageId || null,
+      from_number: ctx.fromNumber || null,
+      platform: ctx.platform,
+      model: ctx.model,
+      key_scope: ctx.keyScope || "user",
+      task_type: ctx.taskType,
+      prompt_tokens: pt,
+      completion_tokens: ct,
+      total_tokens: pt + ct,
+      input_price_per_1m_usd: inP,
+      output_price_per_1m_usd: outP,
+      input_cost_usd: inputCost,
+      output_cost_usd: outputCost,
+      total_cost_usd: inputCost + outputCost,
+    });
+  } catch (e) {
+    console.log("[ai-usage-log] failed:", (e as Error)?.message, "task=", ctx.taskType);
+  }
+}
+
 // Rough token estimator: ~4 chars per token, +4 tokens per message for role overhead
 function estimateTokens(text: string): number {
   if (!text) return 0;
