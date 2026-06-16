@@ -36,11 +36,16 @@ export function useFeatureAccess() {
       ]);
       if (cancelled) return;
       const result: Record<FeatureKey, boolean> = { ...DEFAULTS };
+      const globalAccess: Record<FeatureKey, boolean> = { ...DEFAULTS };
       (globals || []).forEach((g: any) => {
-        if (g.feature in result) result[g.feature as FeatureKey] = !!g.show_to_users;
+        if (g.feature in globalAccess) {
+          globalAccess[g.feature as FeatureKey] = !!g.show_to_users;
+          result[g.feature as FeatureKey] = !!g.show_to_users;
+        }
       });
       (overrides || []).forEach((o: any) => {
-        if (o.feature in result) result[o.feature as FeatureKey] = !!o.enabled;
+        const feature = o.feature as FeatureKey;
+        if (feature in result && globalAccess[feature]) result[feature] = !!o.enabled;
       });
       setAccess(result);
       setLoading(false);

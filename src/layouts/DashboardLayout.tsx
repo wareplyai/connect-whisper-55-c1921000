@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, Receipt, MessageSquareText, Bot, ShieldCheck, MessageSquare, Package, ShoppingBag, Lock } from "lucide-react";
+import { LayoutDashboard, Smartphone, CreditCard, BookOpen, HelpCircle, Phone, LogOut, Shield, Receipt, MessageSquareText, Bot, ShieldCheck, MessageSquare, Package, ShoppingBag } from "lucide-react";
 import { FeatureKey } from "@/hooks/useFeatureAccess";
 import { TrialBanner } from "@/components/TrialBanner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,7 +31,7 @@ const resources = [
 
 const DashboardLayout = () => {
   const { profile, isAdmin, signOut } = useAuth();
-  const { access } = useFeatureAccess();
+  const { access, loading: featureAccessLoading } = useFeatureAccess();
   const featureMap: Record<string, FeatureKey> = {
     "/dashboard/ai-agent": "ai_agent",
     "/dashboard/auto-replies": "auto_replies",
@@ -43,7 +43,7 @@ const DashboardLayout = () => {
     const fk = featureMap[to];
     return fk ? !access[fk] : false;
   };
-  const visibleNav = nav.filter((n) => !isLocked(n.to));
+  const visibleNav = nav.filter((n) => featureAccessLoading ? !featureMap[n.to] : !isLocked(n.to));
   const location = useLocation();
   const navigate = useNavigate();
   const handleSignOut = async () => {
