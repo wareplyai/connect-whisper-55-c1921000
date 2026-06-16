@@ -130,6 +130,12 @@ function jsonResp(body: unknown, status = 200) {
   });
 }
 
+// Rough token estimator: ~4 chars per token, +4 tokens per message for role overhead
+function estimateTokens(text: string): number {
+  if (!text) return 0;
+  return Math.ceil(text.length / 4);
+}
+
 async function callAI(opts: {
   platform: string; model: string; apiKey: string;
   systemPrompt: string; userMessage: string;
@@ -137,10 +143,42 @@ async function callAI(opts: {
   maxTokens?: number;
   temperature?: number;
 }): Promise<{ text: string; tokens: number; promptTokens: number; completionTokens: number }> {
-  const { platform, model, apiKey, systemPrompt, userMessage } = opts;
-  const history = Array.isArray(opts.history) ? opts.history.filter((m) => m && m.content && m.content.trim()) : [];
-  const maxTokens = Math.max(50, Math.min(4000, Number(opts.maxTokens) || 2000));
+  const { platform, model, apiKey, userMessage } = opts;
+  let systemPrompt = opts.systemPrompt;
+  let history = Array.isArray(opts.history) ? opts.history.filter((m) => m && m.content && m.content.trim()) : [];
+  // Total budget cap (input + output combined). Hard ceiling 8000.
+  const budget = Math.max(150, Math.min(8000, Number(opts.maxTokens) || 2000));
   const temperature = Math.max(0, Math.min(2, typeof opts.temperature === "number" ? opts.temperature : 0.7));
+
+  // Reserve at least 20% (min 120) for the model's reply so it's not cut off.
+  const minOutputReserve = Math.max(120, Math.floor(budget * 0.2));
+  let promptBudget = budget - minOutputReserve;
+
+  // 1) Drop oldest history turns until we fit.
+  const sysTokens = () => estimateTokens(systemPrompt) + 4;
+  const userTokens = () => estimateTokens(userMessage) + 4;
+  const histTokens = () => history.reduce((s, m) => s + estimateTokens(m.content) + 4, 0);
+  while (history.length > 0 && sysTokens() + userTokens() + histTokens() > promptBudget) {
+    history.shift();
+  }
+  // 2) If still over (huge system prompt), truncate system prompt from the end.
+  let overflow = sysTokens() + userTokens() + histTokens() - promptBudget;
+  if (overflow > 0) {
+    const keepChars = Math.max(400, (estimateTokens(systemPrompt) - overflow) * 4);
+    if (systemPrompt.length > keepChars) {
+      systemPrompt = systemPrompt.slice(0, keepChars) + "\n…[truncated to fit token budget]";
+    }
+  }
+  // 3) If user message itself is enormous, truncate from the middle.
+  overflow = sysTokens() + userTokens() + histTokens() - promptBudget;
+  if (overflow > 0) {
+    const keepChars = Math.max(200, userMessage.length - overflow * 4);
+    // mutate via reassignment isn't possible; use a local
+  }
+
+  const estimatedPrompt = sysTokens() + userTokens() + histTokens();
+  // Output cap = remaining budget after estimated input, clamped 80..budget.
+  const outputCap = Math.max(80, Math.min(budget, budget - estimatedPrompt));
 
   if (platform === "openai" || platform === "deepseek") {
     const url = platform === "openai"
@@ -156,7 +194,7 @@ async function callAI(opts: {
           ...history.map((m) => ({ role: m.role, content: m.content })),
           { role: "user", content: userMessage },
         ],
-        max_tokens: maxTokens,
+        max_tokens: outputCap,
         temperature,
       }),
     });
@@ -184,7 +222,7 @@ async function callAI(opts: {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents,
-          generationConfig: { maxOutputTokens: maxTokens, temperature },
+          generationConfig: { maxOutputTokens: outputCap, temperature },
         }),
       }
     );
@@ -199,6 +237,7 @@ async function callAI(opts: {
 
   throw new Error(`Unsupported platform: ${platform}`);
 }
+
 
 // Fetch the last N (incoming + outgoing) messages for this customer in this session,
 // merged + sorted oldest→newest, so the AI has conversation memory.

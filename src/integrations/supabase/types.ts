@@ -1850,6 +1850,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      headadmin_purge_user_usage: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
       headadmin_usage_totals: {
         Args: never
         Returns: {
