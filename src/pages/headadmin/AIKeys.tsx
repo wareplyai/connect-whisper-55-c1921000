@@ -95,7 +95,7 @@ export default function AIKeys() {
         <div className="grid sm:grid-cols-2 gap-3">
           <div>
             <Label>Platform</Label>
-            <Select value={platform} onValueChange={setPlatform}>
+            <Select value={platform} onValueChange={(v) => { setPlatform(v); setModel(""); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="openai">OpenAI</SelectItem>
@@ -106,7 +106,15 @@ export default function AIKeys() {
           </div>
           <div>
             <Label>Model (optional)</Label>
-            <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder="gpt-4o-mini / gemini-1.5-flash / …" />
+            <Select value={model || "__none"} onValueChange={(v) => setModel(v === "__none" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="Select a model" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Default (auto)</SelectItem>
+                {(MODELS[platform] || []).map((m) => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <div>
