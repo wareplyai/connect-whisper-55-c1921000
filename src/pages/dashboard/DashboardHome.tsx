@@ -172,7 +172,7 @@ const DashboardHome = () => {
           value={stats.total.toLocaleString()}
           icon={MessageSquare}
           accent="primary"
-          sub={`${stats.sent} sent · ${stats.failed} failed · ${stats.pending} pending`}
+          sub={`Last 7 days · ${stats.sent} sent · ${stats.failed} failed · ${stats.pending} pending`}
         />
         <KpiCard
           label="AI Success Rate"
