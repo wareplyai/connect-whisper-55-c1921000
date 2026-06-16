@@ -45,19 +45,21 @@ async function decryptKey(payload: string): Promise<string> {
   return dec.decode(pt);
 }
 
-// Transcribe a remote .ogg/.mp3/.m4a voice file via Lovable AI Gateway (Gemini).
-// Auto-detects Bangla / English. Returns "" on failure.
-// Accepts either a URL or pre-fetched (already-decrypted) bytes.
+// Transcribe a remote .ogg/.mp3/.m4a voice file using the user's own AI API key
+// (or the global key set by headadmin) — NOT Lovable AI Gateway / no third-party.
+// Supports Gemini (direct Google API) and OpenAI Whisper. Returns "" on failure.
 async function transcribeVoiceFile(
+  apiKey: string,
+  platform: string,
   audioUrl: string,
   prefetched?: { bytes: Uint8Array; mime: string } | null,
 ): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string }> {
-  const sttModel = "google/gemini-2.5-flash";
+  const plat = (platform || "").toLowerCase();
+  const fallbackModel = plat === "openai" ? "whisper-1" : "gemini-2.5-flash";
   try {
-    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableKey) {
-      console.log("[stt] LOVABLE_API_KEY missing");
-      return { text: "", promptTokens: 0, completionTokens: 0, model: sttModel };
+    if (!apiKey) {
+      console.log("[stt] no apiKey provided");
+      return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel };
     }
     let buf: Uint8Array;
     let ctype: string;
@@ -68,61 +70,87 @@ async function transcribeVoiceFile(
       const audioRes = await fetch(audioUrl);
       if (!audioRes.ok) {
         console.log("[stt] download failed:", audioRes.status, audioUrl);
-        return { text: "", promptTokens: 0, completionTokens: 0, model: sttModel };
+        return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel };
       }
       ctype = (audioRes.headers.get("content-type") || "audio/ogg").split(";")[0].trim();
       buf = new Uint8Array(await audioRes.arrayBuffer());
     }
-    // chunked base64 to avoid stack overflow on large audio
-    let bin = "";
-    const CHUNK = 0x8000;
-    for (let i = 0; i < buf.length; i += CHUNK) {
-      bin += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + CHUNK)) as any);
-    }
-    const b64 = btoa(bin);
-    console.log("[stt] audio bytes:", buf.length, "mime:", ctype);
+    console.log("[stt] audio bytes:", buf.length, "mime:", ctype, "platform:", plat);
 
-    const fmt = ctype.includes("mp3") || ctype.includes("mpeg") ? "mp3"
-      : ctype.includes("wav") ? "wav"
-      : ctype.includes("m4a") || ctype.includes("mp4") || ctype.includes("aac") ? "m4a"
-      : "ogg";
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: sttModel,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are an automatic speech-to-text engine. Transcribe the user's audio verbatim into text. The audio may be in Bangla, English, or a mix. Output ONLY the transcript text — no quotes, no explanations, no language labels. If the audio has no speech, output an empty string.",
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Transcribe this voice note:" },
-              { type: "input_audio", input_audio: { data: b64, format: fmt } },
-            ],
-          },
-        ],
-      }),
-    });
-    const data: any = await r.json().catch(() => ({}));
-    const pt = Number(data?.usage?.prompt_tokens) || 0;
-    const ct = Number(data?.usage?.completion_tokens) || 0;
-    if (!r.ok) {
-      console.log("[stt] gateway error:", r.status, JSON.stringify(data).slice(0, 400));
-      return { text: "", promptTokens: pt, completionTokens: ct, model: sttModel };
+    if (plat === "openai") {
+      const ext = ctype.includes("mp3") || ctype.includes("mpeg") ? "mp3"
+        : ctype.includes("wav") ? "wav"
+        : ctype.includes("m4a") || ctype.includes("mp4") ? "m4a"
+        : ctype.includes("webm") ? "webm"
+        : "ogg";
+      const form = new FormData();
+      form.append("file", new Blob([buf], { type: ctype || "audio/ogg" }), `audio.${ext}`);
+      form.append("model", "whisper-1");
+      const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: form,
+      });
+      const data: any = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        console.log("[stt] openai whisper error:", r.status, JSON.stringify(data).slice(0, 400));
+        return { text: "", promptTokens: 0, completionTokens: 0, model: "whisper-1" };
+      }
+      const text = String(data?.text || "").trim();
+      console.log("[stt] whisper transcribed", text.length, "chars");
+      return { text, promptTokens: 0, completionTokens: 0, model: "whisper-1" };
     }
-    const text = String(data?.choices?.[0]?.message?.content || "").trim();
-    console.log("[stt] transcribed", text.length, "chars");
-    return { text, promptTokens: pt, completionTokens: ct, model: sttModel };
+
+    if (plat === "gemini") {
+      const model = "gemini-2.5-flash";
+      let bin = "";
+      const CHUNK = 0x8000;
+      for (let i = 0; i < buf.length; i += CHUNK) {
+        bin += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + CHUNK)) as any);
+      }
+      const b64 = btoa(bin);
+      const audioMime = ctype.includes("mp3") || ctype.includes("mpeg") ? "audio/mp3"
+        : ctype.includes("wav") ? "audio/wav"
+        : ctype.includes("m4a") || ctype.includes("mp4") ? "audio/mp4"
+        : ctype.includes("aac") ? "audio/aac"
+        : "audio/ogg";
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text:
+              "You are an automatic speech-to-text engine. Transcribe the user's audio verbatim into text. The audio may be in Bangla, English, or a mix. Output ONLY the transcript text — no quotes, no explanations, no language labels. If the audio has no speech, output an empty string." }] },
+            contents: [{
+              role: "user",
+              parts: [
+                { text: "Transcribe this voice note:" },
+                { inline_data: { mime_type: audioMime, data: b64 } },
+              ],
+            }],
+            generationConfig: { temperature: 0 },
+          }),
+        },
+      );
+      const data: any = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        console.log("[stt] gemini error:", r.status, JSON.stringify(data).slice(0, 400));
+        return { text: "", promptTokens: 0, completionTokens: 0, model };
+      }
+      const text = String(data?.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
+      const um = data?.usageMetadata || {};
+      const pt = Number(um.promptTokenCount) || 0;
+      const ct = Number(um.candidatesTokenCount) || 0;
+      console.log("[stt] gemini transcribed", text.length, "chars");
+      return { text, promptTokens: pt, completionTokens: ct, model };
+    }
+
+    console.log("[stt] platform does not support audio transcription:", plat);
+    return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel };
   } catch (e) {
     console.log("[stt] exception:", (e as Error)?.message);
-    return { text: "", promptTokens: 0, completionTokens: 0, model: sttModel };
+    return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel };
   }
 }
 
