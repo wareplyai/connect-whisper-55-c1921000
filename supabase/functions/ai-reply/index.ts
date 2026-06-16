@@ -579,9 +579,12 @@ async function matchProductByVision(
 // Uses OpenAI vision when available; falls back to regex on the caption text.
 async function extractStructuredFromImage(opts: {
   apiKey?: string | null; platform?: string | null; imageUrl?: string | null; caption?: string | null;
+  detail?: "low" | "high" | "auto"; maxTokens?: number;
 }): Promise<{ product_name: string | null; order_number: string | null; promptTokens: number; completionTokens: number; model: string }> {
   const model = "gpt-4o-mini";
   const caption = (opts.caption || "").trim();
+  const detail = opts.detail || "low";
+  const maxTokens = Math.max(40, Math.min(500, opts.maxTokens || 150));
   // Regex fallback for order number
   const orderRegex = /(?:order|invoice|inv|#)\s*[:#-]?\s*([A-Z0-9-]{4,20})/i;
   const fallbackOrder = caption.match(orderRegex)?.[1] || null;
@@ -606,11 +609,11 @@ async function extractStructuredFromImage(opts: {
             role: "user",
             content: [
               { type: "text", text: `Caption: ${caption || "(none)"}\nReturn JSON only.` },
-              { type: "image_url", image_url: { url: opts.imageUrl } },
+              { type: "image_url", image_url: { url: opts.imageUrl, detail } },
             ],
           },
         ],
-        max_tokens: 200,
+        max_tokens: maxTokens,
       }),
     });
     const data = await r.json();
