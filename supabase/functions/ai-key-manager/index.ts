@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
       return !error && !!data;
     };
 
-    if (action === "save_global" || action === "get_global" || action === "list_global" || action === "delete_global" || action === "toggle_global") {
+    if (action === "save_global" || action === "get_global" || action === "list_global" || action === "delete_global" || action === "toggle_global" || action === "list_user_overrides" || action === "set_user_override" || action === "delete_user_override" || action === "list_all_users") {
       if (!(await requireHeadadmin())) {
         return new Response(JSON.stringify({ error: "Forbidden" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
