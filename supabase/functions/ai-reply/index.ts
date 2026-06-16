@@ -2026,14 +2026,12 @@ Deno.serve(async (req) => {
           }
           if (!rawText) {
             const sttRes = await transcribeVoiceFile(audioUrl, prefetched);
+            pendingSttUsage = {
+              promptTokens: sttRes.promptTokens,
+              completionTokens: sttRes.completionTokens,
+              model: sttRes.model,
+            };
             const transcript = sttRes.text;
-            // Log STT usage (always against Lovable AI Gateway / global key).
-            await logAiUsage(admin, {
-              userId, sessionId, messageId: null, fromNumber,
-              platform: "lovable", model: sttRes.model, keyScope: "global",
-              taskType: "voice_transcribe",
-              promptTokens: sttRes.promptTokens, completionTokens: sttRes.completionTokens,
-            });
             if (transcript) {
               voiceTranscript = transcript;
               rawText = transcript;
