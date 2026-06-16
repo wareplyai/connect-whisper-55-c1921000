@@ -472,8 +472,11 @@ function textSimilarity(a: string, b: string): number {
 async function describeImageWithOpenAI(
   apiKey: string,
   imageUrl: string,
+  opts?: { detail?: "low" | "high" | "auto"; maxTokens?: number },
 ): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string }> {
   const model = "gpt-4o-mini";
+  const detail = opts?.detail || "low";
+  const maxTokens = Math.max(40, Math.min(500, opts?.maxTokens || 150));
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -485,9 +488,9 @@ async function describeImageWithOpenAI(
           content:
             "You describe a product photo. Reply with a comma-separated list of 8-15 short keywords (English): object, color, material, style, pattern, brand if visible. Keywords only.",
         },
-        { role: "user", content: [{ type: "image_url", image_url: { url: imageUrl } }] },
+        { role: "user", content: [{ type: "image_url", image_url: { url: imageUrl, detail } }] },
       ],
-      max_tokens: 200,
+      max_tokens: maxTokens,
     }),
   });
   const data = await r.json();
