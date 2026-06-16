@@ -477,7 +477,8 @@ async function matchProductByVision(
   apiKey: string,
   customerImageUrl: string,
   products: Array<{ id: string; name: string; match_image_urls: string[] | null; image_url: string | null }>,
-): Promise<{ product: any; confidence: number } | null> {
+): Promise<{ product: any; confidence: number; promptTokens: number; completionTokens: number; model: string } | { product: null; promptTokens: number; completionTokens: number; model: string }> {
+  const model = "gpt-4o-mini";
   // Build candidate list: 1 image per product (first match image, or fallback to image_url).
   const candidates = products
     .map((p) => {
@@ -485,7 +486,7 @@ async function matchProductByVision(
       return img ? { id: p.id, name: p.name, img, row: p } : null;
     })
     .filter(Boolean) as Array<{ id: string; name: string; img: string; row: any }>;
-  if (!candidates.length) return null;
+  if (!candidates.length) return { product: null, promptTokens: 0, completionTokens: 0, model };
 
   // OpenAI vision can handle many images; cap at 20 to keep cost/latency sane.
   const slice = candidates.slice(0, 20);
@@ -508,16 +509,18 @@ async function matchProductByVision(
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model,
         response_format: { type: "json_object" },
         messages: [{ role: "user", content }],
         max_tokens: 200,
       }),
     });
     const data = await r.json();
+    const pt = Number(data?.usage?.prompt_tokens) || 0;
+    const ct = Number(data?.usage?.completion_tokens) || 0;
     if (!r.ok) {
       console.log("[vision-match] api error", data?.error?.message || r.status);
-      return null;
+      return { product: null, promptTokens: pt, completionTokens: ct, model };
     }
     const raw = data.choices?.[0]?.message?.content || "{}";
     const parsed = JSON.parse(raw);
@@ -525,12 +528,12 @@ async function matchProductByVision(
     const conf = Math.max(0, Math.min(100, Number(parsed?.confidence) || 0));
     console.log("[vision-match] result", { idx, conf, reason: parsed?.reason });
     if (idx >= 1 && idx <= slice.length && conf >= 55) {
-      return { product: slice[idx - 1].row, confidence: conf };
+      return { product: slice[idx - 1].row, confidence: conf, promptTokens: pt, completionTokens: ct, model };
     }
-    return null;
+    return { product: null, promptTokens: pt, completionTokens: ct, model };
   } catch (e) {
     console.log("[vision-match] failed:", (e as Error)?.message);
-    return null;
+    return { product: null, promptTokens: 0, completionTokens: 0, model };
   }
 }
 
