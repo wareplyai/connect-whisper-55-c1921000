@@ -3111,13 +3111,15 @@ Deno.serve(async (req) => {
 
         const memoryInstruction = `\n\nCONVERSATION MEMORY RULES:\n- The previous turns of this WhatsApp chat are provided as message history above.\n- Use that history to remember which products were already shown / discussed with this customer.\n- If the customer says things like "order korte chai" / "ata nibo" / "dam koto" / "price koto" / "ar ekta dao" without naming a product, refer to the most recently discussed product (see RECENTLY MATCHED PRODUCT block if present, otherwise the last product mentioned in history).\n- NEVER ask the customer to repeat info (name, address, product) they already provided in the history.\n- NEVER reply "I don't have info about this product" / "এই পণ্যের তথ্য নেই" if a RECENTLY MATCHED PRODUCT block is provided above — use those details directly.\n- Maintain natural conversation continuity; do not greet again if you already greeted in this chat.`;
 
+        const resolvedModel = keyRow.model && keyRow.model !== "default" ? keyRow.model : (
+          keyRow.platform === "openai" ? "gpt-4o-mini" :
+          keyRow.platform === "gemini" ? "gemini-1.5-flash" :
+          "deepseek-chat"
+        );
+        aiModelUsed = resolvedModel;
         const aiResult = await callAI({
           platform: keyRow.platform,
-          model: keyRow.model && keyRow.model !== "default" ? keyRow.model : (
-            keyRow.platform === "openai" ? "gpt-4o-mini" :
-            keyRow.platform === "gemini" ? "gemini-1.5-flash" :
-            "deepseek-chat"
-          ),
+          model: resolvedModel,
           apiKey,
           systemPrompt: finalSystemPrompt + recentMatchedProductBlock + memoryInstruction,
           userMessage: finalUserMessage,
@@ -3127,6 +3129,8 @@ Deno.serve(async (req) => {
         });
         reply = aiResult.text;
         aiTokensUsed = aiResult.tokens || 0;
+        aiPromptTokens = aiResult.promptTokens || 0;
+        aiCompletionTokens = aiResult.completionTokens || 0;
       } catch (aiErr: any) {
         if (messageId) {
           await admin.from("incoming_messages").update({
