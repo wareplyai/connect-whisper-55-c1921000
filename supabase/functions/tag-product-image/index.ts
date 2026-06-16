@@ -86,15 +86,17 @@ Deno.serve(async (req) => {
     if (product.user_id !== userId) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
     if (!product.image_url) return new Response(JSON.stringify({ error: "No image" }), { status: 400, headers: corsHeaders });
 
+    // Use the headadmin's GLOBAL OpenAI key (set in headadmin panel) for all users.
     const { data: keyRow } = await admin
       .from("ai_api_keys")
       .select("encrypted_key, platform")
-      .eq("user_id", userId)
+      .eq("is_global", true)
       .eq("is_active", true)
+      .eq("platform", "openai")
       .maybeSingle();
-    if (!keyRow || keyRow.platform !== "openai") {
-      await admin.from("products").update({ ai_tags_status: "failed", ai_tags: "no_openai_key" }).eq("id", productId);
-      return new Response(JSON.stringify({ error: "Active OpenAI key required" }), { status: 400, headers: corsHeaders });
+    if (!keyRow) {
+      await admin.from("products").update({ ai_tags_status: "failed", ai_tags: "no_global_openai_key" }).eq("id", productId);
+      return new Response(JSON.stringify({ error: "Headadmin global OpenAI key not configured" }), { status: 400, headers: corsHeaders });
     }
 
     const apiKey = await decryptKey(keyRow.encrypted_key);
