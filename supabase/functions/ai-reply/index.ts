@@ -2021,7 +2021,7 @@ Deno.serve(async (req) => {
     let voiceTranscript = "";
     let voiceUploadedMime: string | null = null;
     // Captured here so we can log STT token usage AFTER `admin`/`userId` exist further down.
-    let pendingSttUsage: { promptTokens: number; completionTokens: number; model: string } | null = null;
+    let pendingSttUsage: { promptTokens: number; completionTokens: number; model: string; platform: string; keyScope: string } | null = null;
     {
       const audioUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
       const lowerType0 = messageType.toLowerCase();
@@ -2054,23 +2054,48 @@ Deno.serve(async (req) => {
               console.log("[voice] chat-media upload failed; will try transcribing the raw URL");
             }
           }
-          if (!rawText) {
-            const sttRes = await transcribeVoiceFile(audioUrl, prefetched);
-            pendingSttUsage = {
-              promptTokens: sttRes.promptTokens,
-              completionTokens: sttRes.completionTokens,
-              model: sttRes.model,
-            };
-            const transcript = sttRes.text;
-            if (transcript) {
-              voiceTranscript = transcript;
-              rawText = transcript;
-              (body as any).message = transcript;
-              (body as any).transcribed_text = transcript;
-              (body as any).original_type = "audio";
-              console.log("[stt] AI agent will reply to transcribed audio for session", sessionId);
+          if (!rawText && ses0?.user_id) {
+            // Resolve the user's own AI key (or global headadmin key) — NEVER use Lovable AI Gateway here.
+            let sttKey: { encrypted_key: string; platform: string; scope?: string } | null = null;
+            try {
+              const { data: resolved } = await admin0.rpc("resolve_ai_api_key", { _user_id: ses0.user_id, _platform: null });
+              const r = Array.isArray(resolved) ? resolved[0] : resolved;
+              if (r?.encrypted_key) sttKey = r as any;
+            } catch (rErr) {
+              console.log("[stt] resolve_ai_api_key rpc failed:", (rErr as Error)?.message);
+            }
+            if (!sttKey) {
+              const { data: legacy } = await admin0
+                .from("ai_api_keys")
+                .select("encrypted_key, platform")
+                .eq("user_id", ses0.user_id)
+                .eq("is_active", true)
+                .maybeSingle();
+              if (legacy) sttKey = legacy as any;
+            }
+            if (!sttKey) {
+              console.log("[stt] no AI key configured (user or global) — skipping transcription");
             } else {
-              console.log("[stt] empty transcript for", audioUrl);
+              const decKey = await decryptKey(sttKey.encrypted_key);
+              const sttRes = await transcribeVoiceFile(decKey, sttKey.platform, audioUrl, prefetched);
+              pendingSttUsage = {
+                promptTokens: sttRes.promptTokens,
+                completionTokens: sttRes.completionTokens,
+                model: sttRes.model,
+                platform: sttKey.platform,
+                keyScope: sttKey.scope || "user",
+              };
+              const transcript = sttRes.text;
+              if (transcript) {
+                voiceTranscript = transcript;
+                rawText = transcript;
+                (body as any).message = transcript;
+                (body as any).transcribed_text = transcript;
+                (body as any).original_type = "audio";
+                console.log("[stt] AI agent will reply to transcribed audio for session", sessionId);
+              } else {
+                console.log("[stt] empty transcript for", audioUrl);
+              }
             }
           }
         } catch (e) {
@@ -2078,6 +2103,7 @@ Deno.serve(async (req) => {
         }
       }
     }
+
 
     // ---- Non-image media we cannot transcribe (video/document/sticker), or audio when
     // transcription failed — log to inbox and skip AI reply. media_url is already the
