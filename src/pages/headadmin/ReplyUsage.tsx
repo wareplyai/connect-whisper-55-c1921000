@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { RefreshCw, Pencil, RotateCcw, BarChart3, DollarSign, Cpu, Users } from "lucide-react";
+import { RefreshCw, Pencil, RotateCcw, BarChart3, DollarSign, Cpu, Users, Trash2 } from "lucide-react";
 
 interface Row {
   user_id: string;
