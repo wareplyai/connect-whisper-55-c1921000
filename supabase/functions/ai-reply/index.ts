@@ -404,6 +404,71 @@ async function describeImageWithOpenAI(apiKey: string, imageUrl: string): Promis
   return (data.choices?.[0]?.message?.content || "").trim();
 }
 
+// Direct vision-based product matching. Sends the customer image PLUS each
+// product's match images to OpenAI vision and asks which product (by index)
+// is the same item. Much more accurate than keyword similarity.
+// Returns the matched product row + confidence, or null.
+async function matchProductByVision(
+  apiKey: string,
+  customerImageUrl: string,
+  products: Array<{ id: string; name: string; match_image_urls: string[] | null; image_url: string | null }>,
+): Promise<{ product: any; confidence: number } | null> {
+  // Build candidate list: 1 image per product (first match image, or fallback to image_url).
+  const candidates = products
+    .map((p) => {
+      const img = (Array.isArray(p.match_image_urls) && p.match_image_urls[0]) || p.image_url || null;
+      return img ? { id: p.id, name: p.name, img, row: p } : null;
+    })
+    .filter(Boolean) as Array<{ id: string; name: string; img: string; row: any }>;
+  if (!candidates.length) return null;
+
+  // OpenAI vision can handle many images; cap at 20 to keep cost/latency sane.
+  const slice = candidates.slice(0, 20);
+
+  const content: any[] = [
+    {
+      type: "text",
+      text:
+        `You are a product visual-matching expert. The FIRST image is what the CUSTOMER sent. The remaining ${slice.length} images are CATALOG products (labeled 1..${slice.length}).\n\n` +
+        `Decide which catalog product (if any) is the SAME product the customer is asking about. Consider garment shape, print, pattern, colors, neckline, sleeve length, and overall look. Allow color variations of the SAME printed design to match. Reject clearly different products.\n\n` +
+        `Catalog:\n${slice.map((c, i) => `${i + 1}. ${c.name}`).join("\n")}\n\n` +
+        `Return STRICT JSON: {"index": <1-based number or 0 if none>, "confidence": <0-100 integer>, "reason": "<short>"}.`,
+    },
+    { type: "image_url", image_url: { url: customerImageUrl } },
+    ...slice.map((c) => ({ type: "image_url" as const, image_url: { url: c.img } })),
+  ];
+
+  try {
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        response_format: { type: "json_object" },
+        messages: [{ role: "user", content }],
+        max_tokens: 200,
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      console.log("[vision-match] api error", data?.error?.message || r.status);
+      return null;
+    }
+    const raw = data.choices?.[0]?.message?.content || "{}";
+    const parsed = JSON.parse(raw);
+    const idx = Number(parsed?.index) || 0;
+    const conf = Math.max(0, Math.min(100, Number(parsed?.confidence) || 0));
+    console.log("[vision-match] result", { idx, conf, reason: parsed?.reason });
+    if (idx >= 1 && idx <= slice.length && conf >= 55) {
+      return { product: slice[idx - 1].row, confidence: conf };
+    }
+    return null;
+  } catch (e) {
+    console.log("[vision-match] failed:", (e as Error)?.message);
+    return null;
+  }
+}
+
 // Extracts structured fields (product_name, order_number) from optional image + caption.
 // Uses OpenAI vision when available; falls back to regex on the caption text.
 async function extractStructuredFromImage(opts: {
@@ -2967,7 +3032,7 @@ Deno.serve(async (req) => {
     // Load product catalog so AI can reference real products in replies.
     const { data: catalogRows } = await admin
       .from("products")
-      .select("id, name, price, description, category, stock, image_url, real_image_urls")
+      .select("id, name, price, description, category, stock, image_url, match_image_urls, real_image_urls")
       .eq("user_id", userId)
       .eq("is_active", true)
       .limit(100);
@@ -3006,20 +3071,33 @@ Deno.serve(async (req) => {
         }
         const { data: productRows } = await admin
           .from("products")
-          .select("id, name, price, description, category, stock, image_url, ai_tags")
+          .select("id, name, price, description, category, stock, image_url, ai_tags, match_image_urls, real_image_urls")
           .eq("user_id", userId)
           .eq("is_active", true)
           .limit(500);
-        let best: { score: number; row: any } | null = null;
-        const haystackQuery = [desc, structured.product_name, imageCaption, messageText].filter(Boolean).join(" ");
-        for (const p of productRows || []) {
-          const haystack = [p.name, p.description, p.category, p.ai_tags].filter(Boolean).join(" ");
-          const score = textSimilarity(haystackQuery, haystack);
-          if (!best || score > best.score) best = { score, row: p };
-        }
-        if (best && best.score >= 0.80) {
-          matchedProduct = best.row;
-          console.log("[ai-reply] image+text pre-match", { name: best.row?.name, score: best.score });
+
+        // ── Primary: direct vision comparison against each product's match image ──
+        try {
+          const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any);
+          if (vMatch?.product) {
+            matchedProduct = vMatch.product;
+            console.log("[ai-reply] image+text vision-match", { name: vMatch.product?.name, conf: vMatch.confidence });
+          }
+        } catch (_e) { /* fall through to text similarity */ }
+
+        // ── Fallback: keyword/text similarity using vision description ──
+        if (!matchedProduct) {
+          let best: { score: number; row: any } | null = null;
+          const haystackQuery = [desc, structured.product_name, imageCaption, messageText].filter(Boolean).join(" ");
+          for (const p of productRows || []) {
+            const haystack = [p.name, p.description, p.category, p.ai_tags].filter(Boolean).join(" ");
+            const score = textSimilarity(haystackQuery, haystack);
+            if (!best || score > best.score) best = { score, row: p };
+          }
+          if (best && best.score >= 0.25) {
+            matchedProduct = best.row;
+            console.log("[ai-reply] image+text text-match", { name: best.row?.name, score: best.score });
+          }
         }
       } catch (e) {
         console.log("[ai-reply] image+text pre-match failed:", (e as Error)?.message);
@@ -3088,23 +3166,43 @@ Deno.serve(async (req) => {
 
           const { data: productRows } = await admin
             .from("products")
-            .select("id, name, price, description, category, stock, image_url, ai_tags")
+            .select("id, name, price, description, category, stock, image_url, ai_tags, match_image_urls, real_image_urls")
             .eq("user_id", userId)
             .eq("is_active", true)
             .limit(500);
 
+          // ── Primary: direct vision comparison against each product's match image ──
+          let matched: any = null;
+          let matchedConf = 0;
+          try {
+            const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any);
+            if (vMatch?.product) {
+              matched = vMatch.product;
+              matchedConf = vMatch.confidence;
+            }
+          } catch (_e) { /* fall through */ }
+
+          // ── Fallback: keyword similarity ──
           let best: { score: number; row: any } | null = null;
-          const haystackQuery = [desc, structured.product_name, imageCaption].filter(Boolean).join(" ");
-          for (const p of productRows || []) {
-            const haystack = [p.name, p.description, p.category, p.ai_tags].filter(Boolean).join(" ");
-            const score = textSimilarity(haystackQuery, haystack);
-            if (!best || score > best.score) best = { score, row: p };
+          if (!matched) {
+            const haystackQuery = [desc, structured.product_name, imageCaption].filter(Boolean).join(" ");
+            for (const p of productRows || []) {
+              const haystack = [p.name, p.description, p.category, p.ai_tags].filter(Boolean).join(" ");
+              const score = textSimilarity(haystackQuery, haystack);
+              if (!best || score > best.score) best = { score, row: p };
+            }
+            if (best && best.score >= 0.25) {
+              matched = best.row;
+              matchedConf = Math.round(best.score * 100);
+            }
           }
 
-          if (best && best.score >= 0.80) {
-            const p = best.row;
-            const conf = Math.round(best.score * 100);
-            reply = `✅ Match found (${conf}% confidence)\n\n📦 ${p.name}\n💰 Price: ${p.price}\n${p.stock > 0 ? `📊 Stock: ${p.stock}` : "❌ Out of stock"}\n${p.description ? `\n${p.description}` : ""}`;
+          if (matched) {
+            const p = matched;
+            reply = `✅ Match found (${matchedConf}% confidence)\n\n📦 ${p.name}\n💰 Price: ${p.price}\n${p.stock > 0 ? `📊 Stock: ${p.stock}` : "❌ Out of stock"}\n${p.description ? `\n${p.description}` : ""}`;
+            // Attach a real image of the matched product (preferred) so customer
+            // immediately sees what we matched.
+            matchedProduct = p;
           } else {
             // Log for admin notification
             await admin.from("unmatched_image_queries").insert({
@@ -3275,6 +3373,26 @@ Deno.serve(async (req) => {
     } catch (e) {
       console.log("[ai-reply] product-image attach failed:", (e as Error)?.message);
     }
+
+    // If we're attaching a product image but the AI reply text is a generic
+    // "sorry, no info" / contact-us style fallback, override with a friendly
+    // caption so customers don't get a contradictory message + photo.
+    if (outgoingImageUrl) {
+      const lower = String(reply || "").toLowerCase();
+      const isNegative =
+        /\b(sorry|don'?t have|do not have|no info|no details|contact us directly|help you out|আমার কাছে নেই|তথ্য নেই|বিস্তারিত নেই|যোগাযোগ)/i.test(lower) ||
+        reply.trim().length < 5;
+      if (isNegative) {
+        // Try to find the product name we're sending
+        const sentProduct = (catalogRows || []).find((p: any) => p.id === outgoingImageProductId);
+        const pname = sentProduct?.name || "";
+        const priceLine = sentProduct?.price ? `\n💰 ${sentProduct.price}` : "";
+        const descLine = sentProduct?.description ? `\n${String(sentProduct.description).slice(0, 200)}` : "";
+        reply = `এই নিন ${pname ? `"${pname}" ` : ""}এর ছবি 📷${priceLine}${descLine}\n\nHere's the photo${pname ? ` of ${pname}` : ""}.`;
+        console.log("[ai-reply] caption override applied (was negative)");
+      }
+    }
+
 
     // Send the reply back via WhatsApp gateway
     const sendResult = await sendViaGateway({
