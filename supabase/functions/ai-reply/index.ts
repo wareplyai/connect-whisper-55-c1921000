@@ -78,6 +78,16 @@ async function transcribeVoiceFile(
     }
     console.log("[stt] audio bytes:", buf.length, "mime:", ctype, "platform:", plat);
 
+    // Enforce headadmin-configured max duration. WhatsApp Opus voice notes are
+    // ~6-8 KB/sec; we cap at 20 KB/sec to stay safe across codecs. Anything
+    // larger is rejected so a single voice note can never run away on cost.
+    const safeMaxSec = Math.max(1, Math.min(600, Number(maxSeconds) || 60));
+    const maxBytes = safeMaxSec * 20_000;
+    if (buf.length > maxBytes) {
+      console.log("[stt] audio exceeds max duration cap", { bytes: buf.length, maxBytes, maxSeconds: safeMaxSec });
+      return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel, skipped: `audio too long (cap ${safeMaxSec}s)` };
+    }
+
     if (plat === "openai") {
       const ext = ctype.includes("mp3") || ctype.includes("mpeg") ? "mp3"
         : ctype.includes("wav") ? "wav"
