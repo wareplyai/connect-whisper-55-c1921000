@@ -1,5 +1,8 @@
-// Generates AI description tags for a product image using the user's stored OpenAI key.
+// Generates AI description tags for a product image using the headadmin's global OpenAI key.
 // Called once at upload time, stores result in products.ai_tags.
+// Uses vision detail "low" + low max_tokens to keep cost ~85 input tokens per image
+// (vs ~25,000 at detail "high"). All calls are logged to ai_usage_logs so they
+// appear on the Reply Usage dashboard.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -31,32 +34,83 @@ async function decryptKey(payload: string): Promise<string> {
   return dec.decode(pt);
 }
 
-async function describeImage(apiKey: string, imageUrl: string, productHint: string): Promise<string> {
+async function describeImage(
+  apiKey: string,
+  imageUrl: string,
+  productHint: string,
+  detail: "low" | "high" | "auto",
+  maxTokens: number,
+): Promise<{ tags: string; promptTokens: number; completionTokens: number; model: string }> {
+  const model = "gpt-4o-mini";
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         {
           role: "system",
           content:
-            "You are a product image tagger. Look at the image and return a comma-separated list of 8-15 short descriptive keywords/phrases (English). Cover: object type, colors, material, style, pattern, shape, brand if visible. No sentences, just keywords.",
+            "You are a product image tagger. Return ONLY a comma-separated list of 6-12 short keywords (English): object type, colors, material, pattern, style. No sentences.",
         },
         {
           role: "user",
           content: [
             { type: "text", text: `Product context: ${productHint || "(none)"}\n\nReturn only keywords.` },
-            { type: "image_url", image_url: { url: imageUrl } },
+            { type: "image_url", image_url: { url: imageUrl, detail } },
           ],
         },
       ],
-      max_tokens: 200,
+      max_tokens: Math.max(40, Math.min(400, maxTokens)),
     }),
   });
   const data = await r.json();
   if (!r.ok) throw new Error(data?.error?.message || `Vision error ${r.status}`);
-  return (data.choices?.[0]?.message?.content || "").trim();
+  const tags = (data.choices?.[0]?.message?.content || "").trim();
+  return {
+    tags,
+    promptTokens: Number(data?.usage?.prompt_tokens) || 0,
+    completionTokens: Number(data?.usage?.completion_tokens) || 0,
+    model,
+  };
+}
+
+async function logUsage(admin: any, ctx: {
+  userId: string; platform: string; model: string; taskType: string;
+  promptTokens: number; completionTokens: number;
+}) {
+  try {
+    const pt = Number(ctx.promptTokens) || 0;
+    const ct = Number(ctx.completionTokens) || 0;
+    if (pt + ct <= 0) return;
+    const { data: priceRow } = await admin
+      .from("ai_model_pricing")
+      .select("input_price_per_1m_usd, output_price_per_1m_usd")
+      .eq("platform", ctx.platform)
+      .eq("model", ctx.model)
+      .maybeSingle();
+    const inP = Number(priceRow?.input_price_per_1m_usd) || 0;
+    const outP = Number(priceRow?.output_price_per_1m_usd) || 0;
+    const inputCost = (pt / 1_000_000) * inP;
+    const outputCost = (ct / 1_000_000) * outP;
+    await admin.from("ai_usage_logs").insert({
+      user_id: ctx.userId,
+      platform: ctx.platform,
+      model: ctx.model,
+      key_scope: "global",
+      task_type: ctx.taskType,
+      prompt_tokens: pt,
+      completion_tokens: ct,
+      total_tokens: pt + ct,
+      input_price_per_1m_usd: inP,
+      output_price_per_1m_usd: outP,
+      input_cost_usd: inputCost,
+      output_cost_usd: outputCost,
+      total_cost_usd: inputCost + outputCost,
+    });
+  } catch (e) {
+    console.log("[tag-product-image] usage log failed:", (e as Error)?.message);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -99,12 +153,31 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Headadmin global OpenAI key not configured" }), { status: 400, headers: corsHeaders });
     }
 
+    // Honour headadmin-controlled vision detail + max tokens (re-uses image_describe limits).
+    let detail: "low" | "high" | "auto" = "low";
+    let maxTokens = 150;
+    try {
+      const { data: limits } = await admin.rpc("get_ai_task_limits");
+      const r: any = Array.isArray(limits) ? limits[0] : limits;
+      if (r?.vision_detail) detail = r.vision_detail;
+      if (r?.image_describe_max_tokens) maxTokens = Number(r.image_describe_max_tokens) || 150;
+    } catch (_) { /* fall back to defaults */ }
+
     const apiKey = await decryptKey(keyRow.encrypted_key);
     const hint = `${product.name || ""} ${product.description || ""}`.trim();
 
     let tags = "";
     try {
-      tags = await describeImage(apiKey, product.image_url, hint);
+      const res = await describeImage(apiKey, product.image_url, hint, detail, maxTokens);
+      tags = res.tags;
+      await logUsage(admin, {
+        userId: product.user_id,
+        platform: "openai",
+        model: res.model,
+        taskType: "product_image_tag",
+        promptTokens: res.promptTokens,
+        completionTokens: res.completionTokens,
+      });
     } catch (e: any) {
       await admin.from("products").update({ ai_tags_status: "failed", ai_tags: String(e?.message || "vision_failed").slice(0, 500) }).eq("id", productId);
       return new Response(JSON.stringify({ error: e?.message || "vision failed" }), { status: 500, headers: corsHeaders });
