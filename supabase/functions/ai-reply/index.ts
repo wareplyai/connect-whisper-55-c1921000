@@ -3205,6 +3205,7 @@ Deno.serve(async (req) => {
     //   3. if that product has an image_url, send as image with the AI reply as caption
     let outgoingImageUrl: string | null = null;
     let outgoingImageProductId: string | null = null;
+    let extraRealImages: string[] = [];
     try {
       const askText = `${messageText || ""} ${imageCaption || ""}`.toLowerCase();
       const imageWanted = /(\bছবি\b|\bছবিটা\b|\bছবিটি\b|\bছবিগুলো\b|\bছবিগুল\b|\bছবি\s*দাও\b|\bছবি\s*দেন\b|\bphoto\b|\bpic\b|\bpicture\b|\bimage\b|\bsnap\b|\bdekha[ow]\b|\bdekhao\b|\bdekhaben\b|\bdao\b|\bden\b|\bdeo\b|\bdeben\b|\bshow\b|\bsend\b.*\b(photo|pic|picture|image)\b|\b(photo|pic|picture|image)\b.*\b(send|pathao|patha[ow]|den|dao)\b)/i.test(askText);
@@ -3215,15 +3216,14 @@ Deno.serve(async (req) => {
         const askNorm = norm(askText);
 
         let target: any = matchedProduct || null;
+        let matchedByName = !!target;
         if (!target) {
-          // Prefer product whose exact name appears in the AI reply text
           let best: { row: any; len: number } | null = null;
           for (const p of catalogRows || []) {
             const n = norm(p.name);
             if (!n) continue;
             if (replyNorm.includes(n) && (!best || n.length > best.len)) best = { row: p, len: n.length };
           }
-          // Otherwise check the customer's own message
           if (!best) {
             for (const p of catalogRows || []) {
               const n = norm(p.name);
@@ -3231,10 +3231,9 @@ Deno.serve(async (req) => {
               if (askNorm.includes(n) && (!best || n.length > best.len)) best = { row: p, len: n.length };
             }
           }
-          target = best?.row || null;
+          if (best) { target = best.row; matchedByName = true; }
         }
 
-        // Fallback: most recently mentioned product across recent history
         if (!target) {
           try {
             const { data: recent } = await admin
@@ -3251,14 +3250,24 @@ Deno.serve(async (req) => {
               if (!n) continue;
               if (blob.includes(n) && (!best || n.length > best.len)) best = { row: p, len: n.length };
             }
-            target = best?.row || null;
+            if (best) { target = best.row; matchedByName = true; }
           } catch { /* ignore */ }
         }
 
-        if (target?.image_url) {
+        // Prefer real_image_urls (customer-facing photos) when product was
+        // identified by NAME mention. Fallback to primary image_url otherwise.
+        const realImgs: string[] = Array.isArray(target?.real_image_urls)
+          ? (target.real_image_urls as any[]).map((u) => String(u || "").trim()).filter(Boolean)
+          : [];
+        if (target && matchedByName && realImgs.length > 0) {
+          outgoingImageUrl = realImgs[0];
+          extraRealImages = realImgs.slice(1, 2);
+          outgoingImageProductId = target.id || null;
+          console.log("[ai-reply] attaching REAL product images", { product: target.name, count: realImgs.length });
+        } else if (target?.image_url) {
           outgoingImageUrl = String(target.image_url);
           outgoingImageProductId = target.id || null;
-          console.log("[ai-reply] attaching product image", { product: target.name, productId: target.id });
+          console.log("[ai-reply] attaching product image (fallback)", { product: target.name });
         } else if (imageWanted) {
           console.log("[ai-reply] customer asked for image but no product image found");
         }
