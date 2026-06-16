@@ -163,7 +163,8 @@ async function callAI(opts: {
     const data = await r.json();
     if (!r.ok) throw new Error(data?.error?.message || `AI error ${r.status}`);
     const text = data.choices?.[0]?.message?.content?.trim() || "";
-    const tokens = Number(data?.usage?.total_tokens) || 0;
+    // Only count completion tokens — max_tokens setting limits output, not prompt
+    const tokens = Number(data?.usage?.completion_tokens) || 0;
     return { text, tokens } as any;
   }
 
@@ -191,7 +192,8 @@ async function callAI(opts: {
     if (!r.ok) throw new Error(data?.error?.message || `Gemini error ${r.status}`);
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
     const um = data?.usageMetadata || {};
-    const tokens = Number(um.totalTokenCount) || ((Number(um.promptTokenCount) || 0) + (Number(um.candidatesTokenCount) || 0));
+    // Only count output tokens — max_tokens setting limits output, not prompt
+    const tokens = Number(um.candidatesTokenCount) || 0;
     return { text, tokens } as any;
   }
 
