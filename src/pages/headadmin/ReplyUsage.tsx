@@ -246,9 +246,11 @@ export default function ReplyUsage() {
                   <TableCell className="text-right tabular-nums font-semibold text-emerald-600">{fmtUSD(r.total_cost_usd)}</TableCell>
                   <TableCell className="text-xs">{r.max_tokens.toLocaleString()}</TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(r)} title="Edit"><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => resetUsage(r)} title="Reset usage"><RotateCcw className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(r)} title="Edit limits"><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => resetUsage(r)} title="Reset reply counter"><RotateCcw className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => purgeUser(r)} title="Delete ALL usage & cost history (fresh start)" className="text-destructive hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
+
                 </TableRow>
               );
             })}
