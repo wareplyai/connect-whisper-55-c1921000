@@ -3247,7 +3247,7 @@ Deno.serve(async (req) => {
     // text flow can answer with the matched product details in a single reply.
     if (isImageMessage && imageUrl && messageText && !matchedProduct && keyRow?.platform === "openai" && apiKey) {
       try {
-        const descRes = await describeImageWithOpenAI(apiKey, imageUrl);
+        const descRes = await describeImageWithOpenAI(apiKey, imageUrl, { detail: aiLimits.vision_detail, maxTokens: aiLimits.image_describe_max_tokens });
         await logAiUsage(admin, {
           userId, sessionId, messageId, fromNumber,
           platform: keyRow.platform, model: descRes.model, keyScope: keyRow.scope || "user",
@@ -3255,9 +3255,7 @@ Deno.serve(async (req) => {
           promptTokens: descRes.promptTokens, completionTokens: descRes.completionTokens,
         });
         const desc = descRes.text;
-        const structRes = await extractStructuredFromImage({
-          apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption,
-        });
+        const structRes = await extractStructuredFromImage({ apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption, detail: aiLimits.vision_detail, maxTokens: aiLimits.image_extract_max_tokens });
         await logAiUsage(admin, {
           userId, sessionId, messageId, fromNumber,
           platform: keyRow.platform, model: structRes.model, keyScope: keyRow.scope || "user",
@@ -3282,7 +3280,7 @@ Deno.serve(async (req) => {
 
         // ── Primary: direct vision comparison against each product's match image ──
         try {
-          const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any);
+          const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any, { detail: aiLimits.vision_detail, maxTokens: aiLimits.vision_match_max_tokens, maxCandidates: aiLimits.vision_match_max_candidates });
           await logAiUsage(admin, {
             userId, sessionId, messageId, fromNumber,
             platform: keyRow.platform, model: vMatch.model, keyScope: keyRow.scope || "user",
@@ -3359,7 +3357,7 @@ Deno.serve(async (req) => {
         reply = "Sorry, image search needs an OpenAI API key. Please describe the product in text. ছবি match করতে OpenAI key দরকার, দয়া করে product টি text এ describe করুন।";
       } else {
         try {
-          const descRes = await describeImageWithOpenAI(apiKey, imageUrl);
+          const descRes = await describeImageWithOpenAI(apiKey, imageUrl, { detail: aiLimits.vision_detail, maxTokens: aiLimits.image_describe_max_tokens });
           await logAiUsage(admin, {
             userId, sessionId, messageId, fromNumber,
             platform: keyRow.platform, model: descRes.model, keyScope: keyRow.scope || "user",
@@ -3369,9 +3367,7 @@ Deno.serve(async (req) => {
           const desc = descRes.text;
 
           // Extract structured fields (product name + order number) and persist them.
-          const structRes = await extractStructuredFromImage({
-            apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption,
-          });
+          const structRes = await extractStructuredFromImage({ apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption, detail: aiLimits.vision_detail, maxTokens: aiLimits.image_extract_max_tokens });
           await logAiUsage(admin, {
             userId, sessionId, messageId, fromNumber,
             platform: keyRow.platform, model: structRes.model, keyScope: keyRow.scope || "user",
@@ -3399,7 +3395,7 @@ Deno.serve(async (req) => {
           let matched: any = null;
           let matchedConf = 0;
           try {
-            const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any);
+            const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any, { detail: aiLimits.vision_detail, maxTokens: aiLimits.vision_match_max_tokens, maxCandidates: aiLimits.vision_match_max_candidates });
             await logAiUsage(admin, {
               userId, sessionId, messageId, fromNumber,
               platform: keyRow.platform, model: vMatch.model, keyScope: keyRow.scope || "user",
