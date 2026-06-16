@@ -1294,8 +1294,12 @@ export type Database = {
           image_path: string | null
           image_url: string | null
           is_active: boolean
+          match_image_paths: string[]
+          match_image_urls: string[]
           name: string
           price: number
+          real_image_paths: string[]
+          real_image_urls: string[]
           source: string
           stock: number
           updated_at: string
@@ -1312,8 +1316,12 @@ export type Database = {
           image_path?: string | null
           image_url?: string | null
           is_active?: boolean
+          match_image_paths?: string[]
+          match_image_urls?: string[]
           name: string
           price?: number
+          real_image_paths?: string[]
+          real_image_urls?: string[]
           source?: string
           stock?: number
           updated_at?: string
@@ -1330,8 +1338,12 @@ export type Database = {
           image_path?: string | null
           image_url?: string | null
           is_active?: boolean
+          match_image_paths?: string[]
+          match_image_urls?: string[]
           name?: string
           price?: number
+          real_image_paths?: string[]
+          real_image_urls?: string[]
           source?: string
           stock?: number
           updated_at?: string

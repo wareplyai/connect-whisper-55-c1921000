@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Trash2, RefreshCw, Upload, Pencil, LayoutGrid, List, Plus, Camera, FileSpreadsheet, Download, Check, X } from "lucide-react";
+import { Loader2, Trash2, Upload, Pencil, LayoutGrid, List, Plus, Camera, Image as ImageIcon, FileSpreadsheet, Download, Info } from "lucide-react";
 
 type CsvRow = { name: string; price: string; description: string; category: string; stock: string; image_url: string };
 
@@ -49,7 +49,9 @@ function parseCsv(text: string): CsvRow[] {
   }));
 }
 
-const IMAGE_MATCH_MAX = 50;
+const PRODUCT_MAX = 10;
+const MATCH_MAX = 2;
+const REAL_MAX = 2;
 
 async function hashFromUrl(url: string): Promise<string> {
   const res = await fetch(url);
@@ -72,22 +74,31 @@ type Product = {
   stock: number;
   image_url: string | null;
   image_path: string | null;
+  match_image_urls: string[] | null;
+  match_image_paths: string[] | null;
+  real_image_urls: string[] | null;
+  real_image_paths: string[] | null;
   ai_tags: string | null;
   ai_tags_status: string;
   is_active: boolean;
   created_at: string;
 };
 
-type EditState = {
-  open: boolean;
-  product: Product | null;
+type FormState = {
   name: string;
   price: string;
   description: string;
   category: string;
   stock: string;
-  file: File | null;
+  matchFiles: (File | null)[];   // length 2
+  realFiles: (File | null)[];    // length 2
 };
+
+const emptyForm = (): FormState => ({
+  name: "", price: "", description: "", category: "", stock: "",
+  matchFiles: [null, null],
+  realFiles: [null, null],
+});
 
 export default function Products() {
   const { user } = useAuth();
@@ -95,25 +106,18 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [view, setView] = useState<"list" | "grid">("list");
-  const [form, setForm] = useState({
-    name: "",
-    price: "",
-    description: "",
-    category: "",
-    stock: "",
-  });
-  const [file, setFile] = useState<File | null>(null);
+  const [form, setForm] = useState<FormState>(emptyForm());
   const [addOpen, setAddOpen] = useState(false);
-  const [edit, setEdit] = useState<EditState>({
-    open: false, product: null, name: "", price: "", description: "", category: "", stock: "", file: null,
-  });
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editForm, setEditForm] = useState<FormState>(emptyForm());
   const [editSaving, setEditSaving] = useState(false);
 
   // CSV import
   const [csvOpen, setCsvOpen] = useState(false);
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [csvImporting, setCsvImporting] = useState(false);
-  const [matchStatus, setMatchStatus] = useState<Record<string, "loading" | "success" | "error">>({});
   const [csvProgress, setCsvProgress] = useState(0);
 
   const handleCsvFile = async (f: File | null) => {
@@ -138,6 +142,9 @@ export default function Products() {
 
   const importCsv = async () => {
     if (!user || !csvRows.length) return;
+    if (items.length + csvRows.length > PRODUCT_MAX) {
+      return toast.error(`Limit is ${PRODUCT_MAX} products. You have ${items.length} and tried to import ${csvRows.length}.`);
+    }
     setCsvImporting(true);
     setCsvProgress(0);
     let imported = 0;
@@ -157,6 +164,7 @@ export default function Products() {
             category: r.category || null,
             stock: Number(r.stock) || 0,
             image_url: r.image_url || null,
+            match_image_urls: r.image_url ? [r.image_url] : [],
           });
           if (!error) { imported++; existingNames.add(key); }
           else skipped++;
@@ -173,6 +181,7 @@ export default function Products() {
       setCsvImporting(false);
     }
   };
+
   const load = async () => {
     setLoading(true);
     const { data } = await supabase
@@ -185,25 +194,34 @@ export default function Products() {
 
   useEffect(() => { load(); }, []);
 
-  const reset = () => {
-    setForm({ name: "", price: "", description: "", category: "", stock: "" });
-    setFile(null);
+  const uploadOne = async (f: File): Promise<{ url: string; path: string }> => {
+    const ext = f.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${user!.id}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, f, { cacheControl: "3600", upsert: false });
+    if (error) throw error;
+    const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
+    return { url: pub.publicUrl, path };
   };
 
   const handleCreate = async () => {
     if (!user) return;
     if (!form.name.trim()) return toast.error("Name required");
-    if (!file) return toast.error("Image required");
+    const matchFiles = form.matchFiles.filter(Boolean) as File[];
+    const realFiles = form.realFiles.filter(Boolean) as File[];
+    if (matchFiles.length === 0) return toast.error("At least 1 match image required");
+    if (items.length >= PRODUCT_MAX) return toast.error(`You have reached the ${PRODUCT_MAX}-product limit. Delete one or contact admin.`);
+
     setSaving(true);
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("product-images").upload(path, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
+      const matchUploads = await Promise.all(matchFiles.map(uploadOne));
+      const realUploads = await Promise.all(realFiles.map(uploadOne));
+
+      const match_image_urls = matchUploads.map((m) => m.url);
+      const match_image_paths = matchUploads.map((m) => m.path);
+      const real_image_urls = realUploads.map((m) => m.url);
+      const real_image_paths = realUploads.map((m) => m.path);
+
+      const primary = matchUploads[0];
 
       const { data: inserted, error: insErr } = await supabase
         .from("products" as any)
@@ -214,8 +232,12 @@ export default function Products() {
           description: form.description.trim() || null,
           category: form.category.trim() || null,
           stock: Number(form.stock) || 0,
-          image_url: pub.publicUrl,
-          image_path: path,
+          image_url: primary.url,
+          image_path: primary.path,
+          match_image_urls,
+          match_image_paths,
+          real_image_urls,
+          real_image_paths,
         })
         .select("id")
         .single();
@@ -225,20 +247,13 @@ export default function Products() {
       if (productId) {
         supabase.functions.invoke("tag-product-image", { body: { productId } }).then(({ error }) => {
           if (error) toast.error("Auto-tag failed: " + error.message);
-          else { load(); }
+          else load();
         });
-        // Auto add to Image Match silently
-        autoAddToImageMatch({
-          id: productId,
-          name: form.name.trim(),
-          price: Number(form.price) || 0,
-          description: form.description.trim() || null,
-          image_url: pub.publicUrl,
-        }).then(() => load()).catch(() => {});
+        syncImageMatch(form.name.trim(), Number(form.price) || 0, form.description.trim() || null, match_image_urls).catch(() => {});
       }
 
-      toast.success("Product added — AI tagging & Image Match in background");
-      reset();
+      toast.success("Product added — AI tagging in background");
+      setForm(emptyForm());
       setAddOpen(false);
       load();
     } catch (e: any) {
@@ -250,10 +265,12 @@ export default function Products() {
 
   const handleDelete = async (p: Product) => {
     if (!confirm(`Delete "${p.name}"?`)) return;
-    if (p.image_path) {
-      await supabase.storage.from("product-images").remove([p.image_path]);
-    }
-    // Remove matching Image Match entry to free up the limit
+    const allPaths = [
+      ...(p.match_image_paths || []),
+      ...(p.real_image_paths || []),
+      ...(p.image_path && !(p.match_image_paths || []).includes(p.image_path) ? [p.image_path] : []),
+    ];
+    if (allPaths.length) await supabase.storage.from("product-images").remove(allPaths);
     if (user) {
       await supabase.from("product_images" as any).delete().eq("user_id", user.id).eq("product_name", p.name);
     }
@@ -262,84 +279,79 @@ export default function Products() {
     load();
   };
 
-  const retag = async (p: Product) => {
-    const { error } = await supabase.functions.invoke("tag-product-image", { body: { productId: p.id } });
-    if (error) toast.error(error.message);
-    else { toast.success("Re-tagged"); load(); }
-  };
-
   const openEdit = (p: Product) => {
-    setEdit({
-      open: true,
-      product: p,
+    setEditProduct(p);
+    setEditForm({
       name: p.name,
       price: String(p.price ?? ""),
       description: p.description ?? "",
       category: p.category ?? "",
       stock: String(p.stock ?? ""),
-      file: null,
+      matchFiles: [null, null],
+      realFiles: [null, null],
     });
+    setEditOpen(true);
   };
 
   const saveEdit = async () => {
-    if (!user || !edit.product) return;
-    if (!edit.name.trim()) return toast.error("Name required");
+    if (!user || !editProduct) return;
+    if (!editForm.name.trim()) return toast.error("Name required");
     setEditSaving(true);
     try {
-      let image_url = edit.product.image_url;
-      let image_path = edit.product.image_path;
-      let imageChanged = false;
+      const updates: any = {
+        name: editForm.name.trim(),
+        price: Number(editForm.price) || 0,
+        description: editForm.description.trim() || null,
+        category: editForm.category.trim() || null,
+        stock: Number(editForm.stock) || 0,
+      };
 
-      if (edit.file) {
-        const ext = edit.file.name.split(".").pop()?.toLowerCase() || "jpg";
-        const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("product-images").upload(path, edit.file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-        if (upErr) throw upErr;
-        const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
-        // remove old
-        if (image_path) {
-          await supabase.storage.from("product-images").remove([image_path]);
-        }
-        image_url = pub.publicUrl;
-        image_path = path;
+      const newMatch = editForm.matchFiles.filter(Boolean) as File[];
+      const newReal = editForm.realFiles.filter(Boolean) as File[];
+
+      let imageChanged = false;
+      let matchUrlsForSync: string[] | null = null;
+
+      if (newMatch.length) {
+        const old = editProduct.match_image_paths || [];
+        if (old.length) await supabase.storage.from("product-images").remove(old);
+        const ups = await Promise.all(newMatch.map(uploadOne));
+        updates.match_image_urls = ups.map((u) => u.url);
+        updates.match_image_paths = ups.map((u) => u.path);
+        updates.image_url = ups[0].url;
+        updates.image_path = ups[0].path;
+        updates.ai_tags_status = "pending";
+        updates.ai_tags = null;
         imageChanged = true;
+        matchUrlsForSync = updates.match_image_urls;
       }
 
-      const { error: updErr } = await supabase
-        .from("products" as any)
-        .update({
-          name: edit.name.trim(),
-          price: Number(edit.price) || 0,
-          description: edit.description.trim() || null,
-          category: edit.category.trim() || null,
-          stock: Number(edit.stock) || 0,
-          image_url,
-          image_path,
-          ...(imageChanged ? { ai_tags_status: "pending", ai_tags: null } : {}),
-        })
-        .eq("id", edit.product.id);
+      if (newReal.length) {
+        const old = editProduct.real_image_paths || [];
+        if (old.length) await supabase.storage.from("product-images").remove(old);
+        const ups = await Promise.all(newReal.map(uploadOne));
+        updates.real_image_urls = ups.map((u) => u.url);
+        updates.real_image_paths = ups.map((u) => u.path);
+      }
+
+      const { error: updErr } = await supabase.from("products" as any).update(updates).eq("id", editProduct.id);
       if (updErr) throw updErr;
 
       if (imageChanged) {
-        supabase.functions.invoke("tag-product-image", { body: { productId: edit.product.id } }).then(({ error }) => {
+        supabase.functions.invoke("tag-product-image", { body: { productId: editProduct.id } }).then(({ error }) => {
           if (error) toast.error("Auto-tag failed: " + error.message);
-          else { load(); }
+          else load();
         });
       }
-      // Always re-sync to Image Match (name/price/desc/image may have changed)
-      autoAddToImageMatch({
-        id: edit.product.id,
-        name: edit.name.trim(),
-        price: Number(edit.price) || 0,
-        description: edit.description.trim() || null,
-        image_url,
-      }).catch(() => {});
+      syncImageMatch(
+        updates.name,
+        updates.price,
+        updates.description,
+        matchUrlsForSync || editProduct.match_image_urls || (editProduct.image_url ? [editProduct.image_url] : []),
+      ).catch(() => {});
 
       toast.success("Product updated");
-      setEdit({ ...edit, open: false });
+      setEditOpen(false);
       load();
     } catch (e: any) {
       toast.error(e.message || "Failed");
@@ -348,100 +360,80 @@ export default function Products() {
     }
   };
 
-  const setMatchStatusFor = (id: string, s: "loading" | "success" | "error" | null) => {
-    setMatchStatus((prev) => {
-      const next = { ...prev };
-      if (s === null) delete next[id]; else next[id] = s;
-      return next;
-    });
-  };
-
-  const autoAddToImageMatch = async (p: { id: string; name: string; price: number; description: string | null; image_url: string | null }) => {
-    if (!user || !p.image_url) return;
-    try {
-      const { data: existing } = await supabase
-        .from("product_images" as any)
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("product_name", p.name)
-        .maybeSingle();
-
-      const hash = await hashFromUrl(p.image_url);
-      const payload: any = {
-        product_name: p.name,
-        product_price: p.price ? String(p.price) : null,
-        product_description: p.description || null,
-        product_image_url: p.image_url,
-        image_hash: hash,
-      };
-
-      if (existing) {
-        await supabase.from("product_images" as any).update(payload).eq("id", (existing as any).id);
-      } else {
-        const { count } = await supabase
-          .from("product_images" as any)
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id);
-        if ((count || 0) >= IMAGE_MATCH_MAX) {
-          toast.error(`Image Match limit reached (${IMAGE_MATCH_MAX}). Contact admin to increase.`);
-          return;
-        }
-        await supabase.from("product_images" as any).insert({ user_id: user.id, ...payload });
+  // Sync all match images for a product into product_images (one row per image)
+  const syncImageMatch = async (name: string, price: number, description: string | null, matchUrls: string[]) => {
+    if (!user || !matchUrls?.length) return;
+    await supabase.from("product_images" as any).delete().eq("user_id", user.id).eq("product_name", name);
+    for (const url of matchUrls) {
+      try {
+        const hash = await hashFromUrl(url);
+        await supabase.from("product_images" as any).insert({
+          user_id: user.id,
+          product_name: name,
+          product_price: price ? String(price) : null,
+          product_description: description || null,
+          product_image_url: url,
+          image_hash: hash,
+        });
+      } catch (e) {
+        console.error("syncImageMatch row failed", e);
       }
-    } catch (e: any) {
-      console.error("auto image match failed", e);
     }
   };
 
-  const addToImageMatch = async (p: Product) => {
-    setMatchStatusFor(p.id, "loading");
-    try {
-      await autoAddToImageMatch(p);
-      setMatchStatusFor(p.id, "success");
-      toast.success("Synced to Image Match");
-      setTimeout(() => setMatchStatusFor(p.id, null), 2000);
-    } catch (e: any) {
-      setMatchStatusFor(p.id, "error");
-      toast.error(e.message || "Failed");
-      setTimeout(() => setMatchStatusFor(p.id, null), 2000);
-    }
-  };
+  const FileSlot = ({ value, onChange, label }: { value: File | null; onChange: (f: File | null) => void; label: string }) => (
+    <div>
+      <Input type="file" accept="image/*" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+      {value && <p className="text-[11px] text-muted-foreground mt-1 truncate">✓ {value.name}</p>}
+      {!value && <p className="text-[11px] text-muted-foreground mt-1">{label}</p>}
+    </div>
+  );
 
   const ProductActions = ({ p }: { p: Product }) => (
     <div className="flex gap-2 flex-wrap">
       <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
         <Pencil className="size-3 mr-1" /> Edit
       </Button>
-      <Badge variant="secondary" className="text-[10px] gap-1">
-        <Camera className="size-3" /> Image Match: Auto
-      </Badge>
       <Button size="sm" variant="destructive" onClick={() => handleDelete(p)}>
         <Trash2 className="size-3 mr-1" /> Delete
       </Button>
     </div>
   );
 
+  const atLimit = items.length >= PRODUCT_MAX;
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">Products</h1>
-          <p className="text-sm text-muted-foreground">
-            Upload product images. AI will auto-tag them so customers can find them by sending a photo on WhatsApp.
+          <p className="text-sm text-muted-foreground max-w-2xl">
+            Upload up to <b>{PRODUCT_MAX} products</b>. For each product you can add{" "}
+            <b>{MATCH_MAX} match images</b> (used to recognize photos customers send on WhatsApp) and{" "}
+            <b>{REAL_MAX} real images</b> (sent to the customer when they ask for the product photo).
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => { setCsvRows([]); setCsvOpen(true); }}>
+          <Button variant="outline" onClick={() => { setCsvRows([]); setCsvOpen(true); }} disabled={atLimit}>
             <FileSpreadsheet className="size-4 mr-2" /> Import CSV
           </Button>
-          <Button onClick={() => { reset(); setAddOpen(true); }}>
+          <Button onClick={() => { setForm(emptyForm()); setAddOpen(true); }} disabled={atLimit}>
             <Plus className="size-4 mr-2" /> New product
           </Button>
         </div>
       </div>
 
-      <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) reset(); }}>
-        <DialogContent className="max-w-lg">
+      <Card className="p-3 flex items-center gap-3 bg-muted/40">
+        <Info className="size-4 text-muted-foreground flex-shrink-0" />
+        <div className="text-sm flex-1">
+          <b>{items.length} / {PRODUCT_MAX}</b> products used.{" "}
+          {atLimit && <span className="text-destructive">Limit reached — delete a product or contact admin to increase.</span>}
+        </div>
+        <Progress value={(items.length / PRODUCT_MAX) * 100} className="w-32 h-2" />
+      </Card>
+
+      <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) setForm(emptyForm()); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add product</DialogTitle>
           </DialogHeader>
@@ -466,9 +458,49 @@ export default function Products() {
               <Label>Description</Label>
               <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
-            <div className="md:col-span-2">
-              <Label>Image *</Label>
-              <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+
+            <div className="md:col-span-2 border rounded-lg p-3 space-y-2 bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Camera className="size-4 text-primary" />
+                <Label className="text-sm font-semibold">Match images (max {MATCH_MAX}) *</Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Used to <b>recognize</b> photos customers send. Upload the same image style customers usually share (e.g. the image you posted on your website / Facebook).
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {[0, 1].map((i) => (
+                  <FileSlot
+                    key={i}
+                    value={form.matchFiles[i]}
+                    onChange={(f) => {
+                      const next = [...form.matchFiles]; next[i] = f; setForm({ ...form, matchFiles: next });
+                    }}
+                    label={i === 0 ? "Match image #1 (required)" : "Match image #2 (optional)"}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="md:col-span-2 border rounded-lg p-3 space-y-2 bg-muted/30">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="size-4 text-primary" />
+                <Label className="text-sm font-semibold">Real product images (max {REAL_MAX})</Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Sent to the customer when they ask for the <b>real product photo</b>. Upload your high-quality product photos here.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {[0, 1].map((i) => (
+                  <FileSlot
+                    key={i}
+                    value={form.realFiles[i]}
+                    onChange={(f) => {
+                      const next = [...form.realFiles]; next[i] = f; setForm({ ...form, realFiles: next });
+                    }}
+                    label={`Real image #${i + 1} (optional)`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -485,20 +517,10 @@ export default function Products() {
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-semibold">Your products ({items.length})</h2>
           <div className="inline-flex rounded-md border bg-background p-0.5">
-            <Button
-              size="sm"
-              variant={view === "list" ? "secondary" : "ghost"}
-              onClick={() => setView("list")}
-              className="h-8"
-            >
+            <Button size="sm" variant={view === "list" ? "secondary" : "ghost"} onClick={() => setView("list")} className="h-8">
               <List className="size-4 mr-1" /> List
             </Button>
-            <Button
-              size="sm"
-              variant={view === "grid" ? "secondary" : "ghost"}
-              onClick={() => setView("grid")}
-              className="h-8"
-            >
+            <Button size="sm" variant={view === "grid" ? "secondary" : "ghost"} onClick={() => setView("grid")} className="h-8">
               <LayoutGrid className="size-4 mr-1" /> Grid
             </Button>
           </div>
@@ -513,24 +535,21 @@ export default function Products() {
             {items.map((p) => (
               <Card key={p.id} className="p-3">
                 <div className="flex items-center gap-3">
-                  {p.image_url && (
-                    <img src={p.image_url} alt={p.name} className="w-20 h-20 rounded object-cover flex-shrink-0" />
-                  )}
+                  {p.image_url && <img src={p.image_url} alt={p.name} className="w-20 h-20 rounded object-cover flex-shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold truncate">{p.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {p.category || "—"} · Stock: {p.stock}
-                    </div>
-                    {p.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{p.description}</p>
-                    )}
+                    <div className="text-xs text-muted-foreground truncate">{p.category || "—"} · Stock: {p.stock}</div>
+                    {p.description && <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{p.description}</p>}
                     <div className="flex items-center gap-2 flex-wrap mt-1">
                       <Badge variant={p.ai_tags_status === "ready" ? "default" : "secondary"} className="text-[10px]">
                         AI: {p.ai_tags_status}
                       </Badge>
-                      {p.ai_tags && p.ai_tags_status === "ready" && (
-                        <span className="text-[10px] text-muted-foreground line-clamp-1">{p.ai_tags}</span>
-                      )}
+                      <Badge variant="outline" className="text-[10px] gap-1">
+                        <Camera className="size-3" /> Match: {(p.match_image_urls || []).length}/{MATCH_MAX}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px] gap-1">
+                        <ImageIcon className="size-3" /> Real: {(p.real_image_urls || []).length}/{REAL_MAX}
+                      </Badge>
                     </div>
                   </div>
                   <div className="flex-shrink-0 flex flex-col items-end gap-2">
@@ -545,31 +564,22 @@ export default function Products() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.map((p) => (
               <Card key={p.id} className="overflow-hidden">
-                {p.image_url && (
-                  <img src={p.image_url} alt={p.name} className="w-full h-40 object-cover" />
-                )}
+                {p.image_url && <img src={p.image_url} alt={p.name} className="w-full h-40 object-cover" />}
                 <div className="p-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="font-semibold">{p.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {p.category || "—"} · Stock: {p.stock}
-                      </div>
+                      <div className="text-sm text-muted-foreground">{p.category || "—"} · Stock: {p.stock}</div>
                     </div>
-                    <div className="font-bold">{p.price}</div>
+                    <div className="font-bold">৳{p.price}</div>
                   </div>
                   {p.description && <p className="text-xs text-muted-foreground line-clamp-2">{p.description}</p>}
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant={p.ai_tags_status === "ready" ? "default" : "secondary"}>
-                      AI: {p.ai_tags_status}
-                    </Badge>
+                    <Badge variant={p.ai_tags_status === "ready" ? "default" : "secondary"} className="text-[10px]">AI: {p.ai_tags_status}</Badge>
+                    <Badge variant="outline" className="text-[10px]"><Camera className="size-3 mr-1" />{(p.match_image_urls || []).length}/{MATCH_MAX}</Badge>
+                    <Badge variant="outline" className="text-[10px]"><ImageIcon className="size-3 mr-1" />{(p.real_image_urls || []).length}/{REAL_MAX}</Badge>
                   </div>
-                  {p.ai_tags && p.ai_tags_status === "ready" && (
-                    <p className="text-xs text-muted-foreground line-clamp-2"><b>Tags:</b> {p.ai_tags}</p>
-                  )}
-                  <div className="pt-2">
-                    <ProductActions p={p} />
-                  </div>
+                  <div className="pt-2"><ProductActions p={p} /></div>
                 </div>
               </Card>
             ))}
@@ -577,45 +587,85 @@ export default function Products() {
         )}
       </div>
 
-      <Dialog open={edit.open} onOpenChange={(o) => setEdit({ ...edit, open: o })}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit product</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="md:col-span-2">
               <Label>Name *</Label>
-              <Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+              <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
             </div>
             <div>
               <Label>Price</Label>
-              <Input type="number" value={edit.price} onChange={(e) => setEdit({ ...edit, price: e.target.value })} />
+              <Input type="number" value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} />
             </div>
             <div>
               <Label>Stock</Label>
-              <Input type="number" value={edit.stock} onChange={(e) => setEdit({ ...edit, stock: e.target.value })} />
+              <Input type="number" value={editForm.stock} onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })} />
             </div>
             <div className="md:col-span-2">
               <Label>Category</Label>
-              <Input value={edit.category} onChange={(e) => setEdit({ ...edit, category: e.target.value })} />
+              <Input value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })} />
             </div>
             <div className="md:col-span-2">
               <Label>Description</Label>
-              <Textarea rows={2} value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} />
+              <Textarea rows={2} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
             </div>
-            <div className="md:col-span-2">
-              <Label>Replace image (optional)</Label>
-              <Input type="file" accept="image/*" onChange={(e) => setEdit({ ...edit, file: e.target.files?.[0] || null })} />
-              {edit.product?.image_url && !edit.file && (
-                <img src={edit.product.image_url} alt="current" className="mt-2 w-24 h-24 object-cover rounded border" />
+
+            <div className="md:col-span-2 border rounded-lg p-3 space-y-2 bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Camera className="size-4 text-primary" />
+                <Label className="text-sm font-semibold">Match images (current: {(editProduct?.match_image_urls || []).length}/{MATCH_MAX})</Label>
+              </div>
+              {(editProduct?.match_image_urls || []).length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  {(editProduct?.match_image_urls || []).map((u, i) => (
+                    <img key={i} src={u} className="w-16 h-16 rounded object-cover border" />
+                  ))}
+                </div>
               )}
-              {edit.file && (
-                <p className="text-xs text-muted-foreground mt-1">New image will replace current and AI tags will regenerate.</p>
+              <p className="text-xs text-muted-foreground">Upload new files to <b>replace all</b> match images. Leave empty to keep current.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {[0, 1].map((i) => (
+                  <FileSlot
+                    key={i}
+                    value={editForm.matchFiles[i]}
+                    onChange={(f) => { const next = [...editForm.matchFiles]; next[i] = f; setEditForm({ ...editForm, matchFiles: next }); }}
+                    label={`Replace match #${i + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="md:col-span-2 border rounded-lg p-3 space-y-2 bg-muted/30">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="size-4 text-primary" />
+                <Label className="text-sm font-semibold">Real images (current: {(editProduct?.real_image_urls || []).length}/{REAL_MAX})</Label>
+              </div>
+              {(editProduct?.real_image_urls || []).length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  {(editProduct?.real_image_urls || []).map((u, i) => (
+                    <img key={i} src={u} className="w-16 h-16 rounded object-cover border" />
+                  ))}
+                </div>
               )}
+              <p className="text-xs text-muted-foreground">Upload new files to <b>replace all</b> real images. Leave empty to keep current.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {[0, 1].map((i) => (
+                  <FileSlot
+                    key={i}
+                    value={editForm.realFiles[i]}
+                    onChange={(f) => { const next = [...editForm.realFiles]; next[i] = f; setEditForm({ ...editForm, realFiles: next }); }}
+                    label={`Replace real #${i + 1}`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEdit({ ...edit, open: false })} disabled={editSaving}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={editSaving}>Cancel</Button>
             <Button onClick={saveEdit} disabled={editSaving}>
               {editSaving && <Loader2 className="size-4 animate-spin mr-2" />}
               Save
@@ -634,9 +684,7 @@ export default function Products() {
               <Button variant="outline" size="sm" onClick={downloadSampleCsv}>
                 <Download className="size-4 mr-1" /> Download sample CSV
               </Button>
-              <span className="text-xs text-muted-foreground">
-                Columns: name, price, description, category, stock, image_url
-              </span>
+              <span className="text-xs text-muted-foreground">Columns: name, price, description, category, stock, image_url</span>
             </div>
             <Input type="file" accept=".csv,text/csv" onChange={(e) => handleCsvFile(e.target.files?.[0] || null)} />
             {csvRows.length > 0 && (
@@ -644,28 +692,22 @@ export default function Products() {
                 <table className="w-full text-xs">
                   <thead className="bg-muted sticky top-0">
                     <tr>
-                      <th className="text-left p-2">Name</th>
-                      <th className="text-left p-2">Price</th>
-                      <th className="text-left p-2">Category</th>
-                      <th className="text-left p-2">Stock</th>
+                      <th className="text-left p-2">Name</th><th className="text-left p-2">Price</th>
+                      <th className="text-left p-2">Category</th><th className="text-left p-2">Stock</th>
                       <th className="text-left p-2">Image</th>
                     </tr>
                   </thead>
                   <tbody>
                     {csvRows.slice(0, 100).map((r, i) => (
                       <tr key={i} className="border-t">
-                        <td className="p-2">{r.name}</td>
-                        <td className="p-2">{r.price}</td>
-                        <td className="p-2">{r.category}</td>
-                        <td className="p-2">{r.stock}</td>
+                        <td className="p-2">{r.name}</td><td className="p-2">{r.price}</td>
+                        <td className="p-2">{r.category}</td><td className="p-2">{r.stock}</td>
                         <td className="p-2 truncate max-w-[200px]">{r.image_url}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {csvRows.length > 100 && (
-                  <div className="p-2 text-xs text-muted-foreground">+ {csvRows.length - 100} more rows</div>
-                )}
+                {csvRows.length > 100 && <div className="p-2 text-xs text-muted-foreground">+ {csvRows.length - 100} more rows</div>}
               </div>
             )}
             {csvImporting && <Progress value={csvProgress} />}
