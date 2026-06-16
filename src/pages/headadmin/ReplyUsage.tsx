@@ -140,7 +140,7 @@ export default function ReplyUsage() {
   };
 
   const resetUsage = async (r: Row) => {
-    if (!confirm(`Reset usage counter for ${r.email}?`)) return;
+    if (!confirm(`Reset reply counter for ${r.email}?`)) return;
     const { data: sub } = await supabase
       .from("subscriptions").select("id")
       .eq("user_id", r.user_id).order("created_at", { ascending: false }).limit(1).maybeSingle();
@@ -154,6 +154,15 @@ export default function ReplyUsage() {
     }).eq("id", sub.id);
     if (error) toast.error(error.message); else { toast.success("Usage reset"); load(); }
   };
+
+  const purgeUser = async (r: Row) => {
+    if (!confirm(`⚠️ Delete ALL token usage history & cost for ${r.email}?\n\nThis will:\n• Erase every AI reply log\n• Reset replies used to 0\n• Start the user fresh\n\nThis cannot be undone.`)) return;
+    const { error } = await supabase.rpc("headadmin_purge_user_usage", { _user_id: r.user_id });
+    if (error) { toast.error(error.message); return; }
+    toast.success("User usage fully wiped — fresh start");
+    load();
+  };
+
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
