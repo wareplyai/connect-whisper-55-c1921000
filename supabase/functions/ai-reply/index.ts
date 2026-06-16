@@ -404,6 +404,71 @@ async function describeImageWithOpenAI(apiKey: string, imageUrl: string): Promis
   return (data.choices?.[0]?.message?.content || "").trim();
 }
 
+// Direct vision-based product matching. Sends the customer image PLUS each
+// product's match images to OpenAI vision and asks which product (by index)
+// is the same item. Much more accurate than keyword similarity.
+// Returns the matched product row + confidence, or null.
+async function matchProductByVision(
+  apiKey: string,
+  customerImageUrl: string,
+  products: Array<{ id: string; name: string; match_image_urls: string[] | null; image_url: string | null }>,
+): Promise<{ product: any; confidence: number } | null> {
+  // Build candidate list: 1 image per product (first match image, or fallback to image_url).
+  const candidates = products
+    .map((p) => {
+      const img = (Array.isArray(p.match_image_urls) && p.match_image_urls[0]) || p.image_url || null;
+      return img ? { id: p.id, name: p.name, img, row: p } : null;
+    })
+    .filter(Boolean) as Array<{ id: string; name: string; img: string; row: any }>;
+  if (!candidates.length) return null;
+
+  // OpenAI vision can handle many images; cap at 20 to keep cost/latency sane.
+  const slice = candidates.slice(0, 20);
+
+  const content: any[] = [
+    {
+      type: "text",
+      text:
+        `You are a product visual-matching expert. The FIRST image is what the CUSTOMER sent. The remaining ${slice.length} images are CATALOG products (labeled 1..${slice.length}).\n\n` +
+        `Decide which catalog product (if any) is the SAME product the customer is asking about. Consider garment shape, print, pattern, colors, neckline, sleeve length, and overall look. Allow color variations of the SAME printed design to match. Reject clearly different products.\n\n` +
+        `Catalog:\n${slice.map((c, i) => `${i + 1}. ${c.name}`).join("\n")}\n\n` +
+        `Return STRICT JSON: {"index": <1-based number or 0 if none>, "confidence": <0-100 integer>, "reason": "<short>"}.`,
+    },
+    { type: "image_url", image_url: { url: customerImageUrl } },
+    ...slice.map((c) => ({ type: "image_url" as const, image_url: { url: c.img } })),
+  ];
+
+  try {
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        response_format: { type: "json_object" },
+        messages: [{ role: "user", content }],
+        max_tokens: 200,
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      console.log("[vision-match] api error", data?.error?.message || r.status);
+      return null;
+    }
+    const raw = data.choices?.[0]?.message?.content || "{}";
+    const parsed = JSON.parse(raw);
+    const idx = Number(parsed?.index) || 0;
+    const conf = Math.max(0, Math.min(100, Number(parsed?.confidence) || 0));
+    console.log("[vision-match] result", { idx, conf, reason: parsed?.reason });
+    if (idx >= 1 && idx <= slice.length && conf >= 55) {
+      return { product: slice[idx - 1].row, confidence: conf };
+    }
+    return null;
+  } catch (e) {
+    console.log("[vision-match] failed:", (e as Error)?.message);
+    return null;
+  }
+}
+
 // Extracts structured fields (product_name, order_number) from optional image + caption.
 // Uses OpenAI vision when available; falls back to regex on the caption text.
 async function extractStructuredFromImage(opts: {
