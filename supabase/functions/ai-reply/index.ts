@@ -51,7 +51,8 @@ async function decryptKey(payload: string): Promise<string> {
 async function transcribeVoiceFile(
   audioUrl: string,
   prefetched?: { bytes: Uint8Array; mime: string } | null,
-): Promise<string> {
+): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string }> {
+  const sttModel = "google/gemini-2.5-flash";
   try {
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableKey) {
