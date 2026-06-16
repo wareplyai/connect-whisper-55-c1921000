@@ -36,7 +36,48 @@ export default function HeadAdminSettings() {
     supabase.from("profiles").select("id,email,full_name").order("email").then(({ data }) => {
       setUsers((data as any) || []);
     });
+    // Load AI task limits
+    (supabase as any).rpc("get_ai_task_limits").then(({ data }: any) => {
+      const r = Array.isArray(data) ? data[0] : data;
+      if (r) setAiLimits({
+        vision_detail: r.vision_detail || "low",
+        image_describe_max_tokens: r.image_describe_max_tokens ?? 150,
+        image_extract_max_tokens: r.image_extract_max_tokens ?? 150,
+        vision_match_max_tokens: r.vision_match_max_tokens ?? 100,
+        vision_match_max_candidates: r.vision_match_max_candidates ?? 8,
+        voice_transcribe_max_seconds: r.voice_transcribe_max_seconds ?? 60,
+        text_reply_max_tokens: r.text_reply_max_tokens ?? 600,
+      });
+    });
   }, []);
+
+  const [aiLimits, setAiLimits] = useState({
+    vision_detail: "low" as "low" | "high" | "auto",
+    image_describe_max_tokens: 150,
+    image_extract_max_tokens: 150,
+    vision_match_max_tokens: 100,
+    vision_match_max_candidates: 8,
+    voice_transcribe_max_seconds: 60,
+    text_reply_max_tokens: 600,
+  });
+  const [aiLimitsSaving, setAiLimitsSaving] = useState(false);
+
+  const saveAiLimits = async () => {
+    setAiLimitsSaving(true);
+    const { error } = await (supabase as any).rpc("headadmin_update_ai_task_limits", {
+      _vision_detail: aiLimits.vision_detail,
+      _image_describe_max_tokens: aiLimits.image_describe_max_tokens,
+      _image_extract_max_tokens: aiLimits.image_extract_max_tokens,
+      _vision_match_max_tokens: aiLimits.vision_match_max_tokens,
+      _vision_match_max_candidates: aiLimits.vision_match_max_candidates,
+      _voice_transcribe_max_seconds: aiLimits.voice_transcribe_max_seconds,
+      _text_reply_max_tokens: aiLimits.text_reply_max_tokens,
+    });
+    setAiLimitsSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("AI task limits saved");
+  };
+
 
   const runBulkDelete = async () => {
     if (!bulk.user_id) { toast.error("Select a user"); return; }
