@@ -3166,23 +3166,43 @@ Deno.serve(async (req) => {
 
           const { data: productRows } = await admin
             .from("products")
-            .select("id, name, price, description, category, stock, image_url, ai_tags")
+            .select("id, name, price, description, category, stock, image_url, ai_tags, match_image_urls, real_image_urls")
             .eq("user_id", userId)
             .eq("is_active", true)
             .limit(500);
 
+          // ── Primary: direct vision comparison against each product's match image ──
+          let matched: any = null;
+          let matchedConf = 0;
+          try {
+            const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any);
+            if (vMatch?.product) {
+              matched = vMatch.product;
+              matchedConf = vMatch.confidence;
+            }
+          } catch (_e) { /* fall through */ }
+
+          // ── Fallback: keyword similarity ──
           let best: { score: number; row: any } | null = null;
-          const haystackQuery = [desc, structured.product_name, imageCaption].filter(Boolean).join(" ");
-          for (const p of productRows || []) {
-            const haystack = [p.name, p.description, p.category, p.ai_tags].filter(Boolean).join(" ");
-            const score = textSimilarity(haystackQuery, haystack);
-            if (!best || score > best.score) best = { score, row: p };
+          if (!matched) {
+            const haystackQuery = [desc, structured.product_name, imageCaption].filter(Boolean).join(" ");
+            for (const p of productRows || []) {
+              const haystack = [p.name, p.description, p.category, p.ai_tags].filter(Boolean).join(" ");
+              const score = textSimilarity(haystackQuery, haystack);
+              if (!best || score > best.score) best = { score, row: p };
+            }
+            if (best && best.score >= 0.25) {
+              matched = best.row;
+              matchedConf = Math.round(best.score * 100);
+            }
           }
 
-          if (best && best.score >= 0.80) {
-            const p = best.row;
-            const conf = Math.round(best.score * 100);
-            reply = `✅ Match found (${conf}% confidence)\n\n📦 ${p.name}\n💰 Price: ${p.price}\n${p.stock > 0 ? `📊 Stock: ${p.stock}` : "❌ Out of stock"}\n${p.description ? `\n${p.description}` : ""}`;
+          if (matched) {
+            const p = matched;
+            reply = `✅ Match found (${matchedConf}% confidence)\n\n📦 ${p.name}\n💰 Price: ${p.price}\n${p.stock > 0 ? `📊 Stock: ${p.stock}` : "❌ Out of stock"}\n${p.description ? `\n${p.description}` : ""}`;
+            // Attach a real image of the matched product (preferred) so customer
+            // immediately sees what we matched.
+            matchedProduct = p;
           } else {
             // Log for admin notification
             await admin.from("unmatched_image_queries").insert({
