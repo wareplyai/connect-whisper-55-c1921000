@@ -3155,10 +3155,24 @@ Deno.serve(async (req) => {
     // text flow can answer with the matched product details in a single reply.
     if (isImageMessage && imageUrl && messageText && !matchedProduct && keyRow?.platform === "openai" && apiKey) {
       try {
-        const desc = await describeImageWithOpenAI(apiKey, imageUrl);
-        const structured = await extractStructuredFromImage({
+        const descRes = await describeImageWithOpenAI(apiKey, imageUrl);
+        await logAiUsage(admin, {
+          userId, sessionId, messageId, fromNumber,
+          platform: keyRow.platform, model: descRes.model, keyScope: keyRow.scope || "user",
+          taskType: "image_describe",
+          promptTokens: descRes.promptTokens, completionTokens: descRes.completionTokens,
+        });
+        const desc = descRes.text;
+        const structRes = await extractStructuredFromImage({
           apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption,
         });
+        await logAiUsage(admin, {
+          userId, sessionId, messageId, fromNumber,
+          platform: keyRow.platform, model: structRes.model, keyScope: keyRow.scope || "user",
+          taskType: "image_extract",
+          promptTokens: structRes.promptTokens, completionTokens: structRes.completionTokens,
+        });
+        const structured = { product_name: structRes.product_name, order_number: structRes.order_number };
         if (messageId) {
           await admin.from("incoming_messages").update({
             extracted_product_name: structured.product_name,
@@ -3177,9 +3191,15 @@ Deno.serve(async (req) => {
         // ── Primary: direct vision comparison against each product's match image ──
         try {
           const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any);
+          await logAiUsage(admin, {
+            userId, sessionId, messageId, fromNumber,
+            platform: keyRow.platform, model: vMatch.model, keyScope: keyRow.scope || "user",
+            taskType: "vision_match",
+            promptTokens: vMatch.promptTokens, completionTokens: vMatch.completionTokens,
+          });
           if (vMatch?.product) {
             matchedProduct = vMatch.product;
-            console.log("[ai-reply] image+text vision-match", { name: vMatch.product?.name, conf: vMatch.confidence });
+            console.log("[ai-reply] image+text vision-match", { name: vMatch.product?.name, conf: (vMatch as any).confidence });
           }
         } catch (_e) { /* fall through to text similarity */ }
 
