@@ -3199,7 +3199,7 @@ Deno.serve(async (req) => {
 
           if (matched) {
             const p = matched;
-            reply = `✅ Match found (${matchedConf}% confidence)\n\n📦 ${p.name}\n💰 Price: ${p.price}\n${p.stock > 0 ? `📊 Stock: ${p.stock}` : "❌ Out of stock"}\n${p.description ? `\n${p.description}` : ""}`;
+            reply = `আপনি যে ছবিটি দিয়েছেন তার ডিটেইলস নিচে দেওয়া হলো:\n\nProduct Name: ${p.name}\nPrice: ${p.price}${p.description ? `\nDescription: ${p.description}` : ""}`;
             // Attach a real image of the matched product (preferred) so customer
             // immediately sees what we matched.
             matchedProduct = p;
