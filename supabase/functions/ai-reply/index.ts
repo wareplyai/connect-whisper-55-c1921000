@@ -3282,6 +3282,41 @@ Deno.serve(async (req) => {
           const { error: tokenError } = await admin.rpc("consume_tokens", { _user_id: userId, _tokens: aiTokensUsed });
           if (tokenError) console.log("[ai-reply] consume_tokens failed:", tokenError.message);
         }
+
+        // Per-reply usage + cost log
+        try {
+          if ((aiPromptTokens + aiCompletionTokens) > 0 && aiModelUsed) {
+            const { data: priceRow } = await admin
+              .from("ai_model_pricing")
+              .select("input_price_per_1m_usd, output_price_per_1m_usd")
+              .eq("platform", keyRow.platform)
+              .eq("model", aiModelUsed)
+              .maybeSingle();
+            const inP = Number(priceRow?.input_price_per_1m_usd) || 0;
+            const outP = Number(priceRow?.output_price_per_1m_usd) || 0;
+            const inputCost = (aiPromptTokens / 1_000_000) * inP;
+            const outputCost = (aiCompletionTokens / 1_000_000) * outP;
+            await admin.from("ai_usage_logs").insert({
+              user_id: userId,
+              session_id: sessionId,
+              incoming_message_id: messageId,
+              from_number: fromNumber,
+              platform: keyRow.platform,
+              model: aiModelUsed,
+              key_scope: keyRow.scope || "user",
+              prompt_tokens: aiPromptTokens,
+              completion_tokens: aiCompletionTokens,
+              total_tokens: aiPromptTokens + aiCompletionTokens,
+              input_price_per_1m_usd: inP,
+              output_price_per_1m_usd: outP,
+              input_cost_usd: inputCost,
+              output_cost_usd: outputCost,
+              total_cost_usd: inputCost + outputCost,
+            });
+          }
+        } catch (costErr) {
+          console.log("[ai-reply] usage log failed:", (costErr as Error)?.message);
+        }
       } catch (qErr) {
         console.log("[ai-reply] quota tracking failed:", (qErr as Error)?.message);
       }
