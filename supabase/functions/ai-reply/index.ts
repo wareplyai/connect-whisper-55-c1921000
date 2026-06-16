@@ -1992,6 +1992,8 @@ Deno.serve(async (req) => {
     // and expose transcribed_text so the inbox/AI agent can use the transcript as the message text.
     let voiceTranscript = "";
     let voiceUploadedMime: string | null = null;
+    // Captured here so we can log STT token usage AFTER `admin`/`userId` exist further down.
+    let pendingSttUsage: { promptTokens: number; completionTokens: number; model: string } | null = null;
     {
       const audioUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
       const lowerType0 = messageType.toLowerCase();
