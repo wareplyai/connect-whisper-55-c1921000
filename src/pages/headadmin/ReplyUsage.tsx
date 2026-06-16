@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { RefreshCw, Pencil, RotateCcw, BarChart3, DollarSign, Cpu, Users } from "lucide-react";
+import { RefreshCw, Pencil, RotateCcw, BarChart3, DollarSign, Cpu, Users, Trash2 } from "lucide-react";
 
 interface Row {
   user_id: string;
@@ -140,7 +140,7 @@ export default function ReplyUsage() {
   };
 
   const resetUsage = async (r: Row) => {
-    if (!confirm(`Reset usage counter for ${r.email}?`)) return;
+    if (!confirm(`Reset reply counter for ${r.email}?`)) return;
     const { data: sub } = await supabase
       .from("subscriptions").select("id")
       .eq("user_id", r.user_id).order("created_at", { ascending: false }).limit(1).maybeSingle();
@@ -154,6 +154,15 @@ export default function ReplyUsage() {
     }).eq("id", sub.id);
     if (error) toast.error(error.message); else { toast.success("Usage reset"); load(); }
   };
+
+  const purgeUser = async (r: Row) => {
+    if (!confirm(`⚠️ Delete ALL token usage history & cost for ${r.email}?\n\nThis will:\n• Erase every AI reply log\n• Reset replies used to 0\n• Start the user fresh\n\nThis cannot be undone.`)) return;
+    const { error } = await supabase.rpc("headadmin_purge_user_usage", { _user_id: r.user_id });
+    if (error) { toast.error(error.message); return; }
+    toast.success("User usage fully wiped — fresh start");
+    load();
+  };
+
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
@@ -237,9 +246,11 @@ export default function ReplyUsage() {
                   <TableCell className="text-right tabular-nums font-semibold text-emerald-600">{fmtUSD(r.total_cost_usd)}</TableCell>
                   <TableCell className="text-xs">{r.max_tokens.toLocaleString()}</TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(r)} title="Edit"><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => resetUsage(r)} title="Reset usage"><RotateCcw className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(r)} title="Edit limits"><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => resetUsage(r)} title="Reset reply counter"><RotateCcw className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => purgeUser(r)} title="Delete ALL usage & cost history (fresh start)" className="text-destructive hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
+
                 </TableRow>
               );
             })}
@@ -258,10 +269,13 @@ export default function ReplyUsage() {
               <p className="text-xs text-muted-foreground mt-1">Overrides plan default. Set 0 to disable AI replies.</p>
             </div>
             <div>
-              <Label>Max tokens per reply</Label>
-              <Input type="number" min={50} max={8000} value={tokens} onChange={(e) => setTokens(e.target.value)} />
-              <p className="text-xs text-muted-foreground mt-1">Caps the AI output length for this user. Output never exceeds this — your API key won't be charged for more output tokens.</p>
+              <Label>Max tokens per reply (TOTAL budget: input + output)</Label>
+              <Input type="number" min={150} max={8000} value={tokens} onChange={(e) => setTokens(e.target.value)} />
+              <p className="text-xs text-muted-foreground mt-1">
+                Hard cap on combined prompt + completion tokens for one reply. If the system prompt + chat history exceeds the budget, the oldest history turns and extra context are trimmed automatically so total usage stays within this limit. Min 150, max 8000.
+              </p>
             </div>
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEdit(null)}>Cancel</Button>
