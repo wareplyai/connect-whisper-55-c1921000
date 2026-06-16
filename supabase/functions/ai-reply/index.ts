@@ -140,7 +140,7 @@ async function transcribeVoiceFile(
                 { inline_data: { mime_type: audioMime, data: b64 } },
               ],
             }],
-            generationConfig: { temperature: 0 },
+            generationConfig: { temperature: 0, maxOutputTokens: 500 },
           }),
         },
       );
