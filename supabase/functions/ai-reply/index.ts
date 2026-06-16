@@ -136,7 +136,7 @@ async function callAI(opts: {
   history?: Array<{ role: "user" | "assistant"; content: string }>;
   maxTokens?: number;
   temperature?: number;
-}): Promise<{ text: string; tokens: number }> {
+}): Promise<{ text: string; tokens: number; promptTokens: number; completionTokens: number }> {
   const { platform, model, apiKey, systemPrompt, userMessage } = opts;
   const history = Array.isArray(opts.history) ? opts.history.filter((m) => m && m.content && m.content.trim()) : [];
   const maxTokens = Math.max(50, Math.min(4000, Number(opts.maxTokens) || 2000));
@@ -163,9 +163,9 @@ async function callAI(opts: {
     const data = await r.json();
     if (!r.ok) throw new Error(data?.error?.message || `AI error ${r.status}`);
     const text = data.choices?.[0]?.message?.content?.trim() || "";
-    // Only count completion tokens — max_tokens setting limits output, not prompt
-    const tokens = Number(data?.usage?.completion_tokens) || 0;
-    return { text, tokens } as any;
+    const promptTokens = Number(data?.usage?.prompt_tokens) || 0;
+    const completionTokens = Number(data?.usage?.completion_tokens) || 0;
+    return { text, tokens: completionTokens, promptTokens, completionTokens };
   }
 
   if (platform === "gemini") {
@@ -192,9 +192,9 @@ async function callAI(opts: {
     if (!r.ok) throw new Error(data?.error?.message || `Gemini error ${r.status}`);
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
     const um = data?.usageMetadata || {};
-    // Only count output tokens — max_tokens setting limits output, not prompt
-    const tokens = Number(um.candidatesTokenCount) || 0;
-    return { text, tokens } as any;
+    const promptTokens = Number(um.promptTokenCount) || 0;
+    const completionTokens = Number(um.candidatesTokenCount) || 0;
+    return { text, tokens: completionTokens, promptTokens, completionTokens };
   }
 
   throw new Error(`Unsupported platform: ${platform}`);
@@ -3001,6 +3001,9 @@ Deno.serve(async (req) => {
 
     let reply = "";
     let aiTokensUsed = 0;
+    let aiPromptTokens = 0;
+    let aiCompletionTokens = 0;
+    let aiModelUsed = "";
 
     // ---- Image-message branch: vision describe + product match (image-only) ----
     // Only fire the "image received but couldn't open" fallback when there is REAL
@@ -3108,13 +3111,15 @@ Deno.serve(async (req) => {
 
         const memoryInstruction = `\n\nCONVERSATION MEMORY RULES:\n- The previous turns of this WhatsApp chat are provided as message history above.\n- Use that history to remember which products were already shown / discussed with this customer.\n- If the customer says things like "order korte chai" / "ata nibo" / "dam koto" / "price koto" / "ar ekta dao" without naming a product, refer to the most recently discussed product (see RECENTLY MATCHED PRODUCT block if present, otherwise the last product mentioned in history).\n- NEVER ask the customer to repeat info (name, address, product) they already provided in the history.\n- NEVER reply "I don't have info about this product" / "এই পণ্যের তথ্য নেই" if a RECENTLY MATCHED PRODUCT block is provided above — use those details directly.\n- Maintain natural conversation continuity; do not greet again if you already greeted in this chat.`;
 
+        const resolvedModel = keyRow.model && keyRow.model !== "default" ? keyRow.model : (
+          keyRow.platform === "openai" ? "gpt-4o-mini" :
+          keyRow.platform === "gemini" ? "gemini-1.5-flash" :
+          "deepseek-chat"
+        );
+        aiModelUsed = resolvedModel;
         const aiResult = await callAI({
           platform: keyRow.platform,
-          model: keyRow.model && keyRow.model !== "default" ? keyRow.model : (
-            keyRow.platform === "openai" ? "gpt-4o-mini" :
-            keyRow.platform === "gemini" ? "gemini-1.5-flash" :
-            "deepseek-chat"
-          ),
+          model: resolvedModel,
           apiKey,
           systemPrompt: finalSystemPrompt + recentMatchedProductBlock + memoryInstruction,
           userMessage: finalUserMessage,
@@ -3124,6 +3129,8 @@ Deno.serve(async (req) => {
         });
         reply = aiResult.text;
         aiTokensUsed = aiResult.tokens || 0;
+        aiPromptTokens = aiResult.promptTokens || 0;
+        aiCompletionTokens = aiResult.completionTokens || 0;
       } catch (aiErr: any) {
         if (messageId) {
           await admin.from("incoming_messages").update({
@@ -3274,6 +3281,41 @@ Deno.serve(async (req) => {
         if (aiTokensUsed > 0) {
           const { error: tokenError } = await admin.rpc("consume_tokens", { _user_id: userId, _tokens: aiTokensUsed });
           if (tokenError) console.log("[ai-reply] consume_tokens failed:", tokenError.message);
+        }
+
+        // Per-reply usage + cost log
+        try {
+          if ((aiPromptTokens + aiCompletionTokens) > 0 && aiModelUsed) {
+            const { data: priceRow } = await admin
+              .from("ai_model_pricing")
+              .select("input_price_per_1m_usd, output_price_per_1m_usd")
+              .eq("platform", keyRow.platform)
+              .eq("model", aiModelUsed)
+              .maybeSingle();
+            const inP = Number(priceRow?.input_price_per_1m_usd) || 0;
+            const outP = Number(priceRow?.output_price_per_1m_usd) || 0;
+            const inputCost = (aiPromptTokens / 1_000_000) * inP;
+            const outputCost = (aiCompletionTokens / 1_000_000) * outP;
+            await admin.from("ai_usage_logs").insert({
+              user_id: userId,
+              session_id: sessionId,
+              incoming_message_id: messageId,
+              from_number: fromNumber,
+              platform: keyRow.platform,
+              model: aiModelUsed,
+              key_scope: keyRow.scope || "user",
+              prompt_tokens: aiPromptTokens,
+              completion_tokens: aiCompletionTokens,
+              total_tokens: aiPromptTokens + aiCompletionTokens,
+              input_price_per_1m_usd: inP,
+              output_price_per_1m_usd: outP,
+              input_cost_usd: inputCost,
+              output_cost_usd: outputCost,
+              total_cost_usd: inputCost + outputCost,
+            });
+          }
+        } catch (costErr) {
+          console.log("[ai-reply] usage log failed:", (costErr as Error)?.message);
         }
       } catch (qErr) {
         console.log("[ai-reply] quota tracking failed:", (qErr as Error)?.message);
