@@ -2486,7 +2486,7 @@ Deno.serve(async (req) => {
     if (pendingSttUsage && (pendingSttUsage.promptTokens + pendingSttUsage.completionTokens) > 0) {
       await logAiUsage(admin, {
         userId, sessionId, messageId: null, fromNumber,
-        platform: "lovable", model: pendingSttUsage.model, keyScope: "global",
+        platform: pendingSttUsage.platform, model: pendingSttUsage.model, keyScope: pendingSttUsage.keyScope,
         taskType: "voice_transcribe",
         promptTokens: pendingSttUsage.promptTokens,
         completionTokens: pendingSttUsage.completionTokens,
