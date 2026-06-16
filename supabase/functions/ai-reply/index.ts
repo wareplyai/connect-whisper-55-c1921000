@@ -163,7 +163,8 @@ async function callAI(opts: {
     const data = await r.json();
     if (!r.ok) throw new Error(data?.error?.message || `AI error ${r.status}`);
     const text = data.choices?.[0]?.message?.content?.trim() || "";
-    const tokens = Number(data?.usage?.total_tokens) || 0;
+    // Only count completion tokens — max_tokens setting limits output, not prompt
+    const tokens = Number(data?.usage?.completion_tokens) || 0;
     return { text, tokens } as any;
   }
 
