@@ -20,6 +20,18 @@ interface GlobalKey {
   created_at: string;
 }
 
+interface UserOverrideKey extends GlobalKey {
+  user_id: string;
+  user_email?: string | null;
+  user_name?: string | null;
+}
+
+interface UserOption {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+}
+
 const MODELS: Record<string, string[]> = {
   openai: [
     "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
