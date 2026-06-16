@@ -3317,6 +3317,36 @@ Deno.serve(async (req) => {
         image_caption: outgoingImageUrl ? reply : null,
       });
 
+      // Send additional real images (2nd photo) as a follow-up, no caption
+      for (const extraUrl of extraRealImages) {
+        try {
+          const extraSend = await sendViaGateway({
+            gateway: GATEWAY,
+            sessionId,
+            apiToken: session.api_token,
+            to: fromNumber,
+            message: "",
+            imageUrl: extraUrl,
+            showTyping: false,
+            accountProtection,
+          });
+          if (extraSend.ok) {
+            await admin.from("message_logs").insert({
+              user_id: userId, session_id: sessionId, to_number: extraSend.to,
+              message_type: "image",
+              payload: { auto_reply: true, source: "ai", image_url: extraUrl, product_id: outgoingImageProductId, follow_up: true },
+              status: "sent",
+              image_url: extraUrl,
+              image_caption: null,
+            });
+          } else {
+            console.log("[ai-reply] extra real image send failed:", extraSend.error);
+          }
+        } catch (e) {
+          console.log("[ai-reply] extra real image error:", (e as Error)?.message);
+        }
+      }
+
       // Increment monthly reply quota counter (auto-rolls period if expired)
       try {
         const { data: quotaResult, error: quotaError } = await admin.rpc("consume_reply_quota", { _user_id: userId });
