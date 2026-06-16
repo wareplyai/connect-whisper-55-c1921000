@@ -3646,6 +3646,7 @@ Deno.serve(async (req) => {
               platform: keyRow.platform,
               model: aiModelUsed,
               key_scope: keyRow.scope || "user",
+              task_type: "text_reply",
               prompt_tokens: aiPromptTokens,
               completion_tokens: aiCompletionTokens,
               total_tokens: aiPromptTokens + aiCompletionTokens,
