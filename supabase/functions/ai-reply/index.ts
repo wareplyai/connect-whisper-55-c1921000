@@ -438,12 +438,16 @@ function textSimilarity(a: string, b: string): number {
   return union === 0 ? 0 : inter / union;
 }
 
-async function describeImageWithOpenAI(apiKey: string, imageUrl: string): Promise<string> {
+async function describeImageWithOpenAI(
+  apiKey: string,
+  imageUrl: string,
+): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string }> {
+  const model = "gpt-4o-mini";
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         {
           role: "system",
@@ -457,7 +461,12 @@ async function describeImageWithOpenAI(apiKey: string, imageUrl: string): Promis
   });
   const data = await r.json();
   if (!r.ok) throw new Error(data?.error?.message || `Vision error ${r.status}`);
-  return (data.choices?.[0]?.message?.content || "").trim();
+  return {
+    text: (data.choices?.[0]?.message?.content || "").trim(),
+    promptTokens: Number(data?.usage?.prompt_tokens) || 0,
+    completionTokens: Number(data?.usage?.completion_tokens) || 0,
+    model,
+  };
 }
 
 // Direct vision-based product matching. Sends the customer image PLUS each
