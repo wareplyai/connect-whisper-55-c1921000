@@ -11,6 +11,13 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { RefreshCw, Pencil, RotateCcw, BarChart3, DollarSign, Cpu, Users, Trash2 } from "lucide-react";
 
+interface TaskBreakdownItem {
+  task_type: string;
+  count: number;
+  total_tokens: number;
+  total_cost_usd: number;
+}
+
 interface Row {
   user_id: string;
   email: string | null;
@@ -28,6 +35,8 @@ interface Row {
   total_cost_usd: number;
   reply_count: number;
   last_used_at: string | null;
+  task_breakdown: TaskBreakdownItem[] | null;
+  global_task_breakdown: TaskBreakdownItem[] | null;
 }
 
 interface Totals {
@@ -49,11 +58,43 @@ interface Detail {
   platform: string;
   model: string;
   key_scope: string | null;
+  task_type: string;
   prompt_tokens: number;
   completion_tokens: number;
   total_tokens: number;
   total_cost_usd: number;
 }
+
+const TASK_LABELS: Record<string, { label: string; desc: string; tone: string }> = {
+  text_reply: {
+    label: "Text reply",
+    desc: "Customer-er text question-er AI reply (main chat completion).",
+    tone: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  },
+  image_describe: {
+    label: "Image describe",
+    desc: "Customer-er pathano photo OpenAI vision diye describe kora (keywords).",
+    tone: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+  },
+  vision_match: {
+    label: "Vision match",
+    desc: "Customer-er image-ke catalog product image-er sathe vision diye match kora.",
+    tone: "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300",
+  },
+  image_extract: {
+    label: "Image extract",
+    desc: "Image theke product name / order number extract kora (vision JSON).",
+    tone: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  },
+  voice_transcribe: {
+    label: "Voice → Text",
+    desc: "Voice note Gemini diye Bangla/English text-e transcribe kora.",
+    tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  },
+};
+
+const taskMeta = (t: string) =>
+  TASK_LABELS[t] || { label: t, desc: "", tone: "bg-muted text-foreground" };
 
 const fmtUSD = (n: number) =>
   `$${(Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 6 })}`;
