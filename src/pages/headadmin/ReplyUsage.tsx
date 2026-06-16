@@ -382,11 +382,46 @@ export default function ReplyUsage() {
               </Card>
             </div>
 
+            {/* Per-task breakdown for this user */}
+            {Array.isArray(detailUser?.task_breakdown) && (detailUser?.task_breakdown?.length || 0) > 0 && (
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground mb-2">
+                  AI tasks the user-admin spent tokens on
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(detailUser?.task_breakdown || []).map((tb) => {
+                    const meta = taskMeta(tb.task_type);
+                    const gTok = (detailUser?.global_task_breakdown || []).find((g) => g.task_type === tb.task_type)?.total_tokens || 0;
+                    return (
+                      <Card key={tb.task_type} className="p-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${meta.tone}`}>
+                            {meta.label}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground tabular-nums">
+                            {tb.count} calls · {Number(tb.total_tokens || 0).toLocaleString()} tok
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-1">{meta.desc}</div>
+                        <div className="flex items-center justify-between gap-2 mt-1">
+                          <span className="text-[10px] text-muted-foreground">
+                            Global-key tokens: <span className="tabular-nums font-medium">{Number(gTok).toLocaleString()}</span>
+                          </span>
+                          <span className="text-[11px] font-semibold text-emerald-600 tabular-nums">{fmtUSD(tb.total_cost_usd)}</span>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-xs">When</TableHead>
+                    <TableHead className="text-xs">Task</TableHead>
                     <TableHead className="text-xs">From (customer)</TableHead>
                     <TableHead className="text-xs">Session #</TableHead>
                     <TableHead className="text-xs">Model</TableHead>
@@ -398,25 +433,33 @@ export default function ReplyUsage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {detailLoading && <TableRow><TableCell colSpan={9} className="text-center py-6">Loading…</TableCell></TableRow>}
+                  {detailLoading && <TableRow><TableCell colSpan={10} className="text-center py-6">Loading…</TableCell></TableRow>}
                   {!detailLoading && details.length === 0 && (
-                    <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground text-xs">No AI replies yet</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground text-xs">No AI replies yet</TableCell></TableRow>
                   )}
-                  {details.map((d) => (
-                    <TableRow key={d.id}>
-                      <TableCell className="text-xs whitespace-nowrap">{new Date(d.created_at).toLocaleString()}</TableCell>
-                      <TableCell className="text-xs">{d.from_number || "—"}</TableCell>
-                      <TableCell className="text-xs">{d.session_phone || "—"}</TableCell>
-                      <TableCell className="text-xs">{d.platform}/{d.model}</TableCell>
-                      <TableCell className="text-xs">
-                        <Badge variant={d.key_scope === "global" ? "default" : "secondary"} className="text-[10px]">{d.key_scope || "user"}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{d.prompt_tokens.toLocaleString()}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums">{d.completion_tokens.toLocaleString()}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums font-medium">{d.total_tokens.toLocaleString()}</TableCell>
-                      <TableCell className="text-right text-xs tabular-nums font-semibold text-emerald-600">{fmtUSD(d.total_cost_usd)}</TableCell>
-                    </TableRow>
-                  ))}
+                  {details.map((d) => {
+                    const meta = taskMeta(d.task_type || "text_reply");
+                    return (
+                      <TableRow key={d.id}>
+                        <TableCell className="text-xs whitespace-nowrap">{new Date(d.created_at).toLocaleString()}</TableCell>
+                        <TableCell className="text-xs">
+                          <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${meta.tone}`} title={meta.desc}>
+                            {meta.label}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-xs">{d.from_number || "—"}</TableCell>
+                        <TableCell className="text-xs">{d.session_phone || "—"}</TableCell>
+                        <TableCell className="text-xs">{d.platform}/{d.model}</TableCell>
+                        <TableCell className="text-xs">
+                          <Badge variant={d.key_scope === "global" ? "default" : "secondary"} className="text-[10px]">{d.key_scope || "user"}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right text-xs tabular-nums">{d.prompt_tokens.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums">{d.completion_tokens.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums font-medium">{d.total_tokens.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums font-semibold text-emerald-600">{fmtUSD(d.total_cost_usd)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
