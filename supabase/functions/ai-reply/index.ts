@@ -541,21 +541,22 @@ async function matchProductByVision(
 // Uses OpenAI vision when available; falls back to regex on the caption text.
 async function extractStructuredFromImage(opts: {
   apiKey?: string | null; platform?: string | null; imageUrl?: string | null; caption?: string | null;
-}): Promise<{ product_name: string | null; order_number: string | null }> {
+}): Promise<{ product_name: string | null; order_number: string | null; promptTokens: number; completionTokens: number; model: string }> {
+  const model = "gpt-4o-mini";
   const caption = (opts.caption || "").trim();
   // Regex fallback for order number
   const orderRegex = /(?:order|invoice|inv|#)\s*[:#-]?\s*([A-Z0-9-]{4,20})/i;
   const fallbackOrder = caption.match(orderRegex)?.[1] || null;
 
   if (opts.platform !== "openai" || !opts.apiKey || !opts.imageUrl) {
-    return { product_name: null, order_number: fallbackOrder };
+    return { product_name: null, order_number: fallbackOrder, promptTokens: 0, completionTokens: 0, model };
   }
   try {
     const r = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${opts.apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model,
         response_format: { type: "json_object" },
         messages: [
           {
@@ -575,16 +576,21 @@ async function extractStructuredFromImage(opts: {
       }),
     });
     const data = await r.json();
+    const pt = Number(data?.usage?.prompt_tokens) || 0;
+    const ct = Number(data?.usage?.completion_tokens) || 0;
     if (!r.ok) throw new Error(data?.error?.message || `extract error ${r.status}`);
     const txt = data.choices?.[0]?.message?.content || "{}";
     const parsed = JSON.parse(txt);
     return {
       product_name: parsed.product_name ? String(parsed.product_name).slice(0, 200) : null,
       order_number: (parsed.order_number ? String(parsed.order_number).slice(0, 60) : null) || fallbackOrder,
+      promptTokens: pt,
+      completionTokens: ct,
+      model,
     };
   } catch (e) {
     console.log("[extract-structured] failed:", (e as Error)?.message);
-    return { product_name: null, order_number: fallbackOrder };
+    return { product_name: null, order_number: fallbackOrder, promptTokens: 0, completionTokens: 0, model };
   }
 }
 
