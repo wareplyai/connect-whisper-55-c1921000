@@ -3267,12 +3267,26 @@ Deno.serve(async (req) => {
         reply = "Sorry, image search needs an OpenAI API key. Please describe the product in text. ছবি match করতে OpenAI key দরকার, দয়া করে product টি text এ describe করুন।";
       } else {
         try {
-          const desc = await describeImageWithOpenAI(apiKey, imageUrl);
+          const descRes = await describeImageWithOpenAI(apiKey, imageUrl);
+          await logAiUsage(admin, {
+            userId, sessionId, messageId, fromNumber,
+            platform: keyRow.platform, model: descRes.model, keyScope: keyRow.scope || "user",
+            taskType: "image_describe",
+            promptTokens: descRes.promptTokens, completionTokens: descRes.completionTokens,
+          });
+          const desc = descRes.text;
 
           // Extract structured fields (product name + order number) and persist them.
-          const structured = await extractStructuredFromImage({
+          const structRes = await extractStructuredFromImage({
             apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption,
           });
+          await logAiUsage(admin, {
+            userId, sessionId, messageId, fromNumber,
+            platform: keyRow.platform, model: structRes.model, keyScope: keyRow.scope || "user",
+            taskType: "image_extract",
+            promptTokens: structRes.promptTokens, completionTokens: structRes.completionTokens,
+          });
+          const structured = { product_name: structRes.product_name, order_number: structRes.order_number };
           if (messageId) {
             await admin.from("incoming_messages").update({
               extracted_product_name: structured.product_name,
@@ -3294,9 +3308,15 @@ Deno.serve(async (req) => {
           let matchedConf = 0;
           try {
             const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any);
+            await logAiUsage(admin, {
+              userId, sessionId, messageId, fromNumber,
+              platform: keyRow.platform, model: vMatch.model, keyScope: keyRow.scope || "user",
+              taskType: "vision_match",
+              promptTokens: vMatch.promptTokens, completionTokens: vMatch.completionTokens,
+            });
             if (vMatch?.product) {
               matched = vMatch.product;
-              matchedConf = vMatch.confidence;
+              matchedConf = (vMatch as any).confidence || 0;
             }
           } catch (_e) { /* fall through */ }
 
@@ -3314,6 +3334,7 @@ Deno.serve(async (req) => {
               matchedConf = Math.round(best.score * 100);
             }
           }
+
 
           if (matched) {
             const p = matched;
