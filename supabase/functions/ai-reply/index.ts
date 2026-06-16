@@ -3227,7 +3227,11 @@ Deno.serve(async (req) => {
                 });
               }
             } catch (_e) { /* non-fatal */ }
-            reply = "I couldn't find a matching product from your image. Could you please describe the product in text (name/color/size)? দুঃখিত, ছবি থেকে product খুঁজে পাইনি — দয়া করে product টি text এ describe করুন।";
+            {
+              const seen = (desc || "").trim().slice(0, 120);
+              const seenLine = seen ? `আপনার ছবিতে দেখছি: ${seen}। ` : "";
+              reply = `${seenLine}এই ডিজাইনটি এই মুহূর্তে আমাদের কালেকশনে নেই। একটু কষ্ট করে product এর নাম, রঙ বা সাইজ লিখে জানালে আমি দ্রুত খুঁজে দিচ্ছি। চাইলে কাছাকাছি ডিজাইনও দেখাতে পারি।`;
+            }
           }
         } catch (visErr: any) {
           console.error("[image-match] error:", visErr?.message);
