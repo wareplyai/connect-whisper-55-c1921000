@@ -3374,6 +3374,26 @@ Deno.serve(async (req) => {
       console.log("[ai-reply] product-image attach failed:", (e as Error)?.message);
     }
 
+    // If we're attaching a product image but the AI reply text is a generic
+    // "sorry, no info" / contact-us style fallback, override with a friendly
+    // caption so customers don't get a contradictory message + photo.
+    if (outgoingImageUrl) {
+      const lower = String(reply || "").toLowerCase();
+      const isNegative =
+        /\b(sorry|don'?t have|do not have|no info|no details|contact us directly|help you out|আমার কাছে নেই|তথ্য নেই|বিস্তারিত নেই|যোগাযোগ)/i.test(lower) ||
+        reply.trim().length < 5;
+      if (isNegative) {
+        // Try to find the product name we're sending
+        const sentProduct = (catalogRows || []).find((p: any) => p.id === outgoingImageProductId);
+        const pname = sentProduct?.name || "";
+        const priceLine = sentProduct?.price ? `\n💰 ${sentProduct.price}` : "";
+        const descLine = sentProduct?.description ? `\n${String(sentProduct.description).slice(0, 200)}` : "";
+        reply = `এই নিন ${pname ? `"${pname}" ` : ""}এর ছবি 📷${priceLine}${descLine}\n\nHere's the photo${pname ? ` of ${pname}` : ""}.`;
+        console.log("[ai-reply] caption override applied (was negative)");
+      }
+    }
+
+
     // Send the reply back via WhatsApp gateway
     const sendResult = await sendViaGateway({
       gateway: GATEWAY,
