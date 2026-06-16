@@ -2428,6 +2428,19 @@ Deno.serve(async (req) => {
 
     const userId = session.user_id;
 
+    // Now that admin + userId + sessionId are known, flush any STT usage captured earlier.
+    if (pendingSttUsage && (pendingSttUsage.promptTokens + pendingSttUsage.completionTokens) > 0) {
+      await logAiUsage(admin, {
+        userId, sessionId, messageId: null, fromNumber,
+        platform: "lovable", model: pendingSttUsage.model, keyScope: "global",
+        taskType: "voice_transcribe",
+        promptTokens: pendingSttUsage.promptTokens,
+        completionTokens: pendingSttUsage.completionTokens,
+      });
+      pendingSttUsage = null;
+    }
+
+
     // Load business profile
     const { data: biz } = await admin
       .from("business_profiles")
