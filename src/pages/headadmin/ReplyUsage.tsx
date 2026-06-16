@@ -118,7 +118,7 @@ export default function ReplyUsage() {
       supabase.rpc("headadmin_usage_totals"),
     ]);
     if (error) toast.error(error.message);
-    setRows((data || []) as Row[]);
+    setRows((data || []) as unknown as Row[]);
     if (Array.isArray(t) && t[0]) setTotals(t[0] as Totals);
     setLoading(false);
   };
