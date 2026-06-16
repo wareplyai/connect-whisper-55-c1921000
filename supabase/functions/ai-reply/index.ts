@@ -57,7 +57,7 @@ async function transcribeVoiceFile(
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableKey) {
       console.log("[stt] LOVABLE_API_KEY missing");
-      return "";
+      return { text: "", promptTokens: 0, completionTokens: 0, model: sttModel };
     }
     let buf: Uint8Array;
     let ctype: string;
@@ -68,7 +68,7 @@ async function transcribeVoiceFile(
       const audioRes = await fetch(audioUrl);
       if (!audioRes.ok) {
         console.log("[stt] download failed:", audioRes.status, audioUrl);
-        return "";
+        return { text: "", promptTokens: 0, completionTokens: 0, model: sttModel };
       }
       ctype = (audioRes.headers.get("content-type") || "audio/ogg").split(";")[0].trim();
       buf = new Uint8Array(await audioRes.arrayBuffer());
@@ -93,7 +93,7 @@ async function transcribeVoiceFile(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: sttModel,
         messages: [
           {
             role: "system",
@@ -111,16 +111,18 @@ async function transcribeVoiceFile(
       }),
     });
     const data: any = await r.json().catch(() => ({}));
+    const pt = Number(data?.usage?.prompt_tokens) || 0;
+    const ct = Number(data?.usage?.completion_tokens) || 0;
     if (!r.ok) {
       console.log("[stt] gateway error:", r.status, JSON.stringify(data).slice(0, 400));
-      return "";
+      return { text: "", promptTokens: pt, completionTokens: ct, model: sttModel };
     }
     const text = String(data?.choices?.[0]?.message?.content || "").trim();
     console.log("[stt] transcribed", text.length, "chars");
-    return text;
+    return { text, promptTokens: pt, completionTokens: ct, model: sttModel };
   } catch (e) {
     console.log("[stt] exception:", (e as Error)?.message);
-    return "";
+    return { text: "", promptTokens: 0, completionTokens: 0, model: sttModel };
   }
 }
 
