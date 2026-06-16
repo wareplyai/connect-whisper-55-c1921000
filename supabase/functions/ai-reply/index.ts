@@ -2967,7 +2967,7 @@ Deno.serve(async (req) => {
     // Load product catalog so AI can reference real products in replies.
     const { data: catalogRows } = await admin
       .from("products")
-      .select("id, name, price, description, category, stock, image_url")
+      .select("id, name, price, description, category, stock, image_url, real_image_urls")
       .eq("user_id", userId)
       .eq("is_active", true)
       .limit(100);
@@ -3205,6 +3205,7 @@ Deno.serve(async (req) => {
     //   3. if that product has an image_url, send as image with the AI reply as caption
     let outgoingImageUrl: string | null = null;
     let outgoingImageProductId: string | null = null;
+    let extraRealImages: string[] = [];
     try {
       const askText = `${messageText || ""} ${imageCaption || ""}`.toLowerCase();
       const imageWanted = /(\bছবি\b|\bছবিটা\b|\bছবিটি\b|\bছবিগুলো\b|\bছবিগুল\b|\bছবি\s*দাও\b|\bছবি\s*দেন\b|\bphoto\b|\bpic\b|\bpicture\b|\bimage\b|\bsnap\b|\bdekha[ow]\b|\bdekhao\b|\bdekhaben\b|\bdao\b|\bden\b|\bdeo\b|\bdeben\b|\bshow\b|\bsend\b.*\b(photo|pic|picture|image)\b|\b(photo|pic|picture|image)\b.*\b(send|pathao|patha[ow]|den|dao)\b)/i.test(askText);
@@ -3215,15 +3216,14 @@ Deno.serve(async (req) => {
         const askNorm = norm(askText);
 
         let target: any = matchedProduct || null;
+        let matchedByName = !!target;
         if (!target) {
-          // Prefer product whose exact name appears in the AI reply text
           let best: { row: any; len: number } | null = null;
           for (const p of catalogRows || []) {
             const n = norm(p.name);
             if (!n) continue;
             if (replyNorm.includes(n) && (!best || n.length > best.len)) best = { row: p, len: n.length };
           }
-          // Otherwise check the customer's own message
           if (!best) {
             for (const p of catalogRows || []) {
               const n = norm(p.name);
@@ -3231,10 +3231,9 @@ Deno.serve(async (req) => {
               if (askNorm.includes(n) && (!best || n.length > best.len)) best = { row: p, len: n.length };
             }
           }
-          target = best?.row || null;
+          if (best) { target = best.row; matchedByName = true; }
         }
 
-        // Fallback: most recently mentioned product across recent history
         if (!target) {
           try {
             const { data: recent } = await admin
@@ -3251,14 +3250,24 @@ Deno.serve(async (req) => {
               if (!n) continue;
               if (blob.includes(n) && (!best || n.length > best.len)) best = { row: p, len: n.length };
             }
-            target = best?.row || null;
+            if (best) { target = best.row; matchedByName = true; }
           } catch { /* ignore */ }
         }
 
-        if (target?.image_url) {
+        // Prefer real_image_urls (customer-facing photos) when product was
+        // identified by NAME mention. Fallback to primary image_url otherwise.
+        const realImgs: string[] = Array.isArray(target?.real_image_urls)
+          ? (target.real_image_urls as any[]).map((u) => String(u || "").trim()).filter(Boolean)
+          : [];
+        if (target && matchedByName && realImgs.length > 0) {
+          outgoingImageUrl = realImgs[0];
+          extraRealImages = realImgs.slice(1, 2);
+          outgoingImageProductId = target.id || null;
+          console.log("[ai-reply] attaching REAL product images", { product: target.name, count: realImgs.length });
+        } else if (target?.image_url) {
           outgoingImageUrl = String(target.image_url);
           outgoingImageProductId = target.id || null;
-          console.log("[ai-reply] attaching product image", { product: target.name, productId: target.id });
+          console.log("[ai-reply] attaching product image (fallback)", { product: target.name });
         } else if (imageWanted) {
           console.log("[ai-reply] customer asked for image but no product image found");
         }
@@ -3307,6 +3316,36 @@ Deno.serve(async (req) => {
         image_url: outgoingImageUrl || null,
         image_caption: outgoingImageUrl ? reply : null,
       });
+
+      // Send additional real images (2nd photo) as a follow-up, no caption
+      for (const extraUrl of extraRealImages) {
+        try {
+          const extraSend = await sendViaGateway({
+            gateway: GATEWAY,
+            sessionId,
+            apiToken: session.api_token,
+            to: fromNumber,
+            message: "",
+            imageUrl: extraUrl,
+            showTyping: false,
+            accountProtection,
+          });
+          if (extraSend.ok) {
+            await admin.from("message_logs").insert({
+              user_id: userId, session_id: sessionId, to_number: extraSend.to,
+              message_type: "image",
+              payload: { auto_reply: true, source: "ai", image_url: extraUrl, product_id: outgoingImageProductId, follow_up: true },
+              status: "sent",
+              image_url: extraUrl,
+              image_caption: null,
+            });
+          } else {
+            console.log("[ai-reply] extra real image send failed:", extraSend.error);
+          }
+        } catch (e) {
+          console.log("[ai-reply] extra real image error:", (e as Error)?.message);
+        }
+      }
 
       // Increment monthly reply quota counter (auto-rolls period if expired)
       try {
