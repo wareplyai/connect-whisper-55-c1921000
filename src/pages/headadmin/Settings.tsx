@@ -36,7 +36,48 @@ export default function HeadAdminSettings() {
     supabase.from("profiles").select("id,email,full_name").order("email").then(({ data }) => {
       setUsers((data as any) || []);
     });
+    // Load AI task limits
+    (supabase as any).rpc("get_ai_task_limits").then(({ data }: any) => {
+      const r = Array.isArray(data) ? data[0] : data;
+      if (r) setAiLimits({
+        vision_detail: r.vision_detail || "low",
+        image_describe_max_tokens: r.image_describe_max_tokens ?? 150,
+        image_extract_max_tokens: r.image_extract_max_tokens ?? 150,
+        vision_match_max_tokens: r.vision_match_max_tokens ?? 100,
+        vision_match_max_candidates: r.vision_match_max_candidates ?? 8,
+        voice_transcribe_max_seconds: r.voice_transcribe_max_seconds ?? 60,
+        text_reply_max_tokens: r.text_reply_max_tokens ?? 600,
+      });
+    });
   }, []);
+
+  const [aiLimits, setAiLimits] = useState({
+    vision_detail: "low" as "low" | "high" | "auto",
+    image_describe_max_tokens: 150,
+    image_extract_max_tokens: 150,
+    vision_match_max_tokens: 100,
+    vision_match_max_candidates: 8,
+    voice_transcribe_max_seconds: 60,
+    text_reply_max_tokens: 600,
+  });
+  const [aiLimitsSaving, setAiLimitsSaving] = useState(false);
+
+  const saveAiLimits = async () => {
+    setAiLimitsSaving(true);
+    const { error } = await (supabase as any).rpc("headadmin_update_ai_task_limits", {
+      _vision_detail: aiLimits.vision_detail,
+      _image_describe_max_tokens: aiLimits.image_describe_max_tokens,
+      _image_extract_max_tokens: aiLimits.image_extract_max_tokens,
+      _vision_match_max_tokens: aiLimits.vision_match_max_tokens,
+      _vision_match_max_candidates: aiLimits.vision_match_max_candidates,
+      _voice_transcribe_max_seconds: aiLimits.voice_transcribe_max_seconds,
+      _text_reply_max_tokens: aiLimits.text_reply_max_tokens,
+    });
+    setAiLimitsSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("AI task limits saved");
+  };
+
 
   const runBulkDelete = async () => {
     if (!bulk.user_id) { toast.error("Select a user"); return; }
@@ -117,6 +158,74 @@ export default function HeadAdminSettings() {
         </div>
         <div className="mt-4"><Button onClick={savePlatform}>Save Settings</Button></div>
       </Card>
+
+      <Card className="p-5 bg-card border-border">
+        <h3 className="text-sm font-semibold mb-1">AI Task Token Limits</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Control how many tokens each AI task can use. Vision detail <strong>low</strong> uses ~85 tokens per image
+          instead of 25,000+ (recommended). Lower = cheaper but slightly less accurate.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <Label>Vision detail (image quality sent to AI)</Label>
+            <Select
+              value={aiLimits.vision_detail}
+              onValueChange={(v) => setAiLimits({ ...aiLimits, vision_detail: v as any })}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Low — ~85 tokens / image (cheapest)</SelectItem>
+                <SelectItem value="high">High — ~25,000 tokens / image (expensive)</SelectItem>
+                <SelectItem value="auto">Auto — AI decides</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Image describe — max output tokens</Label>
+            <Input type="number" min={40} max={500}
+              value={aiLimits.image_describe_max_tokens}
+              onChange={(e) => setAiLimits({ ...aiLimits, image_describe_max_tokens: Number(e.target.value) })} />
+          </div>
+          <div>
+            <Label>Image extract — max output tokens</Label>
+            <Input type="number" min={40} max={500}
+              value={aiLimits.image_extract_max_tokens}
+              onChange={(e) => setAiLimits({ ...aiLimits, image_extract_max_tokens: Number(e.target.value) })} />
+          </div>
+          <div>
+            <Label>Vision match — max output tokens</Label>
+            <Input type="number" min={40} max={400}
+              value={aiLimits.vision_match_max_tokens}
+              onChange={(e) => setAiLimits({ ...aiLimits, vision_match_max_tokens: Number(e.target.value) })} />
+          </div>
+          <div>
+            <Label>Vision match — max catalog products compared</Label>
+            <Input type="number" min={1} max={20}
+              value={aiLimits.vision_match_max_candidates}
+              onChange={(e) => setAiLimits({ ...aiLimits, vision_match_max_candidates: Number(e.target.value) })} />
+            <p className="text-[11px] text-muted-foreground mt-1">Each candidate = +1 image sent to AI. Lower = much cheaper.</p>
+          </div>
+          <div>
+            <Label>Text reply — max output tokens</Label>
+            <Input type="number" min={100} max={2000}
+              value={aiLimits.text_reply_max_tokens}
+              onChange={(e) => setAiLimits({ ...aiLimits, text_reply_max_tokens: Number(e.target.value) })} />
+          </div>
+          <div>
+            <Label>Voice transcribe — max seconds</Label>
+            <Input type="number" min={5} max={300}
+              value={aiLimits.voice_transcribe_max_seconds}
+              onChange={(e) => setAiLimits({ ...aiLimits, voice_transcribe_max_seconds: Number(e.target.value) })} />
+          </div>
+        </div>
+        <div className="mt-4">
+          <Button onClick={saveAiLimits} disabled={aiLimitsSaving}>
+            {aiLimitsSaving ? "Saving..." : "Save AI Limits"}
+          </Button>
+        </div>
+      </Card>
+
+
 
       <Card className="p-5 bg-card border-border">
         <div className="flex items-center gap-2 mb-4">
