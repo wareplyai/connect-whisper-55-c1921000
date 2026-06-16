@@ -3235,7 +3235,7 @@ Deno.serve(async (req) => {
           }
         } catch (visErr: any) {
           console.error("[image-match] error:", visErr?.message);
-          reply = "Sorry, I couldn't read your image right now. Please describe the product in text.";
+          reply = "ছবিটি এই মুহূর্তে পড়তে পারছি না। দয়া করে product এর নাম বা ডিটেইল লিখে পাঠান, আমি সাথে সাথে সাহায্য করছি।";
         }
       }
     } else {
