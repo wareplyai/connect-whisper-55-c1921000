@@ -3071,20 +3071,33 @@ Deno.serve(async (req) => {
         }
         const { data: productRows } = await admin
           .from("products")
-          .select("id, name, price, description, category, stock, image_url, ai_tags")
+          .select("id, name, price, description, category, stock, image_url, ai_tags, match_image_urls, real_image_urls")
           .eq("user_id", userId)
           .eq("is_active", true)
           .limit(500);
-        let best: { score: number; row: any } | null = null;
-        const haystackQuery = [desc, structured.product_name, imageCaption, messageText].filter(Boolean).join(" ");
-        for (const p of productRows || []) {
-          const haystack = [p.name, p.description, p.category, p.ai_tags].filter(Boolean).join(" ");
-          const score = textSimilarity(haystackQuery, haystack);
-          if (!best || score > best.score) best = { score, row: p };
-        }
-        if (best && best.score >= 0.80) {
-          matchedProduct = best.row;
-          console.log("[ai-reply] image+text pre-match", { name: best.row?.name, score: best.score });
+
+        // ── Primary: direct vision comparison against each product's match image ──
+        try {
+          const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any);
+          if (vMatch?.product) {
+            matchedProduct = vMatch.product;
+            console.log("[ai-reply] image+text vision-match", { name: vMatch.product?.name, conf: vMatch.confidence });
+          }
+        } catch (_e) { /* fall through to text similarity */ }
+
+        // ── Fallback: keyword/text similarity using vision description ──
+        if (!matchedProduct) {
+          let best: { score: number; row: any } | null = null;
+          const haystackQuery = [desc, structured.product_name, imageCaption, messageText].filter(Boolean).join(" ");
+          for (const p of productRows || []) {
+            const haystack = [p.name, p.description, p.category, p.ai_tags].filter(Boolean).join(" ");
+            const score = textSimilarity(haystackQuery, haystack);
+            if (!best || score > best.score) best = { score, row: p };
+          }
+          if (best && best.score >= 0.25) {
+            matchedProduct = best.row;
+            console.log("[ai-reply] image+text text-match", { name: best.row?.name, score: best.score });
+          }
         }
       } catch (e) {
         console.log("[ai-reply] image+text pre-match failed:", (e as Error)?.message);
