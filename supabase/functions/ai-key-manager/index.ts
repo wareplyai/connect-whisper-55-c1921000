@@ -246,6 +246,69 @@ Deno.serve(async (req) => {
         if (error) throw error;
         return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+
+      // ---------- HEADADMIN: per-user override keys ----------
+      if (action === "list_user_overrides") {
+        const { data, error } = await admin
+          .from("ai_api_keys")
+          .select("id, user_id, platform, model, key_last4, is_active, created_at")
+          .not("user_id", "is", null)
+          .eq("is_admin_override", true)
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        const userIds = Array.from(new Set((data || []).map((r: any) => r.user_id)));
+        let profiles: any[] = [];
+        if (userIds.length) {
+          const { data: pData } = await admin.from("profiles").select("id, email, full_name").in("id", userIds);
+          profiles = pData || [];
+        }
+        const enriched = (data || []).map((r: any) => {
+          const p = profiles.find((x) => x.id === r.user_id);
+          return { ...r, user_email: p?.email || null, user_name: p?.full_name || null };
+        });
+        return new Response(JSON.stringify({ keys: enriched }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (action === "set_user_override") {
+        const targetUserId = String(body.user_id || "").trim();
+        const apiKey = String(body.apiKey || "").trim();
+        const platformOverride = body.platform as string | undefined;
+        const model = String(body.model || "").trim();
+        if (!targetUserId || !apiKey) {
+          return new Response(JSON.stringify({ error: "user_id and apiKey required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const platform = (platformOverride as any) || detectPlatform(apiKey);
+        if (!platform) return new Response(JSON.stringify({ error: "Unable to detect platform" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const encrypted = await encryptKey(apiKey);
+        const last4 = apiKey.slice(-4);
+        // Deactivate any existing keys for that user (both their own and prior overrides)
+        await admin.from("ai_api_keys").update({ is_active: false }).eq("user_id", targetUserId);
+        const { data, error } = await admin.from("ai_api_keys").insert({
+          user_id: targetUserId, is_global: false, is_admin_override: true,
+          platform, model: model || "default",
+          encrypted_key: encrypted, key_last4: last4, is_active: true,
+        }).select("id, platform, model, key_last4, is_active, created_at").single();
+        if (error) throw error;
+        return new Response(JSON.stringify({ ok: true, key: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (action === "delete_user_override") {
+        const id = String(body.id || "").trim();
+        if (!id) return new Response(JSON.stringify({ error: "id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const { error } = await admin.from("ai_api_keys").delete().eq("id", id).eq("is_admin_override", true);
+        if (error) throw error;
+        return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (action === "list_all_users") {
+        const { data, error } = await admin
+          .from("profiles")
+          .select("id, email, full_name")
+          .order("created_at", { ascending: false })
+          .limit(500);
+        if (error) throw error;
+        return new Response(JSON.stringify({ users: data || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     return new Response(JSON.stringify({ error: "Unknown action" }), {

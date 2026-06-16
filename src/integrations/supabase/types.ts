@@ -227,6 +227,7 @@ export type Database = {
           encrypted_key: string
           id: string
           is_active: boolean
+          is_admin_override: boolean
           is_global: boolean
           key_last4: string
           model: string
@@ -239,6 +240,7 @@ export type Database = {
           encrypted_key: string
           id?: string
           is_active?: boolean
+          is_admin_override?: boolean
           is_global?: boolean
           key_last4: string
           model: string
@@ -251,6 +253,7 @@ export type Database = {
           encrypted_key?: string
           id?: string
           is_active?: boolean
+          is_admin_override?: boolean
           is_global?: boolean
           key_last4?: string
           model?: string
