@@ -201,6 +201,89 @@ export default function AIKeys() {
           </TableBody>
         </Table>
       </Card>
+
+      {/* Per-user override section */}
+      <div className="pt-4 border-t">
+        <h2 className="text-xl font-bold">Per-User Override Keys</h2>
+        <p className="text-sm text-muted-foreground">
+          Optional. Assign a specific AI key to one user — it overrides the global key for that user only. Other users continue using the global key.
+        </p>
+      </div>
+
+      <Card className="p-4 space-y-3">
+        <div className="flex items-center gap-2"><Plus className="h-4 w-4" /><h3 className="font-semibold">Add Override for a User</h3></div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <Label>User</Label>
+            <Select value={ovrUserId} onValueChange={setOvrUserId}>
+              <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
+              <SelectContent>
+                {users.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>{u.full_name || u.email || u.id.slice(0, 8)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Platform</Label>
+            <Select value={ovrPlatform} onValueChange={(v) => { setOvrPlatform(v); setOvrModel(""); }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="openai">OpenAI</SelectItem>
+                <SelectItem value="gemini">Gemini</SelectItem>
+                <SelectItem value="deepseek">DeepSeek</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Model (optional)</Label>
+            <Select value={ovrModel || "__none"} onValueChange={(v) => setOvrModel(v === "__none" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="Select a model" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Default (auto)</SelectItem>
+                {(MODELS[ovrPlatform] || []).map((m) => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>API Key</Label>
+            <Input type="password" value={ovrApiKey} onChange={(e) => setOvrApiKey(e.target.value)} placeholder="sk-…  /  AIza…  /  ds-…" />
+          </div>
+        </div>
+        <Button onClick={saveOverride} disabled={ovrSaving}>{ovrSaving ? "Saving…" : "Save Override"}</Button>
+      </Card>
+
+      <Card className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>User</TableHead>
+              <TableHead>Platform</TableHead>
+              <TableHead>Model</TableHead>
+              <TableHead>Key</TableHead>
+              <TableHead>Added</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {!loading && overrides.length === 0 && <TableRow><TableCell colSpan={6} className="py-6 text-center text-muted-foreground">No per-user overrides — every user uses the global key</TableCell></TableRow>}
+            {overrides.map((k) => (
+              <TableRow key={k.id}>
+                <TableCell className="text-sm">{k.user_name || k.user_email || k.user_id.slice(0, 8)}</TableCell>
+                <TableCell><Badge variant="outline" className="capitalize">{k.platform}</Badge></TableCell>
+                <TableCell className="text-sm">{k.model}</TableCell>
+                <TableCell className="font-mono text-xs">••••{k.key_last4}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{new Date(k.created_at).toLocaleDateString()}</TableCell>
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="icon" onClick={() => removeOverride(k.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
     </div>
   );
 }
