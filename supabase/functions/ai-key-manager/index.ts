@@ -302,13 +302,29 @@ Deno.serve(async (req) => {
       }
 
       if (action === "list_all_users") {
-        const { data, error } = await admin
-          .from("profiles")
-          .select("id, email, full_name")
-          .order("created_at", { ascending: false })
-          .limit(500);
-        if (error) throw error;
-        return new Response(JSON.stringify({ users: data || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        // Pull from auth.users so we see EVERY user (even ones without a profile row),
+        // then enrich with profile name/email and exclude headadmin accounts.
+        const { data: authList, error: aErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        if (aErr) throw aErr;
+        const ids = (authList?.users || []).map((u: any) => u.id);
+        const profMap = new Map<string, any>();
+        if (ids.length) {
+          const { data: pData } = await admin.from("profiles").select("id, email, full_name").in("id", ids);
+          (pData || []).forEach((p: any) => profMap.set(p.id, p));
+        }
+        const { data: hData } = await admin.from("headadmin").select("auth_user_id");
+        const headadminIds = new Set((hData || []).map((h: any) => h.auth_user_id));
+        const users = (authList?.users || [])
+          .filter((u: any) => !headadminIds.has(u.id))
+          .map((u: any) => {
+            const p = profMap.get(u.id);
+            return {
+              id: u.id,
+              email: p?.email || u.email || null,
+              full_name: p?.full_name || u.user_metadata?.full_name || null,
+            };
+          });
+        return new Response(JSON.stringify({ users }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
 

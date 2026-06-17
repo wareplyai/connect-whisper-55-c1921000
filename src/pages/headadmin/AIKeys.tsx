@@ -67,6 +67,16 @@ export default function AIKeys() {
   const [ovrModel, setOvrModel] = useState("");
   const [ovrApiKey, setOvrApiKey] = useState("");
   const [ovrSaving, setOvrSaving] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const filteredUsers = users.filter((u) => {
+    const q = userSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (u.full_name || "").toLowerCase().includes(q) ||
+      (u.email || "").toLowerCase().includes(q) ||
+      u.id.toLowerCase().includes(q)
+    );
+  });
 
   const load = async () => {
     setLoading(true);
@@ -212,14 +222,29 @@ export default function AIKeys() {
 
       <Card className="p-4 space-y-3">
         <div className="flex items-center gap-2"><Plus className="h-4 w-4" /><h3 className="font-semibold">Add Override for a User</h3></div>
+        <p className="text-xs text-muted-foreground">
+          When you assign a key to a user, that user will <strong>only</strong> use this key — they will <strong>not</strong> fall back to the global AI key. Users without an override continue to use the global key.
+        </p>
         <div className="grid sm:grid-cols-2 gap-3">
-          <div>
-            <Label>User</Label>
+          <div className="sm:col-span-2">
+            <Label>User ({users.length} available)</Label>
+            <Input
+              className="mb-2"
+              placeholder="Search by name, email, or user ID…"
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+            />
             <Select value={ovrUserId} onValueChange={setOvrUserId}>
-              <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
-              <SelectContent>
-                {users.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>{u.full_name || u.email || u.id.slice(0, 8)}</SelectItem>
+              <SelectTrigger><SelectValue placeholder={users.length ? "Select user" : "No users found"} /></SelectTrigger>
+              <SelectContent className="max-h-72">
+                {filteredUsers.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground">No matching users</div>
+                )}
+                {filteredUsers.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.full_name || u.email || u.id.slice(0, 8)}
+                    {u.email && u.full_name ? ` — ${u.email}` : ""}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -247,7 +272,7 @@ export default function AIKeys() {
               </SelectContent>
             </Select>
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <Label>API Key</Label>
             <Input type="password" value={ovrApiKey} onChange={(e) => setOvrApiKey(e.target.value)} placeholder="sk-…  /  AIza…  /  ds-…" />
           </div>
