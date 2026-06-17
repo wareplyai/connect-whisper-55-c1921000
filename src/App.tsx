@@ -153,6 +153,7 @@ const App = () => (
               <Route path="/headadmin" element={<HeadAdminRoute><HeadAdminLayout /></HeadAdminRoute>}>
                 <Route index element={<HeadAdminOverview />} />
                 <Route path="users" element={<AllUsers />} />
+                <Route path="pending-users" element={<HAPendingApprovals />} />
                 <Route path="sessions" element={<AllSessions />} />
                 <Route path="revenue" element={<Revenue />} />
                 <Route path="messages" element={<AllMessages />} />
