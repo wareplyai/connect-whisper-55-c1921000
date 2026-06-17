@@ -311,6 +311,59 @@ export default function HeadAdminOverview() {
         </div>
       </ChartCard>
 
+      {/* AI Spend (this month) */}
+      <ChartCard
+        title="AI Spend — This Month"
+        subtitle={
+          aiSpend
+            ? `$${aiSpend.cost.toFixed(4)} · ${aiSpend.tokens.toLocaleString()} tokens · ${aiSpend.activeUsers} active user(s)`
+            : "Loading…"
+        }
+        action={<a href="/headadmin/reply-usage" className="text-xs text-primary hover:underline">Manage limits</a>}
+      >
+        <div className="grid gap-4 md:grid-cols-3 mb-4">
+          <div className="rounded-xl border border-border bg-card-elevated p-4">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Cost this month</p>
+            <p className="text-2xl font-bold tabular-nums text-emerald-600 mt-1">${(aiSpend?.cost || 0).toFixed(4)}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Last month: ${(aiSpend?.lastCost || 0).toFixed(4)}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card-elevated p-4">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total tokens</p>
+            <p className="text-2xl font-bold tabular-nums mt-1">{(aiSpend?.tokens || 0).toLocaleString()}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Across all users</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card-elevated p-4">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Active AI users</p>
+            <p className="text-2xl font-bold tabular-nums mt-1">{aiSpend?.activeUsers || 0}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Used AI at least once this month</p>
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">Top users by AI cost</p>
+          {(!aiSpend || aiSpend.top.length === 0) ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">No AI usage yet this month</p>
+          ) : (
+            <div className="space-y-2">
+              {aiSpend.top.map((u: any, i: number) => (
+                <div key={u.user_id} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card-elevated px-3 py-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="h-7 w-7 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold shrink-0">{i + 1}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{u.full_name || u.email || u.user_id?.slice(0, 8)}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{u.email || "—"}</p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold tabular-nums text-emerald-600">${Number(u.cost_usd || 0).toFixed(4)}</p>
+                    <p className="text-[11px] text-muted-foreground tabular-nums">{Number(u.tokens || 0).toLocaleString()} tok</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </ChartCard>
+
       {/* Charts row */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
