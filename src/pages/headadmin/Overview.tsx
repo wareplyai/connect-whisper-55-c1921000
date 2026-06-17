@@ -72,12 +72,13 @@ export default function HeadAdminOverview() {
   const [loadingExtra, setLoadingExtra] = useState(true);
 
   const loadFeaturePerms = async () => {
-    const [{ data: globals }, { data: overrides }, { count: totalUsers }] = await Promise.all([
+    const [{ data: globals }, { data: overrides }, { data: profilesData }] = await Promise.all([
       supabase.from("global_feature_settings" as any).select("feature, show_to_users"),
       supabase.from("user_feature_access" as any).select("user_id, feature, enabled"),
-      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("profiles").select("id"),
     ]);
-    const total = totalUsers || 0;
+    const profileIds = new Set((profilesData || []).map((p: any) => p.id));
+    const total = profileIds.size;
     const gMap: Record<string, boolean> = { ai_agent: true, auto_replies: true, abandoned_cart: true, products: true };
     (globals || []).forEach((g: any) => { gMap[g.feature] = !!g.show_to_users; });
     const features = [
@@ -87,15 +88,21 @@ export default function HeadAdminOverview() {
       { key: "products", label: "Products", icon: ShoppingBasket },
     ];
     const result = features.map((f) => {
-      const ovs = (overrides || []).filter((o: any) => o.feature === f.key);
-      const overrideUserIds = new Set(ovs.map((o: any) => o.user_id));
-      const overrideEnabled = ovs.filter((o: any) => o.enabled).length;
-      const nonOverridden = Math.max(0, total - overrideUserIds.size);
-      const enabled = overrideEnabled + (gMap[f.key] ? nonOverridden : 0);
+      // Only consider overrides for users that still exist in profiles.
+      // Deduplicate per user (latest row wins via Map).
+      const perUser = new Map<string, boolean>();
+      (overrides || [])
+        .filter((o: any) => o.feature === f.key && profileIds.has(o.user_id))
+        .forEach((o: any) => perUser.set(o.user_id, !!o.enabled));
+      const overrideEnabled = Array.from(perUser.values()).filter(Boolean).length;
+      const nonOverridden = Math.max(0, total - perUser.size);
+      const rawEnabled = overrideEnabled + (gMap[f.key] ? nonOverridden : 0);
+      const enabled = Math.min(rawEnabled, total); // clamp so it never exceeds total
       return { ...f, enabled, total, globalOn: gMap[f.key] };
     });
     setFeaturePerms(result);
   };
+
 
   const loadAbandoned = async () => {
     const [{ data: conns }, { data: rows }] = await Promise.all([
