@@ -116,6 +116,76 @@ export default function ReplyUsage() {
   const [detailUser, setDetailUser] = useState<Row | null>(null);
   const [details, setDetails] = useState<Detail[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [limitUser, setLimitUser] = useState<Row | null>(null);
+  const [limitTokenCap, setLimitTokenCap] = useState("");
+  const [limitCostCap, setLimitCostCap] = useState("");
+  const [disabledTasks, setDisabledTasks] = useState<Set<string>>(new Set());
+  const [limitCurrent, setLimitCurrent] = useState<{ tokens: number; cost: number } | null>(null);
+  const [limitSaving, setLimitSaving] = useState(false);
+
+  const openLimits = async (r: Row) => {
+    setLimitUser(r);
+    setLimitTokenCap("");
+    setLimitCostCap("");
+    setDisabledTasks(new Set());
+    setLimitCurrent(null);
+    const { data } = await supabase
+      .from("user_ai_limits" as any)
+      .select("monthly_token_cap, monthly_cost_cap_usd, disabled_tasks")
+      .eq("user_id", r.user_id)
+      .maybeSingle();
+    if (data) {
+      setLimitTokenCap(String((data as any).monthly_token_cap || ""));
+      setLimitCostCap(String((data as any).monthly_cost_cap_usd || ""));
+      setDisabledTasks(new Set(((data as any).disabled_tasks || []) as string[]));
+    }
+    // Show current month spend
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+    const { data: usage } = await supabase
+      .from("ai_usage_logs")
+      .select("total_tokens, total_cost_usd")
+      .eq("user_id", r.user_id)
+      .gte("created_at", monthStart.toISOString());
+    const tokens = (usage || []).reduce((s: number, u: any) => s + Number(u.total_tokens || 0), 0);
+    const cost = (usage || []).reduce((s: number, u: any) => s + Number(u.total_cost_usd || 0), 0);
+    setLimitCurrent({ tokens, cost });
+  };
+
+  const toggleTask = (task: string) => {
+    setDisabledTasks((prev) => {
+      const next = new Set(prev);
+      if (next.has(task)) next.delete(task);
+      else next.add(task);
+      return next;
+    });
+  };
+
+  const saveLimits = async () => {
+    if (!limitUser) return;
+    setLimitSaving(true);
+    const payload = {
+      user_id: limitUser.user_id,
+      monthly_token_cap: Math.max(0, Number(limitTokenCap) || 0),
+      monthly_cost_cap_usd: Math.max(0, Number(limitCostCap) || 0),
+      disabled_tasks: Array.from(disabledTasks),
+    };
+    const { error } = await supabase
+      .from("user_ai_limits" as any)
+      .upsert(payload as any, { onConflict: "user_id" });
+    setLimitSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("AI limits saved");
+    setLimitUser(null);
+  };
+
+  const clearLimits = async () => {
+    if (!limitUser) return;
+    if (!confirm("Remove all AI limits for this user?")) return;
+    const { error } = await supabase.from("user_ai_limits" as any).delete().eq("user_id", limitUser.user_id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("AI limits cleared");
+    setLimitUser(null);
+  };
 
   const load = async () => {
     setLoading(true);
