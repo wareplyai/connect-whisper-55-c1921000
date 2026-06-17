@@ -88,8 +88,13 @@ const TASK_LABELS: Record<string, { label: string; desc: string; tone: string }>
   },
   voice_transcribe: {
     label: "Voice → Text",
-    desc: "Voice note Gemini diye Bangla/English text-e transcribe kora.",
+    desc: "Customer-er voice note Whisper/Gemini diye Bangla/English text-e transcribe kora (per-second billing).",
     tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  },
+  product_image_tag: {
+    label: "Product image tag",
+    desc: "Admin-er upload kora product image-er auto keyword/tag generate (vision low-detail).",
+    tone: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
   },
 };
 
