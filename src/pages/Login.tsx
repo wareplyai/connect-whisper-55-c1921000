@@ -31,7 +31,7 @@ const Login = () => {
 
     const { data: prof } = await supabase
       .from("profiles")
-      .select("is_active")
+      .select("is_active, approval_status")
       .eq("id", signIn.user!.id)
       .maybeSingle();
 
@@ -39,6 +39,18 @@ const Login = () => {
       await supabase.auth.signOut();
       setLoading(false);
       return toast.error("Your account has been deactivated. Please contact support.");
+    }
+
+    if ((prof as any).approval_status === 'rejected') {
+      await supabase.auth.signOut();
+      setLoading(false);
+      return toast.error("Your account has been rejected. Contact admin: 01948695672", { duration: 10000 });
+    }
+
+    if ((prof as any).approval_status !== 'approved') {
+      await supabase.auth.signOut();
+      setLoading(false);
+      return toast.error("Apnar account pending. Approval er jonno admin er sathe contact korun: 01948695672 (WhatsApp/Call). Approved hole login korte parben.", { duration: 12000 });
     }
 
     setLoading(false);
