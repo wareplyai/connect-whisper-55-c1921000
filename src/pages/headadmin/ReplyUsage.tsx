@@ -478,3 +478,179 @@ export default function ReplyUsage() {
     </div>
   );
 }
+
+// ============================================================
+// Voice Transcribe Debug Panel
+// Shows the exact ai_usage_logs filters used + latest voice_transcribe
+// insert per user, with status badges so we can confirm logging works.
+// ============================================================
+interface VoiceRow {
+  id: string;
+  user_id: string;
+  created_at: string;
+  model: string;
+  platform: string;
+  key_scope: string | null;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  input_cost_usd: number | null;
+  total_cost_usd: number | null;
+  session_id: string | null;
+  from_number: string | null;
+}
+
+function VoiceTranscribeDebug({ rows }: { rows: Row[] }) {
+  const [voiceLogs, setVoiceLogs] = useState<VoiceRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
+
+  const fetchVoice = async () => {
+    setLoading(true);
+    const { data, error, count } = await supabase
+      .from("ai_usage_logs")
+      .select(
+        "id,user_id,created_at,model,platform,key_scope,prompt_tokens,completion_tokens,total_tokens,input_cost_usd,total_cost_usd,session_id,from_number",
+        { count: "exact" }
+      )
+      .eq("task_type", "voice_transcribe")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) toast.error(error.message);
+    setVoiceLogs((data || []) as VoiceRow[]);
+    setTotalCount(count ?? null);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchVoice();
+    const ch = supabase
+      .channel("voice-debug")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "ai_usage_logs", filter: "task_type=eq.voice_transcribe" },
+        () => fetchVoice()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, []);
+
+  // Latest log per user
+  const latestByUser = new Map<string, VoiceRow>();
+  for (const v of voiceLogs) {
+    if (!latestByUser.has(v.user_id)) latestByUser.set(v.user_id, v);
+  }
+
+  const userMeta = (uid: string) => rows.find((r) => r.user_id === uid);
+
+  return (
+    <Card className="p-4 border-emerald-500/30 bg-emerald-500/5">
+      <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white">Voice Transcribe Debug</Badge>
+            <span className="text-xs text-muted-foreground">
+              Live `ai_usage_logs` rows where <code className="px-1 rounded bg-muted text-foreground">task_type = 'voice_transcribe'</code>
+            </span>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1 font-mono">
+            SELECT … FROM ai_usage_logs WHERE task_type = 'voice_transcribe' ORDER BY created_at DESC LIMIT 50
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="tabular-nums">
+            Total rows: {totalCount ?? "…"}
+          </Badge>
+          <Badge variant="outline" className="tabular-nums">
+            Users with voice: {latestByUser.size}
+          </Badge>
+          <Button variant="outline" size="sm" onClick={fetchVoice} disabled={loading}>
+            <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? "animate-spin" : ""}`} /> Reload
+          </Button>
+        </div>
+      </div>
+
+      {loading && voiceLogs.length === 0 && (
+        <div className="text-center text-sm text-muted-foreground py-6">Loading voice logs…</div>
+      )}
+
+      {!loading && voiceLogs.length === 0 && (
+        <div className="rounded border border-dashed p-4 text-center text-sm text-muted-foreground">
+          <div className="font-medium text-foreground mb-1">⚠ No voice_transcribe rows yet</div>
+          <div className="text-xs">
+            Code wired ase, but kono customer ekhono voice note pathayni. WhatsApp/Messenger e ekta voice
+            message ashlei <code className="px-1 rounded bg-muted text-foreground">ai-reply</code> function ekhane row insert korbe.
+          </div>
+        </div>
+      )}
+
+      {latestByUser.size > 0 && (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Last voice insert</TableHead>
+                <TableHead>Model</TableHead>
+                <TableHead>Scope</TableHead>
+                <TableHead className="text-right">Tokens</TableHead>
+                <TableHead className="text-right">Cost</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from(latestByUser.entries()).map(([uid, v]) => {
+                const u = userMeta(uid);
+                const cost = Number(v.total_cost_usd || v.input_cost_usd || 0);
+                const isWhisper = /whisper/i.test(v.model);
+                const tokenBased = v.total_tokens > 0;
+                let statusLabel = "Logged";
+                let statusTone = "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
+                if (isWhisper && !tokenBased) {
+                  statusLabel = "Whisper (per-sec)";
+                  statusTone = "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300";
+                } else if (tokenBased) {
+                  statusLabel = "Gemini (token)";
+                  statusTone = "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300";
+                }
+                return (
+                  <TableRow key={v.id}>
+                    <TableCell>
+                      <div className="font-medium text-sm">{u?.full_name || "—"}</div>
+                      <div className="text-[11px] text-muted-foreground">{u?.email || uid.slice(0, 8)}</div>
+                    </TableCell>
+                    <TableCell className="text-xs tabular-nums">
+                      {new Date(v.created_at).toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      <span className="font-mono">{v.platform}/{v.model}</span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={v.key_scope === "global" ? "default" : "secondary"} className="text-[10px]">
+                        {v.key_scope || "user"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-xs">
+                      {tokenBased ? Number(v.total_tokens).toLocaleString() : "—"}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-xs font-semibold text-emerald-600">
+                      {fmtUSD(cost)}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${statusTone}`}>
+                        {statusLabel}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
