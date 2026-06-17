@@ -2524,14 +2524,50 @@ Deno.serve(async (req) => {
     const userId = session.user_id;
 
     // Now that admin + userId + sessionId are known, flush any STT usage captured earlier.
-    if (pendingSttUsage && (pendingSttUsage.promptTokens + pendingSttUsage.completionTokens) > 0) {
-      await logAiUsage(admin, {
-        userId, sessionId, messageId: null, fromNumber,
-        platform: pendingSttUsage.platform, model: pendingSttUsage.model, keyScope: pendingSttUsage.keyScope,
-        taskType: "voice_transcribe",
-        promptTokens: pendingSttUsage.promptTokens,
-        completionTokens: pendingSttUsage.completionTokens,
-      });
+    // We ALWAYS log a voice_transcribe row (even if 0 tokens, e.g. Whisper which bills
+    // per-second, not per-token) so admins can see the count + cost in Reply Usage.
+    if (pendingSttUsage) {
+      const pt = Number(pendingSttUsage.promptTokens) || 0;
+      const ct = Number(pendingSttUsage.completionTokens) || 0;
+      if (pt + ct > 0) {
+        // Token-based pricing path (Gemini)
+        await logAiUsage(admin, {
+          userId, sessionId, messageId: null, fromNumber,
+          platform: pendingSttUsage.platform, model: pendingSttUsage.model, keyScope: pendingSttUsage.keyScope,
+          taskType: "voice_transcribe",
+          promptTokens: pt,
+          completionTokens: ct,
+        });
+      } else {
+        // Per-second pricing path (Whisper: $0.006/min = $0.0001/sec)
+        const seconds = Math.max(1, Number(pendingSttUsage.audioSeconds) || 1);
+        const isWhisper = /whisper/i.test(pendingSttUsage.model);
+        const perSecUsd = isWhisper ? 0.0001 : 0.0001; // default same rate if unknown
+        const costUsd = seconds * perSecUsd;
+        try {
+          await admin.from("ai_usage_logs").insert({
+            user_id: userId,
+            session_id: sessionId,
+            incoming_message_id: null,
+            from_number: fromNumber,
+            platform: pendingSttUsage.platform,
+            model: pendingSttUsage.model,
+            key_scope: pendingSttUsage.keyScope || "user",
+            task_type: "voice_transcribe",
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: 0,
+            input_price_per_1m_usd: 0,
+            output_price_per_1m_usd: 0,
+            input_cost_usd: costUsd,
+            output_cost_usd: 0,
+            total_cost_usd: costUsd,
+          });
+          console.log("[stt] logged voice_transcribe seconds=", seconds, "cost=", costUsd.toFixed(6));
+        } catch (e) {
+          console.log("[stt] failed to log voice_transcribe:", (e as Error)?.message);
+        }
+      }
       pendingSttUsage = null;
     }
 
