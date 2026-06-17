@@ -439,6 +439,61 @@ export default function ReplyUsage() {
         </DialogContent>
       </Dialog>
 
+      {/* AI Limits dialog */}
+      <Dialog open={!!limitUser} onOpenChange={(o) => !o && setLimitUser(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>AI Limits — {limitUser?.full_name || limitUser?.email}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {limitCurrent && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs space-y-1">
+                <div className="font-semibold">This month so far</div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Tokens used:</span><span className="font-bold tabular-nums">{limitCurrent.tokens.toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Cost used:</span><span className="font-bold tabular-nums text-emerald-600">${limitCurrent.cost.toFixed(4)}</span></div>
+              </div>
+            )}
+            <div>
+              <Label>Monthly token cap</Label>
+              <Input type="number" min={0} value={limitTokenCap} onChange={(e) => setLimitTokenCap(e.target.value)} placeholder="0 = unlimited" />
+              <p className="text-[11px] text-muted-foreground mt-1">When the user crosses this many tokens this month, AI replies are blocked. Set 0 for unlimited.</p>
+            </div>
+            <div>
+              <Label>Monthly cost cap (USD)</Label>
+              <Input type="number" min={0} step="0.01" value={limitCostCap} onChange={(e) => setLimitCostCap(e.target.value)} placeholder="0 = unlimited" />
+              <p className="text-[11px] text-muted-foreground mt-1">Hard $ cap. Once the user's monthly AI cost reaches this, AI replies are blocked. Set 0 for unlimited.</p>
+            </div>
+            <div>
+              <Label>Disable specific AI tasks</Label>
+              <p className="text-[11px] text-muted-foreground mb-2">Toggle off any task the user is NOT allowed to use.</p>
+              <div className="space-y-2 rounded-lg border border-border p-3">
+                {Object.entries(TASK_LABELS).map(([key, meta]) => {
+                  const disabled = disabledTasks.has(key);
+                  return (
+                    <div key={key} className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${meta.tone}`}>{meta.label}</span>
+                          {disabled && <Badge variant="destructive" className="text-[9px]">Blocked</Badge>}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{meta.desc}</p>
+                      </div>
+                      <Switch checked={!disabled} onCheckedChange={() => toggleTask(key)} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={clearLimits}>Clear all limits</Button>
+            <div className="flex-1" />
+            <Button variant="outline" onClick={() => setLimitUser(null)}>Cancel</Button>
+            <Button onClick={saveLimits} disabled={limitSaving}>{limitSaving ? "Saving…" : "Save"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Detail dialog */}
       <Dialog open={!!detailUser} onOpenChange={(o) => !o && setDetailUser(null)}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
