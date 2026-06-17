@@ -197,7 +197,8 @@ export default function HeadAdminOverview() {
     loadExtra();
     loadAbandoned();
     loadFeaturePerms();
-    const t = setInterval(() => { loadExtra(); loadAbandoned(); loadFeaturePerms(); }, 30000);
+    loadAiSpend();
+    const t = setInterval(() => { loadExtra(); loadAbandoned(); loadFeaturePerms(); loadAiSpend(); }, 30000);
     const ch = supabase
       .channel(`ha-overview-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => { loadExtra(); loadFeaturePerms(); })
@@ -208,6 +209,7 @@ export default function HeadAdminOverview() {
       .on("postgres_changes", { event: "*", schema: "public", table: "abandoned_connections" }, loadAbandoned)
       .on("postgres_changes", { event: "*", schema: "public", table: "global_feature_settings" }, loadFeaturePerms)
       .on("postgres_changes", { event: "*", schema: "public", table: "user_feature_access" }, loadFeaturePerms)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "ai_usage_logs" }, loadAiSpend)
       .subscribe();
     return () => { clearInterval(t); supabase.removeChannel(ch); };
   }, []);
