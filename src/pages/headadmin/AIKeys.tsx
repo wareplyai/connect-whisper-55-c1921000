@@ -67,6 +67,16 @@ export default function AIKeys() {
   const [ovrModel, setOvrModel] = useState("");
   const [ovrApiKey, setOvrApiKey] = useState("");
   const [ovrSaving, setOvrSaving] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const filteredUsers = users.filter((u) => {
+    const q = userSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (u.full_name || "").toLowerCase().includes(q) ||
+      (u.email || "").toLowerCase().includes(q) ||
+      u.id.toLowerCase().includes(q)
+    );
+  });
 
   const load = async () => {
     setLoading(true);
