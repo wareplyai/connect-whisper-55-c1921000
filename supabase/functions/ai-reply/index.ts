@@ -54,13 +54,20 @@ async function transcribeVoiceFile(
   audioUrl: string,
   prefetched?: { bytes: Uint8Array; mime: string } | null,
   maxSeconds: number = 60,
-): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string; skipped?: string }> {
+): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string; skipped?: string; audioSeconds: number; audioBytes: number }> {
   const plat = (platform || "").toLowerCase();
   const fallbackModel = plat === "openai" ? "whisper-1" : "gemini-2.5-flash";
+  // Default empty result helper (no audio yet)
+  const empty = (model: string, extra: Partial<{ skipped: string; audioBytes: number; audioSeconds: number }> = {}) => ({
+    text: "", promptTokens: 0, completionTokens: 0, model,
+    audioBytes: extra.audioBytes ?? 0,
+    audioSeconds: extra.audioSeconds ?? 0,
+    ...(extra.skipped ? { skipped: extra.skipped } : {}),
+  });
   try {
     if (!apiKey) {
       console.log("[stt] no apiKey provided");
-      return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel };
+      return empty(fallbackModel);
     }
     let buf: Uint8Array;
     let ctype: string;
@@ -71,12 +78,16 @@ async function transcribeVoiceFile(
       const audioRes = await fetch(audioUrl);
       if (!audioRes.ok) {
         console.log("[stt] download failed:", audioRes.status, audioUrl);
-        return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel };
+        return empty(fallbackModel);
       }
       ctype = (audioRes.headers.get("content-type") || "audio/ogg").split(";")[0].trim();
       buf = new Uint8Array(await audioRes.arrayBuffer());
     }
     console.log("[stt] audio bytes:", buf.length, "mime:", ctype, "platform:", plat);
+
+    // Estimate duration from byte size (~7 KB/sec for Opus voice notes). This is
+    // used only for cost accounting/reporting in ai_usage_logs.
+    const estSeconds = Math.max(1, Math.round(buf.length / 7000));
 
     // Enforce headadmin-configured max duration. WhatsApp Opus voice notes are
     // ~6-8 KB/sec; we cap at 20 KB/sec to stay safe across codecs. Anything
@@ -85,7 +96,7 @@ async function transcribeVoiceFile(
     const maxBytes = safeMaxSec * 20_000;
     if (buf.length > maxBytes) {
       console.log("[stt] audio exceeds max duration cap", { bytes: buf.length, maxBytes, maxSeconds: safeMaxSec });
-      return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel, skipped: `audio too long (cap ${safeMaxSec}s)` };
+      return empty(fallbackModel, { skipped: `audio too long (cap ${safeMaxSec}s)`, audioBytes: buf.length, audioSeconds: estSeconds });
     }
 
     if (plat === "openai") {
@@ -105,11 +116,11 @@ async function transcribeVoiceFile(
       const data: any = await r.json().catch(() => ({}));
       if (!r.ok) {
         console.log("[stt] openai whisper error:", r.status, JSON.stringify(data).slice(0, 400));
-        return { text: "", promptTokens: 0, completionTokens: 0, model: "whisper-1" };
+        return empty("whisper-1", { audioBytes: buf.length, audioSeconds: estSeconds });
       }
       const text = String(data?.text || "").trim();
-      console.log("[stt] whisper transcribed", text.length, "chars");
-      return { text, promptTokens: 0, completionTokens: 0, model: "whisper-1" };
+      console.log("[stt] whisper transcribed", text.length, "chars,", estSeconds, "sec est");
+      return { text, promptTokens: 0, completionTokens: 0, model: "whisper-1", audioBytes: buf.length, audioSeconds: estSeconds };
     }
 
     if (plat === "gemini") {
@@ -147,21 +158,21 @@ async function transcribeVoiceFile(
       const data: any = await r.json().catch(() => ({}));
       if (!r.ok) {
         console.log("[stt] gemini error:", r.status, JSON.stringify(data).slice(0, 400));
-        return { text: "", promptTokens: 0, completionTokens: 0, model };
+        return empty(model, { audioBytes: buf.length, audioSeconds: estSeconds });
       }
       const text = String(data?.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
       const um = data?.usageMetadata || {};
       const pt = Number(um.promptTokenCount) || 0;
       const ct = Number(um.candidatesTokenCount) || 0;
-      console.log("[stt] gemini transcribed", text.length, "chars");
-      return { text, promptTokens: pt, completionTokens: ct, model };
+      console.log("[stt] gemini transcribed", text.length, "chars,", estSeconds, "sec est");
+      return { text, promptTokens: pt, completionTokens: ct, model, audioBytes: buf.length, audioSeconds: estSeconds };
     }
 
     console.log("[stt] platform does not support audio transcription:", plat);
-    return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel };
+    return empty(fallbackModel, { audioBytes: buf.length, audioSeconds: estSeconds });
   } catch (e) {
     console.log("[stt] exception:", (e as Error)?.message);
-    return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel };
+    return empty(fallbackModel);
   }
 }
 
@@ -2042,7 +2053,7 @@ Deno.serve(async (req) => {
     let voiceTranscript = "";
     let voiceUploadedMime: string | null = null;
     // Captured here so we can log STT token usage AFTER `admin`/`userId` exist further down.
-    let pendingSttUsage: { promptTokens: number; completionTokens: number; model: string; platform: string; keyScope: string } | null = null;
+    let pendingSttUsage: { promptTokens: number; completionTokens: number; model: string; platform: string; keyScope: string; audioSeconds: number } | null = null;
     {
       const audioUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
       const lowerType0 = messageType.toLowerCase();
@@ -2113,6 +2124,7 @@ Deno.serve(async (req) => {
                 model: sttRes.model,
                 platform: sttKey.platform,
                 keyScope: sttKey.scope || "user",
+                audioSeconds: sttRes.audioSeconds || 0,
               };
               const transcript = sttRes.text;
               if (transcript) {
@@ -2512,14 +2524,50 @@ Deno.serve(async (req) => {
     const userId = session.user_id;
 
     // Now that admin + userId + sessionId are known, flush any STT usage captured earlier.
-    if (pendingSttUsage && (pendingSttUsage.promptTokens + pendingSttUsage.completionTokens) > 0) {
-      await logAiUsage(admin, {
-        userId, sessionId, messageId: null, fromNumber,
-        platform: pendingSttUsage.platform, model: pendingSttUsage.model, keyScope: pendingSttUsage.keyScope,
-        taskType: "voice_transcribe",
-        promptTokens: pendingSttUsage.promptTokens,
-        completionTokens: pendingSttUsage.completionTokens,
-      });
+    // We ALWAYS log a voice_transcribe row (even if 0 tokens, e.g. Whisper which bills
+    // per-second, not per-token) so admins can see the count + cost in Reply Usage.
+    if (pendingSttUsage) {
+      const pt = Number(pendingSttUsage.promptTokens) || 0;
+      const ct = Number(pendingSttUsage.completionTokens) || 0;
+      if (pt + ct > 0) {
+        // Token-based pricing path (Gemini)
+        await logAiUsage(admin, {
+          userId, sessionId, messageId: null, fromNumber,
+          platform: pendingSttUsage.platform, model: pendingSttUsage.model, keyScope: pendingSttUsage.keyScope,
+          taskType: "voice_transcribe",
+          promptTokens: pt,
+          completionTokens: ct,
+        });
+      } else {
+        // Per-second pricing path (Whisper: $0.006/min = $0.0001/sec)
+        const seconds = Math.max(1, Number(pendingSttUsage.audioSeconds) || 1);
+        const isWhisper = /whisper/i.test(pendingSttUsage.model);
+        const perSecUsd = isWhisper ? 0.0001 : 0.0001; // default same rate if unknown
+        const costUsd = seconds * perSecUsd;
+        try {
+          await admin.from("ai_usage_logs").insert({
+            user_id: userId,
+            session_id: sessionId,
+            incoming_message_id: null,
+            from_number: fromNumber,
+            platform: pendingSttUsage.platform,
+            model: pendingSttUsage.model,
+            key_scope: pendingSttUsage.keyScope || "user",
+            task_type: "voice_transcribe",
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: 0,
+            input_price_per_1m_usd: 0,
+            output_price_per_1m_usd: 0,
+            input_cost_usd: costUsd,
+            output_cost_usd: 0,
+            total_cost_usd: costUsd,
+          });
+          console.log("[stt] logged voice_transcribe seconds=", seconds, "cost=", costUsd.toFixed(6));
+        } catch (e) {
+          console.log("[stt] failed to log voice_transcribe:", (e as Error)?.message);
+        }
+      }
       pendingSttUsage = null;
     }
 
