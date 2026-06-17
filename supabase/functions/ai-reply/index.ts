@@ -3205,6 +3205,29 @@ Deno.serve(async (req) => {
       console.log("[ai-reply] quota check failed (continuing):", (qErr as Error)?.message);
     }
 
+    // ---- Per-user AI limit (head-admin set monthly token cap / cost cap / task disable) ----
+    try {
+      const { data: limRows } = await admin.rpc("check_user_ai_limit", {
+        _user_id: userId,
+        _task_type: "text_reply",
+      });
+      const lim: any = Array.isArray(limRows) ? limRows[0] : limRows;
+      if (lim && lim.allowed === false) {
+        const reason = String(lim.reason || "ai_limit_reached");
+        console.log("[ai-reply] AI limit blocked:", reason, lim);
+        if (messageId) {
+          await admin.from("incoming_messages").update({
+            reply_error: `AI limit reached (${reason}). tokens=${lim.tokens_used}/${lim.token_cap} cost=$${Number(lim.cost_used).toFixed(4)}/$${Number(lim.cost_cap).toFixed(4)}`,
+            delivery_status: "failed",
+            processed_at: new Date().toISOString(),
+          }).eq("id", messageId);
+        }
+        return jsonResp({ error: "ai_limit_reached", detail: lim }, 402);
+      }
+    } catch (limErr) {
+      console.log("[ai-reply] ai-limit check failed (continuing):", (limErr as Error)?.message);
+    }
+
     // Load API key — try user's own first, fallback to global key set by headadmin
     let keyRow: { encrypted_key: string; platform: string; model: string; scope?: string } | null = null;
     try {
