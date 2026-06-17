@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { saveApprovalNotice } from "@/lib/accountApproval";
 
 interface Profile {
   id: string;
@@ -68,7 +69,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!user) return;
 
-    const forceLogout = async () => {
+    const forceLogout = async (status: "pending" | "rejected" = "pending") => {
+      saveApprovalNotice(status);
       try { await supabase.auth.signOut(); } catch {}
       window.location.href = "/login";
     };
@@ -80,7 +82,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq("id", user.id)
         .maybeSingle();
       if (error) return;
-      if (!data || data.is_active === false || (data as any).approval_status !== "approved") forceLogout();
+      if (!data || data.is_active === false || (data as any).approval_status !== "approved") {
+        forceLogout((data as any)?.approval_status === "rejected" ? "rejected" : "pending");
+      }
     };
 
     // Initial check
@@ -93,7 +97,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` },
         (payload: any) => {
-          if (!payload.new || payload.new.is_active === false || payload.new.approval_status !== "approved") forceLogout();
+          if (!payload.new || payload.new.is_active === false || payload.new.approval_status !== "approved") {
+            forceLogout(payload.new?.approval_status === "rejected" ? "rejected" : "pending");
+          }
         }
       )
       .on(

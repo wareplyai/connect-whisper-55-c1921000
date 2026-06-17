@@ -1,20 +1,41 @@
 import { friendlyError } from "@/lib/friendlyError";
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
+import { Loader2, Mail, Lock, ArrowRight, MessageCircle } from "lucide-react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { AuthInput } from "@/components/auth/AuthInput";
+import {
+  ADMIN_WHATSAPP_URL,
+  ApprovalNoticeStatus,
+  PENDING_APPROVAL_DETAILS,
+  PENDING_APPROVAL_MESSAGE,
+  REJECTED_APPROVAL_MESSAGE,
+  saveApprovalNotice,
+  showApprovalToast,
+  takeApprovalNotice,
+} from "@/lib/accountApproval";
 
 const Login = () => {
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [approvalNotice, setApprovalNotice] = useState<ApprovalNoticeStatus | null>(null);
+
+  useEffect(() => {
+    const notice = takeApprovalNotice();
+    const confirmed = searchParams.get("confirmed") === "1";
+    if (!notice && !confirmed) return;
+    const status = notice || "pending";
+    setApprovalNotice(status);
+    showApprovalToast(status);
+  }, [searchParams]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +45,9 @@ const Login = () => {
       setLoading(false);
       const msg = (error.message || "").toLowerCase();
       if (msg.includes("not confirmed") || msg.includes("email not confirmed")) {
-        return toast.error("Please confirm your email first. Check your inbox for the confirmation link.");
+        setApprovalNotice("pending");
+        showApprovalToast("pending");
+        return;
       }
       return toast.error(friendlyError(error));
     }
@@ -44,13 +67,18 @@ const Login = () => {
     if ((prof as any).approval_status === 'rejected') {
       await supabase.auth.signOut();
       setLoading(false);
-      return toast.error("Your account has been rejected. Contact admin: 01948695672", { duration: 10000 });
+      setApprovalNotice("rejected");
+      showApprovalToast("rejected");
+      return;
     }
 
     if ((prof as any).approval_status !== 'approved') {
       await supabase.auth.signOut();
       setLoading(false);
-      return toast.error("Apnar account pending. Approval er jonno admin er sathe contact korun: 01948695672 (WhatsApp/Call). Approved hole login korte parben.", { duration: 12000 });
+      saveApprovalNotice("pending");
+      setApprovalNotice("pending");
+      showApprovalToast("pending");
+      return;
     }
 
     setLoading(false);
@@ -72,6 +100,22 @@ const Login = () => {
       }
     >
       <form onSubmit={onSubmit} className="space-y-5">
+        {approvalNotice && (
+          <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm text-foreground">
+            <p className="font-medium">
+              {approvalNotice === "rejected" ? REJECTED_APPROVAL_MESSAGE : PENDING_APPROVAL_MESSAGE}
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              {approvalNotice === "rejected" ? "WhatsApp/Call: 01948695672" : PENDING_APPROVAL_DETAILS}
+            </p>
+            <Button asChild className="mt-3 h-10 w-full rounded-lg bg-primary text-primary-foreground hover:bg-primary-hover">
+              <a href={ADMIN_WHATSAPP_URL} target="_blank" rel="noreferrer">
+                <MessageCircle className="mr-2 h-4 w-4" />
+                WhatsApp admin
+              </a>
+            </Button>
+          </div>
+        )}
         <AuthInput
           id="email"
           label="Email address"
