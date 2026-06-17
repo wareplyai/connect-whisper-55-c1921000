@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Loader2, Mail, Lock, User, ArrowRight } from "lucide-react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { AuthInput } from "@/components/auth/AuthInput";
+import { saveApprovalNotice } from "@/lib/accountApproval";
 
 const Register = () => {
   const nav = useNavigate();
@@ -27,7 +28,7 @@ const Register = () => {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}/login?confirmed=1`,
         data: { full_name: fullName },
       },
     });
@@ -40,7 +41,8 @@ const Register = () => {
     if (data.session) {
       await supabase.auth.signOut();
     }
-    toast.success("Account create hoyeche! Apnar account pending. Approval er jonno admin er sathe contact korun: 01948695672 (WhatsApp/Call).", { duration: 14000 });
+    saveApprovalNotice("pending");
+    toast.success("Account create hoyeche! Email confirm korar por admin approval er jonno WhatsApp korun.", { duration: 14000 });
     nav("/login");
   };
 
