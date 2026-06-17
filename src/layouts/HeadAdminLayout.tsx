@@ -56,6 +56,7 @@ const navGroups = [
 const allItems = [
   { to: "/headadmin", label: "Dashboard", end: true },
   { to: "/headadmin/users", label: "Users" },
+  { to: "/headadmin/pending-users", label: "Pending Approvals" },
   { to: "/headadmin/sessions", label: "Sessions" },
   { to: "/headadmin/messages", label: "Messages" },
   { to: "/headadmin/user-storage", label: "User Storage" },
