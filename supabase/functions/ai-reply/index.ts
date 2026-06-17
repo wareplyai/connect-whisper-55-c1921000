@@ -57,10 +57,17 @@ async function transcribeVoiceFile(
 ): Promise<{ text: string; promptTokens: number; completionTokens: number; model: string; skipped?: string; audioSeconds: number; audioBytes: number }> {
   const plat = (platform || "").toLowerCase();
   const fallbackModel = plat === "openai" ? "whisper-1" : "gemini-2.5-flash";
+  // Default empty result helper (no audio yet)
+  const empty = (model: string, extra: Partial<{ skipped: string; audioBytes: number; audioSeconds: number }> = {}) => ({
+    text: "", promptTokens: 0, completionTokens: 0, model,
+    audioBytes: extra.audioBytes ?? 0,
+    audioSeconds: extra.audioSeconds ?? 0,
+    ...(extra.skipped ? { skipped: extra.skipped } : {}),
+  });
   try {
     if (!apiKey) {
       console.log("[stt] no apiKey provided");
-      return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel };
+      return empty(fallbackModel);
     }
     let buf: Uint8Array;
     let ctype: string;
@@ -71,12 +78,16 @@ async function transcribeVoiceFile(
       const audioRes = await fetch(audioUrl);
       if (!audioRes.ok) {
         console.log("[stt] download failed:", audioRes.status, audioUrl);
-        return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel };
+        return empty(fallbackModel);
       }
       ctype = (audioRes.headers.get("content-type") || "audio/ogg").split(";")[0].trim();
       buf = new Uint8Array(await audioRes.arrayBuffer());
     }
     console.log("[stt] audio bytes:", buf.length, "mime:", ctype, "platform:", plat);
+
+    // Estimate duration from byte size (~7 KB/sec for Opus voice notes). This is
+    // used only for cost accounting/reporting in ai_usage_logs.
+    const estSeconds = Math.max(1, Math.round(buf.length / 7000));
 
     // Enforce headadmin-configured max duration. WhatsApp Opus voice notes are
     // ~6-8 KB/sec; we cap at 20 KB/sec to stay safe across codecs. Anything
@@ -85,7 +96,7 @@ async function transcribeVoiceFile(
     const maxBytes = safeMaxSec * 20_000;
     if (buf.length > maxBytes) {
       console.log("[stt] audio exceeds max duration cap", { bytes: buf.length, maxBytes, maxSeconds: safeMaxSec });
-      return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel, skipped: `audio too long (cap ${safeMaxSec}s)` };
+      return empty(fallbackModel, { skipped: `audio too long (cap ${safeMaxSec}s)`, audioBytes: buf.length, audioSeconds: estSeconds });
     }
 
     if (plat === "openai") {
@@ -105,11 +116,11 @@ async function transcribeVoiceFile(
       const data: any = await r.json().catch(() => ({}));
       if (!r.ok) {
         console.log("[stt] openai whisper error:", r.status, JSON.stringify(data).slice(0, 400));
-        return { text: "", promptTokens: 0, completionTokens: 0, model: "whisper-1" };
+        return empty("whisper-1", { audioBytes: buf.length, audioSeconds: estSeconds });
       }
       const text = String(data?.text || "").trim();
-      console.log("[stt] whisper transcribed", text.length, "chars");
-      return { text, promptTokens: 0, completionTokens: 0, model: "whisper-1" };
+      console.log("[stt] whisper transcribed", text.length, "chars,", estSeconds, "sec est");
+      return { text, promptTokens: 0, completionTokens: 0, model: "whisper-1", audioBytes: buf.length, audioSeconds: estSeconds };
     }
 
     if (plat === "gemini") {
@@ -147,21 +158,21 @@ async function transcribeVoiceFile(
       const data: any = await r.json().catch(() => ({}));
       if (!r.ok) {
         console.log("[stt] gemini error:", r.status, JSON.stringify(data).slice(0, 400));
-        return { text: "", promptTokens: 0, completionTokens: 0, model };
+        return empty(model, { audioBytes: buf.length, audioSeconds: estSeconds });
       }
       const text = String(data?.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
       const um = data?.usageMetadata || {};
       const pt = Number(um.promptTokenCount) || 0;
       const ct = Number(um.candidatesTokenCount) || 0;
-      console.log("[stt] gemini transcribed", text.length, "chars");
-      return { text, promptTokens: pt, completionTokens: ct, model };
+      console.log("[stt] gemini transcribed", text.length, "chars,", estSeconds, "sec est");
+      return { text, promptTokens: pt, completionTokens: ct, model, audioBytes: buf.length, audioSeconds: estSeconds };
     }
 
     console.log("[stt] platform does not support audio transcription:", plat);
-    return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel };
+    return empty(fallbackModel, { audioBytes: buf.length, audioSeconds: estSeconds });
   } catch (e) {
     console.log("[stt] exception:", (e as Error)?.message);
-    return { text: "", promptTokens: 0, completionTokens: 0, model: fallbackModel };
+    return empty(fallbackModel);
   }
 }
 
