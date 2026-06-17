@@ -312,18 +312,16 @@ Deno.serve(async (req) => {
           const { data: pData } = await admin.from("profiles").select("id, email, full_name").in("id", ids);
           (pData || []).forEach((p: any) => profMap.set(p.id, p));
         }
-        const { data: hData } = await admin.from("headadmin").select("auth_user_id");
-        const headadminIds = new Set((hData || []).map((h: any) => h.auth_user_id));
-        const users = (authList?.users || [])
-          .filter((u: any) => !headadminIds.has(u.id))
-          .map((u: any) => {
-            const p = profMap.get(u.id);
-            return {
-              id: u.id,
-              email: p?.email || u.email || null,
-              full_name: p?.full_name || u.user_metadata?.full_name || null,
-            };
-          });
+        // Include ALL auth users (including headadmin accounts) so any user
+        // visible in the Users page can be selected for a per-user override.
+        const users = (authList?.users || []).map((u: any) => {
+          const p = profMap.get(u.id);
+          return {
+            id: u.id,
+            email: p?.email || u.email || null,
+            full_name: p?.full_name || u.user_metadata?.full_name || null,
+          };
+        });
         return new Response(JSON.stringify({ users }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
