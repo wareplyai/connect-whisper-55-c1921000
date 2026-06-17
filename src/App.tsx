@@ -68,6 +68,7 @@ const HADashboardAds = lazy(() => import("./pages/headadmin/DashboardAds"));
 const HAUserStorage = lazy(() => import("./pages/headadmin/UserStorage"));
 const HAReplyUsage = lazy(() => import("./pages/headadmin/ReplyUsage"));
 const HAAIKeys = lazy(() => import("./pages/headadmin/AIKeys"));
+const HAPendingApprovals = lazy(() => import("./pages/headadmin/PendingApprovals"));
 const HeadAdminMobileLayout = lazy(() => import("./layouts/HeadAdminMobileLayout"));
 const MobileHome = lazy(() => import("./pages/headadmin/mobile/MobileHome"));
 const MobileNotifications = lazy(() => import("./pages/headadmin/mobile/MobileNotifications"));
@@ -152,6 +153,7 @@ const App = () => (
               <Route path="/headadmin" element={<HeadAdminRoute><HeadAdminLayout /></HeadAdminRoute>}>
                 <Route index element={<HeadAdminOverview />} />
                 <Route path="users" element={<AllUsers />} />
+                <Route path="pending-users" element={<HAPendingApprovals />} />
                 <Route path="sessions" element={<AllSessions />} />
                 <Route path="revenue" element={<Revenue />} />
                 <Route path="messages" element={<AllMessages />} />

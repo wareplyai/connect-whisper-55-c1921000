@@ -36,14 +36,12 @@ const Register = () => {
       return toast.error(friendlyError(error));
     }
     setLoading(false);
-    // If email confirmation is enabled, no session is returned on signUp
-    if (!data.session) {
-      toast.success("Confirmation email sent! Please check your inbox and click the link to activate your account.");
-      nav("/login");
-      return;
+    // If a session was returned (email confirmation disabled), sign out — account must be approved first
+    if (data.session) {
+      await supabase.auth.signOut();
     }
-    toast.success("Account created!");
-    nav("/dashboard");
+    toast.success("Account create hoyeche! Apnar account pending. Approval er jonno admin er sathe contact korun: 01948695672 (WhatsApp/Call).", { duration: 14000 });
+    nav("/login");
   };
 
   return (
