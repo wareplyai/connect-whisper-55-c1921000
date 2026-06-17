@@ -5,7 +5,7 @@ import { useEffect } from "react";
 
 export const ProtectedRoute = ({ children, adminOnly = false }: { children: JSX.Element; adminOnly?: boolean }) => {
   const { user, profile, isAdmin, loading, signOut } = useAuth();
-  const isBlocked = !!user && (!profile || profile.is_active === false || profile.approval_status !== "approved");
+  const isBlocked = !loading && !!user && (!profile || profile.is_active === false || profile.approval_status !== "approved");
   const message = profile?.approval_status === "rejected"
     ? "Your account has been rejected. Contact admin: 01948695672"
     : "Apnar account pending. Approval er jonno admin er sathe contact korun: 01948695672 (WhatsApp/Call). Approved hole login korte parben.";
