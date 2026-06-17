@@ -69,7 +69,22 @@ export default function HeadAdminOverview() {
   const [aStats, setAStats] = useState({ received: 0, incomplete: 0, completed: 0, sent: 0 });
   const [aRecent, setARecent] = useState<any[]>([]);
   const [featurePerms, setFeaturePerms] = useState<{ key: string; label: string; icon: any; enabled: number; total: number; globalOn: boolean }[]>([]);
+  const [aiSpend, setAiSpend] = useState<{ tokens: number; cost: number; lastCost: number; activeUsers: number; top: any[] } | null>(null);
   const [loadingExtra, setLoadingExtra] = useState(true);
+
+  const loadAiSpend = async () => {
+    const { data } = await supabase.rpc("headadmin_ai_spend_summary" as any);
+    const row: any = Array.isArray(data) ? data[0] : data;
+    if (row) {
+      setAiSpend({
+        tokens: Number(row.this_month_tokens || 0),
+        cost: Number(row.this_month_cost || 0),
+        lastCost: Number(row.last_month_cost || 0),
+        activeUsers: Number(row.active_users_this_month || 0),
+        top: Array.isArray(row.top_users) ? row.top_users : [],
+      });
+    }
+  };
 
   const loadFeaturePerms = async () => {
     const [{ data: globals }, { data: overrides }, { data: profilesData }] = await Promise.all([
@@ -182,7 +197,8 @@ export default function HeadAdminOverview() {
     loadExtra();
     loadAbandoned();
     loadFeaturePerms();
-    const t = setInterval(() => { loadExtra(); loadAbandoned(); loadFeaturePerms(); }, 30000);
+    loadAiSpend();
+    const t = setInterval(() => { loadExtra(); loadAbandoned(); loadFeaturePerms(); loadAiSpend(); }, 30000);
     const ch = supabase
       .channel(`ha-overview-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => { loadExtra(); loadFeaturePerms(); })
@@ -193,6 +209,7 @@ export default function HeadAdminOverview() {
       .on("postgres_changes", { event: "*", schema: "public", table: "abandoned_connections" }, loadAbandoned)
       .on("postgres_changes", { event: "*", schema: "public", table: "global_feature_settings" }, loadFeaturePerms)
       .on("postgres_changes", { event: "*", schema: "public", table: "user_feature_access" }, loadFeaturePerms)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "ai_usage_logs" }, loadAiSpend)
       .subscribe();
     return () => { clearInterval(t); supabase.removeChannel(ch); };
   }, []);
@@ -291,6 +308,59 @@ export default function HeadAdminOverview() {
               </div>
             );
           })}
+        </div>
+      </ChartCard>
+
+      {/* AI Spend (this month) */}
+      <ChartCard
+        title="AI Spend — This Month"
+        subtitle={
+          aiSpend
+            ? `$${aiSpend.cost.toFixed(4)} · ${aiSpend.tokens.toLocaleString()} tokens · ${aiSpend.activeUsers} active user(s)`
+            : "Loading…"
+        }
+        action={<a href="/headadmin/reply-usage" className="text-xs text-primary hover:underline">Manage limits</a>}
+      >
+        <div className="grid gap-4 md:grid-cols-3 mb-4">
+          <div className="rounded-xl border border-border bg-card-elevated p-4">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Cost this month</p>
+            <p className="text-2xl font-bold tabular-nums text-emerald-600 mt-1">${(aiSpend?.cost || 0).toFixed(4)}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Last month: ${(aiSpend?.lastCost || 0).toFixed(4)}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card-elevated p-4">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total tokens</p>
+            <p className="text-2xl font-bold tabular-nums mt-1">{(aiSpend?.tokens || 0).toLocaleString()}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Across all users</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card-elevated p-4">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Active AI users</p>
+            <p className="text-2xl font-bold tabular-nums mt-1">{aiSpend?.activeUsers || 0}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Used AI at least once this month</p>
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">Top users by AI cost</p>
+          {(!aiSpend || aiSpend.top.length === 0) ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">No AI usage yet this month</p>
+          ) : (
+            <div className="space-y-2">
+              {aiSpend.top.map((u: any, i: number) => (
+                <div key={u.user_id} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card-elevated px-3 py-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="h-7 w-7 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-bold shrink-0">{i + 1}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{u.full_name || u.email || u.user_id?.slice(0, 8)}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{u.email || "—"}</p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold tabular-nums text-emerald-600">${Number(u.cost_usd || 0).toFixed(4)}</p>
+                    <p className="text-[11px] text-muted-foreground tabular-nums">{Number(u.tokens || 0).toLocaleString()} tok</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </ChartCard>
 

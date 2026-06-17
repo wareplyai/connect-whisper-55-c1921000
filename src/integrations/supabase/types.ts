@@ -1748,6 +1748,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_ai_limits: {
+        Row: {
+          created_at: string
+          disabled_tasks: string[]
+          monthly_cost_cap_usd: number
+          monthly_token_cap: number
+          note: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          disabled_tasks?: string[]
+          monthly_cost_cap_usd?: number
+          monthly_token_cap?: number
+          note?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          disabled_tasks?: string[]
+          monthly_cost_cap_usd?: number
+          monthly_token_cap?: number
+          note?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_ai_limits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_feature_access: {
         Row: {
           enabled: boolean
@@ -1840,6 +1878,18 @@ export type Database = {
         Args: { _feature: string; _user_id: string }
         Returns: boolean
       }
+      check_user_ai_limit: {
+        Args: { _task_type: string; _user_id: string }
+        Returns: {
+          allowed: boolean
+          cost_cap: number
+          cost_used: number
+          reason: string
+          task_disabled: boolean
+          token_cap: number
+          tokens_used: number
+        }[]
+      }
       cleanup_old_data: { Args: never; Returns: undefined }
       consume_reply_quota: {
         Args: { _user_id: string }
@@ -1899,6 +1949,16 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      headadmin_ai_spend_summary: {
+        Args: never
+        Returns: {
+          active_users_this_month: number
+          last_month_cost: number
+          this_month_cost: number
+          this_month_tokens: number
+          top_users: Json
+        }[]
       }
       headadmin_list_user_usage: {
         Args: never

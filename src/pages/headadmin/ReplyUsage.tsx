@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { RefreshCw, Pencil, RotateCcw, BarChart3, DollarSign, Cpu, Users, Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { RefreshCw, Pencil, RotateCcw, BarChart3, DollarSign, Cpu, Users, Trash2, Gauge } from "lucide-react";
 
 interface TaskBreakdownItem {
   task_type: string;
@@ -115,6 +116,76 @@ export default function ReplyUsage() {
   const [detailUser, setDetailUser] = useState<Row | null>(null);
   const [details, setDetails] = useState<Detail[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [limitUser, setLimitUser] = useState<Row | null>(null);
+  const [limitTokenCap, setLimitTokenCap] = useState("");
+  const [limitCostCap, setLimitCostCap] = useState("");
+  const [disabledTasks, setDisabledTasks] = useState<Set<string>>(new Set());
+  const [limitCurrent, setLimitCurrent] = useState<{ tokens: number; cost: number } | null>(null);
+  const [limitSaving, setLimitSaving] = useState(false);
+
+  const openLimits = async (r: Row) => {
+    setLimitUser(r);
+    setLimitTokenCap("");
+    setLimitCostCap("");
+    setDisabledTasks(new Set());
+    setLimitCurrent(null);
+    const { data } = await supabase
+      .from("user_ai_limits" as any)
+      .select("monthly_token_cap, monthly_cost_cap_usd, disabled_tasks")
+      .eq("user_id", r.user_id)
+      .maybeSingle();
+    if (data) {
+      setLimitTokenCap(String((data as any).monthly_token_cap || ""));
+      setLimitCostCap(String((data as any).monthly_cost_cap_usd || ""));
+      setDisabledTasks(new Set(((data as any).disabled_tasks || []) as string[]));
+    }
+    // Show current month spend
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+    const { data: usage } = await supabase
+      .from("ai_usage_logs")
+      .select("total_tokens, total_cost_usd")
+      .eq("user_id", r.user_id)
+      .gte("created_at", monthStart.toISOString());
+    const tokens = (usage || []).reduce((s: number, u: any) => s + Number(u.total_tokens || 0), 0);
+    const cost = (usage || []).reduce((s: number, u: any) => s + Number(u.total_cost_usd || 0), 0);
+    setLimitCurrent({ tokens, cost });
+  };
+
+  const toggleTask = (task: string) => {
+    setDisabledTasks((prev) => {
+      const next = new Set(prev);
+      if (next.has(task)) next.delete(task);
+      else next.add(task);
+      return next;
+    });
+  };
+
+  const saveLimits = async () => {
+    if (!limitUser) return;
+    setLimitSaving(true);
+    const payload = {
+      user_id: limitUser.user_id,
+      monthly_token_cap: Math.max(0, Number(limitTokenCap) || 0),
+      monthly_cost_cap_usd: Math.max(0, Number(limitCostCap) || 0),
+      disabled_tasks: Array.from(disabledTasks),
+    };
+    const { error } = await supabase
+      .from("user_ai_limits" as any)
+      .upsert(payload as any, { onConflict: "user_id" });
+    setLimitSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("AI limits saved");
+    setLimitUser(null);
+  };
+
+  const clearLimits = async () => {
+    if (!limitUser) return;
+    if (!confirm("Remove all AI limits for this user?")) return;
+    const { error } = await supabase.from("user_ai_limits" as any).delete().eq("user_id", limitUser.user_id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("AI limits cleared");
+    setLimitUser(null);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -329,7 +400,8 @@ export default function ReplyUsage() {
                   <TableCell className="text-right tabular-nums font-semibold text-emerald-600">{fmtUSD(r.total_cost_usd)}</TableCell>
                   <TableCell className="text-xs">{r.max_tokens.toLocaleString()}</TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(r)} title="Edit limits"><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(r)} title="Edit reply quota / max tokens"><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => openLimits(r)} title="Set AI limits (token cap, cost cap, disable tasks)"><Gauge className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => resetUsage(r)} title="Reset reply counter"><RotateCcw className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => purgeUser(r)} title="Delete ALL usage & cost history (fresh start)" className="text-destructive hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
@@ -363,6 +435,61 @@ export default function ReplyUsage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEdit(null)}>Cancel</Button>
             <Button onClick={save}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Limits dialog */}
+      <Dialog open={!!limitUser} onOpenChange={(o) => !o && setLimitUser(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>AI Limits — {limitUser?.full_name || limitUser?.email}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {limitCurrent && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs space-y-1">
+                <div className="font-semibold">This month so far</div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Tokens used:</span><span className="font-bold tabular-nums">{limitCurrent.tokens.toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Cost used:</span><span className="font-bold tabular-nums text-emerald-600">${limitCurrent.cost.toFixed(4)}</span></div>
+              </div>
+            )}
+            <div>
+              <Label>Monthly token cap</Label>
+              <Input type="number" min={0} value={limitTokenCap} onChange={(e) => setLimitTokenCap(e.target.value)} placeholder="0 = unlimited" />
+              <p className="text-[11px] text-muted-foreground mt-1">When the user crosses this many tokens this month, AI replies are blocked. Set 0 for unlimited.</p>
+            </div>
+            <div>
+              <Label>Monthly cost cap (USD)</Label>
+              <Input type="number" min={0} step="0.01" value={limitCostCap} onChange={(e) => setLimitCostCap(e.target.value)} placeholder="0 = unlimited" />
+              <p className="text-[11px] text-muted-foreground mt-1">Hard $ cap. Once the user's monthly AI cost reaches this, AI replies are blocked. Set 0 for unlimited.</p>
+            </div>
+            <div>
+              <Label>Disable specific AI tasks</Label>
+              <p className="text-[11px] text-muted-foreground mb-2">Toggle off any task the user is NOT allowed to use.</p>
+              <div className="space-y-2 rounded-lg border border-border p-3">
+                {Object.entries(TASK_LABELS).map(([key, meta]) => {
+                  const disabled = disabledTasks.has(key);
+                  return (
+                    <div key={key} className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${meta.tone}`}>{meta.label}</span>
+                          {disabled && <Badge variant="destructive" className="text-[9px]">Blocked</Badge>}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{meta.desc}</p>
+                      </div>
+                      <Switch checked={!disabled} onCheckedChange={() => toggleTask(key)} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={clearLimits}>Clear all limits</Button>
+            <div className="flex-1" />
+            <Button variant="outline" onClick={() => setLimitUser(null)}>Cancel</Button>
+            <Button onClick={saveLimits} disabled={limitSaving}>{limitSaving ? "Saving…" : "Save"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
