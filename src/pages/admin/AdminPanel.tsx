@@ -28,8 +28,7 @@ function rangeFromPreset(key: PresetKey): DateRange | undefined {
 }
 
 const AdminPanel = () => {
-  const [stats, setStats] = useState({ users: 0, sessions: 0, messages: 0 });
-  const [users, setUsers] = useState<any[]>([]);
+  const [stats, setStats] = useState({ customers: 0, sessions: 0, messages: 0 });
   const [preset, setPreset] = useState<PresetKey>("7d");
   const [range, setRange] = useState<DateRange | undefined>(rangeFromPreset("7d"));
   const [loading, setLoading] = useState(false);
@@ -44,30 +43,52 @@ const AdminPanel = () => {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      let msgQ = supabase.from("message_logs").select("*", { count: "exact", head: true });
-      if (range?.from) msgQ = msgQ.gte("created_at", range.from.toISOString());
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) {
+        setStats({ customers: 0, sessions: 0, messages: 0 });
+        setLoading(false);
+        return;
+      }
+
+      let msgQ = supabase
+        .from("incoming_messages")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", uid);
+      if (range?.from) msgQ = msgQ.gte("received_at", range.from.toISOString());
       if (range?.to) {
         const end = new Date(range.to);
         end.setHours(23, 59, 59, 999);
-        msgQ = msgQ.lte("created_at", end.toISOString());
+        msgQ = msgQ.lte("received_at", end.toISOString());
       }
 
-      const [u, s, m, list] = await Promise.all([
-        supabase.from("profiles").select("*", { count: "exact", head: true }),
-        supabase.from("sessions").select("*", { count: "exact", head: true }),
+      const [custRes, sessRes, msgRes] = await Promise.all([
+        supabase
+          .from("incoming_messages")
+          .select("from_number")
+          .eq("user_id", uid)
+          .eq("is_group", false),
+        supabase
+          .from("sessions")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", uid),
         msgQ,
-        supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(20),
       ]);
-      setStats({ users: u.count || 0, sessions: s.count || 0, messages: m.count || 0 });
-      setUsers(list.data || []);
+
+      const distinct = new Set((custRes.data || []).map((r: any) => r.from_number).filter(Boolean));
+      setStats({
+        customers: distinct.size,
+        sessions: sessRes.count || 0,
+        messages: msgRes.count || 0,
+      });
       setLoading(false);
     })();
   }, [range?.from?.getTime(), range?.to?.getTime()]);
 
   const cards = [
-    { label: "Total Users", value: stats.users, icon: Users, sub: "All time" },
-    { label: "Total Sessions", value: stats.sessions, icon: Smartphone, sub: "All time" },
-    { label: "Messages", value: stats.messages, icon: MessageSquare, sub: rangeLabel },
+    { label: "My Customers", value: stats.customers, icon: Users, sub: "All time" },
+    { label: "My Sessions", value: stats.sessions, icon: Smartphone, sub: "All time" },
+    { label: "My Messages", value: stats.messages, icon: MessageSquare, sub: rangeLabel },
   ];
 
   return (
@@ -75,7 +96,7 @@ const AdminPanel = () => {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Admin Panel</h1>
-          <p className="text-sm text-muted-foreground">Platform-wide overview and user management.</p>
+          <p className="text-sm text-muted-foreground">Your account overview and customer activity.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -140,31 +161,6 @@ const AdminPanel = () => {
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground mt-1.5">{c.sub}</p>
           </div>
         ))}
-      </div>
-
-      <div className="rounded-xl border border-border bg-card p-6">
-        <h2 className="font-semibold mb-4">All Users</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase text-muted-foreground">
-              <tr><th className="text-left py-2">Name</th><th className="text-left">Email</th><th className="text-left">Plan</th><th className="text-left">Status</th><th className="text-right">Created</th></tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-t border-border">
-                  <td className="py-2.5">{u.full_name || "—"}</td>
-                  <td>{u.email}</td>
-                  <td><span className="px-2 py-0.5 rounded-full bg-card-elevated text-xs capitalize">{u.plan}</span></td>
-                  <td><span className={`px-2 py-0.5 rounded-full text-xs ${u.is_active ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>{u.is_active ? "Active" : "Inactive"}</span></td>
-                  <td className="text-right text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
-                </tr>
-              ))}
-              {users.length === 0 && (
-                <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">No users yet</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   );
