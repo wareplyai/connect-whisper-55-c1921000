@@ -2,7 +2,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Smartphone, DollarSign, MessageSquare,
   Bell, ScrollText, Settings, LogOut, CreditCard, Receipt, Tags, Search,
-  ChevronDown, Zap, ToggleRight, SmartphoneCharging, Megaphone, HardDrive, Sparkles, KeyRound,
+  ChevronDown, Zap, ToggleRight, SmartphoneCharging, Megaphone, HardDrive, Sparkles, KeyRound, UserCheck,
 } from "lucide-react";
 import { useHeadAdmin } from "@/contexts/HeadAdminContext";
 import { Logo } from "@/components/Logo";
