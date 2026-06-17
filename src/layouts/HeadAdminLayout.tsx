@@ -18,6 +18,7 @@ const navGroups = [
     items: [
       { to: "/headadmin", label: "Dashboard", icon: LayoutDashboard, end: true },
       { to: "/headadmin/users", label: "Users", icon: Users },
+      { to: "/headadmin/pending-users", label: "Pending Approvals", icon: UserCheck },
       { to: "/headadmin/sessions", label: "Sessions", icon: Smartphone },
       { to: "/headadmin/messages", label: "Messages", icon: MessageSquare },
       { to: "/headadmin/user-storage", label: "User Storage", icon: HardDrive },
