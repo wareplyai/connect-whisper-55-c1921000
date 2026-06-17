@@ -2053,7 +2053,7 @@ Deno.serve(async (req) => {
     let voiceTranscript = "";
     let voiceUploadedMime: string | null = null;
     // Captured here so we can log STT token usage AFTER `admin`/`userId` exist further down.
-    let pendingSttUsage: { promptTokens: number; completionTokens: number; model: string; platform: string; keyScope: string } | null = null;
+    let pendingSttUsage: { promptTokens: number; completionTokens: number; model: string; platform: string; keyScope: string; audioSeconds: number } | null = null;
     {
       const audioUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
       const lowerType0 = messageType.toLowerCase();
