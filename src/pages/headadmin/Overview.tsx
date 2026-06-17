@@ -69,7 +69,22 @@ export default function HeadAdminOverview() {
   const [aStats, setAStats] = useState({ received: 0, incomplete: 0, completed: 0, sent: 0 });
   const [aRecent, setARecent] = useState<any[]>([]);
   const [featurePerms, setFeaturePerms] = useState<{ key: string; label: string; icon: any; enabled: number; total: number; globalOn: boolean }[]>([]);
+  const [aiSpend, setAiSpend] = useState<{ tokens: number; cost: number; lastCost: number; activeUsers: number; top: any[] } | null>(null);
   const [loadingExtra, setLoadingExtra] = useState(true);
+
+  const loadAiSpend = async () => {
+    const { data } = await supabase.rpc("headadmin_ai_spend_summary" as any);
+    const row: any = Array.isArray(data) ? data[0] : data;
+    if (row) {
+      setAiSpend({
+        tokens: Number(row.this_month_tokens || 0),
+        cost: Number(row.this_month_cost || 0),
+        lastCost: Number(row.last_month_cost || 0),
+        activeUsers: Number(row.active_users_this_month || 0),
+        top: Array.isArray(row.top_users) ? row.top_users : [],
+      });
+    }
+  };
 
   const loadFeaturePerms = async () => {
     const [{ data: globals }, { data: overrides }, { data: profilesData }] = await Promise.all([
