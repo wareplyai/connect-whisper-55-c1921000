@@ -1393,6 +1393,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -1403,6 +1406,9 @@ export type Database = {
           plan: string
         }
         Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -1413,6 +1419,9 @@ export type Database = {
           plan?: string
         }
         Update: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
