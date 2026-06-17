@@ -9,6 +9,7 @@ interface Profile {
   plan: string;
   max_sessions: number;
   is_active: boolean;
+  approval_status: "pending" | "approved" | "rejected";
 }
 
 interface AuthCtx {
@@ -44,10 +45,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        setTimeout(() => loadProfileData(s.user.id), 0);
+        setLoading(true);
+        setTimeout(() => loadProfileData(s.user.id).finally(() => setLoading(false)), 0);
       } else {
         setProfile(null);
         setIsAdmin(false);
+        setLoading(false);
       }
     });
 
@@ -61,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Auto-logout if user is deactivated or deleted by headadmin (realtime + safety check)
+  // Auto-logout if user is deactivated, unapproved, or deleted by headadmin (realtime + safety check)
   useEffect(() => {
     if (!user) return;
 
@@ -73,11 +76,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const verify = async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("is_active")
+        .select("is_active, approval_status")
         .eq("id", user.id)
         .maybeSingle();
       if (error) return;
-      if (!data || data.is_active === false) forceLogout();
+      if (!data || data.is_active === false || (data as any).approval_status !== "approved") forceLogout();
     };
 
     // Initial check
@@ -90,7 +93,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` },
         (payload: any) => {
-          if (!payload.new || payload.new.is_active === false) forceLogout();
+          if (!payload.new || payload.new.is_active === false || payload.new.approval_status !== "approved") forceLogout();
         }
       )
       .on(
