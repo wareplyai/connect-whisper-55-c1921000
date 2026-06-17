@@ -258,6 +258,10 @@ export default function ReplyUsage() {
         <Input placeholder="Search by email or name…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </Card>
 
+      <VoiceTranscribeDebug rows={rows} />
+
+
+
       <Card className="overflow-x-auto">
         <Table>
           <TableHeader>
