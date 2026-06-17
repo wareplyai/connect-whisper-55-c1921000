@@ -45,7 +45,9 @@ const Login = () => {
       setLoading(false);
       const msg = (error.message || "").toLowerCase();
       if (msg.includes("not confirmed") || msg.includes("email not confirmed")) {
-        return toast.error("Please confirm your email first. Check your inbox for the confirmation link.");
+        setApprovalNotice("pending");
+        showApprovalToast("pending");
+        return;
       }
       return toast.error(friendlyError(error));
     }
