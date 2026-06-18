@@ -197,6 +197,7 @@ async function logAiUsage(
     platform: string;
     model: string;
     keyScope?: string | null;
+    apiKeyId?: string | null;
     taskType: string;
     promptTokens: number;
     completionTokens: number;
@@ -224,6 +225,7 @@ async function logAiUsage(
       platform: ctx.platform,
       model: ctx.model,
       key_scope: ctx.keyScope || "user",
+      api_key_id: ctx.apiKeyId || null,
       task_type: ctx.taskType,
       prompt_tokens: pt,
       completion_tokens: ct,
@@ -2053,7 +2055,7 @@ Deno.serve(async (req) => {
     let voiceTranscript = "";
     let voiceUploadedMime: string | null = null;
     // Captured here so we can log STT token usage AFTER `admin`/`userId` exist further down.
-    let pendingSttUsage: { promptTokens: number; completionTokens: number; model: string; platform: string; keyScope: string; audioSeconds: number } | null = null;
+    let pendingSttUsage: { promptTokens: number; completionTokens: number; model: string; platform: string; keyScope: string; apiKeyId: string | null; audioSeconds: number } | null = null;
     {
       const audioUrl = String((body as any).media_url || (body as any).mediaUrl || "").trim();
       const lowerType0 = messageType.toLowerCase();
@@ -2088,7 +2090,7 @@ Deno.serve(async (req) => {
           }
           if (!rawText && ses0?.user_id) {
             // Resolve the user's own AI key (or global headadmin key) — NEVER use Lovable AI Gateway here.
-            let sttKey: { encrypted_key: string; platform: string; scope?: string } | null = null;
+            let sttKey: { id?: string; encrypted_key: string; platform: string; scope?: string } | null = null;
             try {
               const { data: resolved } = await admin0.rpc("resolve_ai_api_key", { _user_id: ses0.user_id, _platform: null });
               const r = Array.isArray(resolved) ? resolved[0] : resolved;
@@ -2099,7 +2101,7 @@ Deno.serve(async (req) => {
             if (!sttKey) {
               const { data: legacy } = await admin0
                 .from("ai_api_keys")
-                .select("encrypted_key, platform")
+                .select("id, encrypted_key, platform")
                 .eq("user_id", ses0.user_id)
                 .eq("is_active", true)
                 .maybeSingle();
@@ -2124,6 +2126,7 @@ Deno.serve(async (req) => {
                 model: sttRes.model,
                 platform: sttKey.platform,
                 keyScope: sttKey.scope || "user",
+                apiKeyId: sttKey.id || null,
                 audioSeconds: sttRes.audioSeconds || 0,
               };
               const transcript = sttRes.text;
@@ -2533,7 +2536,7 @@ Deno.serve(async (req) => {
         // Token-based pricing path (Gemini)
         await logAiUsage(admin, {
           userId, sessionId, messageId: null, fromNumber,
-          platform: pendingSttUsage.platform, model: pendingSttUsage.model, keyScope: pendingSttUsage.keyScope,
+          platform: pendingSttUsage.platform, model: pendingSttUsage.model, keyScope: pendingSttUsage.keyScope, apiKeyId: pendingSttUsage.apiKeyId || null,
           taskType: "voice_transcribe",
           promptTokens: pt,
           completionTokens: ct,
@@ -2553,6 +2556,7 @@ Deno.serve(async (req) => {
             platform: pendingSttUsage.platform,
             model: pendingSttUsage.model,
             key_scope: pendingSttUsage.keyScope || "user",
+            api_key_id: pendingSttUsage.apiKeyId || null,
             task_type: "voice_transcribe",
             prompt_tokens: 0,
             completion_tokens: 0,
@@ -3229,7 +3233,7 @@ Deno.serve(async (req) => {
     }
 
     // Load API key — try user's own first, fallback to global key set by headadmin
-    let keyRow: { encrypted_key: string; platform: string; model: string; scope?: string } | null = null;
+    let keyRow: { id?: string; encrypted_key: string; platform: string; model: string; scope?: string } | null = null;
     try {
       const { data: resolved } = await admin.rpc("resolve_ai_api_key", { _user_id: userId, _platform: null });
       const r = Array.isArray(resolved) ? resolved[0] : resolved;
@@ -3241,7 +3245,7 @@ Deno.serve(async (req) => {
       // legacy fallback
       const { data: legacy } = await admin
         .from("ai_api_keys")
-        .select("encrypted_key, platform, model")
+        .select("id, encrypted_key, platform, model")
         .eq("user_id", userId)
         .eq("is_active", true)
         .maybeSingle();
@@ -3340,7 +3344,7 @@ Deno.serve(async (req) => {
         const descRes = await describeImageWithOpenAI(apiKey, imageUrl, { detail: aiLimits.vision_detail, maxTokens: aiLimits.image_describe_max_tokens });
         await logAiUsage(admin, {
           userId, sessionId, messageId, fromNumber,
-          platform: keyRow.platform, model: descRes.model, keyScope: keyRow.scope || "user",
+          platform: keyRow.platform, model: descRes.model, keyScope: keyRow.scope || "user", apiKeyId: keyRow.id || null,
           taskType: "image_describe",
           promptTokens: descRes.promptTokens, completionTokens: descRes.completionTokens,
         });
@@ -3348,7 +3352,7 @@ Deno.serve(async (req) => {
         const structRes = await extractStructuredFromImage({ apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption, detail: aiLimits.vision_detail, maxTokens: aiLimits.image_extract_max_tokens });
         await logAiUsage(admin, {
           userId, sessionId, messageId, fromNumber,
-          platform: keyRow.platform, model: structRes.model, keyScope: keyRow.scope || "user",
+          platform: keyRow.platform, model: structRes.model, keyScope: keyRow.scope || "user", apiKeyId: keyRow.id || null,
           taskType: "image_extract",
           promptTokens: structRes.promptTokens, completionTokens: structRes.completionTokens,
         });
@@ -3373,7 +3377,7 @@ Deno.serve(async (req) => {
           const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any, { detail: aiLimits.vision_detail, maxTokens: aiLimits.vision_match_max_tokens, maxCandidates: aiLimits.vision_match_max_candidates });
           await logAiUsage(admin, {
             userId, sessionId, messageId, fromNumber,
-            platform: keyRow.platform, model: vMatch.model, keyScope: keyRow.scope || "user",
+            platform: keyRow.platform, model: vMatch.model, keyScope: keyRow.scope || "user", apiKeyId: keyRow.id || null,
             taskType: "vision_match",
             promptTokens: vMatch.promptTokens, completionTokens: vMatch.completionTokens,
           });
@@ -3450,7 +3454,7 @@ Deno.serve(async (req) => {
           const descRes = await describeImageWithOpenAI(apiKey, imageUrl, { detail: aiLimits.vision_detail, maxTokens: aiLimits.image_describe_max_tokens });
           await logAiUsage(admin, {
             userId, sessionId, messageId, fromNumber,
-            platform: keyRow.platform, model: descRes.model, keyScope: keyRow.scope || "user",
+            platform: keyRow.platform, model: descRes.model, keyScope: keyRow.scope || "user", apiKeyId: keyRow.id || null,
             taskType: "image_describe",
             promptTokens: descRes.promptTokens, completionTokens: descRes.completionTokens,
           });
@@ -3460,7 +3464,7 @@ Deno.serve(async (req) => {
           const structRes = await extractStructuredFromImage({ apiKey, platform: keyRow.platform, imageUrl, caption: imageCaption, detail: aiLimits.vision_detail, maxTokens: aiLimits.image_extract_max_tokens });
           await logAiUsage(admin, {
             userId, sessionId, messageId, fromNumber,
-            platform: keyRow.platform, model: structRes.model, keyScope: keyRow.scope || "user",
+            platform: keyRow.platform, model: structRes.model, keyScope: keyRow.scope || "user", apiKeyId: keyRow.id || null,
             taskType: "image_extract",
             promptTokens: structRes.promptTokens, completionTokens: structRes.completionTokens,
           });
@@ -3488,7 +3492,7 @@ Deno.serve(async (req) => {
             const vMatch = await matchProductByVision(apiKey, imageUrl, (productRows || []) as any, { detail: aiLimits.vision_detail, maxTokens: aiLimits.vision_match_max_tokens, maxCandidates: aiLimits.vision_match_max_candidates });
             await logAiUsage(admin, {
               userId, sessionId, messageId, fromNumber,
-              platform: keyRow.platform, model: vMatch.model, keyScope: keyRow.scope || "user",
+              platform: keyRow.platform, model: vMatch.model, keyScope: keyRow.scope || "user", apiKeyId: keyRow.id || null,
               taskType: "vision_match",
               promptTokens: vMatch.promptTokens, completionTokens: vMatch.completionTokens,
             });
@@ -3824,6 +3828,7 @@ Deno.serve(async (req) => {
               platform: keyRow.platform,
               model: aiModelUsed,
               key_scope: keyRow.scope || "user",
+              api_key_id: keyRow.id || null,
               task_type: "text_reply",
               prompt_tokens: aiPromptTokens,
               completion_tokens: aiCompletionTokens,
