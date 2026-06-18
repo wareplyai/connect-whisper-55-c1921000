@@ -225,6 +225,7 @@ async function logAiUsage(
       platform: ctx.platform,
       model: ctx.model,
       key_scope: ctx.keyScope || "user",
+      api_key_id: ctx.apiKeyId || null,
       task_type: ctx.taskType,
       prompt_tokens: pt,
       completion_tokens: ct,
