@@ -2126,6 +2126,7 @@ Deno.serve(async (req) => {
                 model: sttRes.model,
                 platform: sttKey.platform,
                 keyScope: sttKey.scope || "user",
+                apiKeyId: sttKey.id || null,
                 audioSeconds: sttRes.audioSeconds || 0,
               };
               const transcript = sttRes.text;
