@@ -39,6 +39,8 @@ const navGroups = [
     items: [
       { to: "/headadmin/reply-usage", label: "Reply Usage", icon: Sparkles },
       { to: "/headadmin/ai-keys", label: "Global AI Keys", icon: KeyRound },
+      { to: "/headadmin/global-key-usage", label: "Global Key Usage", icon: Sparkles },
+      { to: "/headadmin/key-breakdown", label: "Key Breakdown", icon: KeyRound },
     ],
   },
   {
