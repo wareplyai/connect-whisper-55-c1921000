@@ -171,6 +171,8 @@ const App = () => (
                 <Route path="user-storage" element={<HAUserStorage />} />
                 <Route path="reply-usage" element={<HAReplyUsage />} />
                 <Route path="ai-keys" element={<HAAIKeys />} />
+                <Route path="global-key-usage" element={<HAGlobalKeyUsage />} />
+                <Route path="key-breakdown" element={<HAKeyBreakdown />} />
               </Route>
 
 
