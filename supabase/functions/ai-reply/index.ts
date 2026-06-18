@@ -197,6 +197,7 @@ async function logAiUsage(
     platform: string;
     model: string;
     keyScope?: string | null;
+    apiKeyId?: string | null;
     taskType: string;
     promptTokens: number;
     completionTokens: number;
