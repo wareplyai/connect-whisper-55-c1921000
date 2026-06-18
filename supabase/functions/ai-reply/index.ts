@@ -3828,6 +3828,7 @@ Deno.serve(async (req) => {
               platform: keyRow.platform,
               model: aiModelUsed,
               key_scope: keyRow.scope || "user",
+              api_key_id: keyRow.id || null,
               task_type: "text_reply",
               prompt_tokens: aiPromptTokens,
               completion_tokens: aiCompletionTokens,
