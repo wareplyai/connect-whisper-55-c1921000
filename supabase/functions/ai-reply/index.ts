@@ -2556,6 +2556,7 @@ Deno.serve(async (req) => {
             platform: pendingSttUsage.platform,
             model: pendingSttUsage.model,
             key_scope: pendingSttUsage.keyScope || "user",
+            api_key_id: pendingSttUsage.apiKeyId || null,
             task_type: "voice_transcribe",
             prompt_tokens: 0,
             completion_tokens: 0,
