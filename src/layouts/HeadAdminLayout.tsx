@@ -69,6 +69,8 @@ const allItems = [
   { to: "/headadmin/plan-pricing", label: "Plan Pricing" },
   { to: "/headadmin/reply-usage", label: "Reply Usage" },
   { to: "/headadmin/ai-keys", label: "Global AI Keys" },
+  { to: "/headadmin/global-key-usage", label: "Global Key Usage" },
+  { to: "/headadmin/key-breakdown", label: "Key Breakdown" },
   { to: "/headadmin/feature-access", label: "Feature Access" },
   { to: "/headadmin/dashboard-ads", label: "Dashboard Ads" },
   { to: "/headadmin/notifications", label: "Notifications" },
