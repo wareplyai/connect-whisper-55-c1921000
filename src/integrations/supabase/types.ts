@@ -337,6 +337,7 @@ export type Database = {
       }
       ai_usage_logs: {
         Row: {
+          api_key_id: string | null
           completion_tokens: number
           created_at: string
           from_number: string | null
@@ -357,6 +358,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          api_key_id?: string | null
           completion_tokens?: number
           created_at?: string
           from_number?: string | null
@@ -377,6 +379,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          api_key_id?: string | null
           completion_tokens?: number
           created_at?: string
           from_number?: string | null
@@ -396,7 +399,15 @@ export type Database = {
           total_tokens?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "ai_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       auto_reply_rules: {
         Row: {
