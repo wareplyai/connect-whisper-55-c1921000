@@ -288,7 +288,7 @@ const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) =>
 };
 
 function isInternalAiReplyWebhook(url: string) {
-  return /\.supabase\.co\/functions\/v1\/ai-reply\/?$/i.test(url.trim());
+  return /\.supabase\.co\/functions\/v1\/ai-reply\/?(?:[?#].*)?$/i.test(url.trim());
 }
 
 export default WebhookConfigDialog;

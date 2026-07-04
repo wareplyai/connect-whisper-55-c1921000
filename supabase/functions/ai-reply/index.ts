@@ -1847,7 +1847,7 @@ async function sendViaGateway(opts: {
 }
 
 function isInternalAiReplyWebhook(url: string): boolean {
-  return /\.supabase\.co\/functions\/v1\/ai-reply\/?$/i.test(url.trim());
+  return /\.supabase\.co\/functions\/v1\/ai-reply\/?(?:[?#].*)?$/i.test(url.trim());
 }
 
 async function deliverUserWebhook(opts: {
