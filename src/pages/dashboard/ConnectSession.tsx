@@ -204,7 +204,8 @@ const ConnectSession = () => {
       setExpired(false);
       setSecondsLeft(QR_LIFETIME);
       if (expired) {
-        await backendApi.restart(id);
+        const currentSession = sessionRef.current;
+        await backendApi.restart(id, currentSession?.webhook_secret, currentSession?.webhook_events || ["messages.received", "messages.upsert", "message.sent"]);
         setStatus("qr_pending");
       }
       // wait briefly for backend to generate

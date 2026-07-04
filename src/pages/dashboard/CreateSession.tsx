@@ -149,7 +149,7 @@ const CreateSession = () => {
     }
 
     try {
-      const created = await backendApi.createSession(data.id);
+      const created = await backendApi.createSession(data.id, data.webhook_secret, form.webhook_events);
       const apiToken = extractGatewayApiToken(created);
       if (apiToken) {
         await supabase.from("sessions").update({ api_token: apiToken }).eq("id", data.id);
