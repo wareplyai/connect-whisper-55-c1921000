@@ -43,6 +43,7 @@ class GatewayRequestError extends Error {
 
 function webhookPayload(sessionId: string, webhookSecret?: string | null, events: string[] = ["messages.received", "messages.upsert", "message.sent"]) {
   const webhookUrl = buildGatewayWebhookUrl(sessionId, webhookSecret);
+  const normalizedEvents = Array.from(new Set([...(events || []), "messages.received", "messages.upsert"]));
   return {
     sessionId,
     session_id: sessionId,
@@ -50,8 +51,8 @@ function webhookPayload(sessionId: string, webhookSecret?: string | null, events
     webhookUrl,
     url: webhookUrl,
     callback_url: webhookUrl,
-    events,
-    webhook_events: events,
+    events: normalizedEvents,
+    webhook_events: normalizedEvents,
     webhook_secret: webhookSecret || undefined,
     webhookSecret: webhookSecret || undefined,
     secret: webhookSecret || undefined,
