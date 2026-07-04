@@ -208,9 +208,14 @@ const SessionDetail = () => {
         if (st?.status) update.status = st.status;
         if (st?.phone) update.phone_number = st.phone;
         if (st?.name) update.whatsapp_name = st.name;
+        const apiToken = extractGatewayApiToken(st);
+        if (apiToken) update.api_token = apiToken;
         if (st?.status === "connected") update.last_active = new Date().toISOString();
         if (Object.keys(update).length) {
           await supabase.from("sessions").update(update).eq("id", id);
+          if (apiToken && (s?.enable_webhook ?? true)) {
+            await backendApi.configureWebhook(id, apiToken, s?.webhook_secret, s?.webhook_events || ["messages.received", "message.sent"]).catch(() => {});
+          }
           loadSession();
         }
       } catch { /* ignore */ }
