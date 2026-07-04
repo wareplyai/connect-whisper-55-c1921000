@@ -10,7 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, ChevronDown, QrCode, AlertCircle, Zap } from "lucide-react";
 import { toast } from "sonner";
-import { backendApi } from "@/lib/backend";
+import { AI_REPLY_WEBHOOK_URL, backendApi, extractGatewayApiToken } from "@/lib/backend";
 import { CountryCodeSelect } from "@/components/CountryCodeSelect";
 import { DEFAULT_COUNTRY, Country, validatePhoneForCountry } from "@/lib/countries";
 import { friendlyError } from "@/lib/friendlyError";
@@ -27,7 +27,6 @@ const CreateSession = () => {
   const nav = useNavigate();
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [phoneNum, setPhoneNum] = useState("");
-  const AI_REPLY_WEBHOOK_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`;
   const [form, setForm] = useState({
     session_name: "",
     enable_account_protection: true,
@@ -150,7 +149,19 @@ const CreateSession = () => {
     }
 
     try {
-      await backendApi.createSession(data.id);
+      const created = await backendApi.createSession(data.id);
+      const apiToken = extractGatewayApiToken(created);
+      if (apiToken) {
+        await supabase.from("sessions").update({ api_token: apiToken }).eq("id", data.id);
+        if (effectiveEnableWebhook) {
+          await backendApi.configureWebhook(data.id, apiToken, data.webhook_secret, form.webhook_events).catch((err) => {
+            console.warn("Webhook configure failed", err);
+            toast.warning("Session created, but webhook setup failed. Open Connect > Manage Webhook and save once.");
+          });
+        }
+      } else {
+        toast.warning("Session created, but gateway did not return apiToken yet. Auto-reply will start after the gateway returns the token.");
+      }
       toast.success("Session created!");
       nav(`/dashboard/sessions/${data.id}/connect`);
     } catch (err: any) {

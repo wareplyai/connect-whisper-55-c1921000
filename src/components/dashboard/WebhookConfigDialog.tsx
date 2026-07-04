@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
+import { AI_REPLY_WEBHOOK_URL, backendApi } from "@/lib/backend";
 
 const ALL_EVENTS = [
   "messages.received", "messages-group.received", "messages-newsletter.received",
@@ -80,7 +81,7 @@ const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) =>
   useEffect(() => {
     if (!session || !open) return;
     setEnabled(!!session.enable_webhook);
-    setUrl(session.webhook_url || `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`);
+    setUrl(session.webhook_url || AI_REPLY_WEBHOOK_URL);
     setForwardUrl(session.forward_webhook_url || "");
     setSecret(session.webhook_secret || "");
     setEvents(session.webhook_events || ["messages.received"]);
@@ -111,9 +112,10 @@ const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) =>
       if (forwardUrl.trim() && !/^https:\/\//i.test(forwardUrl.trim())) return toast.error("Forward URL must start with https://");
     }
     setSaving(true);
+    const effectiveUrl = isInternalAiReplyWebhook(url.trim()) ? AI_REPLY_WEBHOOK_URL : url.trim();
     const { error } = await supabase.from("sessions").update({
       enable_webhook: enabled,
-      webhook_url: url || null,
+      webhook_url: effectiveUrl || null,
       forward_webhook_url: null,
       webhook_secret: secret,
       webhook_events: events,
@@ -123,6 +125,12 @@ const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) =>
     }).eq("id", session.id);
     setSaving(false);
     if (error) return toast.error(friendlyError(error));
+    if (enabled && session.api_token) {
+      await backendApi.configureWebhook(session.id, session.api_token, secret, events).catch((err) => {
+        console.warn("Webhook configure failed", err);
+        toast.warning("Saved locally, but gateway webhook setup failed.");
+      });
+    }
     toast.success("Webhook configuration saved");
     onSaved();
     onOpenChange(false);
@@ -181,7 +189,7 @@ const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) =>
                   <Input
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
-                    placeholder={`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`}
+                    placeholder={AI_REPLY_WEBHOOK_URL}
                     className="border-0 bg-transparent p-0 h-auto text-xs font-mono focus-visible:ring-0"
                   />
                 </div>
@@ -278,5 +286,9 @@ const WebhookConfigDialog = ({ open, onOpenChange, session, onSaved }: Props) =>
     </Dialog>
   );
 };
+
+function isInternalAiReplyWebhook(url: string) {
+  return /\.supabase\.co\/functions\/v1\/ai-reply\/?(?:[?#].*)?$/i.test(url.trim());
+}
 
 export default WebhookConfigDialog;

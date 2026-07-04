@@ -18,7 +18,7 @@ import {
   ArrowLeft, Copy, Eye, EyeOff, RefreshCw, Trash2, Edit, Webhook, Loader2, ChevronLeft, ChevronRight, Link2 as LinkIcon2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { backendApi, BACKEND_URL } from "@/lib/backend";
+import { backendApi, extractGatewayApiToken } from "@/lib/backend";
 import WebhookConfigDialog from "@/components/dashboard/WebhookConfigDialog";
 import { friendlyError } from "@/lib/friendlyError";
 
@@ -208,9 +208,14 @@ const SessionDetail = () => {
         if (st?.status) update.status = st.status;
         if (st?.phone) update.phone_number = st.phone;
         if (st?.name) update.whatsapp_name = st.name;
+        const apiToken = extractGatewayApiToken(st);
+        if (apiToken) update.api_token = apiToken;
         if (st?.status === "connected") update.last_active = new Date().toISOString();
         if (Object.keys(update).length) {
           await supabase.from("sessions").update(update).eq("id", id);
+          if (apiToken && (s?.enable_webhook ?? true)) {
+            await backendApi.configureWebhook(id, apiToken, s?.webhook_secret, s?.webhook_events || ["messages.received", "message.sent"]).catch(() => {});
+          }
           loadSession();
         }
       } catch { /* ignore */ }
@@ -271,7 +276,7 @@ const SessionDetail = () => {
     }
     setSending(true);
     try {
-      await backendApi.sendMessage(s.id, to, text);
+      await backendApi.sendMessage(s.id, to, text, s.api_token);
       await supabase.from("message_logs").insert({
         user_id: s.user_id, session_id: s.id, to_number: to,
         message_type: msgType, payload: { text }, status: "sent",
@@ -311,8 +316,14 @@ const SessionDetail = () => {
     if (!s) return;
     setRestarting(true);
     try {
-      await backendApi.restart(s.id);
-      await supabase.from("sessions").update({ status: "qr_pending" }).eq("id", s.id);
+      const restarted = await backendApi.restart(s.id);
+      const apiToken = extractGatewayApiToken(restarted);
+      const update: any = { status: "qr_pending" };
+      if (apiToken) update.api_token = apiToken;
+      await supabase.from("sessions").update(update).eq("id", s.id);
+      if (apiToken && s.enable_webhook) {
+        await backendApi.configureWebhook(s.id, apiToken, s.webhook_secret, s.webhook_events || ["messages.received", "message.sent"]).catch(() => {});
+      }
       toast.success("Session restarting...");
       nav(`/dashboard/sessions/${s.id}/connect`);
     } catch (err: any) {

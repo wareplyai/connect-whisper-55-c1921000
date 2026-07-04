@@ -1847,7 +1847,7 @@ async function sendViaGateway(opts: {
 }
 
 function isInternalAiReplyWebhook(url: string): boolean {
-  return /\.supabase\.co\/functions\/v1\/ai-reply\/?$/i.test(url.trim());
+  return /\.supabase\.co\/functions\/v1\/ai-reply\/?(?:[?#].*)?$/i.test(url.trim());
 }
 
 async function deliverUserWebhook(opts: {
@@ -1905,6 +1905,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
+    const webhookParams = new URL(req.url).searchParams;
     console.log("INCOMING PAYLOAD:", JSON.stringify(body).slice(0, 2000));
 
     // ============================================================
@@ -1915,9 +1916,11 @@ Deno.serve(async (req) => {
     // own automation is fully responsible for handling the message.
     // ============================================================
     try {
-      const ptSessionId = String((body as any)?.session_id || (body as any)?.sessionId || "").trim();
+      const ptSessionId = String((body as any)?.session_id || (body as any)?.sessionId || webhookParams.get("session_id") || webhookParams.get("sessionId") || "").trim();
       const ptSecret =
         req.headers.get("x-webhook-secret") ||
+        webhookParams.get("secret") ||
+        webhookParams.get("webhook_secret") ||
         (req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "");
       if (ptSessionId && ptSecret) {
         const ptAdmin = createClient(
@@ -2039,14 +2042,14 @@ Deno.serve(async (req) => {
 
     console.log("media_url value:", (body as any)?.media_url ?? null);
     console.log("message_type:", (body as any)?.message_type ?? null);
-    const sessionId = String(body.session_id || body.sessionId || "").trim();
-    let rawText = String(body.message || body.text || body.message_text || "").trim();
+    const sessionId = String(body.session_id || body.sessionId || webhookParams.get("session_id") || webhookParams.get("sessionId") || "").trim();
+    let rawText = String(body.message || body.text || body.message_text || extractMessageTextDeep(body) || "").trim();
     const isGroup = Boolean(body.is_group ?? body.isGroup ?? false) || hasGroupJid(body);
     let messageType = normalizeIncomingMessageType(body, body.message_type || body.messageType || body.type, rawText);
     (body as any).message_type = messageType;
     (body as any).media_type = messageType;
     const fromMe = Boolean(body.from_me ?? body.fromMe ?? body.is_from_me ?? false) ||
-      hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
+      messageLooksFromMe(body) || hasDeepTruthy(body, new Set(["fromme", "from_me", "isfromme", "is_from_me"]));
     const sourceMessageId = String(body.source_message_id || "").trim();
 
     // ---- Voice / audio messages: decrypt (if WA CDN), upload to chat-media, then transcribe.
@@ -2166,6 +2169,8 @@ Deno.serve(async (req) => {
           .eq("id", sessionId).maybeSingle();
         const provided0 =
           req.headers.get("x-webhook-secret") ||
+          webhookParams.get("secret") ||
+          webhookParams.get("webhook_secret") ||
           (req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "");
         if (!ses0) return jsonResp({ error: "Session not found" }, 404);
         if (!provided0 || provided0 !== ses0.webhook_secret) {
@@ -2173,7 +2178,7 @@ Deno.serve(async (req) => {
         }
         if (fromMe || isGroup) return jsonResp({ ok: true, skipped: "from_me_or_group" });
 
-        const fromDigits = String((body as any).from || (body as any).from_number || "").replace(/\D/g, "");
+        const fromDigits = resolveCustomerNumber(body as Record<string, unknown>, ses0.phone_number) || String((body as any).from || (body as any).from_number || "").replace(/\D/g, "");
         if (!fromDigits) return jsonResp({ error: "from required" }, 400);
 
         const normType = /audio|voice|ptt/.test(lowerType) ? "audio"
@@ -2258,6 +2263,8 @@ Deno.serve(async (req) => {
 
     const providedSecret =
       req.headers.get("x-webhook-secret") ||
+      webhookParams.get("secret") ||
+      webhookParams.get("webhook_secret") ||
       (req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "");
 
     const admin = createClient(
@@ -2351,6 +2358,9 @@ Deno.serve(async (req) => {
       !/@lid/i.test(String(rawKey.remoteJid || "")) ? rawKey.remoteJid : "",
       resolveCustomerNumber(resolveBody, session.phone_number),
     );
+    if (!fromNumber) {
+      fromNumber = resolveCustomerNumber(body as Record<string, unknown>, session.phone_number) || digitsOnly((body as any).from_number || (body as any).from || "");
+    }
     if (fromNumber && !looksLikeCustomerPhone(fromNumber)) {
       const recoveredNumber = await resolveFromGatewayMessageInfo({
         gateway: GATEWAY,
