@@ -18,7 +18,7 @@ import {
   ArrowLeft, Copy, Eye, EyeOff, RefreshCw, Trash2, Edit, Webhook, Loader2, ChevronLeft, ChevronRight, Link2 as LinkIcon2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { AI_REPLY_WEBHOOK_URL, backendApi, extractGatewayApiToken } from "@/lib/backend";
+import { backendApi, extractGatewayApiToken } from "@/lib/backend";
 import WebhookConfigDialog from "@/components/dashboard/WebhookConfigDialog";
 import { friendlyError } from "@/lib/friendlyError";
 
