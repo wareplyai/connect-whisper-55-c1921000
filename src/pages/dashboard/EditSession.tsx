@@ -13,6 +13,7 @@ import { CountryCodeSelect } from "@/components/CountryCodeSelect";
 import { splitPhone, DEFAULT_COUNTRY, Country, validatePhoneForCountry } from "@/lib/countries";
 import { AlertCircle } from "lucide-react";
 import { friendlyError } from "@/lib/friendlyError";
+import { AI_REPLY_WEBHOOK_URL } from "@/lib/backend";
 
 const ALL_EVENTS = [
   "messages.received","messages-group.received","messages-newsletter.received","messages-personal.received",
@@ -32,7 +33,6 @@ const EditSession = () => {
   const [num, setNum] = useState("");
   const [form, setForm] = useState<any>(null);
   const [builtIn, setBuiltIn] = useState(true);
-  const AI_REPLY_WEBHOOK_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ai-reply`;
 
   useEffect(() => {
     (async () => {
