@@ -15,9 +15,10 @@ function pathAfterFunction(reqUrl: string) {
   const url = new URL(reqUrl)
   const marker = '/functions/v1/wa-webhook'
   const idx = url.pathname.indexOf(marker)
-  if (idx < 0) return []
-  return url.pathname
-    .slice(idx + marker.length)
+  const rawPath = idx >= 0
+    ? url.pathname.slice(idx + marker.length)
+    : url.pathname.replace(/^\/?wa-webhook\/?/i, '/')
+  return rawPath
     .split('/')
     .map((part) => decodeURIComponent(part.trim()))
     .filter(Boolean)
