@@ -56,7 +56,7 @@ const Sessions = () => {
           const data = await backendApi.getStatus(s.id);
           if (cancelled) return;
           const apiToken = extractGatewayApiToken(data);
-          const update: Record<string, unknown> = {};
+          const update: any = {};
           if (data?.status && data.status !== s.status) update.status = data.status;
           if (data?.phone && data.phone !== s.phone_number) update.phone_number = data.phone;
           if (data?.name && data.name !== s.whatsapp_name) update.whatsapp_name = data.name;
