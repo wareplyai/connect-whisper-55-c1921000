@@ -62,10 +62,12 @@ const Sessions = () => {
           if (data?.name && data.name !== s.whatsapp_name) update.whatsapp_name = data.name;
           if (apiToken && apiToken !== s.api_token) update.api_token = apiToken;
           if (data?.status === "connected") update.last_active = new Date().toISOString();
-          if (Object.keys(update).length === 0) return;
-          await supabase.from("sessions").update(update).eq("id", s.id);
-          if (apiToken && s.enable_webhook && (!s.webhook_url || s.webhook_url === AI_REPLY_WEBHOOK_URL)) {
-            await backendApi.configureWebhook(s.id, apiToken, s.webhook_secret, s.webhook_events || ["messages.received", "message.sent"]).catch(() => {});
+          if (Object.keys(update).length) {
+            await supabase.from("sessions").update(update).eq("id", s.id);
+          }
+          const tokenForWebhook = apiToken || s.api_token;
+          if (data?.status === "connected" && tokenForWebhook && s.enable_webhook && (!s.webhook_url || s.webhook_url === AI_REPLY_WEBHOOK_URL)) {
+            await backendApi.configureWebhook(s.id, tokenForWebhook, s.webhook_secret, s.webhook_events || ["messages.received", "message.sent"]).catch(() => {});
           }
           if (!cancelled) {
             setSessions((prev) => prev.map((x) => x.id === s.id ? { ...x, ...update } : x));
