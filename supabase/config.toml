@@ -18,6 +18,9 @@ verify_jwt = false
 [functions.ai-reply]
 verify_jwt = false
 
+[functions.wa-webhook]
+verify_jwt = false
+
 [functions.tag-product-image]
 verify_jwt = false
 

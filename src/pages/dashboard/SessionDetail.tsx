@@ -316,7 +316,7 @@ const SessionDetail = () => {
     if (!s) return;
     setRestarting(true);
     try {
-      const restarted = await backendApi.restart(s.id);
+      const restarted = await backendApi.restart(s.id, s.webhook_secret, s.webhook_events || ["messages.received", "messages.upsert", "message.sent"]);
       const apiToken = extractGatewayApiToken(restarted);
       const update: any = { status: "qr_pending" };
       if (apiToken) update.api_token = apiToken;

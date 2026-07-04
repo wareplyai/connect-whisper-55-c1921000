@@ -183,6 +183,29 @@ function jsonResp(body: unknown, status = 200) {
   });
 }
 
+function isTransientSupabaseError(error: unknown): boolean {
+  const message = JSON.stringify(error || {}).toLowerCase();
+  return message.includes("pgrst002") ||
+    message.includes("schema cache") ||
+    message.includes("econnrefused") ||
+    message.includes("connection refused") ||
+    message.includes("network") ||
+    message.includes("fetch failed");
+}
+
+async function withSupabaseRetry<T>(fn: () => PromiseLike<T>, label: string, attempts = 3): Promise<T> {
+  let last: unknown;
+  for (let i = 0; i < attempts; i += 1) {
+    const result: any = await fn();
+    if (!result?.error || !isTransientSupabaseError(result.error) || i === attempts - 1) return result as T;
+    last = result.error;
+    const delayMs = 250 * (i + 1);
+    console.log(`[supabase-retry] ${label} transient failure, retry ${i + 1}/${attempts - 1}:`, result.error?.message || result.error);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  throw last;
+}
+
 // Insert a row into ai_usage_logs for ANY AI sub-task (text reply, vision describe,
 // vision match, image extract, voice transcribe). Looks up per-token price from
 // ai_model_pricing and stores cost. Silently swallows errors so it never breaks
@@ -2273,11 +2296,14 @@ Deno.serve(async (req) => {
     );
 
     // Load session and validate webhook secret
-    const { data: session, error: sErr } = await admin
-      .from("sessions")
-      .select("id, user_id, webhook_secret, status, api_token, phone_number, enable_webhook, webhook_url, forward_webhook_url, webhook_events, show_typing_indicator, auto_replies_enabled, read_incoming_messages, enable_message_logging, enable_account_protection")
-      .eq("id", sessionId)
-      .maybeSingle();
+    const { data: session, error: sErr } = await withSupabaseRetry(
+      () => admin
+        .from("sessions")
+        .select("id, user_id, webhook_secret, status, api_token, phone_number, enable_webhook, webhook_url, forward_webhook_url, webhook_events, show_typing_indicator, auto_replies_enabled, read_incoming_messages, enable_message_logging, enable_account_protection")
+        .eq("id", sessionId)
+        .maybeSingle(),
+      "load session",
+    );
     if (sErr) throw sErr;
     if (!session) return jsonResp({ error: "Session not found" }, 404);
     if (!providedSecret || providedSecret !== session.webhook_secret) {
