@@ -116,7 +116,6 @@ export const backendApi = {
       throw lastError || err;
     }
   })(),
-  },
 
   getQr: (sessionId: string) =>
     request<{ qr?: string; status?: string }>(`/api/session/${sessionId}/qr?raw=1`),
