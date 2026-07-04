@@ -62,15 +62,21 @@ const ConnectSession = () => {
   const qrLoadedRef = useRef(false);
   const qrFetchInFlightRef = useRef(false);
   const refreshInFlightRef = useRef(false);
+  const sessionRef = useRef<any>(null);
 
   // Load session
   useEffect(() => {
     if (!id) return;
     supabase.from("sessions").select("*").eq("id", id).maybeSingle().then(({ data }) => {
       setSession(data);
+      sessionRef.current = data;
       if (data?.status) setStatus(data.status);
     });
   }, [id]);
+
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
 
   const fetchQrOnce = async () => {
     if (!id || redirectedRef.current || qrFetchInFlightRef.current || status === "connected") return;
@@ -102,7 +108,8 @@ const ConnectSession = () => {
         setStatus(data.status);
         if (data.status === "connected" && !redirectedRef.current) {
           redirectedRef.current = true;
-          const apiToken = extractGatewayApiToken(data) || session?.api_token || null;
+          const currentSession = sessionRef.current;
+          const apiToken = extractGatewayApiToken(data) || currentSession?.api_token || null;
           const update: any = {
             status: "connected",
             last_active: new Date().toISOString(),
@@ -113,15 +120,15 @@ const ConnectSession = () => {
           await supabase.from("sessions").update({
             ...update,
             enable_webhook: true,
-            webhook_url: session?.webhook_url || AI_REPLY_WEBHOOK_URL,
-            webhook_events: session?.webhook_events?.length ? session.webhook_events : ["messages.received", "message.sent"],
+            webhook_url: currentSession?.webhook_url || AI_REPLY_WEBHOOK_URL,
+            webhook_events: currentSession?.webhook_events?.length ? currentSession.webhook_events : ["messages.received", "message.sent"],
           }).eq("id", id);
           if (apiToken) {
             await backendApi.configureWebhook(
               id,
               apiToken,
-              session?.webhook_secret,
-              session?.webhook_events?.length ? session.webhook_events : ["messages.received", "message.sent"],
+              currentSession?.webhook_secret,
+              currentSession?.webhook_events?.length ? currentSession.webhook_events : ["messages.received", "message.sent"],
             ).catch((err) => {
               console.warn("Webhook configure failed", err);
               toast.warning("WhatsApp connected, but webhook setup failed. Save Manage Webhook once.");
