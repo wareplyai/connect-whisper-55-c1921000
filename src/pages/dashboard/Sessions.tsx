@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, RefreshCw, Search, Smartphone, Trash2, Eye, Edit, Link as LinkIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { backendApi } from "@/lib/backend";
+import { AI_REPLY_WEBHOOK_URL, backendApi, extractGatewayApiToken } from "@/lib/backend";
 import { PlanUsageBar } from "@/components/PlanUsageBar";
 import { NoActiveSubscriptionBanner } from "@/components/NoActiveSubscriptionBanner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -54,15 +54,21 @@ const Sessions = () => {
       await Promise.all(sessions.map(async (s) => {
         try {
           const data = await backendApi.getStatus(s.id);
-          if (cancelled || !data?.status || data.status === s.status) return;
-          await supabase.from("sessions").update({
-            status: data.status,
-            phone_number: data.phone || s.phone_number,
-            whatsapp_name: data.name || s.whatsapp_name,
-            last_active: new Date().toISOString(),
-          }).eq("id", s.id);
+          if (cancelled) return;
+          const apiToken = extractGatewayApiToken(data);
+          const update: Record<string, unknown> = {};
+          if (data?.status && data.status !== s.status) update.status = data.status;
+          if (data?.phone && data.phone !== s.phone_number) update.phone_number = data.phone;
+          if (data?.name && data.name !== s.whatsapp_name) update.whatsapp_name = data.name;
+          if (apiToken && apiToken !== s.api_token) update.api_token = apiToken;
+          if (data?.status === "connected") update.last_active = new Date().toISOString();
+          if (Object.keys(update).length === 0) return;
+          await supabase.from("sessions").update(update).eq("id", s.id);
+          if (apiToken && s.enable_webhook && (!s.webhook_url || s.webhook_url === AI_REPLY_WEBHOOK_URL)) {
+            await backendApi.configureWebhook(s.id, apiToken, s.webhook_secret, s.webhook_events || ["messages.received", "message.sent"]).catch(() => {});
+          }
           if (!cancelled) {
-            setSessions((prev) => prev.map((x) => x.id === s.id ? { ...x, status: data.status } : x));
+            setSessions((prev) => prev.map((x) => x.id === s.id ? { ...x, ...update } : x));
           }
         } catch { /* ignore individual failures */ }
       }));
