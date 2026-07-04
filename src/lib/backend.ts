@@ -76,9 +76,10 @@ export const backendApi = {
   getStatus: (sessionId: string) =>
     request<{ status?: string; phone?: string; name?: string; apiToken?: string; api_token?: string; token?: string }>(`/api/session/${sessionId}/status`),
 
-  sendMessage: (sessionId: string, to: string, message: string) =>
+  sendMessage: (sessionId: string, to: string, message: string, apiToken?: string | null) =>
     request(`/api/session/${sessionId}/send`, {
       method: "POST",
+      headers: apiToken ? { Authorization: `Bearer ${apiToken}` } : undefined,
       body: JSON.stringify({ to, message }),
     }),
 
