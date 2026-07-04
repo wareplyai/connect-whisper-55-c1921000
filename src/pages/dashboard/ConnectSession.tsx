@@ -32,7 +32,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { backendApi } from "@/lib/backend";
+import { AI_REPLY_WEBHOOK_URL, backendApi, extractGatewayApiToken } from "@/lib/backend";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { friendlyError } from "@/lib/friendlyError";
@@ -102,10 +102,33 @@ const ConnectSession = () => {
         setStatus(data.status);
         if (data.status === "connected" && !redirectedRef.current) {
           redirectedRef.current = true;
-          await supabase.from("sessions").update({
+          const apiToken = extractGatewayApiToken(data) || session?.api_token || null;
+          const update: any = {
             status: "connected",
             last_active: new Date().toISOString(),
+          };
+          if (data.phone) update.phone_number = data.phone;
+          if (data.name) update.whatsapp_name = data.name;
+          if (apiToken) update.api_token = apiToken;
+          await supabase.from("sessions").update({
+            ...update,
+            enable_webhook: true,
+            webhook_url: session?.webhook_url || AI_REPLY_WEBHOOK_URL,
+            webhook_events: session?.webhook_events?.length ? session.webhook_events : ["messages.received", "message.sent"],
           }).eq("id", id);
+          if (apiToken) {
+            await backendApi.configureWebhook(
+              id,
+              apiToken,
+              session?.webhook_secret,
+              session?.webhook_events?.length ? session.webhook_events : ["messages.received", "message.sent"],
+            ).catch((err) => {
+              console.warn("Webhook configure failed", err);
+              toast.warning("WhatsApp connected, but webhook setup failed. Save Manage Webhook once.");
+            });
+          } else {
+            toast.warning("WhatsApp connected, but gateway did not return apiToken. Reply automation cannot send until token is available.");
+          }
           toast.success("WhatsApp connected!");
           setTimeout(() => nav(`/dashboard/sessions/${id}`), 1500);
         }
@@ -481,9 +504,12 @@ const WebhookConfigDialog = ({
       if (!/^https:\/\//i.test(url.trim())) { toast.error("URL must start with https://"); return; }
     }
     setSaving(true);
+    const effectiveUrl = enabled && isInternalAiReplyWebhook(url.trim())
+      ? AI_REPLY_WEBHOOK_URL
+      : url.trim();
     const { data, error } = await supabase.from("sessions").update({
       enable_webhook: enabled,
-      webhook_url: url.trim() || null,
+      webhook_url: effectiveUrl || null,
       webhook_secret: secret,
       webhook_events: events,
       ignore_groups: ignoreGroups,
@@ -492,6 +518,12 @@ const WebhookConfigDialog = ({
     }).eq("id", session.id).select().maybeSingle();
     setSaving(false);
     if (error) { toast.error(friendlyError(error)); return; }
+    if (enabled && session.api_token) {
+      await backendApi.configureWebhook(session.id, session.api_token, secret, events).catch((err) => {
+        console.warn("Webhook configure failed", err);
+        toast.warning("Saved locally, but gateway webhook setup failed.");
+      });
+    }
     toast.success("Webhook configuration saved");
     if (data) onSaved(data);
     onOpenChange(false);
@@ -652,5 +684,9 @@ const WebhookConfigDialog = ({
     </Dialog>
   );
 };
+
+function isInternalAiReplyWebhook(url: string) {
+  return /\.supabase\.co\/functions\/v1\/ai-reply\/?$/i.test(url.trim());
+}
 
 export default ConnectSession;
