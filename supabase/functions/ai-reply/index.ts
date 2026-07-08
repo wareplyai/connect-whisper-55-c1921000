@@ -3387,6 +3387,11 @@ Deno.serve(async (req) => {
     console.log("[ai-reply] using API key scope:", keyRow.scope || "user");
 
     const apiKey = await decryptKey(keyRow.encrypted_key);
+    const resolvedReplyModel = keyRow.model && keyRow.model !== "default" ? keyRow.model : (
+      keyRow.platform === "openai" ? "gpt-4o-mini" :
+      keyRow.platform === "gemini" ? "gemini-1.5-flash" :
+      "deepseek-chat"
+    );
 
     // Resolve max_tokens: per-user override → plan default → 1000
     let resolvedMaxTokens = 0;
@@ -3695,15 +3700,10 @@ Deno.serve(async (req) => {
 
         const memoryInstruction = `\n\nCONVERSATION MEMORY RULES:\n- The previous turns of this WhatsApp chat are provided as message history above.\n- Use that history to remember which products were already shown or discussed with this customer.\n- If the customer asks a short follow-up without naming the product, refer to the most recently discussed product from history or the new matched product block.\n- Never ask the customer to repeat information they already provided, such as name, address, product, quantity, or size.\n- Never say product information is missing when a matched product block is provided above; use those details directly.\n- Maintain natural conversation continuity; do not greet again if you already greeted in this chat.\n- Language is mandatory: if the customer used Bangla script or Bangla written with English letters, reply only in Bangla script. Never reply in Banglish or English for that customer.`;
 
-        const resolvedModel = keyRow.model && keyRow.model !== "default" ? keyRow.model : (
-          keyRow.platform === "openai" ? "gpt-4o-mini" :
-          keyRow.platform === "gemini" ? "gemini-1.5-flash" :
-          "deepseek-chat"
-        );
-        aiModelUsed = resolvedModel;
+        aiModelUsed = resolvedReplyModel;
         const aiResult = await callAI({
           platform: keyRow.platform,
-          model: resolvedModel,
+          model: resolvedReplyModel,
           apiKey,
           systemPrompt: finalSystemPrompt + recentMatchedProductBlock + memoryInstruction,
           userMessage: finalUserMessage,
@@ -3842,6 +3842,40 @@ Deno.serve(async (req) => {
         const descLine = sentProduct?.description ? `\n${String(sentProduct.description).slice(0, 200)}` : "";
         reply = `আপনি যে ছবিটি চেয়েছেন তার বিস্তারিত নিচে দেওয়া হলো:\n${pname ? `Name: ${pname}` : ""}${priceLine}${descLine}`.trim();
         console.log("[ai-reply] caption override applied (was negative)");
+      }
+    }
+
+    reply = stripReplyNoise(reply);
+    if (replyViolatesLanguage(reply, customerLanguage)) {
+      try {
+        const repaired = await repairReplyLanguage({
+          platform: keyRow.platform,
+          model: resolvedReplyModel,
+          apiKey,
+          customerLanguage,
+          customerMessage: finalUserMessage || messageText || imageCaption || "",
+          reply,
+          maxTokens: Math.min(800, resolvedMaxTokens || Number((biz as any)?.max_tokens) || 800),
+        });
+        const cleaned = stripReplyNoise(repaired.text);
+        if (cleaned && !replyViolatesLanguage(cleaned, customerLanguage)) {
+          reply = cleaned;
+          aiModelUsed = aiModelUsed || resolvedReplyModel;
+          aiTokensUsed += repaired.tokens || 0;
+          aiPromptTokens += repaired.promptTokens || 0;
+          aiCompletionTokens += repaired.completionTokens || 0;
+          console.log("[ai-reply] language repair applied", { customerLanguage });
+        } else {
+          reply = customerLanguage === "bangla"
+            ? "দুঃখিত, এই তথ্যটি এখন আমার কাছে নেই। সরাসরি যোগাযোগ করলে আমরা সাহায্য করতে পারব।"
+            : "Sorry, I don't have that detail right now. Please contact us directly and we'll help you out.";
+          console.log("[ai-reply] language repair fallback applied", { customerLanguage });
+        }
+      } catch (e) {
+        console.log("[ai-reply] language repair failed:", (e as Error)?.message);
+        reply = customerLanguage === "bangla"
+          ? "দুঃখিত, এই তথ্যটি এখন আমার কাছে নেই। সরাসরি যোগাযোগ করলে আমরা সাহায্য করতে পারব।"
+          : "Sorry, I don't have that detail right now. Please contact us directly and we'll help you out.";
       }
     }
 
