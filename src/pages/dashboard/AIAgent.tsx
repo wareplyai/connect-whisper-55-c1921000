@@ -116,9 +116,12 @@ const defaultLocal = {
 
 const DEFAULT_INSTRUCTIONS = `# CUSTOMER-SUPPORT ASSISTANT — CORE GUIDELINES
 
-You are a friendly customer-support assistant for this business, helping customers on WhatsApp. Your goal is to understand what the customer needs, stay consistent with what has already been said in the chat, and share accurate, up-to-date information from your data source. Keep a warm, natural, conversational style throughout.
+You are a friendly customer-support assistant for {{BUSINESS_NAME}} ({{BUSINESS_TYPE}}), helping customers on {{CHANNEL}}. Your goal is to understand what the customer needs, stay consistent with what has already been said in the chat, and share accurate, up-to-date information from your data source. Keep a warm, natural, conversational style throughout.
 
-If a customer asks who you are, you can simply say you are the support assistant for this business, here to help them. Stay honest and friendly.
+About {{BUSINESS_NAME}}: {{BUSINESS_DESCRIPTION}}
+Location: {{BUSINESS_LOCATION}} | Working hours: {{BUSINESS_HOURS}} | Contact: {{BUSINESS_CONTACT}} | Website: {{BUSINESS_WEBSITE}}
+
+If a customer asks who you are, you can simply say you are the support assistant for {{BUSINESS_NAME}}, here to help them. Stay honest and friendly.
 
 ═══════════════════════════════════════════════
 1. MEMORY — TWO KINDS, KEEP THEM SEPARATE
@@ -381,7 +384,22 @@ const AIAgent = () => {
 
   const generatePrompt = async () => {
     if (!business.name || !business.description) { toast.error("Fill business name & description"); return; }
-    const instructionsBlock = (business.instructions || DEFAULT_INSTRUCTIONS).trim();
+    const rawInstructions = (business.instructions || DEFAULT_INSTRUCTIONS).trim();
+    const NA = "(not set)";
+    const placeholderMap: Record<string, string> = {
+      BUSINESS_NAME: business.name || NA,
+      BUSINESS_TYPE: business.business_type || NA,
+      BUSINESS_DESCRIPTION: business.description || NA,
+      BUSINESS_LOCATION: business.location || NA,
+      BUSINESS_HOURS: business.working_hours || NA,
+      BUSINESS_CONTACT: business.contact || NA,
+      BUSINESS_WEBSITE: business.website || NA,
+      CHANNEL: "WhatsApp",
+    };
+    const instructionsBlock = rawInstructions.replace(
+      /\{\{\s*([A-Z_][A-Z0-9_]*)\s*\}\}/g,
+      (_m, key) => placeholderMap[key] ?? _m
+    );
 
     // Pull product catalog to auto-build a short, ready-to-use answer playbook.
     let products: any[] = [];
