@@ -177,7 +177,7 @@ type DbPlan = {
 
 const USD_TO_BDT_FALLBACK = 122;
 
-const faqKeys = ["1", "2", "3", "4", "5", "6", "7", "8"] as const;
+const faqKeys = ["1", "2", "4", "5", "6", "7", "8"] as const;
 
 const Landing = () => {
   const { t, lang } = useLanguage();
