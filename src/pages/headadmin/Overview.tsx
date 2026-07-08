@@ -253,7 +253,7 @@ export default function HeadAdminOverview() {
           delta="live" up accent="primary" />
         <StatCard icon={MessageSquare} label="Total Messages" value={stats.totalMessages.toLocaleString()}
           delta={`${todayStats.msgsToday} today`} up accent="warning" />
-        <StatCard icon={DollarSign} label="Total Revenue" value={`$${stats.totalRevenue.toFixed(2)}`}
+        <StatCard icon={DollarSign} label="Total Revenue" value={`৳${Math.round(stats.totalRevenue).toLocaleString()}`}
           delta={stats.pendingPayments > 0 ? `${stats.pendingPayments} pending` : "all clear"}
           up={stats.pendingPayments === 0} accent="primary" />
       </div>
