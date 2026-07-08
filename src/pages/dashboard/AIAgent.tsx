@@ -360,6 +360,8 @@ const AIAgent = () => {
       setQa((qaRows ?? []).map((r: any) => ({ id: r.id, question: r.question, answer: r.answer })));
       setFixed((fxRows ?? []).map((r: any) => ({ id: r.id, keyword: r.keyword, reply: r.reply })));
       if (keyRes?.data?.key) setSavedKey(keyRes.data.key as SavedKey);
+      setHasFallbackKey(Boolean(keyRes?.data?.hasFallback));
+
       setLoading(false);
     })();
   }, [user]);
