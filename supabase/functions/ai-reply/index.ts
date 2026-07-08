@@ -899,6 +899,83 @@ function normalizeTextForCompare(value: unknown): string {
     .trim();
 }
 
+type CustomerLanguage = "english" | "bangla";
+
+function containsBanglaScript(value: unknown): boolean {
+  return /[\u0980-\u09FF]/.test(String(value || ""));
+}
+
+function containsBanglish(value: unknown): boolean {
+  const text = String(value || "").toLowerCase();
+  if (!text.trim()) return false;
+  const banglishWords = [
+    "ami", "amake", "amar", "amader", "apni", "apnar", "apnader", "tumi", "tomar", "vai", "bhai", "bon",
+    "ki", "kivabe", "kibhabe", "keno", "kothay", "koto", "kotho", "kon", "konta", "kontar", "eta", "eita", "ata", "oita",
+    "ache", "ase", "nai", "nei", "hobe", "hoy", "hocche", "diben", "dibo", "dite", "den", "dao", "deo", "pathan", "pathao",
+    "lagbe", "dorkar", "chai", "nibo", "kinbo", "dam", "daam", "mullo", "taka", "koto",
+    "rong", "pawa", "jabe", "janan", "bolen", "bolun", "bollen", "thik", "acha", "accha", "dhonnobad",
+    "salam", "assalam", "walaikum", "ji", "ha", "na", "ekhane", "okhane", "akhon", "ekhon", "pore", "din", "din", "khulbe",
+  ];
+  return banglishWords.some((word) => new RegExp(`(^|[^a-z])${word}([^a-z]|$)`, "i").test(text));
+}
+
+function detectCustomerLanguage(message: unknown): CustomerLanguage {
+  const text = String(message || "").trim();
+  if (containsBanglaScript(text) || containsBanglish(text)) return "bangla";
+  return "english";
+}
+
+function stripReplyNoise(value: string): string {
+  return String(value || "")
+    .replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
+    .replace(/\*+/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function replyViolatesLanguage(reply: string, lang: CustomerLanguage): boolean {
+  const cleaned = String(reply || "").trim();
+  if (!cleaned) return false;
+  if (containsBanglish(cleaned)) return true;
+  if (lang === "bangla") {
+    const banglaChars = (cleaned.match(/[\u0980-\u09FF]/g) || []).length;
+    const latinLetters = (cleaned.match(/[A-Za-z]/g) || []).length;
+    return banglaChars === 0 || latinLetters > Math.max(12, banglaChars * 0.35);
+  }
+  return containsBanglaScript(cleaned);
+}
+
+async function repairReplyLanguage(opts: {
+  platform: string;
+  model: string;
+  apiKey: string;
+  customerLanguage: CustomerLanguage;
+  customerMessage: string;
+  reply: string;
+  maxTokens?: number;
+}): Promise<{ text: string; promptTokens: number; completionTokens: number; tokens: number }> {
+  const target = opts.customerLanguage === "bangla" ? "pure Bangla script (বাংলা অক্ষর)" : "pure English";
+  const systemPrompt = `Rewrite customer-support replies into ${target} only.
+Rules:
+- Output only the final reply text.
+- Keep the same business meaning, product names, prices, phone numbers, and order details.
+- Keep it short, natural, and human: 1 to 3 short lines.
+- No emoji, no markdown, no extra closing question.
+- Banglish is forbidden. Bangla words written in English letters are forbidden.
+- If target is Bangla, translate English/Banglish support wording into proper Bangla script.`;
+  return callAI({
+    platform: opts.platform,
+    model: opts.model,
+    apiKey: opts.apiKey,
+    systemPrompt,
+    userMessage: `Customer message:\n${opts.customerMessage || "(none)"}\n\nReply to fix:\n${opts.reply}`,
+    history: [],
+    maxTokens: opts.maxTokens || 600,
+    temperature: 0,
+  });
+}
+
 function extractMessageTextDeep(value: unknown, depth = 0): string {
   if (depth > 7 || value == null) return "";
   if (typeof value === "string") return "";
@@ -3083,6 +3160,7 @@ Deno.serve(async (req) => {
     }
 
     const lowerMsg = messageText.toLowerCase();
+    const customerLanguage = detectCustomerLanguage(messageText || imageCaption || voiceTranscript || "");
 
     // MUTEX: route based on active_reply_mode (per-customer auto_reply overrides global "none")
     if (replyMode === "none" && customerMode !== "auto_reply") {
@@ -3113,7 +3191,12 @@ Deno.serve(async (req) => {
         );
       });
       if (fixedHit) {
-        const reply = fixedHit.reply;
+        let reply = stripReplyNoise(String(fixedHit.reply || ""));
+        if (customerLanguage === "bangla" && replyViolatesLanguage(reply, customerLanguage)) {
+          reply = "দুঃখিত, এই তথ্যটি এখন আমার কাছে নেই। সরাসরি যোগাযোগ করলে আমরা সাহায্য করতে পারব।";
+        } else if (customerLanguage === "english" && replyViolatesLanguage(reply, customerLanguage)) {
+          reply = "Sorry, I don't have that detail right now. Please contact us directly and we'll help you out.";
+        }
         const sendResult = await sendViaGateway({
           gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
           showTyping: aiEnabled ? aiTyping : sessionTyping, accountProtection,
@@ -3162,7 +3245,12 @@ Deno.serve(async (req) => {
         });
       });
       if (ruleHit) {
-        const reply = ruleHit.reply_template;
+        let reply = stripReplyNoise(String(ruleHit.reply_template || ""));
+        if (customerLanguage === "bangla" && replyViolatesLanguage(reply, customerLanguage)) {
+          reply = "দুঃখিত, এই তথ্যটি এখন আমার কাছে নেই। সরাসরি যোগাযোগ করলে আমরা সাহায্য করতে পারব।";
+        } else if (customerLanguage === "english" && replyViolatesLanguage(reply, customerLanguage)) {
+          reply = "Sorry, I don't have that detail right now. Please contact us directly and we'll help you out.";
+        }
         const ruleImageUrl = (ruleHit.image_url || "").trim();
         const sendResult = await sendViaGateway({
           gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
@@ -3299,6 +3387,11 @@ Deno.serve(async (req) => {
     console.log("[ai-reply] using API key scope:", keyRow.scope || "user");
 
     const apiKey = await decryptKey(keyRow.encrypted_key);
+    const resolvedReplyModel = keyRow.model && keyRow.model !== "default" ? keyRow.model : (
+      keyRow.platform === "openai" ? "gpt-4o-mini" :
+      keyRow.platform === "gemini" ? "gemini-1.5-flash" :
+      "deepseek-chat"
+    );
 
     // Resolve max_tokens: per-user override → plan default → 1000
     let resolvedMaxTokens = 0;
@@ -3364,7 +3457,7 @@ Deno.serve(async (req) => {
       : "";
 
     const productInstr = (catalogRows || []).length
-      ? `\n\nআপনি যখন কোনো product সম্পর্কে reply দেবেন, তখন product এর সব details (নাম, দাম, বিবরণ) text এ দিন। একসাথে maximum 3টা product suggest করুন। When you mention a product, use its EXACT name from the catalog.\n\nRules for responding:\n1. IMAGE SENDING: You CAN send product images. If the customer asks to see a photo (words like 'দেখাও', 'ছবি', 'picture', 'photo', 'pic', 'den', 'dao', 'deo', 'show'), reply with ONLY a short confirmation (e.g. "এই নিন ছবি 📷" or "Here you go 📷") and mention the product name — the system will AUTOMATICALLY attach the product image to your reply. NEVER say you cannot send images, NEVER say "ছবি পাঠানোর ব্যবস্থা নেই" — that is FALSE.\n2. For delivery/price/stock/general questions → text reply only.\n3. Answer ALL the customer's questions in ONE comprehensive reply (customer may send several short messages — treat as one).\n4. Be concise but complete.`
+      ? `\n\nPRODUCT REPLY RULES:\n1. When replying about a product, use the exact catalog product name and real catalog details only: name, price, stock, and short description when useful.\n2. Suggest at most 3 products at once.\n3. If the customer asks for a product photo/image, give only a short confirmation and product name. The system can attach the image automatically. Never say images cannot be sent.\n4. For delivery, price, stock, and general questions, answer in text only.\n5. Answer all customer questions from the current turn in one concise reply.\n6. Follow the customer's language strictly: English customer gets English only; Bangla or Banglish customer gets Bangla script only. Never write Bangla words with English letters.`
       : "";
 
     const baseSystem = (biz?.system_prompt && biz.system_prompt.trim().length > 0)
@@ -3481,10 +3574,14 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, skipped: "no_real_image_evidence" });
     }
     if (isImageMessage && !imageUrl && !useTextFlow) {
-      reply = "ছবি receive করেছি ✅ কিন্তু এই মুহূর্তে ছবিটা analyze করা সম্ভব হচ্ছে না। দয়া করে product টির নাম / রঙ / size text এ লিখে পাঠান, আমি match করে details দিচ্ছি।\n\nGot your image but couldn't open it right now — please describe the product in text (name / color / size).";
+      reply = customerLanguage === "bangla"
+        ? "ছবিটি পেয়েছি, কিন্তু এই মুহূর্তে বিশ্লেষণ করা যাচ্ছে না। দয়া করে পণ্যের নাম, রঙ বা সাইজ লিখে পাঠান।"
+        : "Got your image, but I couldn't open it right now. Please describe the product name, color, or size.";
     } else if (isImageMessage && imageUrl && !useTextFlow) {
       if (keyRow.platform !== "openai") {
-        reply = "Sorry, image search needs an OpenAI API key. Please describe the product in text. ছবি match করতে OpenAI key দরকার, দয়া করে product টি text এ describe করুন।";
+        reply = customerLanguage === "bangla"
+          ? "ছবি বিশ্লেষণের জন্য ওপেনএআই কী দরকার। দয়া করে পণ্যের নাম বা বিস্তারিত লিখে পাঠান।"
+          : "Image search needs an OpenAI API key. Please describe the product in text.";
       } else {
         try {
           const descRes = await describeImageWithOpenAI(apiKey, imageUrl, { detail: aiLimits.vision_detail, maxTokens: aiLimits.image_describe_max_tokens });
@@ -3556,7 +3653,9 @@ Deno.serve(async (req) => {
 
           if (matched) {
             const p = matched;
-            reply = `আপনি যে ছবিটি দিয়েছেন তার ডিটেইলস নিচে দেওয়া হলো:\n\nProduct Name: ${p.name}\nPrice: ${p.price}${p.description ? `\nDescription: ${p.description}` : ""}`;
+            reply = customerLanguage === "bangla"
+              ? `ছবির পণ্যটি: ${p.name}\nদাম: ${p.price}${p.description ? `\nবিস্তারিত: ${p.description}` : ""}`
+              : `Product: ${p.name}\nPrice: ${p.price}${p.description ? `\nDetails: ${p.description}` : ""}`;
             // Attach a real image of the matched product (preferred) so customer
             // immediately sees what we matched.
             matchedProduct = p;
@@ -3585,12 +3684,16 @@ Deno.serve(async (req) => {
               }
             } catch (_e) { /* non-fatal */ }
             {
-              reply = `এই ডিজাইনটি এখন আমাদের কাছে নেই। product এর নাম বা রঙ লিখে জানালে দ্রুত খুঁজে দিচ্ছি।`;
+              reply = customerLanguage === "bangla"
+                ? "এই ডিজাইনটি এখন আমাদের কাছে নেই। পণ্যের নাম বা রঙ লিখে জানালে দ্রুত খুঁজে দিচ্ছি।"
+                : "We don't have this design right now. Share the product name or color and I'll check quickly.";
             }
           }
         } catch (visErr: any) {
           console.error("[image-match] error:", visErr?.message);
-          reply = "ছবিটি এই মুহূর্তে পড়তে পারছি না। দয়া করে product এর নাম বা ডিটেইল লিখে পাঠান, আমি সাথে সাথে সাহায্য করছি।";
+          reply = customerLanguage === "bangla"
+            ? "ছবিটি এই মুহূর্তে পড়তে পারছি না। দয়া করে পণ্যের নাম বা বিস্তারিত লিখে পাঠান।"
+            : "I can't read the image right now. Please send the product name or details.";
         }
       }
     } else {
@@ -3605,17 +3708,12 @@ Deno.serve(async (req) => {
         // Recently matched product context removed (product image match feature removed).
         const recentMatchedProductBlock = "";
 
-        const memoryInstruction = `\n\nCONVERSATION MEMORY RULES:\n- The previous turns of this WhatsApp chat are provided as message history above.\n- Use that history to remember which products were already shown / discussed with this customer.\n- If the customer says things like "order korte chai" / "ata nibo" / "dam koto" / "price koto" / "ar ekta dao" without naming a product, refer to the most recently discussed product (see RECENTLY MATCHED PRODUCT block if present, otherwise the last product mentioned in history).\n- NEVER ask the customer to repeat info (name, address, product) they already provided in the history.\n- NEVER reply "I don't have info about this product" / "এই পণ্যের তথ্য নেই" if a RECENTLY MATCHED PRODUCT block is provided above — use those details directly.\n- Maintain natural conversation continuity; do not greet again if you already greeted in this chat.`;
+        const memoryInstruction = `\n\nCONVERSATION MEMORY RULES:\n- The previous turns of this WhatsApp chat are provided as message history above.\n- Use that history to remember which products were already shown or discussed with this customer.\n- If the customer asks a short follow-up without naming the product, refer to the most recently discussed product from history or the new matched product block.\n- Never ask the customer to repeat information they already provided, such as name, address, product, quantity, or size.\n- Never say product information is missing when a matched product block is provided above; use those details directly.\n- Maintain natural conversation continuity; do not greet again if you already greeted in this chat.\n- Language is mandatory: if the customer used Bangla script or Bangla written with English letters, reply only in Bangla script. Never reply in Banglish or English for that customer.`;
 
-        const resolvedModel = keyRow.model && keyRow.model !== "default" ? keyRow.model : (
-          keyRow.platform === "openai" ? "gpt-4o-mini" :
-          keyRow.platform === "gemini" ? "gemini-1.5-flash" :
-          "deepseek-chat"
-        );
-        aiModelUsed = resolvedModel;
+        aiModelUsed = resolvedReplyModel;
         const aiResult = await callAI({
           platform: keyRow.platform,
-          model: resolvedModel,
+          model: resolvedReplyModel,
           apiKey,
           systemPrompt: finalSystemPrompt + recentMatchedProductBlock + memoryInstruction,
           userMessage: finalUserMessage,
@@ -3750,10 +3848,48 @@ Deno.serve(async (req) => {
       if (isNegative) {
         const sentProduct = (catalogRows || []).find((p: any) => p.id === outgoingImageProductId);
         const pname = sentProduct?.name || "";
-        const priceLine = sentProduct?.price ? `\nMRP: ${sentProduct.price}` : "";
+        const priceLine = sentProduct?.price
+          ? (customerLanguage === "bangla" ? `\nদাম: ${sentProduct.price}` : `\nPrice: ${sentProduct.price}`)
+          : "";
         const descLine = sentProduct?.description ? `\n${String(sentProduct.description).slice(0, 200)}` : "";
-        reply = `আপনি যে ছবিটি চেয়েছেন তার বিস্তারিত নিচে দেওয়া হলো:\n${pname ? `Name: ${pname}` : ""}${priceLine}${descLine}`.trim();
+        reply = customerLanguage === "bangla"
+          ? `আপনি যে ছবিটি চেয়েছেন তার বিস্তারিত নিচে দেওয়া হলো:\n${pname ? `নাম: ${pname}` : ""}${priceLine}${descLine}`.trim()
+          : `Here are the details for the image you asked for:\n${pname ? `Name: ${pname}` : ""}${priceLine}${descLine}`.trim();
         console.log("[ai-reply] caption override applied (was negative)");
+      }
+    }
+
+    reply = stripReplyNoise(reply);
+    if (replyViolatesLanguage(reply, customerLanguage)) {
+      try {
+        const repaired = await repairReplyLanguage({
+          platform: keyRow.platform,
+          model: resolvedReplyModel,
+          apiKey,
+          customerLanguage,
+          customerMessage: finalUserMessage || messageText || imageCaption || "",
+          reply,
+          maxTokens: Math.min(800, resolvedMaxTokens || Number((biz as any)?.max_tokens) || 800),
+        });
+        const cleaned = stripReplyNoise(repaired.text);
+        if (cleaned && !replyViolatesLanguage(cleaned, customerLanguage)) {
+          reply = cleaned;
+          aiModelUsed = aiModelUsed || resolvedReplyModel;
+          aiTokensUsed += repaired.tokens || 0;
+          aiPromptTokens += repaired.promptTokens || 0;
+          aiCompletionTokens += repaired.completionTokens || 0;
+          console.log("[ai-reply] language repair applied", { customerLanguage });
+        } else {
+          reply = customerLanguage === "bangla"
+            ? "দুঃখিত, এই তথ্যটি এখন আমার কাছে নেই। সরাসরি যোগাযোগ করলে আমরা সাহায্য করতে পারব।"
+            : "Sorry, I don't have that detail right now. Please contact us directly and we'll help you out.";
+          console.log("[ai-reply] language repair fallback applied", { customerLanguage });
+        }
+      } catch (e) {
+        console.log("[ai-reply] language repair failed:", (e as Error)?.message);
+        reply = customerLanguage === "bangla"
+          ? "দুঃখিত, এই তথ্যটি এখন আমার কাছে নেই। সরাসরি যোগাযোগ করলে আমরা সাহায্য করতে পারব।"
+          : "Sorry, I don't have that detail right now. Please contact us directly and we'll help you out.";
       }
     }
 
