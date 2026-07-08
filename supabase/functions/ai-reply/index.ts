@@ -3160,6 +3160,7 @@ Deno.serve(async (req) => {
     }
 
     const lowerMsg = messageText.toLowerCase();
+    const customerLanguage = detectCustomerLanguage(messageText || imageCaption || voiceTranscript || "");
 
     // MUTEX: route based on active_reply_mode (per-customer auto_reply overrides global "none")
     if (replyMode === "none" && customerMode !== "auto_reply") {
@@ -3190,7 +3191,12 @@ Deno.serve(async (req) => {
         );
       });
       if (fixedHit) {
-        const reply = fixedHit.reply;
+        let reply = stripReplyNoise(String(fixedHit.reply || ""));
+        if (customerLanguage === "bangla" && replyViolatesLanguage(reply, customerLanguage)) {
+          reply = "দুঃখিত, এই তথ্যটি এখন আমার কাছে নেই। সরাসরি যোগাযোগ করলে আমরা সাহায্য করতে পারব।";
+        } else if (customerLanguage === "english" && replyViolatesLanguage(reply, customerLanguage)) {
+          reply = "Sorry, I don't have that detail right now. Please contact us directly and we'll help you out.";
+        }
         const sendResult = await sendViaGateway({
           gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
           showTyping: aiEnabled ? aiTyping : sessionTyping, accountProtection,
@@ -3239,7 +3245,12 @@ Deno.serve(async (req) => {
         });
       });
       if (ruleHit) {
-        const reply = ruleHit.reply_template;
+        let reply = stripReplyNoise(String(ruleHit.reply_template || ""));
+        if (customerLanguage === "bangla" && replyViolatesLanguage(reply, customerLanguage)) {
+          reply = "দুঃখিত, এই তথ্যটি এখন আমার কাছে নেই। সরাসরি যোগাযোগ করলে আমরা সাহায্য করতে পারব।";
+        } else if (customerLanguage === "english" && replyViolatesLanguage(reply, customerLanguage)) {
+          reply = "Sorry, I don't have that detail right now. Please contact us directly and we'll help you out.";
+        }
         const ruleImageUrl = (ruleHit.image_url || "").trim();
         const sendResult = await sendViaGateway({
           gateway: GATEWAY, sessionId, apiToken: session.api_token, to: fromNumber, message: reply,
