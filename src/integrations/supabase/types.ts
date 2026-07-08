@@ -652,6 +652,66 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_orders: {
+        Row: {
+          address: string | null
+          created_at: string
+          customer_name: string | null
+          customer_phone: string
+          id: string
+          notes: string | null
+          product_name: string | null
+          quantity: number | null
+          raw_summary: string | null
+          session_id: string | null
+          source: string
+          source_message_id: string | null
+          status: string
+          total_price: number | null
+          unit_price: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          customer_name?: string | null
+          customer_phone: string
+          id?: string
+          notes?: string | null
+          product_name?: string | null
+          quantity?: number | null
+          raw_summary?: string | null
+          session_id?: string | null
+          source?: string
+          source_message_id?: string | null
+          status?: string
+          total_price?: number | null
+          unit_price?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string
+          id?: string
+          notes?: string | null
+          product_name?: string | null
+          quantity?: number | null
+          raw_summary?: string | null
+          session_id?: string | null
+          source?: string
+          source_message_id?: string | null
+          status?: string
+          total_price?: number | null
+          unit_price?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       customer_reply_settings: {
         Row: {
           ai_paused: boolean

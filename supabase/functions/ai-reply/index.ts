@@ -4083,6 +4083,90 @@ FALLBACK
       }
     }
 
+    // ============ Detect & capture customer order from this message ============
+    try {
+      const rawText = String(messageText || "").trim();
+      if (rawText) {
+        const lower = rawText.toLowerCase();
+        const orderKeywords = [
+          "order", "confirm", "buy", "purchase", "checkout", "delivery",
+          "address", "cash on delivery", "cod", "please send", "send it",
+          "nibo", "nebo", "nib", "nite chai", "nichhi", "nichi", "kinbo", "kinte chai",
+          "lagbe", "order dilam", "order korlam", "order koro", "diye din",
+          "অর্ডার", "কিনব", "কিনবো", "নিবো", "নেবো", "নিব", "নিতে চাই",
+          "লাগবে", "ঠিকানা", "ডেলিভারি", "ক্যাশ অন",
+        ];
+        const hasIntent = orderKeywords.some((k) => lower.includes(k.toLowerCase()));
+
+        if (hasIntent) {
+          const phoneMatch = rawText.replace(/[^\d+]/g, " ").match(/\+?\d{10,15}/);
+          const customerPhone = (phoneMatch?.[0] || fromNumber || "").replace(/\D/g, "");
+          const qtyMatch = rawText.match(/(\d+)\s*(pcs|piece|pieces|ta|টা|টি|x|×)/i);
+          const quantity = qtyMatch ? Math.max(1, parseInt(qtyMatch[1], 10)) : 1;
+          const priceMatch = rawText.match(/(?:৳|tk|taka)\s*(\d{2,7})|(\d{2,7})\s*(?:tk|taka|৳)/i);
+          const unitPrice = priceMatch ? Number(priceMatch[1] || priceMatch[2]) : null;
+
+          let productName: string | null = matchedProduct?.name || null;
+          let resolvedUnitPrice: number | null = unitPrice ?? (matchedProduct?.price ? Number(matchedProduct.price) : null);
+
+          if (!productName) {
+            try {
+              const { data: prods } = await admin
+                .from("products")
+                .select("name, price")
+                .eq("user_id", userId)
+                .limit(200);
+              const hit = (prods || []).find((p: any) =>
+                p?.name && lower.includes(String(p.name).toLowerCase())
+              );
+              if (hit) {
+                productName = hit.name;
+                if (!resolvedUnitPrice && hit.price) resolvedUnitPrice = Number(hit.price);
+              }
+            } catch (_) { /* ignore */ }
+          }
+
+          let address: string | null = null;
+          const addrMatch = rawText.match(/(?:address|ঠিকানা)\s*[:\-–]\s*(.+)$/i);
+          if (addrMatch) address = addrMatch[1].trim().slice(0, 300);
+
+          const totalPrice = resolvedUnitPrice != null ? Number(resolvedUnitPrice) * quantity : null;
+
+          const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+          const { data: existing } = await admin
+            .from("customer_orders")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("customer_phone", customerPhone || fromNumber || "unknown")
+            .gte("created_at", tenMinAgo)
+            .maybeSingle();
+
+          if (!existing) {
+            const { error: insErr } = await admin.from("customer_orders").insert({
+              user_id: userId,
+              session_id: sessionId,
+              customer_phone: customerPhone || fromNumber || "unknown",
+              customer_name: null,
+              product_name: productName,
+              quantity,
+              unit_price: resolvedUnitPrice,
+              total_price: totalPrice,
+              address,
+              notes: null,
+              raw_summary: rawText.slice(0, 500),
+              status: "new",
+              source: "ai_agent",
+              source_message_id: messageId || null,
+            });
+            if (insErr) console.log("[ai-reply] customer_orders insert failed:", insErr.message);
+            else console.log("[ai-reply] captured customer_order for", customerPhone);
+          }
+        }
+      }
+    } catch (orderErr) {
+      console.log("[ai-reply] order capture failed:", (orderErr as Error)?.message);
+    }
+
     return jsonResp({ ok: true, reply, sent: sendOk, send_error: sendErr, sent_to: sendResult.to, source: "ai", message_id: messageId });
   } catch (e: any) {
     console.error("ai-reply error:", e);
