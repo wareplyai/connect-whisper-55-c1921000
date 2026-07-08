@@ -3865,7 +3865,12 @@ Deno.serve(async (req) => {
     }
 
     reply = stripReplyNoise(reply);
-    if (replyViolatesLanguage(reply, customerLanguage)) {
+    // Enforce the "only 2 output modes" rule: pure Bangla script OR pure English.
+    // Never let Banglish (Bangla words in English letters) reach the customer.
+    // Try repair up to 2 times before falling back.
+    let repairAttempts = 0;
+    while (replyViolatesLanguage(reply, customerLanguage) && repairAttempts < 2) {
+      repairAttempts++;
       try {
         const repaired = await repairReplyLanguage({
           platform: keyRow.platform,
@@ -3877,25 +3882,27 @@ Deno.serve(async (req) => {
           maxTokens: Math.min(800, resolvedMaxTokens || Number((biz as any)?.max_tokens) || 800),
         });
         const cleaned = stripReplyNoise(repaired.text);
+        aiTokensUsed += repaired.tokens || 0;
+        aiPromptTokens += repaired.promptTokens || 0;
+        aiCompletionTokens += repaired.completionTokens || 0;
         if (cleaned && !replyViolatesLanguage(cleaned, customerLanguage)) {
           reply = cleaned;
           aiModelUsed = aiModelUsed || resolvedReplyModel;
-          aiTokensUsed += repaired.tokens || 0;
-          aiPromptTokens += repaired.promptTokens || 0;
-          aiCompletionTokens += repaired.completionTokens || 0;
-          console.log("[ai-reply] language repair applied", { customerLanguage });
-        } else {
-          reply = customerLanguage === "bangla"
-            ? "দুঃখিত, এই তথ্যটি এখন আমার কাছে নেই। সরাসরি যোগাযোগ করলে আমরা সাহায্য করতে পারব।"
-            : "Sorry, I don't have that detail right now. Please contact us directly and we'll help you out.";
-          console.log("[ai-reply] language repair fallback applied", { customerLanguage });
+          console.log("[ai-reply] language repair applied", { customerLanguage, repairAttempts });
+          break;
         }
+        // keep the cleaned text as the base for the next attempt if non-empty
+        if (cleaned) reply = cleaned;
       } catch (e) {
         console.log("[ai-reply] language repair failed:", (e as Error)?.message);
-        reply = customerLanguage === "bangla"
-          ? "দুঃখিত, এই তথ্যটি এখন আমার কাছে নেই। সরাসরি যোগাযোগ করলে আমরা সাহায্য করতে পারব।"
-          : "Sorry, I don't have that detail right now. Please contact us directly and we'll help you out.";
+        break;
       }
+    }
+    if (replyViolatesLanguage(reply, customerLanguage)) {
+      reply = customerLanguage === "bangla"
+        ? "দুঃখিত, এই তথ্যটি এখন আমার কাছে নেই। একটু পরে আবার জানাবো।"
+        : "Sorry, I don't have that detail right now. I'll get back to you shortly.";
+      console.log("[ai-reply] language repair fallback applied", { customerLanguage });
     }
 
 
