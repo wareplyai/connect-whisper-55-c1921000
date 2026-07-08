@@ -514,12 +514,32 @@ ${productLines}`;
   const saveBusiness = async () => {
     if (!user) return;
     setSavingBiz(true);
+
+    // Step 1: wipe the previous system_prompt so no stale content survives
+    await supabase
+      .from("business_profiles")
+      .update({ system_prompt: "" } as any)
+      .eq("user_id", user.id);
+
+    // Step 2: upsert full business profile with the NEW system_prompt (replaces old)
     const { error } = await supabase
       .from("business_profiles")
-      .upsert({ user_id: user.id, ...business } as any, { onConflict: "user_id" });
+      .upsert(
+        { user_id: user.id, ...business, system_prompt: business.system_prompt ?? "" } as any,
+        { onConflict: "user_id" }
+      );
+
+    // Step 3: force-write system_prompt explicitly to guarantee the new value is persisted
+    if (!error) {
+      await supabase
+        .from("business_profiles")
+        .update({ system_prompt: business.system_prompt ?? "" } as any)
+        .eq("user_id", user.id);
+    }
+
     setSavingBiz(false);
     if (error) toast.error(friendlyError(error));
-    else toast.success("Business profile saved");
+    else toast.success("Business profile saved — new system prompt is now active");
   };
 
   const persistBusinessPatch = async (patch: Partial<typeof defaultBusiness>) => {
