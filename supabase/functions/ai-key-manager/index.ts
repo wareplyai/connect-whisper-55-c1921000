@@ -127,10 +127,37 @@ Deno.serve(async (req) => {
         .eq("is_active", true)
         .maybeSingle();
       if (error) throw error;
-      return new Response(JSON.stringify({ key: data }), {
+
+      // Check for admin-managed fallback: per-user override or active global key
+      let hasFallback = false;
+      try {
+        const { data: override } = await admin
+          .from("ai_api_keys")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("is_admin_override", true)
+          .eq("is_active", true)
+          .maybeSingle();
+        if (override) hasFallback = true;
+        else {
+          const { data: global } = await admin
+            .from("ai_api_keys")
+            .select("id")
+            .is("user_id", null)
+            .eq("is_global", true)
+            .eq("is_active", true)
+            .limit(1)
+            .maybeSingle();
+          if (global) hasFallback = true;
+        }
+      } catch { /* ignore */ }
+
+
+      return new Response(JSON.stringify({ key: data, hasFallback }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     if (action === "update_model") {
       const model = String(body.model || "").trim();

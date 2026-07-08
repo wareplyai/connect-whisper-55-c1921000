@@ -300,6 +300,8 @@ const AIAgent = () => {
 
   const [local, setLocal] = useState(defaultLocal);
   const [savedKey, setSavedKey] = useState<SavedKey | null>(null);
+  const [hasFallbackKey, setHasFallbackKey] = useState(false);
+
   const [business, setBusiness] = useState(defaultBusiness);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [qa, setQa] = useState<QA[]>([]);
@@ -358,6 +360,8 @@ const AIAgent = () => {
       setQa((qaRows ?? []).map((r: any) => ({ id: r.id, question: r.question, answer: r.answer })));
       setFixed((fxRows ?? []).map((r: any) => ({ id: r.id, keyword: r.keyword, reply: r.reply })));
       if (keyRes?.data?.key) setSavedKey(keyRes.data.key as SavedKey);
+      setHasFallbackKey(Boolean(keyRes?.data?.hasFallback));
+
       setLoading(false);
     })();
   }, [user]);
@@ -553,7 +557,7 @@ ${productLines}`;
   };
 
   const toggleAI = async (v: boolean) => {
-    if (v && !savedKey) { toast.error("Save your AI API key first"); return; }
+    if (v && !savedKey && !hasFallbackKey) { toast.error("Save your AI API key first"); return; }
     if (v && business.connected_session_ids.length === 0) {
       toast.error("Connect at least one WhatsApp session first");
       return;
