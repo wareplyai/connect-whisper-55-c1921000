@@ -3574,10 +3574,14 @@ Deno.serve(async (req) => {
       return jsonResp({ ok: true, skipped: "no_real_image_evidence" });
     }
     if (isImageMessage && !imageUrl && !useTextFlow) {
-      reply = "ছবি receive করেছি ✅ কিন্তু এই মুহূর্তে ছবিটা analyze করা সম্ভব হচ্ছে না। দয়া করে product টির নাম / রঙ / size text এ লিখে পাঠান, আমি match করে details দিচ্ছি।\n\nGot your image but couldn't open it right now — please describe the product in text (name / color / size).";
+      reply = customerLanguage === "bangla"
+        ? "ছবিটি পেয়েছি, কিন্তু এই মুহূর্তে বিশ্লেষণ করা যাচ্ছে না। দয়া করে পণ্যের নাম, রঙ বা সাইজ লিখে পাঠান।"
+        : "Got your image, but I couldn't open it right now. Please describe the product name, color, or size.";
     } else if (isImageMessage && imageUrl && !useTextFlow) {
       if (keyRow.platform !== "openai") {
-        reply = "Sorry, image search needs an OpenAI API key. Please describe the product in text. ছবি match করতে OpenAI key দরকার, দয়া করে product টি text এ describe করুন।";
+        reply = customerLanguage === "bangla"
+          ? "ছবি বিশ্লেষণের জন্য ওপেনএআই কী দরকার। দয়া করে পণ্যের নাম বা বিস্তারিত লিখে পাঠান।"
+          : "Image search needs an OpenAI API key. Please describe the product in text.";
       } else {
         try {
           const descRes = await describeImageWithOpenAI(apiKey, imageUrl, { detail: aiLimits.vision_detail, maxTokens: aiLimits.image_describe_max_tokens });
@@ -3649,7 +3653,9 @@ Deno.serve(async (req) => {
 
           if (matched) {
             const p = matched;
-            reply = `আপনি যে ছবিটি দিয়েছেন তার ডিটেইলস নিচে দেওয়া হলো:\n\nProduct Name: ${p.name}\nPrice: ${p.price}${p.description ? `\nDescription: ${p.description}` : ""}`;
+            reply = customerLanguage === "bangla"
+              ? `ছবির পণ্যটি: ${p.name}\nদাম: ${p.price}${p.description ? `\nবিস্তারিত: ${p.description}` : ""}`
+              : `Product: ${p.name}\nPrice: ${p.price}${p.description ? `\nDetails: ${p.description}` : ""}`;
             // Attach a real image of the matched product (preferred) so customer
             // immediately sees what we matched.
             matchedProduct = p;
@@ -3678,12 +3684,16 @@ Deno.serve(async (req) => {
               }
             } catch (_e) { /* non-fatal */ }
             {
-              reply = `এই ডিজাইনটি এখন আমাদের কাছে নেই। product এর নাম বা রঙ লিখে জানালে দ্রুত খুঁজে দিচ্ছি।`;
+              reply = customerLanguage === "bangla"
+                ? "এই ডিজাইনটি এখন আমাদের কাছে নেই। পণ্যের নাম বা রঙ লিখে জানালে দ্রুত খুঁজে দিচ্ছি।"
+                : "We don't have this design right now. Share the product name or color and I'll check quickly.";
             }
           }
         } catch (visErr: any) {
           console.error("[image-match] error:", visErr?.message);
-          reply = "ছবিটি এই মুহূর্তে পড়তে পারছি না। দয়া করে product এর নাম বা ডিটেইল লিখে পাঠান, আমি সাথে সাথে সাহায্য করছি।";
+          reply = customerLanguage === "bangla"
+            ? "ছবিটি এই মুহূর্তে পড়তে পারছি না। দয়া করে পণ্যের নাম বা বিস্তারিত লিখে পাঠান।"
+            : "I can't read the image right now. Please send the product name or details.";
         }
       }
     } else {
@@ -3838,9 +3848,13 @@ Deno.serve(async (req) => {
       if (isNegative) {
         const sentProduct = (catalogRows || []).find((p: any) => p.id === outgoingImageProductId);
         const pname = sentProduct?.name || "";
-        const priceLine = sentProduct?.price ? `\nMRP: ${sentProduct.price}` : "";
+        const priceLine = sentProduct?.price
+          ? (customerLanguage === "bangla" ? `\nদাম: ${sentProduct.price}` : `\nPrice: ${sentProduct.price}`)
+          : "";
         const descLine = sentProduct?.description ? `\n${String(sentProduct.description).slice(0, 200)}` : "";
-        reply = `আপনি যে ছবিটি চেয়েছেন তার বিস্তারিত নিচে দেওয়া হলো:\n${pname ? `Name: ${pname}` : ""}${priceLine}${descLine}`.trim();
+        reply = customerLanguage === "bangla"
+          ? `আপনি যে ছবিটি চেয়েছেন তার বিস্তারিত নিচে দেওয়া হলো:\n${pname ? `নাম: ${pname}` : ""}${priceLine}${descLine}`.trim()
+          : `Here are the details for the image you asked for:\n${pname ? `Name: ${pname}` : ""}${priceLine}${descLine}`.trim();
         console.log("[ai-reply] caption override applied (was negative)");
       }
     }
