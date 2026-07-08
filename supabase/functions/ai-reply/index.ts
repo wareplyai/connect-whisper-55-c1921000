@@ -899,6 +899,83 @@ function normalizeTextForCompare(value: unknown): string {
     .trim();
 }
 
+type CustomerLanguage = "english" | "bangla";
+
+function containsBanglaScript(value: unknown): boolean {
+  return /[\u0980-\u09FF]/.test(String(value || ""));
+}
+
+function containsBanglish(value: unknown): boolean {
+  const text = String(value || "").toLowerCase();
+  if (!text.trim()) return false;
+  const banglishWords = [
+    "ami", "amake", "amar", "amader", "apni", "apnar", "apnader", "tumi", "tomar", "vai", "bhai", "bon",
+    "ki", "kivabe", "kibhabe", "keno", "kothay", "koto", "kotho", "kon", "konta", "kontar", "eta", "eita", "ata", "oita",
+    "ache", "ase", "nai", "nei", "hobe", "hoy", "hocche", "diben", "dibo", "dite", "den", "dao", "deo", "pathan", "pathao",
+    "lagbe", "dorkar", "chai", "nibo", "kinbo", "order", "dam", "daam", "mullo", "taka", "tk", "delivery", "koto", "size",
+    "rong", "color", "product", "pawa", "jabe", "janan", "bolen", "bolun", "bollen", "thik", "acha", "accha", "dhonnobad",
+    "salam", "assalam", "walaikum", "ji", "ha", "na", "ekhane", "okhane", "akhon", "ekhon", "pore", "din", "din", "khulbe",
+  ];
+  return banglishWords.some((word) => new RegExp(`(^|[^a-z])${word}([^a-z]|$)`, "i").test(text));
+}
+
+function detectCustomerLanguage(message: unknown): CustomerLanguage {
+  const text = String(message || "").trim();
+  if (containsBanglaScript(text) || containsBanglish(text)) return "bangla";
+  return "english";
+}
+
+function stripReplyNoise(value: string): string {
+  return String(value || "")
+    .replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
+    .replace(/\*+/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function replyViolatesLanguage(reply: string, lang: CustomerLanguage): boolean {
+  const cleaned = String(reply || "").trim();
+  if (!cleaned) return false;
+  if (containsBanglish(cleaned)) return true;
+  if (lang === "bangla") {
+    const banglaChars = (cleaned.match(/[\u0980-\u09FF]/g) || []).length;
+    const latinLetters = (cleaned.match(/[A-Za-z]/g) || []).length;
+    return banglaChars === 0 || latinLetters > Math.max(12, banglaChars * 0.35);
+  }
+  return containsBanglaScript(cleaned);
+}
+
+async function repairReplyLanguage(opts: {
+  platform: string;
+  model: string;
+  apiKey: string;
+  customerLanguage: CustomerLanguage;
+  customerMessage: string;
+  reply: string;
+  maxTokens?: number;
+}): Promise<{ text: string; promptTokens: number; completionTokens: number; tokens: number }> {
+  const target = opts.customerLanguage === "bangla" ? "pure Bangla script (বাংলা অক্ষর)" : "pure English";
+  const systemPrompt = `Rewrite customer-support replies into ${target} only.
+Rules:
+- Output only the final reply text.
+- Keep the same business meaning, product names, prices, phone numbers, and order details.
+- Keep it short, natural, and human: 1 to 3 short lines.
+- No emoji, no markdown, no extra closing question.
+- Banglish is forbidden. Bangla words written in English letters are forbidden.
+- If target is Bangla, translate English/Banglish support wording into proper Bangla script.`;
+  return callAI({
+    platform: opts.platform,
+    model: opts.model,
+    apiKey: opts.apiKey,
+    systemPrompt,
+    userMessage: `Customer message:\n${opts.customerMessage || "(none)"}\n\nReply to fix:\n${opts.reply}`,
+    history: [],
+    maxTokens: opts.maxTokens || 600,
+    temperature: 0,
+  });
+}
+
 function extractMessageTextDeep(value: unknown, depth = 0): string {
   if (depth > 7 || value == null) return "";
   if (typeof value === "string") return "";
