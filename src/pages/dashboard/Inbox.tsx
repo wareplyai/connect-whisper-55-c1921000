@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Clock, Trash2, Image as ImageIcon, Mic, Film, FileText, Paperclip } from "lucide-react";
+import { Bot, Zap, User, Search, MessageSquare, Send, Loader2, Clock, Trash2, Image as ImageIcon, Mic, Film, FileText, Paperclip, CheckCheck } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/friendlyError";
@@ -345,6 +345,40 @@ const Inbox = () => {
     load();
   };
 
+  const selectedUnread = useMemo(() => {
+    if (!selected) return 0;
+    return incoming.filter((m) =>
+      m.session_id === selected.session_id &&
+      m.from_number === selected.phone_number &&
+      !m.reply_sent && !m.reply_text && (m as any).delivery_status !== "skipped"
+    ).length;
+  }, [incoming, selected]);
+
+  const markAllRead = async () => {
+    if (!user || !selected) return;
+    const ids = incoming
+      .filter((m) =>
+        m.session_id === selected.session_id &&
+        m.from_number === selected.phone_number &&
+        !m.reply_sent && !m.reply_text && (m as any).delivery_status !== "skipped"
+      )
+      .map((m) => m.id);
+    if (ids.length === 0) return toast.info("All messages already read");
+    // Optimistic UI update
+    setIncoming((prev) => prev.map((m) => ids.includes(m.id) ? { ...m, delivery_status: "skipped" } : m));
+    const { error } = await supabase
+      .from("incoming_messages")
+      .update({ delivery_status: "skipped" })
+      .in("id", ids)
+      .eq("user_id", user.id);
+    if (error) {
+      toast.error(friendlyError(error));
+      load();
+      return;
+    }
+    toast.success(`Marked ${ids.length} message${ids.length > 1 ? "s" : ""} as read`);
+  };
+
   const setMode = async (next: "ai" | "human" | "auto_reply") => {
     if (!user || !selected) return;
     const { error } = await supabase.from("customer_reply_settings" as any).upsert({
@@ -601,6 +635,17 @@ const Inbox = () => {
                     title="Keyword auto-reply only"
                   >
                     <Zap className="h-3 w-3" /> Auto
+                  </button>
+                  <button
+                    onClick={markAllRead}
+                    disabled={selectedUnread === 0}
+                    className="px-3 py-1.5 rounded-full border border-border bg-card text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground hover:border-green-500/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Mark all messages as read"
+                  >
+                    <CheckCheck className="h-3 w-3" /> Mark read
+                    {selectedUnread > 0 && (
+                      <span className="ml-1 min-w-4 h-4 px-1 rounded-full bg-green-500 text-white text-[10px] grid place-items-center">{selectedUnread}</span>
+                    )}
                   </button>
                   <label className="flex items-center gap-2 text-xs">
                     <span className="text-muted-foreground">{isBlocked ? "Blocked" : "Block"}</span>
