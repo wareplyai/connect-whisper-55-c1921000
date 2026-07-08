@@ -912,8 +912,8 @@ function containsBanglish(value: unknown): boolean {
     "ami", "amake", "amar", "amader", "apni", "apnar", "apnader", "tumi", "tomar", "vai", "bhai", "bon",
     "ki", "kivabe", "kibhabe", "keno", "kothay", "koto", "kotho", "kon", "konta", "kontar", "eta", "eita", "ata", "oita",
     "ache", "ase", "nai", "nei", "hobe", "hoy", "hocche", "diben", "dibo", "dite", "den", "dao", "deo", "pathan", "pathao",
-    "lagbe", "dorkar", "chai", "nibo", "kinbo", "order", "dam", "daam", "mullo", "taka", "tk", "delivery", "koto", "size",
-    "rong", "color", "product", "pawa", "jabe", "janan", "bolen", "bolun", "bollen", "thik", "acha", "accha", "dhonnobad",
+    "lagbe", "dorkar", "chai", "nibo", "kinbo", "dam", "daam", "mullo", "taka", "koto",
+    "rong", "pawa", "jabe", "janan", "bolen", "bolun", "bollen", "thik", "acha", "accha", "dhonnobad",
     "salam", "assalam", "walaikum", "ji", "ha", "na", "ekhane", "okhane", "akhon", "ekhon", "pore", "din", "din", "khulbe",
   ];
   return banglishWords.some((word) => new RegExp(`(^|[^a-z])${word}([^a-z]|$)`, "i").test(text));
