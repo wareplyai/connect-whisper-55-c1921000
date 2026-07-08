@@ -636,6 +636,17 @@ const Inbox = () => {
                   >
                     <Zap className="h-3 w-3" /> Auto
                   </button>
+                  <button
+                    onClick={markAllRead}
+                    disabled={selectedUnread === 0}
+                    className="px-3 py-1.5 rounded-full border border-border bg-card text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground hover:border-green-500/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Mark all messages as read"
+                  >
+                    <CheckCheck className="h-3 w-3" /> Mark read
+                    {selectedUnread > 0 && (
+                      <span className="ml-1 min-w-4 h-4 px-1 rounded-full bg-green-500 text-white text-[10px] grid place-items-center">{selectedUnread}</span>
+                    )}
+                  </button>
                   <label className="flex items-center gap-2 text-xs">
                     <span className="text-muted-foreground">{isBlocked ? "Blocked" : "Block"}</span>
                     <Switch checked={isBlocked} onCheckedChange={toggleBlock} />
