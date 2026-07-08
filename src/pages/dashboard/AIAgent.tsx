@@ -557,7 +557,7 @@ ${productLines}`;
   };
 
   const toggleAI = async (v: boolean) => {
-    if (v && !savedKey) { toast.error("Save your AI API key first"); return; }
+    if (v && !savedKey && !hasFallbackKey) { toast.error("Save your AI API key first"); return; }
     if (v && business.connected_session_ids.length === 0) {
       toast.error("Connect at least one WhatsApp session first");
       return;
