@@ -3460,10 +3460,15 @@ Deno.serve(async (req) => {
       ? `\n\nPRODUCT REPLY RULES:\n1. When replying about a product, use the exact catalog product name and real catalog details only: name, price, stock, and short description when useful.\n2. Suggest at most 3 products at once.\n3. If the customer asks for a product photo/image, give only a short confirmation and product name. The system can attach the image automatically. Never say images cannot be sent.\n4. For delivery, price, stock, and general questions, answer in text only.\n5. Answer all customer questions from the current turn in one concise reply.\n6. Follow the customer's language strictly: English customer gets English only; Bangla or Banglish customer gets Bangla script only. Never write Bangla words with English letters.`
       : "";
 
+    // Human tone layer — makes the assistant sound like a real, warm shop person
+    // instead of a robotic bot, while still ONLY using real data we already have
+    // (business profile, Q&A, product catalog, order/session context).
+    const humanToneInstr = `\n\nHUMAN TONE & CONVERSATION STYLE (very important):\n- Talk like a real, friendly human shop representative — warm, calm, respectful, never robotic or scripted.\n- Match the customer's energy and length. Short question → short reply. Casual question → casual reply. Serious concern → caring, patient reply.\n- Use natural, everyday words. In Bangla, use soft natural spoken style ("জি", "অবশ্যই", "একটু দেখে বলছি", "ধন্যবাদ") in proper Bangla script only. In English, use natural friendly words ("sure", "of course", "let me check", "thanks for asking").\n- Never sound like a template. Vary your wording between turns. Do not start every reply the same way. Do not repeat the customer's full question back.\n- Do not use headings, bullet symbols, markdown, emojis, or filler like "Is there anything else?" unless the customer clearly needs a list.\n- Never invent products, prices, stock, delivery time, phone numbers, links, discounts, or policies. Use ONLY the real data provided in the business profile, Q&A, product catalog, and this conversation. If something is not in the data, say honestly and softly that you will check and get back, in the customer's language.\n- Remember what the customer already told you in this chat (name, address, product, quantity, etc.). Never re-ask information they already gave.\n- Confirm orders, addresses, and prices gently and clearly, exactly as the real data says.\n- Keep replies concise: usually 1–3 short sentences. Only go longer when the customer really asks for details.\n- Stay strictly in the customer's language (Bangla script for Bangla/Banglish, English for English). Never mix.`;
+
     const baseSystem = (biz?.system_prompt && biz.system_prompt.trim().length > 0)
       ? biz.system_prompt
-      : `You are a helpful WhatsApp assistant for ${biz?.name || "this business"}. Reply in the customer's language. Be friendly, concise, human-like.`;
-    const systemPrompt = `${baseSystem}${qaContext}${productCatalog}${productInstr}`;
+      : `You are a warm, human-sounding WhatsApp support person for ${biz?.name || "this business"}. Reply naturally in the customer's language, like a real helpful shop staff — not a bot. Use only the real business data provided.`;
+    const systemPrompt = `${baseSystem}${qaContext}${productCatalog}${productInstr}${humanToneInstr}`;
 
     // If we have an image AND text in this turn (either originally or after
     // coalescing a recent image+text pair), run vision+match now so the AI
