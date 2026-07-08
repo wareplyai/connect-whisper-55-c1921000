@@ -300,6 +300,8 @@ const AIAgent = () => {
 
   const [local, setLocal] = useState(defaultLocal);
   const [savedKey, setSavedKey] = useState<SavedKey | null>(null);
+  const [hasFallbackKey, setHasFallbackKey] = useState(false);
+
   const [business, setBusiness] = useState(defaultBusiness);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [qa, setQa] = useState<QA[]>([]);
