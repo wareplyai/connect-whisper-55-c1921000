@@ -4084,19 +4084,23 @@ FALLBACK
     }
 
     // ============ Detect & capture customer order from this message ============
+    console.log("[ai-reply] order-capture ENTER", { hasText: !!messageText, len: (messageText||"").length });
     try {
       const rawText = String(messageText || "").trim();
       if (rawText) {
         const lower = rawText.toLowerCase();
         const orderKeywords = [
           "order", "confirm", "buy", "purchase", "checkout", "delivery",
-          "address", "cash on delivery", "cod", "please send", "send it",
+          "address", "addres", "adress", "cash on delivery", "cod", "please send", "send it",
           "nibo", "nebo", "nib", "nite chai", "nichhi", "nichi", "kinbo", "kinte chai",
           "lagbe", "order dilam", "order korlam", "order koro", "diye din",
+          "name holo", "number holo", "phone holo", "size holo", "sieze holo",
+          "নাম", "নাম্বার", "নং", "সাইজ",
           "অর্ডার", "কিনব", "কিনবো", "নিবো", "নেবো", "নিব", "নিতে চাই",
           "লাগবে", "ঠিকানা", "ডেলিভারি", "ক্যাশ অন",
         ];
         const hasIntent = orderKeywords.some((k) => lower.includes(k.toLowerCase()));
+        console.log("[ai-reply] order-capture intent", { hasIntent });
 
         if (hasIntent) {
           const phoneMatch = rawText.replace(/[^\d+]/g, " ").match(/\+?\d{10,15}/);
