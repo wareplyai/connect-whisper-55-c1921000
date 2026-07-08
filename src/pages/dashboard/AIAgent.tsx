@@ -454,45 +454,57 @@ ${business.location ? `Location: ${business.location}\n` : ""}${business.working
     const catalogBlock = `PRODUCT CATALOG (source of truth — never invent items, prices, or stock)
 ${productLines}`;
 
-    const playbookBlock = `ANSWER PLAYBOOK (use these patterns — keep replies short, natural, no emoji)
+    const playbookBlock = `ANSWER PLAYBOOK (patterns — keep replies short, natural, no emoji)
 
-1. Price asked ("দাম কত" / "price koto" / "how much")
-   → Reply one line: "[Product name] er price [price]."
-   → If multiple products asked: short list, one per line.
+⛔ LANGUAGE REMINDER: All example replies below are shown in Bangla script for Bangla/Banglish customers, and in English for English customers. NEVER reply in Banglish (Bangla words in English letters). If the customer wrote in Banglish, still reply in pure Bangla script.
 
-2. Stock / availability asked ("ache?" / "in stock?" / "available?")
-   → "Ji, ache." / "Sorry, ekhon nei, kichudin por asbe."
+1. Price asked ("দাম কত" / "dam koto" / "price koto" / "how much")
+   → Bangla/Banglish customer → "[পণ্যের নাম] এর দাম [price] টাকা।"
+   → English customer → "[Product name] price is [price] tk."
+   → Multiple products asked → short list, one per line.
+
+2. Stock / availability asked ("আছে?" / "ache?" / "in stock?")
+   → Bangla/Banglish customer → "জি, আছে।" / "দুঃখিত, এখন নেই, কিছুদিন পর আসবে।"
+   → English customer → "Yes, in stock." / "Sorry, out of stock right now."
    → Never guess — only use catalog stock.
 
-3. Product image / picture asked ("chobi den" / "picture" / "image")
-   → Send the matching product photo with a one-line caption only.
+3. Product image / picture asked ("ছবি দেন" / "chobi den" / "picture")
+   → Send the matching product photo with a one-line caption only (in the customer's language — Bangla script or English).
 
 4. Delivery / shipping asked
-   → Reply from business info. If not set: "Delivery details ektu por janacchi."
+   → Reply from business info in the customer's language.
+   → Bangla/Banglish fallback: "ডেলিভারি ডিটেইলস একটু পর জানাচ্ছি।"
+   → English fallback: "I will share delivery details shortly."
 
 5. Location / address asked
-   → Reply with the location from business info in one line.
+   → Reply with the location from business info in one line (Bangla script or English, matching the customer).
 
 6. Working hours asked
-   → Reply with the hours from business info in one line.
+   → Reply with the hours from business info in one line (Bangla script or English).
 
 7. Contact / phone asked
-   → Share the contact from business info in one line.
+   → Share the contact from business info in one line (Bangla script or English).
 
 8. Order / how to buy
-   → Short step: "Product name, quantity, address — ei tin ta pathan, ami order confirm kore debo."
+   → Bangla/Banglish customer → "পণ্যের নাম, পরিমাণ, ঠিকানা — এই তিনটি পাঠান, আমি অর্ডার কনফার্ম করে দিচ্ছি।"
+   → English customer → "Please share product name, quantity, and address — I will confirm the order."
 
 9. Discount / offer asked
-   → Only mention offers that exist in business info. Otherwise: "Ekhon kono special offer nei."
+   → Only mention offers in business info.
+   → Bangla/Banglish customer → "এখন কোন বিশেষ অফার নেই।"
+   → English customer → "No special offer right now."
 
 10. Greeting from customer (Salam / Hi / Hello)
-    → Mirror once (Walaikum Assalam / Hi), then go straight to helping.
+    → Bangla/Banglish customer → "ওয়ালাইকুম আসসালাম" / "হ্যালো"
+    → English customer → "Walaikum Assalam" / "Hi"
+    → Then go straight to helping.
 
 11. Off-topic or personal questions
-    → Politely redirect: "Ami ekhane apnake [business name] er bepare help korte parbo."
+    → Bangla/Banglish customer → "আমি এখানে আপনাকে [business name] এর ব্যাপারে সাহায্য করতে পারব।"
+    → English customer → "I can help you with [business name] here."
 
 12. Unknown / missing info
-    → Use the fallback line. Never invent. Offer to connect with the team.`;
+    → Use the fallback line in the correct language. Never invent. Offer to connect with the team.`;
 
     const prompt = `INSTRUCTIONS FOR THIS CHATBOT\n${instructionsBlock}\n\n---\n\n${TOP_PRIMARY_OBJECTIVE}\n\n---\n\n${businessBlock}\n---\n\n${catalogBlock}\n\n---\n\n${playbookBlock}`;
     setBusiness((p) => ({ ...p, system_prompt: prompt }));
