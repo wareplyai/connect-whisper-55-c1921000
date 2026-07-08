@@ -45,6 +45,7 @@ const AIAgent = lazy(() => import("./pages/dashboard/AIAgent"));
 const BehaviorSettings = lazy(() => import("./pages/dashboard/BehaviorSettings"));
 const Products = lazy(() => import("./pages/dashboard/Products"));
 const AbandonedCart = lazy(() => import("./pages/dashboard/AbandonedCart"));
+const Orders = lazy(() => import("./pages/dashboard/Orders"));
 
 // Admin
 const AdminPanel = lazy(() => import("./pages/admin/AdminPanel"));
