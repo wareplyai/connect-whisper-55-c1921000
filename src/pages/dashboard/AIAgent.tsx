@@ -384,7 +384,22 @@ const AIAgent = () => {
 
   const generatePrompt = async () => {
     if (!business.name || !business.description) { toast.error("Fill business name & description"); return; }
-    const instructionsBlock = (business.instructions || DEFAULT_INSTRUCTIONS).trim();
+    const rawInstructions = (business.instructions || DEFAULT_INSTRUCTIONS).trim();
+    const NA = "(not set)";
+    const placeholderMap: Record<string, string> = {
+      BUSINESS_NAME: business.name || NA,
+      BUSINESS_TYPE: business.business_type || NA,
+      BUSINESS_DESCRIPTION: business.description || NA,
+      BUSINESS_LOCATION: business.location || NA,
+      BUSINESS_HOURS: business.working_hours || NA,
+      BUSINESS_CONTACT: business.contact || NA,
+      BUSINESS_WEBSITE: business.website || NA,
+      CHANNEL: "WhatsApp",
+    };
+    const instructionsBlock = rawInstructions.replace(
+      /\{\{\s*([A-Z_][A-Z0-9_]*)\s*\}\}/g,
+      (_m, key) => placeholderMap[key] ?? _m
+    );
 
     // Pull product catalog to auto-build a short, ready-to-use answer playbook.
     let products: any[] = [];
