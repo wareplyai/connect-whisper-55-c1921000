@@ -345,6 +345,40 @@ const Inbox = () => {
     load();
   };
 
+  const selectedUnread = useMemo(() => {
+    if (!selected) return 0;
+    return incoming.filter((m) =>
+      m.session_id === selected.session_id &&
+      m.from_number === selected.phone_number &&
+      !m.reply_sent && !m.reply_text && (m as any).delivery_status !== "skipped"
+    ).length;
+  }, [incoming, selected]);
+
+  const markAllRead = async () => {
+    if (!user || !selected) return;
+    const ids = incoming
+      .filter((m) =>
+        m.session_id === selected.session_id &&
+        m.from_number === selected.phone_number &&
+        !m.reply_sent && !m.reply_text && (m as any).delivery_status !== "skipped"
+      )
+      .map((m) => m.id);
+    if (ids.length === 0) return toast.info("All messages already read");
+    // Optimistic UI update
+    setIncoming((prev) => prev.map((m) => ids.includes(m.id) ? { ...m, delivery_status: "skipped" } : m));
+    const { error } = await supabase
+      .from("incoming_messages")
+      .update({ delivery_status: "skipped" })
+      .in("id", ids)
+      .eq("user_id", user.id);
+    if (error) {
+      toast.error(friendlyError(error));
+      load();
+      return;
+    }
+    toast.success(`Marked ${ids.length} message${ids.length > 1 ? "s" : ""} as read`);
+  };
+
   const setMode = async (next: "ai" | "human" | "auto_reply") => {
     if (!user || !selected) return;
     const { error } = await supabase.from("customer_reply_settings" as any).upsert({
