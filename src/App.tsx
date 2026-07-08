@@ -141,6 +141,7 @@ const App = () => (
                 <Route path="behavior" element={<FeatureGuard feature="behavior"><BehaviorSettings /></FeatureGuard>} />
                 <Route path="products" element={<FeatureGuard feature="products"><Products /></FeatureGuard>} />
                 <Route path="abandoned-cart" element={<FeatureGuard feature="abandoned_cart"><AbandonedCart /></FeatureGuard>} />
+                <Route path="orders" element={<Orders />} />
               </Route>
 
               <Route path="/admin" element={<ProtectedRoute adminOnly><DashboardLayout /></ProtectedRoute>}>
