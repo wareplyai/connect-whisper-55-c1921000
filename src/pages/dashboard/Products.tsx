@@ -339,7 +339,7 @@ export default function Products() {
 
       if (imageChanged) {
         supabase.functions.invoke("tag-product-image", { body: { productId: editProduct.id } }).then(({ error }) => {
-          if (error) toast.error("Auto-tag failed: " + error.message);
+          if (error) console.warn("Auto-tag skipped:", error.message);
           else load();
         });
       }
