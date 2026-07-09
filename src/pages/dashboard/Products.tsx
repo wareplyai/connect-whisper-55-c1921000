@@ -246,7 +246,7 @@ export default function Products() {
       const productId = (inserted as any)?.id;
       if (productId) {
         supabase.functions.invoke("tag-product-image", { body: { productId } }).then(({ error }) => {
-          if (error) toast.error("Auto-tag failed: " + error.message);
+          if (error) console.warn("Auto-tag skipped:", error.message);
           else load();
         });
         syncImageMatch(form.name.trim(), Number(form.price) || 0, form.description.trim() || null, match_image_urls).catch(() => {});
