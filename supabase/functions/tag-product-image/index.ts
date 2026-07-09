@@ -42,37 +42,51 @@ async function describeImage(
   maxTokens: number,
 ): Promise<{ tags: string; promptTokens: number; completionTokens: number; model: string }> {
   const model = "gpt-4o-mini";
-  const r = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a product image tagger. Return ONLY a comma-separated list of 6-12 short keywords (English): object type, colors, material, pattern, style. No sentences.",
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: `Product context: ${productHint || "(none)"}\n\nReturn only keywords.` },
-            { type: "image_url", image_url: { url: imageUrl, detail } },
-          ],
-        },
-      ],
-      max_tokens: Math.max(40, Math.min(400, maxTokens)),
-    }),
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data?.error?.message || `Vision error ${r.status}`);
-  const tags = (data.choices?.[0]?.message?.content || "").trim();
-  return {
-    tags,
-    promptTokens: Number(data?.usage?.prompt_tokens) || 0,
-    completionTokens: Number(data?.usage?.completion_tokens) || 0,
+  const body = JSON.stringify({
     model,
-  };
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a product image tagger. Return ONLY a comma-separated list of 6-12 short keywords (English): object type, colors, material, pattern, style. No sentences.",
+      },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: `Product context: ${productHint || "(none)"}\n\nReturn only keywords.` },
+          { type: "image_url", image_url: { url: imageUrl, detail } },
+        ],
+      },
+    ],
+    max_tokens: Math.max(40, Math.min(400, maxTokens)),
+  });
+
+  // Retry on transient image-download timeouts (OpenAI fetches the storage URL
+  // and freshly-uploaded objects sometimes take a moment to become reachable).
+  let lastErr = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 1500 * attempt));
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body,
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) {
+      const tags = (data.choices?.[0]?.message?.content || "").trim();
+      return {
+        tags,
+        promptTokens: Number(data?.usage?.prompt_tokens) || 0,
+        completionTokens: Number(data?.usage?.completion_tokens) || 0,
+        model,
+      };
+    }
+    lastErr = data?.error?.message || `Vision error ${r.status}`;
+    // Only retry on image-download timeouts / transient upstream errors.
+    const retryable = /timeout|download|fetch|temporar|unavailable|429|502|503|504/i.test(lastErr) || [429, 500, 502, 503, 504].includes(r.status);
+    if (!retryable) break;
+  }
+  throw new Error(lastErr || "vision failed");
 }
 
 async function logUsage(admin: any, ctx: {
