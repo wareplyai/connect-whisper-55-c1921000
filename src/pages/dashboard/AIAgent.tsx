@@ -266,6 +266,8 @@ const AIAgent = () => {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [qa, setQa] = useState<QA[]>([]);
   const [fixed, setFixed] = useState<FixedQA[]>([]);
+  const [genProgress, setGenProgress] = useState(0);
+  const [genLoading, setGenLoading] = useState(false);
 
   const updateLocal = <K extends keyof typeof defaultLocal>(k: K, v: (typeof defaultLocal)[K]) =>
     setLocal((p) => ({ ...p, [k]: v }));
