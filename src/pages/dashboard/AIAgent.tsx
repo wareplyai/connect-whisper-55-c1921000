@@ -849,15 +849,33 @@ const AIAgent = () => {
           <div><Label>Website (optional)</Label><Input value={business.website} onChange={(e) => setBusiness({ ...business, website: e.target.value })} /></div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={generatePrompt} variant="outline">
-            <Sparkles className="h-4 w-4 mr-1.5" /> Auto-Generate Prompt
-          </Button>
-          <Button onClick={saveBusiness} disabled={savingBiz} className="bg-primary text-primary-foreground hover:bg-primary-hover">
-            {savingBiz && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-            Save Business Profile
-          </Button>
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={generatePrompt} variant="outline" disabled={genLoading}>
+              {genLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
+              {genLoading ? "Generating…" : "Auto-Generate Prompt"}
+            </Button>
+            <Button onClick={saveBusiness} disabled={savingBiz} className="bg-primary text-primary-foreground hover:bg-primary-hover">
+              {savingBiz && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+              Save Business Profile
+            </Button>
+          </div>
+          {(genLoading || genProgress > 0) && (
+            <div className="space-y-1.5">
+              <Progress value={genProgress} className="h-2" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>
+                  {genProgress < 30 && "Reading your business info…"}
+                  {genProgress >= 30 && genProgress < 60 && "Building common Q&A…"}
+                  {genProgress >= 60 && genProgress < 95 && "Polishing professional prompt…"}
+                  {genProgress >= 95 && "Done"}
+                </span>
+                <span>{genProgress}%</span>
+              </div>
+            </div>
+          )}
         </div>
+
 
         {business.system_prompt && (
           <div className="space-y-2">
