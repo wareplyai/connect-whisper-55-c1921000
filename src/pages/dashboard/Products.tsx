@@ -449,6 +449,17 @@ export default function Products() {
               <Label>Name *</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
+            <div className="md:col-span-2">
+              <Label>SKU / Product Code</Label>
+              <Input
+                placeholder="e.g. PANJABI-12"
+                value={form.sku}
+                onChange={(e) => setForm({ ...form, sku: e.target.value })}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                A short unique code. The AI will recognise this product when a customer types the SKU.
+              </p>
+            </div>
             <div>
               <Label>Price</Label>
               <Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
