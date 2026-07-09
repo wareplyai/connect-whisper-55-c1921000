@@ -612,9 +612,10 @@ async function matchProductByVision(
     const idx = Number(parsed?.index) || 0;
     const conf = Math.max(0, Math.min(100, Number(parsed?.confidence) || 0));
     console.log("[vision-match] result", { idx, conf, reason: parsed?.reason });
-    if (idx >= 1 && idx <= slice.length && conf >= 55) {
+    if (idx >= 1 && idx <= slice.length && conf >= 50) {
       return { product: slice[idx - 1].row, confidence: conf, promptTokens: pt, completionTokens: ct, model };
     }
+    console.log("[vision-match] rejected — no candidate above threshold", { idx, conf });
     return { product: null, promptTokens: pt, completionTokens: ct, model };
   } catch (e) {
     console.log("[vision-match] failed:", (e as Error)?.message);
