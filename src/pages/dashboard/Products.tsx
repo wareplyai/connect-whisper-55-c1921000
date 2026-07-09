@@ -713,7 +713,7 @@ export default function Products() {
               <Button variant="outline" size="sm" onClick={downloadSampleCsv}>
                 <Download className="size-4 mr-1" /> Download sample CSV
               </Button>
-              <span className="text-xs text-muted-foreground">Columns: name, price, description, category, stock, image_url</span>
+              <span className="text-xs text-muted-foreground">Columns: name, sku, price, description, category, stock, image_url</span>
             </div>
             <Input type="file" accept=".csv,text/csv" onChange={(e) => handleCsvFile(e.target.files?.[0] || null)} />
             {csvRows.length > 0 && (
