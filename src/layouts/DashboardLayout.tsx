@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { prefetchRoute, prefetchDashboardRoutes } from "@/lib/routePrefetch";
+import { UserNotificationBell } from "@/components/UserNotificationBell";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -163,7 +164,10 @@ const DashboardLayout = () => {
               </span>
             ))}
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <UserNotificationBell />
+            <ThemeToggle />
+          </div>
         </header>
         <div className="flex-1 p-6 space-y-6">
           <TrialBanner />
