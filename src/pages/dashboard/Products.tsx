@@ -286,6 +286,7 @@ export default function Products() {
     setEditProduct(p);
     setEditForm({
       name: p.name,
+      sku: p.sku ?? "",
       price: String(p.price ?? ""),
       description: p.description ?? "",
       category: p.category ?? "",
