@@ -4,14 +4,14 @@ export type ApprovalNoticeStatus = "pending" | "rejected";
 
 export const ADMIN_CONTACT_NUMBER = "01948695672";
 export const ADMIN_WHATSAPP_URL =
-  "https://wa.me/8801948695672?text=Assalamu%20alaikum%2C%20amar%20account%20approval%20pending.%20Please%20approve%20my%20account.";
+  "https://wa.me/8801948695672?text=Hello%20Admin%2C%20I%20just%20signed%20up%20and%20I%20want%20to%20purchase%20a%20plan%20right%20now.%20Please%20approve%20my%20account%20instantly%20so%20I%20can%20continue.";
 
 export const PENDING_APPROVAL_MESSAGE =
-  "Apnar account pending ase. Account approval korte user admin er sathe contact korun.";
+  "Hello Admin, I want to purchase a plan right now — please approve my account instantly so I can continue.";
 export const PENDING_APPROVAL_DETAILS =
-  "Admin WhatsApp/Call: 01948695672. Approved hole login korte parben.";
+  "Contact admin on WhatsApp/Call: 01948695672 to get approved. Note: after approval, if you don't choose a plan within 30 minutes, your account will be deactivated automatically.";
 export const REJECTED_APPROVAL_MESSAGE =
-  "Apnar account rejected hoyeche. Admin er sathe contact korun.";
+  "Your account has been rejected. Please contact the admin.";
 
 const STORAGE_KEY = "account-approval-notice";
 

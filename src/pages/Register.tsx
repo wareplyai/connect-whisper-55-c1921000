@@ -42,7 +42,7 @@ const Register = () => {
       await supabase.auth.signOut();
     }
     saveApprovalNotice("pending");
-    toast.success("Account create hoyeche! Email confirm korar por admin approval er jonno WhatsApp korun.", { duration: 14000 });
+    toast.success("Account created! Please contact admin on WhatsApp to get approved instantly so you can purchase a plan.", { duration: 14000 });
     nav("/login");
   };
 
