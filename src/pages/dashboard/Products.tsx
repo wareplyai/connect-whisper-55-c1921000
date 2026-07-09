@@ -38,9 +38,10 @@ function parseCsv(text: string): CsvRow[] {
   if (rows.length < 2) return [];
   const header = rows[0].map((h) => h.trim().toLowerCase());
   const idx = (k: string) => header.indexOf(k);
-  const ni = idx("name"), pi = idx("price"), di = idx("description"), ci = idx("category"), si = idx("stock"), ii = idx("image_url");
+  const ni = idx("name"), ski = idx("sku"), pi = idx("price"), di = idx("description"), ci = idx("category"), si = idx("stock"), ii = idx("image_url");
   return rows.slice(1).filter((r) => r.some((v) => v.trim())).map((r) => ({
     name: (r[ni] || "").trim(),
+    sku: (ski >= 0 ? (r[ski] || "") : "").trim(),
     price: (r[pi] || "").trim(),
     description: (r[di] || "").trim(),
     category: (r[ci] || "").trim(),
