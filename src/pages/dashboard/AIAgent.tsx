@@ -367,115 +367,77 @@ const AIAgent = () => {
 
   const generatePrompt = async () => {
     if (!business.name || !business.description) { toast.error("Fill business name & description"); return; }
-    const rawInstructions = (business.instructions || DEFAULT_INSTRUCTIONS).trim();
-    const NA = "(not set)";
-    const placeholderMap: Record<string, string> = {
-      BUSINESS_NAME: business.name || NA,
-      BUSINESS_TYPE: business.business_type || NA,
-      BUSINESS_DESCRIPTION: business.description || NA,
-      BUSINESS_LOCATION: business.location || NA,
-      BUSINESS_HOURS: business.working_hours || NA,
-      BUSINESS_CONTACT: business.contact || NA,
-      BUSINESS_WEBSITE: business.website || NA,
-      CHANNEL: "WhatsApp",
-    };
-    const instructionsBlock = rawInstructions.replace(
-      /\{\{\s*([A-Z_][A-Z0-9_]*)\s*\}\}/g,
-      (_m, key) => placeholderMap[key] ?? _m
-    );
+    if (genLoading) return;
 
-    // Pull product catalog to auto-build a short, ready-to-use answer playbook.
-    let products: any[] = [];
-    if (user) {
-      const { data } = await supabase
-        .from("products")
-        .select("name, price, currency, stock, description, category")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(40);
-      products = data ?? [];
+    setGenLoading(true);
+    setGenProgress(2);
+
+    // Smooth simulated progress that creeps to ~92 while the AI request runs.
+    const start = Date.now();
+    const timer = setInterval(() => {
+      setGenProgress((prev) => {
+        const elapsed = (Date.now() - start) / 1000;
+        // aims for ~92% by 12s
+        const target = Math.min(92, Math.round((elapsed / 12) * 92));
+        return prev < target ? prev + 1 : prev;
+      });
+    }, 120);
+
+    try {
+      // Fetch product catalog for grounding
+      let products: any[] = [];
+      if (user) {
+        const { data } = await supabase
+          .from("products")
+          .select("name, price, currency, stock, description, category")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(30);
+        products = data ?? [];
+      }
+
+      const baseInstructions = (business.instructions || DEFAULT_INSTRUCTIONS).trim();
+
+      const { data, error } = await supabase.functions.invoke("ai-generate-prompt", {
+        body: {
+          business: {
+            name: business.name,
+            business_type: business.business_type,
+            description: business.description,
+            location: business.location,
+            working_hours: business.working_hours,
+            contact: business.contact,
+            website: business.website,
+          },
+          products,
+          baseInstructions,
+        },
+      });
+
+      if (error || (data as any)?.error) {
+        throw new Error((data as any)?.error || error?.message || "Failed to generate");
+      }
+
+      const generated = String((data as any)?.prompt || "").trim();
+      if (!generated) throw new Error("Empty response from AI");
+
+      // Ensure the strict core instructions + primary objective are always attached at the top.
+      const finalPrompt = `INSTRUCTIONS FOR THIS CHATBOT\n${baseInstructions}\n\n---\n\n${TOP_PRIMARY_OBJECTIVE}\n\n---\n\n${generated}`;
+
+      setBusiness((p) => ({ ...p, system_prompt: finalPrompt }));
+      setGenProgress(100);
+      toast.success("Professional system prompt generated — click Save Business Profile");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to generate prompt");
+      setGenProgress(0);
+    } finally {
+      clearInterval(timer);
+      setGenLoading(false);
+      // reset the bar shortly after so it disappears cleanly on success
+      setTimeout(() => setGenProgress(0), 1200);
     }
-
-    const fmtPrice = (p: any) => {
-      if (p?.price === null || p?.price === undefined || p?.price === "") return "";
-      const cur = p?.currency || "tk";
-      return `${p.price} ${cur}`;
-    };
-    const productLines = products.length
-      ? products.map((p) => {
-          const parts = [p.name];
-          const price = fmtPrice(p);
-          if (price) parts.push(price);
-          if (p.stock !== null && p.stock !== undefined && p.stock !== "") parts.push(`stock: ${p.stock}`);
-          if (p.category) parts.push(p.category);
-          return `- ${parts.join(" — ")}`;
-        }).join("\n")
-      : "- (No products added yet. Use the Products section to add items.)";
-
-    const businessBlock = `BUSINESS PROFILE
-Name: ${business.name}${business.business_type ? `\nType: ${business.business_type}` : ""}
-About: ${business.description}
-${business.location ? `Location: ${business.location}\n` : ""}${business.working_hours ? `Hours: ${business.working_hours}\n` : ""}${business.contact ? `Contact: ${business.contact}\n` : ""}${business.website ? `Website: ${business.website}\n` : ""}`;
-
-    const catalogBlock = `PRODUCT CATALOG (source of truth — never invent items, prices, or stock)
-${productLines}`;
-
-    const playbookBlock = `ANSWER PLAYBOOK (patterns — keep replies short, natural, no emoji)
-
-⛔ LANGUAGE REMINDER: All example replies below are shown in Bangla script for Bangla/Banglish customers, and in English for English customers. NEVER reply in Banglish (Bangla words in English letters). If the customer wrote in Banglish, still reply in pure Bangla script.
-
-1. Price asked ("দাম কত" / "dam koto" / "price koto" / "how much")
-   → Bangla/Banglish customer → "[পণ্যের নাম] এর দাম [price] টাকা।"
-   → English customer → "[Product name] price is [price] tk."
-   → Multiple products asked → short list, one per line.
-
-2. Stock / availability asked ("আছে?" / "ache?" / "in stock?")
-   → Bangla/Banglish customer → "জি, আছে।" / "দুঃখিত, এখন নেই, কিছুদিন পর আসবে।"
-   → English customer → "Yes, in stock." / "Sorry, out of stock right now."
-   → Never guess — only use catalog stock.
-
-3. Product image / picture asked ("ছবি দেন" / "chobi den" / "picture")
-   → Send the matching product photo with a one-line caption only (in the customer's language — Bangla script or English).
-
-4. Delivery / shipping asked
-   → Reply from business info in the customer's language.
-   → Bangla/Banglish fallback: "ডেলিভারি ডিটেইলস একটু পর জানাচ্ছি।"
-   → English fallback: "I will share delivery details shortly."
-
-5. Location / address asked
-   → Reply with the location from business info in one line (Bangla script or English, matching the customer).
-
-6. Working hours asked
-   → Reply with the hours from business info in one line (Bangla script or English).
-
-7. Contact / phone asked
-   → Share the contact from business info in one line (Bangla script or English).
-
-8. Order / how to buy
-   → Bangla/Banglish customer → "পণ্যের নাম, পরিমাণ, ঠিকানা — এই তিনটি পাঠান, আমি অর্ডার কনফার্ম করে দিচ্ছি।"
-   → English customer → "Please share product name, quantity, and address — I will confirm the order."
-
-9. Discount / offer asked
-   → Only mention offers in business info.
-   → Bangla/Banglish customer → "এখন কোন বিশেষ অফার নেই।"
-   → English customer → "No special offer right now."
-
-10. Greeting from customer (Salam / Hi / Hello)
-    → Bangla/Banglish customer → "ওয়ালাইকুম আসসালাম" / "হ্যালো"
-    → English customer → "Walaikum Assalam" / "Hi"
-    → Then go straight to helping.
-
-11. Off-topic or personal questions
-    → Bangla/Banglish customer → "আমি এখানে আপনাকে [business name] এর ব্যাপারে সাহায্য করতে পারব।"
-    → English customer → "I can help you with [business name] here."
-
-12. Unknown / missing info
-    → Use the fallback line in the correct language. Never invent. Offer to connect with the team.`;
-
-    const prompt = `INSTRUCTIONS FOR THIS CHATBOT\n${instructionsBlock}\n\n---\n\n${TOP_PRIMARY_OBJECTIVE}\n\n---\n\n${businessBlock}\n---\n\n${catalogBlock}\n\n---\n\n${playbookBlock}`;
-    setBusiness((p) => ({ ...p, system_prompt: prompt }));
-    toast.success("System prompt generated — click Save Business Profile");
   };
+
 
   const saveBusiness = async () => {
     if (!user) return;
