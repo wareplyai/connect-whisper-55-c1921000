@@ -69,6 +69,7 @@ async function hashFromUrl(url: string): Promise<string> {
 type Product = {
   id: string;
   name: string;
+  sku: string | null;
   price: number;
   description: string | null;
   category: string | null;
@@ -87,6 +88,7 @@ type Product = {
 
 type FormState = {
   name: string;
+  sku: string;
   price: string;
   description: string;
   category: string;
@@ -96,7 +98,7 @@ type FormState = {
 };
 
 const emptyForm = (): FormState => ({
-  name: "", price: "", description: "", category: "", stock: "",
+  name: "", sku: "", price: "", description: "", category: "", stock: "",
   matchFiles: [null, null],
   realFiles: [null, null],
 });
