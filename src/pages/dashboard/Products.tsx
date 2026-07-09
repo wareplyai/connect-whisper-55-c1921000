@@ -556,7 +556,10 @@ export default function Products() {
                   {p.image_url && <img src={p.image_url} alt={p.name} className="w-20 h-20 rounded object-cover flex-shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold truncate">{p.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">{p.category || "—"} · Stock: {p.stock}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {p.sku ? <span className="font-mono">SKU: {p.sku} · </span> : null}
+                      {p.category || "—"} · Stock: {p.stock}
+                    </div>
                     {p.description && <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{p.description}</p>}
                     <div className="flex items-center gap-2 flex-wrap mt-1">
                       <Badge variant={p.ai_tags_status === "ready" ? "default" : "secondary"} className="text-[10px]">
