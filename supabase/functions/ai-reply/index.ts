@@ -612,9 +612,10 @@ async function matchProductByVision(
     const idx = Number(parsed?.index) || 0;
     const conf = Math.max(0, Math.min(100, Number(parsed?.confidence) || 0));
     console.log("[vision-match] result", { idx, conf, reason: parsed?.reason });
-    if (idx >= 1 && idx <= slice.length && conf >= 55) {
+    if (idx >= 1 && idx <= slice.length && conf >= 50) {
       return { product: slice[idx - 1].row, confidence: conf, promptTokens: pt, completionTokens: ct, model };
     }
+    console.log("[vision-match] rejected — no candidate above threshold", { idx, conf });
     return { product: null, promptTokens: pt, completionTokens: ct, model };
   } catch (e) {
     console.log("[vision-match] failed:", (e as Error)?.message);
@@ -3612,8 +3613,9 @@ FALLBACK
     // path only runs when the customer sent ONLY an image (no text).
     const useTextFlow = !!messageText || !!matchedProduct;
     const matchedContext = matchedProduct
-      ? `\n\n🆕 NEW IMAGE MATCH (HIGHEST PRIORITY — OVERRIDES HISTORY):\nThe customer JUST sent a NEW photo in this current message that matches this product from the catalog:\n- Name: "${matchedProduct.name}"${matchedProduct.price ? `\n- Price: ${matchedProduct.price}` : ""}${matchedProduct.description ? `\n- Description: ${String(matchedProduct.description).slice(0, 300)}` : ""}\n\nCRITICAL RULES:\n1. The customer is now asking about THIS product — NOT any previous product discussed earlier in the chat history.\n2. IGNORE any older product context from history. The newly-matched product above is the ONLY product the customer cares about right now.\n3. Reply with details (name, price, description) of THIS new product. If the customer's text caption asks "ata ki [color] ase" / "price koto" / "available?" — answer about THIS product.\n4. Do NOT say "we don't have it" referring to a previous product. The new image was successfully matched, so the product IS in catalog — share its actual details.`
+      ? `\n\n=== NEW IMAGE MATCH (HIGHEST PRIORITY — overrides history, notes, and Q&A) ===\nThe customer JUST sent a photo in THIS message. Our vision system matched it to this exact product in the LIVE PRODUCT CATALOG:\n\n  • Name: ${matchedProduct.name}\n  • Price: ৳${matchedProduct.price} (copy this number VERBATIM — do not round, do not change, do not use any other price from history or notes)\n${(matchedProduct.stock !== null && matchedProduct.stock !== undefined) ? `  • Stock: ${matchedProduct.stock}\n` : ""}${matchedProduct.category ? `  • Category: ${matchedProduct.category}\n` : ""}${matchedProduct.description ? `  • Description: ${String(matchedProduct.description).slice(0, 300)}\n` : ""}\nSTRICT RULES:\n1. The customer is asking about THIS product only. Ignore any earlier product from chat history.\n2. When quoting price, use EXACTLY ৳${matchedProduct.price} — never any other number. If a previous message said a different price, that was wrong; use ৳${matchedProduct.price} now.\n3. Reply with a short, natural answer that includes the product name and the correct price (and stock/availability if the customer asked). Keep it 1-3 short lines.\n4. Do NOT say "product pai nai" / "available na" — the product IS matched and IS in catalog.\n5. The product image will be attached automatically by the system — do not describe the photo, just answer the question.\n=== END IMAGE MATCH ===`
       : "";
+
     const finalSystemPrompt = `${systemPrompt}${matchedContext}`;
     const finalUserMessage = matchedProduct
       ? `Customer sent a product photo that matched "${matchedProduct.name}".${messageText ? `\nCustomer caption/text: ${messageText}` : "\nCustomer caption/text: (none)"}`
