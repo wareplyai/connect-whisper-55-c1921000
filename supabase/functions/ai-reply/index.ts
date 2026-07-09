@@ -3446,19 +3446,19 @@ Deno.serve(async (req) => {
     // Load product catalog so AI can reference real products in replies.
     const { data: catalogRows } = await admin
       .from("products")
-      .select("id, name, price, description, category, stock, image_url, match_image_urls, real_image_urls")
+      .select("id, name, sku, price, description, category, stock, image_url, match_image_urls, real_image_urls")
       .eq("user_id", userId)
       .eq("is_active", true)
       .limit(100);
 
     const productCatalog = (catalogRows || []).length
-      ? `\n\n=== LIVE PRODUCT CATALOG (SINGLE SOURCE OF TRUTH — overrides everything else) ===\nThese are the CURRENT real-time prices and stock from the owner's dashboard. If any other section (business notes, Q&A, examples) shows a different price/stock for the same product, IGNORE it and use the values below.\n${(catalogRows || [])
-          .map((p: any) => `- ${p.name} | price: ৳${p.price}${(p.stock !== null && p.stock !== undefined) ? ` | stock: ${p.stock}` : ""}${p.category ? ` | ${p.category}` : ""}${p.description ? ` — ${String(p.description).slice(0, 120)}` : ""}`)
+      ? `\n\n=== LIVE PRODUCT CATALOG (SINGLE SOURCE OF TRUTH — overrides everything else) ===\nThese are the CURRENT real-time prices and stock from the owner's dashboard. If any other section (business notes, Q&A, examples) shows a different price/stock for the same product, IGNORE it and use the values below.\nEach product has a SKU (unique product code). If the customer types or mentions a SKU, match by SKU FIRST (case-insensitive, exact match) before trying to match by name.\n${(catalogRows || [])
+          .map((p: any) => `- ${p.sku ? `[SKU: ${p.sku}] ` : ""}${p.name} | price: ৳${p.price}${(p.stock !== null && p.stock !== undefined) ? ` | stock: ${p.stock}` : ""}${p.category ? ` | ${p.category}` : ""}${p.description ? ` — ${String(p.description).slice(0, 120)}` : ""}`)
           .join("\n")}\n=== END CATALOG ===`
       : "";
 
     const productInstr = (catalogRows || []).length
-      ? `\n\nPRODUCT REPLY RULES (STRICT):\n- Product name, price, and stock MUST come ONLY from the LIVE PRODUCT CATALOG above. Never use a price from EXTRA BUSINESS NOTES, Q&A, memory, or examples — those may be outdated. The catalog is always the latest truth.\n- Before quoting any price, find that exact product in the LIVE PRODUCT CATALOG and copy its price verbatim. If the product is not in the catalog, say you will check and get back — do NOT guess or reuse an old price.\n- Never invent variants, colors, sizes, prices, or stock.\n- Suggest at most 3 products in one reply.\n- If the customer asks for a photo/picture, reply with one short confirmation line and the product name. The system will attach the image automatically. Never say images cannot be sent.\n- For price, stock, delivery, and general questions, reply in plain text only.`
+      ? `\n\nPRODUCT REPLY RULES (STRICT):\n- Product name, SKU, price, and stock MUST come ONLY from the LIVE PRODUCT CATALOG above. Never use a price from EXTRA BUSINESS NOTES, Q&A, memory, or examples — those may be outdated. The catalog is always the latest truth.\n- If the customer message contains a SKU / product code (any token that matches an [SKU: ...] in the catalog, case-insensitive), identify the product by that SKU and answer about THAT exact product.\n- Before quoting any price, find that exact product in the LIVE PRODUCT CATALOG (by SKU if given, otherwise by name) and copy its price verbatim. If the product is not in the catalog, say you will check and get back — do NOT guess or reuse an old price.\n- Never invent variants, colors, sizes, SKUs, prices, or stock.\n- Suggest at most 3 products in one reply.\n- If the customer asks for a photo/picture, reply with one short confirmation line and the product name. The system will attach the image automatically. Never say images cannot be sent.\n- For price, stock, delivery, and general questions, reply in plain text only.`
       : "";
 
     // ---------- MASTER SYSTEM PROMPT ----------
