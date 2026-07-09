@@ -231,6 +231,7 @@ export default function Products() {
         .insert({
           user_id: user.id,
           name: form.name.trim(),
+          sku: form.sku.trim() || null,
           price: Number(form.price) || 0,
           description: form.description.trim() || null,
           category: form.category.trim() || null,
