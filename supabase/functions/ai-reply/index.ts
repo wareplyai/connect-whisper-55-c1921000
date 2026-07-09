@@ -3451,13 +3451,13 @@ Deno.serve(async (req) => {
       .limit(100);
 
     const productCatalog = (catalogRows || []).length
-      ? `\n\nPRODUCT CATALOG (use these exact names/prices when replying):\n${(catalogRows || [])
-          .map((p: any) => `- ${p.name} | ৳${p.price}${p.stock > 0 ? ` | stock: ${p.stock}` : " | out of stock"}${p.category ? ` | ${p.category}` : ""}${p.description ? ` — ${String(p.description).slice(0, 120)}` : ""}`)
-          .join("\n")}`
+      ? `\n\n=== LIVE PRODUCT CATALOG (SINGLE SOURCE OF TRUTH — overrides everything else) ===\nThese are the CURRENT real-time prices and stock from the owner's dashboard. If any other section (business notes, Q&A, examples) shows a different price/stock for the same product, IGNORE it and use the values below.\n${(catalogRows || [])
+          .map((p: any) => `- ${p.name} | price: ৳${p.price}${(p.stock !== null && p.stock !== undefined) ? ` | stock: ${p.stock}` : ""}${p.category ? ` | ${p.category}` : ""}${p.description ? ` — ${String(p.description).slice(0, 120)}` : ""}`)
+          .join("\n")}\n=== END CATALOG ===`
       : "";
 
     const productInstr = (catalogRows || []).length
-      ? `\n\nPRODUCT REPLY RULES:\n- Use only the exact catalog name, price, stock, and short description above. Never invent variants, colors, sizes, prices, or stock.\n- Suggest at most 3 products in one reply.\n- If the customer asks for a photo/picture, reply with one short confirmation line and the product name. The system will attach the image automatically. Never say images cannot be sent.\n- For price, stock, delivery, and general questions, reply in plain text only.`
+      ? `\n\nPRODUCT REPLY RULES (STRICT):\n- Product name, price, and stock MUST come ONLY from the LIVE PRODUCT CATALOG above. Never use a price from EXTRA BUSINESS NOTES, Q&A, memory, or examples — those may be outdated. The catalog is always the latest truth.\n- Before quoting any price, find that exact product in the LIVE PRODUCT CATALOG and copy its price verbatim. If the product is not in the catalog, say you will check and get back — do NOT guess or reuse an old price.\n- Never invent variants, colors, sizes, prices, or stock.\n- Suggest at most 3 products in one reply.\n- If the customer asks for a photo/picture, reply with one short confirmation line and the product name. The system will attach the image automatically. Never say images cannot be sent.\n- For price, stock, delivery, and general questions, reply in plain text only.`
       : "";
 
     // ---------- MASTER SYSTEM PROMPT ----------
@@ -3484,11 +3484,12 @@ TONE
 
 ANSWERING RULES
 - Answer only what the customer asked. Do not add unrelated info or extra suggestions unless they ask.
-- Use the BUSINESS INFO, Q&A KNOWLEDGE, and PRODUCT CATALOG below as the single source of truth for name, price, stock, delivery, policy, contact, hours, location, and product details.
+- For ANY product price, stock, or availability question, the LIVE PRODUCT CATALOG at the bottom of this prompt is the ONLY valid source. Never quote a price from business notes, Q&A examples, or prior memory — those may be stale.
+- Use the BUSINESS INFO and Q&A KNOWLEDGE for delivery, policy, contact, hours, and location only. For product prices/stock, always defer to the LIVE PRODUCT CATALOG.
 - If multiple items are asked about together, reply in a clean short list (one item per line: name — price / key detail). Keep it scannable, not wordy.
 - If a customer asks for a product image / picture, send the matching product photo with a one-line caption. No long description.
 - If something is unclear, ask one short clarifying question — never more than one at a time.
-- If the answer is not available in the business info, politely say you will check and get back, or ask them to contact the team directly. Never invent prices, stock, offers, or policies.
+- If the answer is not available, politely say you will check and get back. Never invent prices, stock, offers, or policies.
 - Remember what the customer already told you in this chat (name, address, product, quantity). Never re-ask information they already gave.
 
 BOUNDARIES
@@ -3510,13 +3511,28 @@ FALLBACK
     if ((biz as any)?.contact) bizLines.push(`Contact: ${(biz as any).contact}`);
     if ((biz as any)?.website) bizLines.push(`Website: ${(biz as any).website}`);
     const businessInfoBlock = bizLines.length
-      ? `\n\nBUSINESS INFO (real data — use this as truth):\n${bizLines.join("\n")}`
+      ? `\n\nBUSINESS INFO (real data — use for hours/location/contact/policy only, NOT for product prices):\n${bizLines.join("\n")}`
       : "";
 
-    // Admin-written custom notes (system_prompt on business_profiles) go in as
-    // extra business notes — NOT as the whole prompt. Master rules always win.
-    const adminNotes = (biz?.system_prompt && biz.system_prompt.trim().length > 0)
-      ? `\n\nEXTRA BUSINESS NOTES FROM OWNER (follow these unless they conflict with the CORE STYLE / language rule above):\n${biz.system_prompt.trim()}`
+    // Admin-written custom notes (system_prompt on business_profiles). We strip
+    // any hard-coded price lines because product prices MUST come from the live
+    // catalog — otherwise stale prices from an old auto-generated prompt leak in.
+    const rawNotes = (biz?.system_prompt || "").trim();
+    const sanitizedNotes = rawNotes
+      ? rawNotes
+          .split("\n")
+          .filter((line: string) => {
+            // Drop any line that looks like it's quoting a product price
+            // (contains a currency/price word AND a number).
+            const hasPriceWord = /(৳|\btk\b|\btaka\b|\bprice\b|\bdam\b|দাম|টাকা)/i.test(line);
+            const hasDigit = /\d/.test(line);
+            return !(hasPriceWord && hasDigit);
+          })
+          .join("\n")
+          .trim()
+      : "";
+    const adminNotes = sanitizedNotes
+      ? `\n\nEXTRA BUSINESS NOTES FROM OWNER (style/tone/policy only — DO NOT trust any prices here, always use LIVE PRODUCT CATALOG below):\n${sanitizedNotes}`
       : "";
 
     const systemPrompt = `${MASTER_INSTRUCTIONS}${businessInfoBlock}${adminNotes}${qaContext}${productCatalog}${productInstr}`;
