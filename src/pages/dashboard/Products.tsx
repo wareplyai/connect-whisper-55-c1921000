@@ -306,6 +306,7 @@ export default function Products() {
     try {
       const updates: any = {
         name: editForm.name.trim(),
+        sku: editForm.sku.trim() || null,
         price: Number(editForm.price) || 0,
         description: editForm.description.trim() || null,
         category: editForm.category.trim() || null,
