@@ -132,9 +132,9 @@ export default function Products() {
   };
 
   const downloadSampleCsv = () => {
-    const sample = `name,price,description,category,stock,image_url
-"T-Shirt Red",499,"100% cotton t-shirt","Clothing",100,"https://example.com/red.jpg"
-"Blue Mug",250,"Ceramic 350ml","Home",50,"https://example.com/mug.jpg"
+    const sample = `name,sku,price,description,category,stock,image_url
+"T-Shirt Red","TSHIRT-RED-01",499,"100% cotton t-shirt","Clothing",100,"https://example.com/red.jpg"
+"Blue Mug","MUG-BLUE-350",250,"Ceramic 350ml","Home",50,"https://example.com/mug.jpg"
 `;
     const blob = new Blob([sample], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
