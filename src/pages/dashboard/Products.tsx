@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Trash2, Upload, Pencil, LayoutGrid, List, Plus, Camera, Image as ImageIcon, FileSpreadsheet, Download, Info } from "lucide-react";
 
-type CsvRow = { name: string; price: string; description: string; category: string; stock: string; image_url: string };
+type CsvRow = { name: string; sku: string; price: string; description: string; category: string; stock: string; image_url: string };
 
 function parseCsv(text: string): CsvRow[] {
   const rows: string[][] = [];
@@ -38,9 +38,10 @@ function parseCsv(text: string): CsvRow[] {
   if (rows.length < 2) return [];
   const header = rows[0].map((h) => h.trim().toLowerCase());
   const idx = (k: string) => header.indexOf(k);
-  const ni = idx("name"), pi = idx("price"), di = idx("description"), ci = idx("category"), si = idx("stock"), ii = idx("image_url");
+  const ni = idx("name"), ski = idx("sku"), pi = idx("price"), di = idx("description"), ci = idx("category"), si = idx("stock"), ii = idx("image_url");
   return rows.slice(1).filter((r) => r.some((v) => v.trim())).map((r) => ({
     name: (r[ni] || "").trim(),
+    sku: (ski >= 0 ? (r[ski] || "") : "").trim(),
     price: (r[pi] || "").trim(),
     description: (r[di] || "").trim(),
     category: (r[ci] || "").trim(),
@@ -68,6 +69,7 @@ async function hashFromUrl(url: string): Promise<string> {
 type Product = {
   id: string;
   name: string;
+  sku: string | null;
   price: number;
   description: string | null;
   category: string | null;
@@ -86,6 +88,7 @@ type Product = {
 
 type FormState = {
   name: string;
+  sku: string;
   price: string;
   description: string;
   category: string;
@@ -95,7 +98,7 @@ type FormState = {
 };
 
 const emptyForm = (): FormState => ({
-  name: "", price: "", description: "", category: "", stock: "",
+  name: "", sku: "", price: "", description: "", category: "", stock: "",
   matchFiles: [null, null],
   realFiles: [null, null],
 });
@@ -129,9 +132,9 @@ export default function Products() {
   };
 
   const downloadSampleCsv = () => {
-    const sample = `name,price,description,category,stock,image_url
-"T-Shirt Red",499,"100% cotton t-shirt","Clothing",100,"https://example.com/red.jpg"
-"Blue Mug",250,"Ceramic 350ml","Home",50,"https://example.com/mug.jpg"
+    const sample = `name,sku,price,description,category,stock,image_url
+"T-Shirt Red","TSHIRT-RED-01",499,"100% cotton t-shirt","Clothing",100,"https://example.com/red.jpg"
+"Blue Mug","MUG-BLUE-350",250,"Ceramic 350ml","Home",50,"https://example.com/mug.jpg"
 `;
     const blob = new Blob([sample], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -159,6 +162,7 @@ export default function Products() {
           const { error } = await supabase.from("products" as any).insert({
             user_id: user.id,
             name: r.name.trim(),
+            sku: r.sku?.trim() || null,
             price: Number(r.price) || 0,
             description: r.description || null,
             category: r.category || null,
@@ -228,6 +232,7 @@ export default function Products() {
         .insert({
           user_id: user.id,
           name: form.name.trim(),
+          sku: form.sku.trim() || null,
           price: Number(form.price) || 0,
           description: form.description.trim() || null,
           category: form.category.trim() || null,
@@ -283,6 +288,7 @@ export default function Products() {
     setEditProduct(p);
     setEditForm({
       name: p.name,
+      sku: p.sku ?? "",
       price: String(p.price ?? ""),
       description: p.description ?? "",
       category: p.category ?? "",
@@ -300,6 +306,7 @@ export default function Products() {
     try {
       const updates: any = {
         name: editForm.name.trim(),
+        sku: editForm.sku.trim() || null,
         price: Number(editForm.price) || 0,
         description: editForm.description.trim() || null,
         category: editForm.category.trim() || null,
@@ -442,6 +449,17 @@ export default function Products() {
               <Label>Name *</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
+            <div className="md:col-span-2">
+              <Label>SKU / Product Code</Label>
+              <Input
+                placeholder="e.g. PANJABI-12"
+                value={form.sku}
+                onChange={(e) => setForm({ ...form, sku: e.target.value })}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                A short unique code. The AI will recognise this product when a customer types the SKU.
+              </p>
+            </div>
             <div>
               <Label>Price</Label>
               <Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
@@ -538,7 +556,10 @@ export default function Products() {
                   {p.image_url && <img src={p.image_url} alt={p.name} className="w-20 h-20 rounded object-cover flex-shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold truncate">{p.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">{p.category || "—"} · Stock: {p.stock}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {p.sku ? <span className="font-mono">SKU: {p.sku} · </span> : null}
+                      {p.category || "—"} · Stock: {p.stock}
+                    </div>
                     {p.description && <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{p.description}</p>}
                     <div className="flex items-center gap-2 flex-wrap mt-1">
                       <Badge variant={p.ai_tags_status === "ready" ? "default" : "secondary"} className="text-[10px]">
@@ -596,6 +617,14 @@ export default function Products() {
             <div className="md:col-span-2">
               <Label>Name *</Label>
               <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>SKU / Product Code</Label>
+              <Input
+                placeholder="e.g. PANJABI-12"
+                value={editForm.sku}
+                onChange={(e) => setEditForm({ ...editForm, sku: e.target.value })}
+              />
             </div>
             <div>
               <Label>Price</Label>
@@ -684,7 +713,7 @@ export default function Products() {
               <Button variant="outline" size="sm" onClick={downloadSampleCsv}>
                 <Download className="size-4 mr-1" /> Download sample CSV
               </Button>
-              <span className="text-xs text-muted-foreground">Columns: name, price, description, category, stock, image_url</span>
+              <span className="text-xs text-muted-foreground">Columns: name, sku, price, description, category, stock, image_url</span>
             </div>
             <Input type="file" accept=".csv,text/csv" onChange={(e) => handleCsvFile(e.target.files?.[0] || null)} />
             {csvRows.length > 0 && (
