@@ -193,8 +193,12 @@ Deno.serve(async (req) => {
         completionTokens: res.completionTokens,
       });
     } catch (e: any) {
-      await admin.from("products").update({ ai_tags_status: "failed", ai_tags: String(e?.message || "vision_failed").slice(0, 500) }).eq("id", productId);
-      return new Response(JSON.stringify({ error: e?.message || "vision failed" }), { status: 500, headers: corsHeaders });
+      const msg = String(e?.message || "vision_failed").slice(0, 500);
+      await admin.from("products").update({ ai_tags_status: "failed", ai_tags: msg }).eq("id", productId);
+      // Soft-fail: return 200 so the client doesn't show a red toast for a
+      // transient image-download timeout. The status stays "failed" in DB and
+      // can be retried by re-saving the product.
+      return new Response(JSON.stringify({ ok: false, softError: msg }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     await admin.from("products").update({ ai_tags: tags, ai_tags_status: "ready" }).eq("id", productId);
