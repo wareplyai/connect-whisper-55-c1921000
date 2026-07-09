@@ -615,6 +615,14 @@ export default function Products() {
               <Label>Name *</Label>
               <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
             </div>
+            <div className="md:col-span-2">
+              <Label>SKU / Product Code</Label>
+              <Input
+                placeholder="e.g. PANJABI-12"
+                value={editForm.sku}
+                onChange={(e) => setEditForm({ ...editForm, sku: e.target.value })}
+              />
+            </div>
             <div>
               <Label>Price</Label>
               <Input type="number" value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} />
