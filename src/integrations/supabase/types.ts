@@ -1410,6 +1410,7 @@ export type Database = {
           price: number
           real_image_paths: string[]
           real_image_urls: string[]
+          sku: string | null
           source: string
           stock: number
           updated_at: string
@@ -1432,6 +1433,7 @@ export type Database = {
           price?: number
           real_image_paths?: string[]
           real_image_urls?: string[]
+          sku?: string | null
           source?: string
           stock?: number
           updated_at?: string
@@ -1454,6 +1456,7 @@ export type Database = {
           price?: number
           real_image_paths?: string[]
           real_image_urls?: string[]
+          sku?: string | null
           source?: string
           stock?: number
           updated_at?: string

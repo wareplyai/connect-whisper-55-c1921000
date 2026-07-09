@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Trash2, Upload, Pencil, LayoutGrid, List, Plus, Camera, Image as ImageIcon, FileSpreadsheet, Download, Info } from "lucide-react";
 
-type CsvRow = { name: string; price: string; description: string; category: string; stock: string; image_url: string };
+type CsvRow = { name: string; sku: string; price: string; description: string; category: string; stock: string; image_url: string };
 
 function parseCsv(text: string): CsvRow[] {
   const rows: string[][] = [];
