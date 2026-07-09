@@ -162,6 +162,7 @@ export default function Products() {
           const { error } = await supabase.from("products" as any).insert({
             user_id: user.id,
             name: r.name.trim(),
+            sku: r.sku?.trim() || null,
             price: Number(r.price) || 0,
             description: r.description || null,
             category: r.category || null,
