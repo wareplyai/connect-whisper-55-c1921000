@@ -498,22 +498,104 @@ function findImageUrl(value: unknown, depth = 0): string | null {
   return null;
 }
 
-// Simple Jaccard-ish keyword overlap score in 0..1
+// Product-image fallback matching. Vision descriptions often use generic words
+// ("shirt", "burgundy", "embroidery") while owners name products with local
+// terms ("panjabi", "maroon", "embroidered"). Normalize those before scoring.
+function semanticProductTokens(value: string): Set<string> {
+  const rawTokens = String(value || "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s,/-]/gu, " ")
+    .split(/[\s,/-]+/)
+    .filter((t) => t.length >= 2);
+
+  const synonym: Record<string, string> = {
+    // Garments / local fashion naming
+    panjabi: "mens_ethnic_top",
+    punjabi: "mens_ethnic_top",
+    kurta: "mens_ethnic_top",
+    kurtha: "mens_ethnic_top",
+    shirt: "mens_ethnic_top",
+    sherwani: "mens_ethnic_top",
+    kurti: "womens_ethnic_top",
+    kameez: "womens_ethnic_top",
+    tunic: "womens_ethnic_top",
+    dress: "womens_ethnic_top",
+    gown: "womens_ethnic_top",
+    // Colors
+    burgundy: "maroon",
+    wine: "maroon",
+    reddish: "red",
+    crimson: "red",
+    navy: "blue",
+    beige: "cream",
+    offwhite: "white",
+    off: "white",
+    golden: "gold",
+    // Material / visual details
+    cotton: "fabric",
+    linen: "fabric",
+    silk: "fabric",
+    textile: "fabric",
+    cloth: "fabric",
+    embroidered: "embroidery",
+    embroider: "embroidery",
+    print: "printed",
+    pattern: "printed",
+    patterned: "printed",
+    floral: "flower",
+    flowers: "flower",
+    button: "buttons",
+    collar: "collar",
+    collared: "collar",
+    sleeve: "sleeve",
+    sleeves: "sleeve",
+    formal: "formal",
+    festive: "formal",
+    traditional: "ethnic",
+    ethnic: "ethnic",
+  };
+
+  const out = new Set<string>();
+  for (const raw of rawTokens) {
+    const stripped = raw.replace(/s$/i, "");
+    const normalized = synonym[raw] || synonym[stripped] || stripped;
+    if (raw.length >= 3) out.add(raw);
+    if (normalized.length >= 3) out.add(normalized);
+  }
+  return out;
+}
+
+function hasSharedToken(A: Set<string>, B: Set<string>, values: string[]): boolean {
+  return values.some((v) => A.has(v) && B.has(v));
+}
+
+// Semantic product keyword overlap score in 0..1.
 function textSimilarity(a: string, b: string): number {
-  const tokenize = (s: string) =>
-    new Set(
-      s.toLowerCase()
-        .replace(/[^\p{L}\p{N}\s,]/gu, " ")
-        .split(/[\s,]+/)
-        .filter((t) => t.length >= 3),
-    );
-  const A = tokenize(a);
-  const B = tokenize(b);
+  const A = semanticProductTokens(a);
+  const B = semanticProductTokens(b);
   if (A.size === 0 || B.size === 0) return 0;
   let inter = 0;
   for (const t of A) if (B.has(t)) inter++;
   const union = A.size + B.size - inter;
-  return union === 0 ? 0 : inter / union;
+  const jaccard = union === 0 ? 0 : inter / union;
+  const overlap = inter / Math.max(1, Math.min(A.size, B.size));
+  let score = Math.max(jaccard, overlap * 0.62);
+
+  const garmentTokens = ["mens_ethnic_top", "womens_ethnic_top"];
+  const colorTokens = ["black", "white", "cream", "beige", "red", "maroon", "blue", "green", "yellow", "gold", "pink", "purple", "orange", "brown", "grey", "gray"];
+  const detailTokens = ["embroidery", "printed", "flower", "collar", "buttons", "sleeve", "fabric", "formal", "ethnic"];
+  const sameGarment = hasSharedToken(A, B, garmentTokens);
+  const sameColor = hasSharedToken(A, B, colorTokens);
+  const detailHits = detailTokens.filter((v) => A.has(v) && B.has(v)).length;
+
+  // Strong product signals: same garment family + same color, or same garment
+  // plus multiple distinctive visual details. This catches cases like a maroon
+  // panjabi described by vision as a burgundy embroidered shirt.
+  if (sameGarment && sameColor) score = Math.max(score, 0.46);
+  if (sameGarment && detailHits >= 2) score = Math.max(score, 0.34);
+  if (sameColor && detailHits >= 3) score = Math.max(score, 0.31);
+
+  return Math.min(1, score);
 }
 
 async function describeImageWithOpenAI(
@@ -564,13 +646,19 @@ async function matchProductByVision(
   const detail = opts?.detail || "low";
   const maxTokens = Math.max(40, Math.min(400, opts?.maxTokens || 100));
   const maxCandidates = Math.max(1, Math.min(20, opts?.maxCandidates || 8));
-  // Build candidate list: 1 image per product (first match image, or fallback to image_url).
+  // Build candidate list: include up to 2 match images per product. Some owners
+  // upload one clean catalog photo and one customer-style/social photo; comparing
+  // both is much more reliable than only the first image.
   const candidates = products
     .map((p) => {
-      const img = (Array.isArray(p.match_image_urls) && p.match_image_urls[0]) || p.image_url || null;
-      return img ? { id: p.id, name: p.name, img, row: p } : null;
+      const imgs = [
+        ...(Array.isArray(p.match_image_urls) ? p.match_image_urls : []),
+        p.image_url,
+      ].map((u) => String(u || "").trim()).filter(Boolean);
+      const uniqueImgs = [...new Set(imgs)].slice(0, 2);
+      return uniqueImgs.length ? { id: p.id, name: p.name, imgs: uniqueImgs, row: p } : null;
     })
-    .filter(Boolean) as Array<{ id: string; name: string; img: string; row: any }>;
+    .filter(Boolean) as Array<{ id: string; name: string; imgs: string[]; row: any }>;
   if (!candidates.length) return { product: null, promptTokens: 0, completionTokens: 0, model };
 
   // Cap candidate count to control vision token cost.
@@ -581,12 +669,12 @@ async function matchProductByVision(
       type: "text",
       text:
         `You are a product visual-matching expert. The FIRST image is what the CUSTOMER sent. The remaining ${slice.length} images are CATALOG products (labeled 1..${slice.length}).\n\n` +
-        `Decide which catalog product (if any) is the SAME product the customer is asking about. Consider garment shape, print, pattern, colors, neckline, sleeve length, and overall look. Allow color variations of the SAME printed design to match. Reject clearly different products.\n\n` +
+        `Each catalog product may have 1-2 reference images under the same label. Decide which catalog product (if any) is the SAME product the customer is asking about. Consider garment type, shape, print, embroidery, pattern, colors, neckline, sleeve length, collar/buttons, packaging, and overall look. Treat local fashion terms as equivalent when visually appropriate: panjabi/punjabi/kurta may look like an embroidered shirt; kurti/kameez may look like a dress/tunic. Allow color variations of the SAME printed design to match. Reject clearly different products.\n\n` +
         `Catalog:\n${slice.map((c, i) => `${i + 1}. ${c.name}`).join("\n")}\n\n` +
         `Return STRICT JSON: {"index": <1-based number or 0 if none>, "confidence": <0-100 integer>, "reason": "<short>"}.`,
     },
     { type: "image_url", image_url: { url: customerImageUrl, detail } },
-    ...slice.map((c) => ({ type: "image_url" as const, image_url: { url: c.img, detail } })),
+    ...slice.flatMap((c) => c.imgs.map((img) => ({ type: "image_url" as const, image_url: { url: img, detail } }))),
   ];
 
   try {
@@ -612,7 +700,7 @@ async function matchProductByVision(
     const idx = Number(parsed?.index) || 0;
     const conf = Math.max(0, Math.min(100, Number(parsed?.confidence) || 0));
     console.log("[vision-match] result", { idx, conf, reason: parsed?.reason });
-    if (idx >= 1 && idx <= slice.length && conf >= 50) {
+    if (idx >= 1 && idx <= slice.length && conf >= 45) {
       return { product: slice[idx - 1].row, confidence: conf, promptTokens: pt, completionTokens: ct, model };
     }
     console.log("[vision-match] rejected — no candidate above threshold", { idx, conf });
