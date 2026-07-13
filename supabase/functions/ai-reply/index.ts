@@ -4239,7 +4239,13 @@ FALLBACK
             best = p; bestLen = name.length;
           }
         }
-        return best;
+        if (best) return best;
+        // 3) Fuzzy fallback via semantic tokens (handles panjazi↔panjabi typos).
+        try {
+          const fuzzy = findCatalogProductForOrder(`${text || ""} ${reply || ""}`, rows);
+          if (fuzzy) return fuzzy;
+        } catch { /* ignore */ }
+        return null;
       };
       const guardProduct = findCatalogProduct();
       if (guardProduct?.price) {
