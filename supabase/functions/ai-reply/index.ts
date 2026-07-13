@@ -106,7 +106,8 @@ async function transcribeVoiceFile(
         : ctype.includes("webm") ? "webm"
         : "ogg";
       const form = new FormData();
-      form.append("file", new Blob([buf], { type: ctype || "audio/ogg" }), `audio.${ext}`);
+      const audioPart = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+      form.append("file", new Blob([audioPart], { type: ctype || "audio/ogg" }), `audio.${ext}`);
       form.append("model", "whisper-1");
       const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
         method: "POST",
@@ -511,7 +512,12 @@ function semanticProductTokens(value: string): Set<string> {
   const synonym: Record<string, string> = {
     // Garments / local fashion naming
     panjabi: "mens_ethnic_top",
+    panjazi: "mens_ethnic_top",
+    panjbi: "mens_ethnic_top",
+    panjaby: "mens_ethnic_top",
+    panjabe: "mens_ethnic_top",
     punjabi: "mens_ethnic_top",
+    punjbi: "mens_ethnic_top",
     kurta: "mens_ethnic_top",
     kurtha: "mens_ethnic_top",
     shirt: "mens_ethnic_top",
@@ -596,6 +602,148 @@ function textSimilarity(a: string, b: string): number {
   if (sameColor && detailHits >= 3) score = Math.max(score, 0.31);
 
   return Math.min(1, score);
+}
+
+function normalizeOrderText(value: unknown): string {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[৳]/g, " tk ")
+    .replace(/[^\p{L}\p{N}+\s,./:-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractFirstPhoneFromText(rawText: string): string | null {
+  const compactCandidates = String(rawText || "").match(/(?:\+?\d[\d\s().-]{8,}\d)/g) || [];
+  for (const c of compactCandidates) {
+    const digits = digitsOnly(c);
+    if (digits.length >= 10 && digits.length <= 15) return digits;
+  }
+  return null;
+}
+
+function extractCustomerNameFromOrder(rawText: string): string | null {
+  const match = rawText.match(/(?:\bname\b|নাম)\s*(?:holo|halo|is|:|-)?\s*([^,\n]{2,80})/i);
+  if (!match) return null;
+  return match[1]
+    .replace(/\b(?:address|addres|adress|phone|number|mobile|size)\b.*$/i, "")
+    .replace(/(?:ঠিকানা|নাম্বার|নম্বর|মোবাইল|সাইজ).*$/i, "")
+    .trim()
+    .slice(0, 80) || null;
+}
+
+function extractOrderSize(rawText: string): string | null {
+  const match = rawText.match(/(?:\bsize\b|সাইজ)\s*(?:holo|halo|is|:|-)?\s*([\p{L}\p{N}./-]{1,16})/iu);
+  return match?.[1]?.trim().slice(0, 16) || null;
+}
+
+function extractOrderAddress(rawText: string): string | null {
+  const patterns = [
+    /(?:\baddress\b|\baddres\b|\badress\b|ঠিকানা)\s*(?:holo|halo|is|:|-)?\s*([\s\S]{3,300})/i,
+    /(?:\bdelivery\b|ডেলিভারি)\s*(?:address|ঠিকানা)?\s*(?:holo|halo|is|:|-)?\s*([\s\S]{3,300})/i,
+  ];
+  for (const re of patterns) {
+    const match = rawText.match(re);
+    if (match?.[1]) {
+      const cleaned = match[1]
+        .replace(/\b(?:and\s*)?(?:phone|number|mobile|contact|name|size)\b\s*(?:holo|halo|is|:|-)?\s*\+?[\d\s().-]{5,}.*$/i, "")
+        .replace(/(?:নাম্বার|নম্বর|মোবাইল|ফোন|নাম|সাইজ)\s*[:：-]?\s*[\s\S]*$/i, "")
+        .replace(/\s+(?:and|ar|ebong|ও|আর)\s*$/i, "")
+        .trim();
+      if (cleaned.length >= 3) return cleaned.slice(0, 300);
+    }
+  }
+  return null;
+}
+
+function extractProductPhraseFromOrder(rawText: string): string | null {
+  let text = String(rawText || "")
+    .replace(/\+?\d[\d\s().-]{8,}\d/g, " ")
+    .replace(/\b(?:order|confirm|buy|purchase|checkout|delivery|cod|cash on delivery|please|pls|plz|send|it|this|eta|eita|chai|cai|korte|kore|korbo|koro|dib[aoen]*|diben|den|dao|deo|lagbe|nibo|nebo|kinbo|kinte)\b/gi, " ")
+    .replace(/(?:অর্ডার|কিনবো|কিনব|নিবো|নেবো|লাগবে|দেন|দিন|দিবেন|চাই)/g, " ");
+  text = text.split(/\b(?:address|addres|adress|delivery|phone|number|mobile|contact|name|size)\b|(?:ঠিকানা|ডেলিভারি|নাম্বার|নম্বর|মোবাইল|ফোন|নাম|সাইজ)/i)[0] || text;
+  text = text.replace(/[^\p{L}\p{N}\s/-]/gu, " ").replace(/\s+/g, " ").trim();
+  return text.length >= 2 ? text.slice(0, 120) : null;
+}
+
+function findCatalogProductForOrder(rawText: string, products: any[] = []): any | null {
+  const normalized = normalizeOrderText(rawText);
+  if (!normalized || !products.length) return null;
+
+  for (const p of products) {
+    const sku = normalizeOrderText(p?.sku || "");
+    if (sku && new RegExp(`(^|\\s)${sku.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\s|$)`, "i").test(normalized)) {
+      return p;
+    }
+  }
+
+  let best: { row: any; score: number } | null = null;
+  for (const p of products) {
+    const name = String(p?.name || "");
+    if (!name) continue;
+    const productHaystack = [p?.name, p?.sku, p?.category, p?.description].filter(Boolean).join(" ");
+    const nameNorm = normalizeOrderText(name);
+    let score = textSimilarity(normalized, productHaystack);
+    if (nameNorm && (normalized.includes(nameNorm) || nameNorm.includes(normalized))) score = Math.max(score, 0.98);
+
+    const orderNumbers = new Set((normalized.match(/\b\d{1,5}\b/g) || []));
+    const productNumbers = new Set((nameNorm.match(/\b\d{1,5}\b/g) || []));
+    const hasSharedNumber = [...orderNumbers].some((n) => productNumbers.has(n));
+    if (hasSharedNumber) score += 0.18;
+
+    if (!best || score > best.score) best = { row: p, score };
+  }
+  return best && best.score >= 0.30 ? best.row : null;
+}
+
+export function buildCustomerOrderDraft(rawText: string, opts: { fromNumber?: string | null; matchedProduct?: any; products?: any[] } = {}) {
+  const text = String(rawText || "").trim();
+  const lower = text.toLowerCase();
+  const orderKeywords = [
+    "order", "confirm", "buy", "purchase", "checkout", "delivery",
+    "address", "addres", "adress", "cash on delivery", "cod", "please send", "send it",
+    "korte chai", "korte cai", "kore chai", "kore cai", "korbo", "kormu",
+    "nibo", "nebo", "nib", "nite chai", "nichhi", "nichi", "kinbo", "kinte chai",
+    "lagbe", "order dilam", "order korlam", "order koro", "diye din",
+    "name holo", "number holo", "phone holo", "size holo", "sieze holo",
+    "নাম", "নাম্বার", "নম্বর", "নং", "সাইজ",
+    "অর্ডার", "কিনব", "কিনবো", "নিবো", "নেবো", "নিব", "নিতে চাই",
+    "লাগবে", "ঠিকানা", "ডেলিভারি", "ক্যাশ অন",
+  ];
+  const hasIntent = orderKeywords.some((k) => lower.includes(k.toLowerCase()));
+
+  const suppliedPhone = extractFirstPhoneFromText(text);
+  const customerPhone = suppliedPhone || digitsOnly(opts.fromNumber || "") || "";
+  const customerName = extractCustomerNameFromOrder(text);
+  const size = extractOrderSize(text);
+  const address = extractOrderAddress(text);
+  const qtyMatch = text.match(/(?:qty|quantity|poriman|পরিমাণ)\s*(?:is|:|-)?\s*(\d{1,3})|(?:^|\s)(\d{1,3})\s*(pcs|piece|pieces|ta|টা|টি|x|×)\b/i);
+  const quantity = Math.max(1, parseInt(qtyMatch?.[1] || qtyMatch?.[2] || "1", 10) || 1);
+
+  const catalogProduct = opts.matchedProduct || findCatalogProductForOrder(text, opts.products || []);
+  const productPhrase = extractProductPhraseFromOrder(text);
+  const productName = catalogProduct?.name || productPhrase || null;
+  const priceMatch = text.match(/(?:৳|tk|taka)\s*(\d{2,7})|(\d{2,7})\s*(?:tk|taka|৳)/i);
+  const typedUnitPrice = priceMatch ? Number(priceMatch[1] || priceMatch[2]) : null;
+  const resolvedUnitPrice = catalogProduct?.price != null ? Number(catalogProduct.price) : typedUnitPrice;
+  const totalPrice = Number.isFinite(resolvedUnitPrice) ? Number(resolvedUnitPrice) * quantity : null;
+  const notesParts = [size ? `Size: ${size}` : null].filter(Boolean);
+
+  const hasDetails = !!(productName || suppliedPhone || customerName || address || size);
+  return {
+    hasIntent,
+    hasDetails,
+    shouldCapture: hasIntent && hasDetails,
+    customerPhone,
+    suppliedPhone,
+    customerName,
+    productName,
+    quantity,
+    unitPrice: Number.isFinite(resolvedUnitPrice) ? Number(resolvedUnitPrice) : null,
+    totalPrice,
+    address,
+    notes: notesParts.length ? notesParts.join("\n") : null,
+  };
 }
 
 async function describeImageWithOpenAI(
@@ -1571,7 +1719,7 @@ async function uploadChatMediaAudio(
       if (dec) {
         const decMime = sniffAudioMime(dec);
         console.log("[wa-decrypt] decrypted audio", { encLen: bytes.length, decLen: dec.length, mime: decMime });
-        bytes = dec;
+        bytes = new Uint8Array(dec);
         if (decMime) mime = decMime;
         else mime = "audio/ogg";
       } else {
@@ -4229,82 +4377,81 @@ FALLBACK
     try {
       const rawText = String(messageText || "").trim();
       if (rawText) {
-        const lower = rawText.toLowerCase();
-        const orderKeywords = [
-          "order", "confirm", "buy", "purchase", "checkout", "delivery",
-          "address", "addres", "adress", "cash on delivery", "cod", "please send", "send it",
-          "nibo", "nebo", "nib", "nite chai", "nichhi", "nichi", "kinbo", "kinte chai",
-          "lagbe", "order dilam", "order korlam", "order koro", "diye din",
-          "name holo", "number holo", "phone holo", "size holo", "sieze holo",
-          "নাম", "নাম্বার", "নং", "সাইজ",
-          "অর্ডার", "কিনব", "কিনবো", "নিবো", "নেবো", "নিব", "নিতে চাই",
-          "লাগবে", "ঠিকানা", "ডেলিভারি", "ক্যাশ অন",
-        ];
-        const hasIntent = orderKeywords.some((k) => lower.includes(k.toLowerCase()));
-        console.log("[ai-reply] order-capture intent", { hasIntent });
+        let catalogForOrder: any[] = [];
+        try {
+          const { data: prods } = await admin
+            .from("products")
+            .select("name, price, sku, category, description")
+            .eq("user_id", userId)
+            .eq("is_active", true)
+            .limit(300);
+          catalogForOrder = prods || [];
+        } catch (_) { /* catalog is best effort */ }
 
-        if (hasIntent) {
-          const phoneMatch = rawText.replace(/[^\d+]/g, " ").match(/\+?\d{10,15}/);
-          const customerPhone = (phoneMatch?.[0] || fromNumber || "").replace(/\D/g, "");
-          const qtyMatch = rawText.match(/(\d+)\s*(pcs|piece|pieces|ta|টা|টি|x|×)/i);
-          const quantity = qtyMatch ? Math.max(1, parseInt(qtyMatch[1], 10)) : 1;
-          const priceMatch = rawText.match(/(?:৳|tk|taka)\s*(\d{2,7})|(\d{2,7})\s*(?:tk|taka|৳)/i);
-          const unitPrice = priceMatch ? Number(priceMatch[1] || priceMatch[2]) : null;
+        const draft = buildCustomerOrderDraft(rawText, {
+          fromNumber,
+          matchedProduct,
+          products: catalogForOrder,
+        });
+        console.log("[ai-reply] order-capture intent", {
+          hasIntent: draft.hasIntent,
+          hasDetails: draft.hasDetails,
+          productName: draft.productName,
+          hasAddress: !!draft.address,
+          hasPhone: !!draft.customerPhone,
+        });
 
-          let productName: string | null = matchedProduct?.name || null;
-          let resolvedUnitPrice: number | null = unitPrice ?? (matchedProduct?.price ? Number(matchedProduct.price) : null);
-
-          if (!productName) {
-            try {
-              const { data: prods } = await admin
-                .from("products")
-                .select("name, price")
-                .eq("user_id", userId)
-                .limit(200);
-              const hit = (prods || []).find((p: any) =>
-                p?.name && lower.includes(String(p.name).toLowerCase())
-              );
-              if (hit) {
-                productName = hit.name;
-                if (!resolvedUnitPrice && hit.price) resolvedUnitPrice = Number(hit.price);
-              }
-            } catch (_) { /* ignore */ }
-          }
-
-          let address: string | null = null;
-          const addrMatch = rawText.match(/(?:address|ঠিকানা)\s*[:\-–]\s*(.+)$/i);
-          if (addrMatch) address = addrMatch[1].trim().slice(0, 300);
-
-          const totalPrice = resolvedUnitPrice != null ? Number(resolvedUnitPrice) * quantity : null;
-
+        if (draft.shouldCapture) {
+          const orderPhone = draft.customerPhone || fromNumber || "unknown";
           const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
           const { data: existing } = await admin
             .from("customer_orders")
-            .select("id")
+            .select("id, customer_name, product_name, quantity, unit_price, total_price, address, notes")
             .eq("user_id", userId)
-            .eq("customer_phone", customerPhone || fromNumber || "unknown")
+            .eq("customer_phone", orderPhone)
             .gte("created_at", tenMinAgo)
+            .order("created_at", { ascending: false })
+            .limit(1)
             .maybeSingle();
 
-          if (!existing) {
+          if (existing?.id) {
+            const updatePayload: Record<string, unknown> = {
+              raw_summary: rawText.slice(0, 500),
+              source_message_id: messageId || null,
+            };
+            if (draft.customerName && !existing.customer_name) updatePayload.customer_name = draft.customerName;
+            if (draft.productName && !existing.product_name) updatePayload.product_name = draft.productName;
+            if (draft.quantity && (!existing.quantity || Number(existing.quantity) <= 1)) updatePayload.quantity = draft.quantity;
+            if (draft.unitPrice != null && !existing.unit_price) updatePayload.unit_price = draft.unitPrice;
+            if (draft.totalPrice != null && !existing.total_price) updatePayload.total_price = draft.totalPrice;
+            if (draft.address && !existing.address) updatePayload.address = draft.address;
+            if (draft.notes && !existing.notes) updatePayload.notes = draft.notes;
+
+            const { error: updErr } = await admin
+              .from("customer_orders")
+              .update(updatePayload)
+              .eq("id", existing.id);
+            if (updErr) console.log("[ai-reply] customer_orders update failed:", updErr.message);
+            else console.log("[ai-reply] updated customer_order", existing.id);
+          } else {
             const { error: insErr } = await admin.from("customer_orders").insert({
               user_id: userId,
               session_id: sessionId,
-              customer_phone: customerPhone || fromNumber || "unknown",
-              customer_name: null,
-              product_name: productName,
-              quantity,
-              unit_price: resolvedUnitPrice,
-              total_price: totalPrice,
-              address,
-              notes: null,
+              customer_phone: orderPhone,
+              customer_name: draft.customerName,
+              product_name: draft.productName,
+              quantity: draft.quantity,
+              unit_price: draft.unitPrice,
+              total_price: draft.totalPrice,
+              address: draft.address,
+              notes: draft.notes,
               raw_summary: rawText.slice(0, 500),
               status: "new",
               source: "ai_agent",
               source_message_id: messageId || null,
             });
             if (insErr) console.log("[ai-reply] customer_orders insert failed:", insErr.message);
-            else console.log("[ai-reply] captured customer_order for", customerPhone);
+            else console.log("[ai-reply] captured customer_order for", orderPhone);
           }
         }
       }

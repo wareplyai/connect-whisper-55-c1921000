@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { gatewayBaseVariants, looksLikeCustomerPhone, looksLikeSendableRecipient, resolveCustomerNumber } from "./index.ts";
+import { buildCustomerOrderDraft, gatewayBaseVariants, looksLikeCustomerPhone, looksLikeSendableRecipient, resolveCustomerNumber } from "./index.ts";
 
 Deno.test("accepts any 8-15 digit string as a possible customer phone", () => {
   // WhatsApp 15-digit LID ids that start with 23/13 are not sendable customer phones.
@@ -83,4 +83,29 @@ Deno.test("read receipt gateway base also tries root when WHATSAPP_GATEWAY_URL c
     gatewayBaseVariants("https://api.wareplyai.com/waapi"),
     ["https://api.wareplyai.com/waapi", "https://api.wareplyai.com"],
   );
+});
+
+Deno.test("captures follow-up Banglish order details with product, size, address, and phone", () => {
+  const draft = buildCustomerOrderDraft(
+    "panjazi 12 size 40 address Mirpur 10 Dhaka phone 01739049039",
+    {
+      fromNumber: "8801739049039",
+      products: [{ name: "Panjabi 12", sku: "PJ12", price: 158, category: "Panjabi", description: "" }],
+    },
+  );
+
+  assertEquals(draft.shouldCapture, true);
+  assertEquals(draft.productName, "Panjabi 12");
+  assertEquals(draft.unitPrice, 158);
+  assertEquals(draft.customerPhone, "01739049039");
+  assertEquals(draft.address, "Mirpur 10 Dhaka");
+  assertEquals(draft.notes, "Size: 40");
+});
+
+Deno.test("does not create an empty skeleton order from intent-only message", () => {
+  const draft = buildCustomerOrderDraft("order kore chai", { fromNumber: "8801739049039" });
+
+  assertEquals(draft.hasIntent, true);
+  assertEquals(draft.hasDetails, false);
+  assertEquals(draft.shouldCapture, false);
 });
