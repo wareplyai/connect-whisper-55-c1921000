@@ -4198,8 +4198,36 @@ FALLBACK
         if (changed) console.log("[ai-reply] price corrected to catalog value", { correctPrice });
         return fixed;
       };
-      if (matchedProduct?.price) {
-        reply = enforcePrice(reply, matchedProduct.price);
+      // Find a catalog product referenced by the customer message OR the reply
+      // (by SKU exact-match first, then by name substring). This ensures text-only
+      // conversations (no image) also get price-corrected against the live catalog.
+      const findCatalogProduct = (): any | null => {
+        if (matchedProduct?.price) return matchedProduct;
+        const rows = (catalogRows || []) as any[];
+        if (!rows.length) return null;
+        const hay = `${text || ""}\n${reply || ""}`.toLowerCase();
+        // 1) SKU exact token match
+        for (const p of rows) {
+          const sku = String(p.sku || "").trim().toLowerCase();
+          if (sku && new RegExp(`(^|[^a-z0-9])${sku.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`, "i").test(hay)) {
+            return p;
+          }
+        }
+        // 2) Name substring match — pick the longest matching name to avoid
+        // "panjabi" matching before "panjabi 12".
+        let best: any = null;
+        let bestLen = 0;
+        for (const p of rows) {
+          const name = String(p.name || "").trim().toLowerCase();
+          if (name.length >= 3 && hay.includes(name) && name.length > bestLen) {
+            best = p; bestLen = name.length;
+          }
+        }
+        return best;
+      };
+      const guardProduct = findCatalogProduct();
+      if (guardProduct?.price) {
+        reply = enforcePrice(reply, guardProduct.price);
       }
     } catch (e) {
       console.log("[ai-reply] price guard failed:", (e as Error)?.message);
