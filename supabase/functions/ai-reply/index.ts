@@ -4022,6 +4022,41 @@ FALLBACK
     }
 
     reply = stripReplyNoise(reply);
+
+    // ── Price correction guard ──
+    // If we matched a specific product (image match OR SKU/name match against the
+    // live catalog), force any price number in the reply to equal that product's
+    // real price. This stops the model from leaking stale prices it saw in history,
+    // Q&A examples, or auto-generated notes.
+    try {
+      const enforcePrice = (rawText: string, correctPriceRaw: any): string => {
+        const correctPrice = Number(correctPriceRaw);
+        if (!rawText || !Number.isFinite(correctPrice) || correctPrice <= 0) return rawText;
+        const correctStr = String(Math.round(correctPrice));
+        // Match numbers that appear next to a currency word / price label on either side.
+        // Examples: "৳1200", "1200 tk", "taka 1200", "দাম: 1200", "price 1200", "1200 টাকা", "1200/-"
+        const pattern = /(৳\s*)(\d{2,7})|(\d{2,7})(\s*(?:৳|tk\b|taka\b|টাকা|\/-))|((?:দাম|মূল্য|price|dam)\s*[:\-–]?\s*)(\d{2,7})/gi;
+        let changed = false;
+        const fixed = rawText.replace(pattern, (m, p1, n1, n2, suf2, p3, n3) => {
+          const num = n1 || n2 || n3;
+          if (!num) return m;
+          if (Number(num) === correctPrice) return m;
+          changed = true;
+          if (p1) return `${p1}${correctStr}`;
+          if (n2) return `${correctStr}${suf2}`;
+          if (p3) return `${p3}${correctStr}`;
+          return m;
+        });
+        if (changed) console.log("[ai-reply] price corrected to catalog value", { correctPrice });
+        return fixed;
+      };
+      if (matchedProduct?.price) {
+        reply = enforcePrice(reply, matchedProduct.price);
+      }
+    } catch (e) {
+      console.log("[ai-reply] price guard failed:", (e as Error)?.message);
+    }
+
     // Enforce the "only 2 output modes" rule: pure Bangla script OR pure English.
     // Never let Banglish (Bangla words in English letters) reach the customer.
     // Try repair up to 2 times before falling back.
