@@ -511,7 +511,12 @@ function semanticProductTokens(value: string): Set<string> {
   const synonym: Record<string, string> = {
     // Garments / local fashion naming
     panjabi: "mens_ethnic_top",
+    panjazi: "mens_ethnic_top",
+    panjbi: "mens_ethnic_top",
+    panjaby: "mens_ethnic_top",
+    panjabe: "mens_ethnic_top",
     punjabi: "mens_ethnic_top",
+    punjbi: "mens_ethnic_top",
     kurta: "mens_ethnic_top",
     kurtha: "mens_ethnic_top",
     shirt: "mens_ethnic_top",
@@ -596,6 +601,148 @@ function textSimilarity(a: string, b: string): number {
   if (sameColor && detailHits >= 3) score = Math.max(score, 0.31);
 
   return Math.min(1, score);
+}
+
+function normalizeOrderText(value: unknown): string {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[৳]/g, " tk ")
+    .replace(/[^\p{L}\p{N}+\s,./:-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractFirstPhoneFromText(rawText: string): string | null {
+  const compactCandidates = String(rawText || "").match(/(?:\+?\d[\d\s().-]{8,}\d)/g) || [];
+  for (const c of compactCandidates) {
+    const digits = digitsOnly(c);
+    if (digits.length >= 10 && digits.length <= 15) return digits;
+  }
+  return null;
+}
+
+function extractCustomerNameFromOrder(rawText: string): string | null {
+  const match = rawText.match(/(?:\bname\b|নাম)\s*(?:holo|halo|is|:|-)?\s*([^,\n]{2,80})/i);
+  if (!match) return null;
+  return match[1]
+    .replace(/\b(?:address|addres|adress|phone|number|mobile|size)\b.*$/i, "")
+    .replace(/(?:ঠিকানা|নাম্বার|নম্বর|মোবাইল|সাইজ).*$/i, "")
+    .trim()
+    .slice(0, 80) || null;
+}
+
+function extractOrderSize(rawText: string): string | null {
+  const match = rawText.match(/(?:\bsize\b|সাইজ)\s*(?:holo|halo|is|:|-)?\s*([\p{L}\p{N}./-]{1,16})/iu);
+  return match?.[1]?.trim().slice(0, 16) || null;
+}
+
+function extractOrderAddress(rawText: string): string | null {
+  const patterns = [
+    /(?:\baddress\b|\baddres\b|\badress\b|ঠিকানা)\s*(?:holo|halo|is|:|-)?\s*([\s\S]{3,300})/i,
+    /(?:\bdelivery\b|ডেলিভারি)\s*(?:address|ঠিকানা)?\s*(?:holo|halo|is|:|-)?\s*([\s\S]{3,300})/i,
+  ];
+  for (const re of patterns) {
+    const match = rawText.match(re);
+    if (match?.[1]) {
+      const cleaned = match[1]
+        .replace(/\b(?:and\s*)?(?:phone|number|mobile|contact|name|size)\b\s*(?:holo|halo|is|:|-)?\s*\+?[\d\s().-]{5,}.*$/i, "")
+        .replace(/(?:নাম্বার|নম্বর|মোবাইল|ফোন|নাম|সাইজ)\s*[:：-]?\s*[\s\S]*$/i, "")
+        .replace(/\s+(?:and|ar|ebong|ও|আর)\s*$/i, "")
+        .trim();
+      if (cleaned.length >= 3) return cleaned.slice(0, 300);
+    }
+  }
+  return null;
+}
+
+function extractProductPhraseFromOrder(rawText: string): string | null {
+  let text = String(rawText || "")
+    .replace(/\+?\d[\d\s().-]{8,}\d/g, " ")
+    .replace(/\b(?:order|confirm|buy|purchase|checkout|delivery|cod|cash on delivery|please|pls|plz|send|it|this|eta|eita|chai|cai|korte|kore|korbo|koro|dib[aoen]*|diben|den|dao|deo|lagbe|nibo|nebo|kinbo|kinte)\b/gi, " ")
+    .replace(/(?:অর্ডার|কিনবো|কিনব|নিবো|নেবো|লাগবে|দেন|দিন|দিবেন|চাই)/g, " ");
+  text = text.split(/\b(?:address|addres|adress|delivery|phone|number|mobile|contact|name|size)\b|(?:ঠিকানা|ডেলিভারি|নাম্বার|নম্বর|মোবাইল|ফোন|নাম|সাইজ)/i)[0] || text;
+  text = text.replace(/[^\p{L}\p{N}\s/-]/gu, " ").replace(/\s+/g, " ").trim();
+  return text.length >= 2 ? text.slice(0, 120) : null;
+}
+
+function findCatalogProductForOrder(rawText: string, products: any[] = []): any | null {
+  const normalized = normalizeOrderText(rawText);
+  if (!normalized || !products.length) return null;
+
+  for (const p of products) {
+    const sku = normalizeOrderText(p?.sku || "");
+    if (sku && new RegExp(`(^|\\s)${sku.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\s|$)`, "i").test(normalized)) {
+      return p;
+    }
+  }
+
+  let best: { row: any; score: number } | null = null;
+  for (const p of products) {
+    const name = String(p?.name || "");
+    if (!name) continue;
+    const productHaystack = [p?.name, p?.sku, p?.category, p?.description].filter(Boolean).join(" ");
+    const nameNorm = normalizeOrderText(name);
+    let score = textSimilarity(normalized, productHaystack);
+    if (nameNorm && (normalized.includes(nameNorm) || nameNorm.includes(normalized))) score = Math.max(score, 0.98);
+
+    const orderNumbers = new Set((normalized.match(/\b\d{1,5}\b/g) || []));
+    const productNumbers = new Set((nameNorm.match(/\b\d{1,5}\b/g) || []));
+    const hasSharedNumber = [...orderNumbers].some((n) => productNumbers.has(n));
+    if (hasSharedNumber) score += 0.18;
+
+    if (!best || score > best.score) best = { row: p, score };
+  }
+  return best && best.score >= 0.30 ? best.row : null;
+}
+
+export function buildCustomerOrderDraft(rawText: string, opts: { fromNumber?: string | null; matchedProduct?: any; products?: any[] } = {}) {
+  const text = String(rawText || "").trim();
+  const lower = text.toLowerCase();
+  const orderKeywords = [
+    "order", "confirm", "buy", "purchase", "checkout", "delivery",
+    "address", "addres", "adress", "cash on delivery", "cod", "please send", "send it",
+    "korte chai", "korte cai", "kore chai", "kore cai", "korbo", "kormu",
+    "nibo", "nebo", "nib", "nite chai", "nichhi", "nichi", "kinbo", "kinte chai",
+    "lagbe", "order dilam", "order korlam", "order koro", "diye din",
+    "name holo", "number holo", "phone holo", "size holo", "sieze holo",
+    "নাম", "নাম্বার", "নম্বর", "নং", "সাইজ",
+    "অর্ডার", "কিনব", "কিনবো", "নিবো", "নেবো", "নিব", "নিতে চাই",
+    "লাগবে", "ঠিকানা", "ডেলিভারি", "ক্যাশ অন",
+  ];
+  const hasIntent = orderKeywords.some((k) => lower.includes(k.toLowerCase()));
+
+  const suppliedPhone = extractFirstPhoneFromText(text);
+  const customerPhone = suppliedPhone || digitsOnly(opts.fromNumber || "") || "";
+  const customerName = extractCustomerNameFromOrder(text);
+  const size = extractOrderSize(text);
+  const address = extractOrderAddress(text);
+  const qtyMatch = text.match(/(?:qty|quantity|poriman|পরিমাণ)\s*(?:is|:|-)?\s*(\d{1,3})|(?:^|\s)(\d{1,3})\s*(pcs|piece|pieces|ta|টা|টি|x|×)\b/i);
+  const quantity = Math.max(1, parseInt(qtyMatch?.[1] || qtyMatch?.[2] || "1", 10) || 1);
+
+  const catalogProduct = opts.matchedProduct || findCatalogProductForOrder(text, opts.products || []);
+  const productPhrase = extractProductPhraseFromOrder(text);
+  const productName = catalogProduct?.name || productPhrase || null;
+  const priceMatch = text.match(/(?:৳|tk|taka)\s*(\d{2,7})|(\d{2,7})\s*(?:tk|taka|৳)/i);
+  const typedUnitPrice = priceMatch ? Number(priceMatch[1] || priceMatch[2]) : null;
+  const resolvedUnitPrice = catalogProduct?.price != null ? Number(catalogProduct.price) : typedUnitPrice;
+  const totalPrice = Number.isFinite(resolvedUnitPrice) ? Number(resolvedUnitPrice) * quantity : null;
+  const notesParts = [size ? `Size: ${size}` : null].filter(Boolean);
+
+  const hasDetails = !!(productName || suppliedPhone || customerName || address || size);
+  return {
+    hasIntent,
+    hasDetails,
+    shouldCapture: hasIntent && hasDetails,
+    customerPhone,
+    suppliedPhone,
+    customerName,
+    productName,
+    quantity,
+    unitPrice: Number.isFinite(resolvedUnitPrice) ? Number(resolvedUnitPrice) : null,
+    totalPrice,
+    address,
+    notes: notesParts.length ? notesParts.join("\n") : null,
+  };
 }
 
 async function describeImageWithOpenAI(
