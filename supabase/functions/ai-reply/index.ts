@@ -4236,7 +4236,7 @@ FALLBACK
         if (matchedProduct?.price) return matchedProduct;
         const rows = (catalogRows || []) as any[];
         if (!rows.length) return null;
-        const hay = `${text || ""}\n${reply || ""}`.toLowerCase();
+        const hay = `${messageText || ""}\n${reply || ""}`.toLowerCase();
         // 1) SKU exact token match
         for (const p of rows) {
           const sku = String(p.sku || "").trim().toLowerCase();
@@ -4257,7 +4257,7 @@ FALLBACK
         if (best) return best;
         // 3) Fuzzy fallback via semantic tokens (handles panjazi↔panjabi typos).
         try {
-          const fuzzy = findCatalogProductForOrder(`${text || ""} ${reply || ""}`, rows);
+          const fuzzy = findCatalogProductForOrder(`${messageText || ""} ${reply || ""}`, rows);
           if (fuzzy) return fuzzy;
         } catch { /* ignore */ }
         return null;
