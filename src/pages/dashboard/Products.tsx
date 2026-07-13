@@ -260,7 +260,9 @@ export default function Products() {
 
   const handleCreate = async () => {
     if (!user) return;
-    if (!form.name.trim()) return toast.error("Name required");
+    const verr = validateProductForm(form, items, null);
+    if (verr) return toast.error(verr);
+
     const matchFiles = form.matchFiles.filter(Boolean) as File[];
     const realFiles = form.realFiles.filter(Boolean) as File[];
     if (matchFiles.length === 0) return toast.error("At least 1 match image required");
@@ -352,7 +354,9 @@ export default function Products() {
 
   const saveEdit = async () => {
     if (!user || !editProduct) return;
-    if (!editForm.name.trim()) return toast.error("Name required");
+    const verr = validateProductForm(editForm, items, editProduct.id);
+    if (verr) return toast.error(verr);
+
     setEditSaving(true);
     try {
       const updates: any = {
