@@ -106,7 +106,8 @@ async function transcribeVoiceFile(
         : ctype.includes("webm") ? "webm"
         : "ogg";
       const form = new FormData();
-      form.append("file", new Blob([buf], { type: ctype || "audio/ogg" }), `audio.${ext}`);
+      const audioPart = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+      form.append("file", new Blob([audioPart], { type: ctype || "audio/ogg" }), `audio.${ext}`);
       form.append("model", "whisper-1");
       const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
         method: "POST",
@@ -1718,7 +1719,7 @@ async function uploadChatMediaAudio(
       if (dec) {
         const decMime = sniffAudioMime(dec);
         console.log("[wa-decrypt] decrypted audio", { encLen: bytes.length, decLen: dec.length, mime: decMime });
-        bytes = dec;
+        bytes = new Uint8Array(dec);
         if (decMime) mime = decMime;
         else mime = "audio/ogg";
       } else {
