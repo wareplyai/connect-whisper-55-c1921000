@@ -103,6 +103,57 @@ const emptyForm = (): FormState => ({
   realFiles: [null, null],
 });
 
+/**
+ * Validate a product form before hitting the DB. Enforces:
+ *  - name required, 2-120 chars
+ *  - sku optional but if present 1-60 chars, no leading/trailing spaces
+ *  - price is a finite non-negative number ≤ 10,000,000
+ *  - stock is a non-negative integer ≤ 1,000,000
+ *  - duplicate detection against existing items (case-insensitive name & sku),
+ *    excluding an optional edit target id.
+ * Returns an error string on failure, null on success.
+ */
+function validateProductForm(
+  form: FormState,
+  existing: Product[],
+  editingId?: string | null,
+): string | null {
+  const name = form.name.trim();
+  if (name.length < 2) return "Name must be at least 2 characters";
+  if (name.length > 120) return "Name must be under 120 characters";
+
+  const sku = form.sku.trim();
+  if (sku && sku.length > 60) return "SKU must be under 60 characters";
+  if (sku && /\s{2,}/.test(sku)) return "SKU should not contain repeated spaces";
+
+  if (form.price !== "") {
+    const priceNum = Number(form.price);
+    if (!Number.isFinite(priceNum) || priceNum < 0) return "Price must be a non-negative number";
+    if (priceNum > 10_000_000) return "Price is too large";
+  }
+
+  if (form.stock !== "") {
+    const stockNum = Number(form.stock);
+    if (!Number.isFinite(stockNum) || stockNum < 0) return "Stock must be a non-negative number";
+    if (!Number.isInteger(stockNum)) return "Stock must be a whole number";
+    if (stockNum > 1_000_000) return "Stock is too large";
+  }
+
+  const nameKey = name.toLowerCase();
+  const skuKey = sku.toLowerCase();
+  for (const p of existing) {
+    if (editingId && p.id === editingId) continue;
+    if ((p.name || "").trim().toLowerCase() === nameKey) {
+      return `Another product already uses the name "${p.name}"`;
+    }
+    if (skuKey && (p.sku || "").trim().toLowerCase() === skuKey) {
+      return `SKU "${sku}" is already used by "${p.name}"`;
+    }
+  }
+  return null;
+}
+
+
 export default function Products() {
   const { user } = useAuth();
   const [items, setItems] = useState<Product[]>([]);
@@ -209,7 +260,9 @@ export default function Products() {
 
   const handleCreate = async () => {
     if (!user) return;
-    if (!form.name.trim()) return toast.error("Name required");
+    const verr = validateProductForm(form, items, null);
+    if (verr) return toast.error(verr);
+
     const matchFiles = form.matchFiles.filter(Boolean) as File[];
     const realFiles = form.realFiles.filter(Boolean) as File[];
     if (matchFiles.length === 0) return toast.error("At least 1 match image required");
@@ -301,7 +354,9 @@ export default function Products() {
 
   const saveEdit = async () => {
     if (!user || !editProduct) return;
-    if (!editForm.name.trim()) return toast.error("Name required");
+    const verr = validateProductForm(editForm, items, editProduct.id);
+    if (verr) return toast.error(verr);
+
     setEditSaving(true);
     try {
       const updates: any = {

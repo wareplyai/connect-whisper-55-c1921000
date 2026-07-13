@@ -299,6 +299,60 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_reply_mismatches: {
+        Row: {
+          ai_reply: string | null
+          catalog_price: number | null
+          confidence: number | null
+          created_at: string
+          customer_text: string | null
+          from_number: string | null
+          id: string
+          matched_product_id: string | null
+          matched_product_name: string | null
+          mismatch_type: string
+          quoted_price: number | null
+          resolved: boolean
+          session_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_reply?: string | null
+          catalog_price?: number | null
+          confidence?: number | null
+          created_at?: string
+          customer_text?: string | null
+          from_number?: string | null
+          id?: string
+          matched_product_id?: string | null
+          matched_product_name?: string | null
+          mismatch_type: string
+          quoted_price?: number | null
+          resolved?: boolean
+          session_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_reply?: string | null
+          catalog_price?: number | null
+          confidence?: number | null
+          created_at?: string
+          customer_text?: string | null
+          from_number?: string | null
+          id?: string
+          matched_product_id?: string | null
+          matched_product_name?: string | null
+          mismatch_type?: string
+          quoted_price?: number | null
+          resolved?: boolean
+          session_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_task_limits: {
         Row: {
           id: boolean
@@ -346,6 +400,7 @@ export type Database = {
           input_cost_usd: number
           input_price_per_1m_usd: number
           key_scope: string | null
+          match_confidence: number | null
           model: string
           output_cost_usd: number
           output_price_per_1m_usd: number
@@ -367,6 +422,7 @@ export type Database = {
           input_cost_usd?: number
           input_price_per_1m_usd?: number
           key_scope?: string | null
+          match_confidence?: number | null
           model: string
           output_cost_usd?: number
           output_price_per_1m_usd?: number
@@ -388,6 +444,7 @@ export type Database = {
           input_cost_usd?: number
           input_price_per_1m_usd?: number
           key_scope?: string | null
+          match_confidence?: number | null
           model?: string
           output_cost_usd?: number
           output_price_per_1m_usd?: number

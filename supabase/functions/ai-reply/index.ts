@@ -666,14 +666,15 @@ function extractProductPhraseFromOrder(rawText: string): string | null {
   return text.length >= 2 ? text.slice(0, 120) : null;
 }
 
-function findCatalogProductForOrder(rawText: string, products: any[] = []): any | null {
+export function findCatalogProductWithScore(rawText: string, products: any[] = []): { row: any; score: number } | null {
   const normalized = normalizeOrderText(rawText);
   if (!normalized || !products.length) return null;
 
+  // SKU exact match = full confidence
   for (const p of products) {
     const sku = normalizeOrderText(p?.sku || "");
     if (sku && new RegExp(`(^|\\s)${sku.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\s|$)`, "i").test(normalized)) {
-      return p;
+      return { row: p, score: 1.0 };
     }
   }
 
@@ -691,10 +692,16 @@ function findCatalogProductForOrder(rawText: string, products: any[] = []): any 
     const hasSharedNumber = [...orderNumbers].some((n) => productNumbers.has(n));
     if (hasSharedNumber) score += 0.18;
 
-    if (!best || score > best.score) best = { row: p, score };
+    if (!best || score > best.score) best = { row: p, score: Math.min(1, score) };
   }
-  return best && best.score >= 0.30 ? best.row : null;
+  return best && best.score >= 0.30 ? best : null;
 }
+
+function findCatalogProductForOrder(rawText: string, products: any[] = []): any | null {
+  const hit = findCatalogProductWithScore(rawText, products);
+  return hit?.row || null;
+}
+
 
 export function buildCustomerOrderDraft(rawText: string, opts: { fromNumber?: string | null; matchedProduct?: any; products?: any[] } = {}) {
   const text = String(rawText || "").trim();
@@ -3852,23 +3859,31 @@ FALLBACK
       ? `\n\n=== NEW IMAGE MATCH (HIGHEST PRIORITY — overrides history, notes, and Q&A) ===\nThe customer JUST sent a photo in THIS message. Our vision system matched it to this exact product in the LIVE PRODUCT CATALOG:\n\n  • Name: ${matchedProduct.name}\n  • Price: ৳${matchedProduct.price} (copy this number VERBATIM — do not round, do not change, do not use any other price from history or notes)\n${(matchedProduct.stock !== null && matchedProduct.stock !== undefined) ? `  • Stock: ${matchedProduct.stock}\n` : ""}${matchedProduct.category ? `  • Category: ${matchedProduct.category}\n` : ""}${matchedProduct.description ? `  • Description: ${String(matchedProduct.description).slice(0, 300)}\n` : ""}\nSTRICT RULES:\n1. The customer is asking about THIS product only. Ignore any earlier product from chat history.\n2. When quoting price, use EXACTLY ৳${matchedProduct.price} — never any other number. If a previous message said a different price, that was wrong; use ৳${matchedProduct.price} now.\n3. Reply with a short, natural answer that includes the product name and the correct price (and stock/availability if the customer asked). Keep it 1-3 short lines.\n4. Do NOT say "product pai nai" / "available na" — the product IS matched and IS in catalog.\n5. The product image will be attached automatically by the system — do not describe the photo, just answer the question.\n=== END IMAGE MATCH ===`
       : "";
 
-    // Text-only catalog hint: if the customer mentioned a product name/SKU
-    // (even with Banglish typos like "panjazi" for "panjabi"), pre-resolve it
-    // against the live catalog and tell the LLM which product they likely mean.
-    // Prevents the LLM from saying "product nei" when the item IS in stock.
+    // Text-only catalog hint with confidence score. Strong match → tell LLM
+    // to answer with that product; weak match → tell LLM to ASK for clarification.
     let textMatchedProduct: any = null;
+    let textMatchConfidence: number = 0;
     try {
       if (!matchedProduct && messageText && (catalogRows || []).length) {
-        textMatchedProduct = findCatalogProductForOrder(messageText, catalogRows || []);
+        const hit = findCatalogProductWithScore(messageText, catalogRows || []);
+        if (hit) {
+          textMatchedProduct = hit.row;
+          textMatchConfidence = hit.score;
+        }
       }
     } catch (e) {
       console.log("[ai-reply] text catalog pre-match failed:", (e as Error)?.message);
     }
-    const textMatchContext = textMatchedProduct
-      ? `\n\n=== CUSTOMER LIKELY MEANS THIS CATALOG PRODUCT (use verbatim, overrides any typo) ===\nThe customer's wording (possibly with Banglish spelling like "panjazi"→"panjabi") best matches this LIVE CATALOG product:\n  • Name: ${textMatchedProduct.name}\n${textMatchedProduct.sku ? `  • SKU: ${textMatchedProduct.sku}\n` : ""}  • Price: ৳${textMatchedProduct.price} (use this exact number)\n${(textMatchedProduct.stock !== null && textMatchedProduct.stock !== undefined) ? `  • Stock: ${textMatchedProduct.stock}\n` : ""}${textMatchedProduct.description ? `  • Description: ${String(textMatchedProduct.description).slice(0, 300)}\n` : ""}\nRULES:\n1. Answer about THIS product. Do NOT say "product nei / available na / catalogue-e nei".\n2. Quote price EXACTLY ৳${textMatchedProduct.price}.\n3. If customer wants to order, collect name+phone+address+size and confirm.\n=== END CATALOG MATCH ===`
+    const strongMatch = textMatchedProduct && textMatchConfidence >= 0.6;
+    const weakMatch = textMatchedProduct && textMatchConfidence >= 0.35 && textMatchConfidence < 0.6;
+    const textMatchContext = strongMatch
+      ? `\n\n=== CUSTOMER LIKELY MEANS THIS CATALOG PRODUCT (confidence: ${textMatchConfidence.toFixed(2)}) ===\n  • Name: ${textMatchedProduct.name}\n${textMatchedProduct.sku ? `  • SKU: ${textMatchedProduct.sku}\n` : ""}  • Price: ৳${textMatchedProduct.price} (use this exact number)\n${(textMatchedProduct.stock !== null && textMatchedProduct.stock !== undefined) ? `  • Stock: ${textMatchedProduct.stock}\n` : ""}${textMatchedProduct.description ? `  • Description: ${String(textMatchedProduct.description).slice(0, 300)}\n` : ""}\nRULES:\n1. Answer about THIS product. Do NOT say "product nei".\n2. Quote price EXACTLY ৳${textMatchedProduct.price}.\n3. If customer wants to order, collect name+phone+address+size and confirm.\n=== END CATALOG MATCH ===`
+      : weakMatch
+      ? `\n\n=== POSSIBLE CATALOG MATCH (LOW CONFIDENCE: ${textMatchConfidence.toFixed(2)}) — ASK BEFORE QUOTING ===\nCustomer's wording weakly matches "${textMatchedProduct.name}" (৳${textMatchedProduct.price}). Instead of quoting a price, ask the customer to confirm: mention the product name and ask if that is what they meant. Example: "Apni ki ${textMatchedProduct.name} (৳${textMatchedProduct.price}) er kotha bolchen? Confirm korle detail pathai." Do NOT quote any price or place any order until customer confirms.\n=== END POSSIBLE MATCH ===`
       : "";
 
     const finalSystemPrompt = `${systemPrompt}${matchedContext}${textMatchContext}`;
+
     const finalUserMessage = matchedProduct
       ? `Customer sent a product photo that matched "${matchedProduct.name}".${messageText ? `\nCustomer caption/text: ${messageText}` : "\nCustomer caption/text: (none)"}`
       : messageText;
@@ -4221,7 +4236,7 @@ FALLBACK
         if (matchedProduct?.price) return matchedProduct;
         const rows = (catalogRows || []) as any[];
         if (!rows.length) return null;
-        const hay = `${text || ""}\n${reply || ""}`.toLowerCase();
+        const hay = `${messageText || ""}\n${reply || ""}`.toLowerCase();
         // 1) SKU exact token match
         for (const p of rows) {
           const sku = String(p.sku || "").trim().toLowerCase();
@@ -4242,18 +4257,53 @@ FALLBACK
         if (best) return best;
         // 3) Fuzzy fallback via semantic tokens (handles panjazi↔panjabi typos).
         try {
-          const fuzzy = findCatalogProductForOrder(`${text || ""} ${reply || ""}`, rows);
+          const fuzzy = findCatalogProductForOrder(`${messageText || ""} ${reply || ""}`, rows);
           if (fuzzy) return fuzzy;
         } catch { /* ignore */ }
         return null;
       };
       const guardProduct = findCatalogProduct();
       if (guardProduct?.price) {
+        const before = reply;
         reply = enforcePrice(reply, guardProduct.price);
+        if (before !== reply) {
+          // Extract the (wrong) price the LLM tried to quote for logging.
+          const wrongPriceMatch = before.match(/(?:৳|tk|taka|টাকা)\s*(\d{2,7})|(\d{2,7})\s*(?:৳|tk|taka|টাকা)/i);
+          const quotedPrice = wrongPriceMatch ? Number(wrongPriceMatch[1] || wrongPriceMatch[2]) : null;
+          admin.from("ai_reply_mismatches").insert({
+            user_id: session.user_id,
+            session_id: session.id,
+            from_number: fromNumber || null,
+            customer_text: (messageText || "").slice(0, 2000),
+            ai_reply: before.slice(0, 2000),
+            matched_product_id: guardProduct.id || null,
+            matched_product_name: guardProduct.name || null,
+            catalog_price: Number(guardProduct.price),
+            quoted_price: quotedPrice,
+            mismatch_type: "price",
+            confidence: textMatchConfidence || null,
+          }).then(() => {}, (e: any) => console.log("[ai-reply] mismatch log failed:", e?.message));
+        }
+      } else if (textMatchedProduct && textMatchConfidence > 0 && textMatchConfidence < 0.6) {
+        // Log low-confidence match so owner can review + add SKU/alias.
+        admin.from("ai_reply_mismatches").insert({
+          user_id: session.user_id,
+          session_id: session.id,
+          from_number: fromNumber || null,
+          customer_text: (messageText || "").slice(0, 2000),
+          ai_reply: (reply || "").slice(0, 2000),
+          matched_product_id: textMatchedProduct.id || null,
+          matched_product_name: textMatchedProduct.name || null,
+          catalog_price: textMatchedProduct.price != null ? Number(textMatchedProduct.price) : null,
+          quoted_price: null,
+          mismatch_type: "low_confidence",
+          confidence: textMatchConfidence,
+        }).then(() => {}, (e: any) => console.log("[ai-reply] low-conf mismatch log failed:", e?.message));
       }
     } catch (e) {
       console.log("[ai-reply] price guard failed:", (e as Error)?.message);
     }
+
 
     // Enforce the "only 2 output modes" rule: pure Bangla script OR pure English.
     // Never let Banglish (Bangla words in English letters) reach the customer.
