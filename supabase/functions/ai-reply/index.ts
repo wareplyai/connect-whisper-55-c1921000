@@ -3884,7 +3884,6 @@ FALLBACK
 
     const finalSystemPrompt = `${systemPrompt}${matchedContext}${textMatchContext}`;
 
-    const finalSystemPrompt = `${systemPrompt}${matchedContext}${textMatchContext}`;
     const finalUserMessage = matchedProduct
       ? `Customer sent a product photo that matched "${matchedProduct.name}".${messageText ? `\nCustomer caption/text: ${messageText}` : "\nCustomer caption/text: (none)"}`
       : messageText;
