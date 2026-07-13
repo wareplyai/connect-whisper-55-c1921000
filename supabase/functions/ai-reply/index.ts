@@ -4265,11 +4265,46 @@ FALLBACK
       };
       const guardProduct = findCatalogProduct();
       if (guardProduct?.price) {
+        const before = reply;
         reply = enforcePrice(reply, guardProduct.price);
+        if (before !== reply) {
+          // Extract the (wrong) price the LLM tried to quote for logging.
+          const wrongPriceMatch = before.match(/(?:৳|tk|taka|টাকা)\s*(\d{2,7})|(\d{2,7})\s*(?:৳|tk|taka|টাকা)/i);
+          const quotedPrice = wrongPriceMatch ? Number(wrongPriceMatch[1] || wrongPriceMatch[2]) : null;
+          admin.from("ai_reply_mismatches").insert({
+            user_id: session.user_id,
+            session_id: session.id,
+            from_number: fromNumber || null,
+            customer_text: (messageText || "").slice(0, 2000),
+            ai_reply: before.slice(0, 2000),
+            matched_product_id: guardProduct.id || null,
+            matched_product_name: guardProduct.name || null,
+            catalog_price: Number(guardProduct.price),
+            quoted_price: quotedPrice,
+            mismatch_type: "price",
+            confidence: textMatchConfidence || null,
+          }).then(() => {}, (e: any) => console.log("[ai-reply] mismatch log failed:", e?.message));
+        }
+      } else if (textMatchedProduct && textMatchConfidence > 0 && textMatchConfidence < 0.6) {
+        // Log low-confidence match so owner can review + add SKU/alias.
+        admin.from("ai_reply_mismatches").insert({
+          user_id: session.user_id,
+          session_id: session.id,
+          from_number: fromNumber || null,
+          customer_text: (messageText || "").slice(0, 2000),
+          ai_reply: (reply || "").slice(0, 2000),
+          matched_product_id: textMatchedProduct.id || null,
+          matched_product_name: textMatchedProduct.name || null,
+          catalog_price: textMatchedProduct.price != null ? Number(textMatchedProduct.price) : null,
+          quoted_price: null,
+          mismatch_type: "low_confidence",
+          confidence: textMatchConfidence,
+        }).then(() => {}, (e: any) => console.log("[ai-reply] low-conf mismatch log failed:", e?.message));
       }
     } catch (e) {
       console.log("[ai-reply] price guard failed:", (e as Error)?.message);
     }
+
 
     // Enforce the "only 2 output modes" rule: pure Bangla script OR pure English.
     // Never let Banglish (Bangla words in English letters) reach the customer.
