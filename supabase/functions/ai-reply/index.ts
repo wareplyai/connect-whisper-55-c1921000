@@ -4376,82 +4376,81 @@ FALLBACK
     try {
       const rawText = String(messageText || "").trim();
       if (rawText) {
-        const lower = rawText.toLowerCase();
-        const orderKeywords = [
-          "order", "confirm", "buy", "purchase", "checkout", "delivery",
-          "address", "addres", "adress", "cash on delivery", "cod", "please send", "send it",
-          "nibo", "nebo", "nib", "nite chai", "nichhi", "nichi", "kinbo", "kinte chai",
-          "lagbe", "order dilam", "order korlam", "order koro", "diye din",
-          "name holo", "number holo", "phone holo", "size holo", "sieze holo",
-          "নাম", "নাম্বার", "নং", "সাইজ",
-          "অর্ডার", "কিনব", "কিনবো", "নিবো", "নেবো", "নিব", "নিতে চাই",
-          "লাগবে", "ঠিকানা", "ডেলিভারি", "ক্যাশ অন",
-        ];
-        const hasIntent = orderKeywords.some((k) => lower.includes(k.toLowerCase()));
-        console.log("[ai-reply] order-capture intent", { hasIntent });
+        let catalogForOrder: any[] = [];
+        try {
+          const { data: prods } = await admin
+            .from("products")
+            .select("name, price, sku, category, description")
+            .eq("user_id", userId)
+            .eq("is_active", true)
+            .limit(300);
+          catalogForOrder = prods || [];
+        } catch (_) { /* catalog is best effort */ }
 
-        if (hasIntent) {
-          const phoneMatch = rawText.replace(/[^\d+]/g, " ").match(/\+?\d{10,15}/);
-          const customerPhone = (phoneMatch?.[0] || fromNumber || "").replace(/\D/g, "");
-          const qtyMatch = rawText.match(/(\d+)\s*(pcs|piece|pieces|ta|টা|টি|x|×)/i);
-          const quantity = qtyMatch ? Math.max(1, parseInt(qtyMatch[1], 10)) : 1;
-          const priceMatch = rawText.match(/(?:৳|tk|taka)\s*(\d{2,7})|(\d{2,7})\s*(?:tk|taka|৳)/i);
-          const unitPrice = priceMatch ? Number(priceMatch[1] || priceMatch[2]) : null;
+        const draft = buildCustomerOrderDraft(rawText, {
+          fromNumber,
+          matchedProduct,
+          products: catalogForOrder,
+        });
+        console.log("[ai-reply] order-capture intent", {
+          hasIntent: draft.hasIntent,
+          hasDetails: draft.hasDetails,
+          productName: draft.productName,
+          hasAddress: !!draft.address,
+          hasPhone: !!draft.customerPhone,
+        });
 
-          let productName: string | null = matchedProduct?.name || null;
-          let resolvedUnitPrice: number | null = unitPrice ?? (matchedProduct?.price ? Number(matchedProduct.price) : null);
-
-          if (!productName) {
-            try {
-              const { data: prods } = await admin
-                .from("products")
-                .select("name, price")
-                .eq("user_id", userId)
-                .limit(200);
-              const hit = (prods || []).find((p: any) =>
-                p?.name && lower.includes(String(p.name).toLowerCase())
-              );
-              if (hit) {
-                productName = hit.name;
-                if (!resolvedUnitPrice && hit.price) resolvedUnitPrice = Number(hit.price);
-              }
-            } catch (_) { /* ignore */ }
-          }
-
-          let address: string | null = null;
-          const addrMatch = rawText.match(/(?:address|ঠিকানা)\s*[:\-–]\s*(.+)$/i);
-          if (addrMatch) address = addrMatch[1].trim().slice(0, 300);
-
-          const totalPrice = resolvedUnitPrice != null ? Number(resolvedUnitPrice) * quantity : null;
-
+        if (draft.shouldCapture) {
+          const orderPhone = draft.customerPhone || fromNumber || "unknown";
           const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
           const { data: existing } = await admin
             .from("customer_orders")
-            .select("id")
+            .select("id, customer_name, product_name, quantity, unit_price, total_price, address, notes")
             .eq("user_id", userId)
-            .eq("customer_phone", customerPhone || fromNumber || "unknown")
+            .eq("customer_phone", orderPhone)
             .gte("created_at", tenMinAgo)
+            .order("created_at", { ascending: false })
+            .limit(1)
             .maybeSingle();
 
-          if (!existing) {
+          if (existing?.id) {
+            const updatePayload: Record<string, unknown> = {
+              raw_summary: rawText.slice(0, 500),
+              source_message_id: messageId || null,
+            };
+            if (draft.customerName && !existing.customer_name) updatePayload.customer_name = draft.customerName;
+            if (draft.productName && !existing.product_name) updatePayload.product_name = draft.productName;
+            if (draft.quantity && (!existing.quantity || Number(existing.quantity) <= 1)) updatePayload.quantity = draft.quantity;
+            if (draft.unitPrice != null && !existing.unit_price) updatePayload.unit_price = draft.unitPrice;
+            if (draft.totalPrice != null && !existing.total_price) updatePayload.total_price = draft.totalPrice;
+            if (draft.address && !existing.address) updatePayload.address = draft.address;
+            if (draft.notes && !existing.notes) updatePayload.notes = draft.notes;
+
+            const { error: updErr } = await admin
+              .from("customer_orders")
+              .update(updatePayload)
+              .eq("id", existing.id);
+            if (updErr) console.log("[ai-reply] customer_orders update failed:", updErr.message);
+            else console.log("[ai-reply] updated customer_order", existing.id);
+          } else {
             const { error: insErr } = await admin.from("customer_orders").insert({
               user_id: userId,
               session_id: sessionId,
-              customer_phone: customerPhone || fromNumber || "unknown",
-              customer_name: null,
-              product_name: productName,
-              quantity,
-              unit_price: resolvedUnitPrice,
-              total_price: totalPrice,
-              address,
-              notes: null,
+              customer_phone: orderPhone,
+              customer_name: draft.customerName,
+              product_name: draft.productName,
+              quantity: draft.quantity,
+              unit_price: draft.unitPrice,
+              total_price: draft.totalPrice,
+              address: draft.address,
+              notes: draft.notes,
               raw_summary: rawText.slice(0, 500),
               status: "new",
               source: "ai_agent",
               source_message_id: messageId || null,
             });
             if (insErr) console.log("[ai-reply] customer_orders insert failed:", insErr.message);
-            else console.log("[ai-reply] captured customer_order for", customerPhone);
+            else console.log("[ai-reply] captured customer_order for", orderPhone);
           }
         }
       }
