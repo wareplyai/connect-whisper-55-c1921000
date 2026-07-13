@@ -3859,21 +3859,30 @@ FALLBACK
       ? `\n\n=== NEW IMAGE MATCH (HIGHEST PRIORITY — overrides history, notes, and Q&A) ===\nThe customer JUST sent a photo in THIS message. Our vision system matched it to this exact product in the LIVE PRODUCT CATALOG:\n\n  • Name: ${matchedProduct.name}\n  • Price: ৳${matchedProduct.price} (copy this number VERBATIM — do not round, do not change, do not use any other price from history or notes)\n${(matchedProduct.stock !== null && matchedProduct.stock !== undefined) ? `  • Stock: ${matchedProduct.stock}\n` : ""}${matchedProduct.category ? `  • Category: ${matchedProduct.category}\n` : ""}${matchedProduct.description ? `  • Description: ${String(matchedProduct.description).slice(0, 300)}\n` : ""}\nSTRICT RULES:\n1. The customer is asking about THIS product only. Ignore any earlier product from chat history.\n2. When quoting price, use EXACTLY ৳${matchedProduct.price} — never any other number. If a previous message said a different price, that was wrong; use ৳${matchedProduct.price} now.\n3. Reply with a short, natural answer that includes the product name and the correct price (and stock/availability if the customer asked). Keep it 1-3 short lines.\n4. Do NOT say "product pai nai" / "available na" — the product IS matched and IS in catalog.\n5. The product image will be attached automatically by the system — do not describe the photo, just answer the question.\n=== END IMAGE MATCH ===`
       : "";
 
-    // Text-only catalog hint: if the customer mentioned a product name/SKU
-    // (even with Banglish typos like "panjazi" for "panjabi"), pre-resolve it
-    // against the live catalog and tell the LLM which product they likely mean.
-    // Prevents the LLM from saying "product nei" when the item IS in stock.
+    // Text-only catalog hint with confidence score. Strong match → tell LLM
+    // to answer with that product; weak match → tell LLM to ASK for clarification.
     let textMatchedProduct: any = null;
+    let textMatchConfidence: number = 0;
     try {
       if (!matchedProduct && messageText && (catalogRows || []).length) {
-        textMatchedProduct = findCatalogProductForOrder(messageText, catalogRows || []);
+        const hit = findCatalogProductWithScore(messageText, catalogRows || []);
+        if (hit) {
+          textMatchedProduct = hit.row;
+          textMatchConfidence = hit.score;
+        }
       }
     } catch (e) {
       console.log("[ai-reply] text catalog pre-match failed:", (e as Error)?.message);
     }
-    const textMatchContext = textMatchedProduct
-      ? `\n\n=== CUSTOMER LIKELY MEANS THIS CATALOG PRODUCT (use verbatim, overrides any typo) ===\nThe customer's wording (possibly with Banglish spelling like "panjazi"→"panjabi") best matches this LIVE CATALOG product:\n  • Name: ${textMatchedProduct.name}\n${textMatchedProduct.sku ? `  • SKU: ${textMatchedProduct.sku}\n` : ""}  • Price: ৳${textMatchedProduct.price} (use this exact number)\n${(textMatchedProduct.stock !== null && textMatchedProduct.stock !== undefined) ? `  • Stock: ${textMatchedProduct.stock}\n` : ""}${textMatchedProduct.description ? `  • Description: ${String(textMatchedProduct.description).slice(0, 300)}\n` : ""}\nRULES:\n1. Answer about THIS product. Do NOT say "product nei / available na / catalogue-e nei".\n2. Quote price EXACTLY ৳${textMatchedProduct.price}.\n3. If customer wants to order, collect name+phone+address+size and confirm.\n=== END CATALOG MATCH ===`
+    const strongMatch = textMatchedProduct && textMatchConfidence >= 0.6;
+    const weakMatch = textMatchedProduct && textMatchConfidence >= 0.35 && textMatchConfidence < 0.6;
+    const textMatchContext = strongMatch
+      ? `\n\n=== CUSTOMER LIKELY MEANS THIS CATALOG PRODUCT (confidence: ${textMatchConfidence.toFixed(2)}) ===\n  • Name: ${textMatchedProduct.name}\n${textMatchedProduct.sku ? `  • SKU: ${textMatchedProduct.sku}\n` : ""}  • Price: ৳${textMatchedProduct.price} (use this exact number)\n${(textMatchedProduct.stock !== null && textMatchedProduct.stock !== undefined) ? `  • Stock: ${textMatchedProduct.stock}\n` : ""}${textMatchedProduct.description ? `  • Description: ${String(textMatchedProduct.description).slice(0, 300)}\n` : ""}\nRULES:\n1. Answer about THIS product. Do NOT say "product nei".\n2. Quote price EXACTLY ৳${textMatchedProduct.price}.\n3. If customer wants to order, collect name+phone+address+size and confirm.\n=== END CATALOG MATCH ===`
+      : weakMatch
+      ? `\n\n=== POSSIBLE CATALOG MATCH (LOW CONFIDENCE: ${textMatchConfidence.toFixed(2)}) — ASK BEFORE QUOTING ===\nCustomer's wording weakly matches "${textMatchedProduct.name}" (৳${textMatchedProduct.price}). Instead of quoting a price, ask the customer to confirm: mention the product name and ask if that is what they meant. Example: "Apni ki ${textMatchedProduct.name} (৳${textMatchedProduct.price}) er kotha bolchen? Confirm korle detail pathai." Do NOT quote any price or place any order until customer confirms.\n=== END POSSIBLE MATCH ===`
       : "";
+
+    const finalSystemPrompt = `${systemPrompt}${matchedContext}${textMatchContext}`;
 
     const finalSystemPrompt = `${systemPrompt}${matchedContext}${textMatchContext}`;
     const finalUserMessage = matchedProduct
