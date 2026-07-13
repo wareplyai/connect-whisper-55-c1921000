@@ -666,14 +666,15 @@ function extractProductPhraseFromOrder(rawText: string): string | null {
   return text.length >= 2 ? text.slice(0, 120) : null;
 }
 
-function findCatalogProductForOrder(rawText: string, products: any[] = []): any | null {
+export function findCatalogProductWithScore(rawText: string, products: any[] = []): { row: any; score: number } | null {
   const normalized = normalizeOrderText(rawText);
   if (!normalized || !products.length) return null;
 
+  // SKU exact match = full confidence
   for (const p of products) {
     const sku = normalizeOrderText(p?.sku || "");
     if (sku && new RegExp(`(^|\\s)${sku.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\s|$)`, "i").test(normalized)) {
-      return p;
+      return { row: p, score: 1.0 };
     }
   }
 
@@ -691,10 +692,16 @@ function findCatalogProductForOrder(rawText: string, products: any[] = []): any 
     const hasSharedNumber = [...orderNumbers].some((n) => productNumbers.has(n));
     if (hasSharedNumber) score += 0.18;
 
-    if (!best || score > best.score) best = { row: p, score };
+    if (!best || score > best.score) best = { row: p, score: Math.min(1, score) };
   }
-  return best && best.score >= 0.30 ? best.row : null;
+  return best && best.score >= 0.30 ? best : null;
 }
+
+function findCatalogProductForOrder(rawText: string, products: any[] = []): any | null {
+  const hit = findCatalogProductWithScore(rawText, products);
+  return hit?.row || null;
+}
+
 
 export function buildCustomerOrderDraft(rawText: string, opts: { fromNumber?: string | null; matchedProduct?: any; products?: any[] } = {}) {
   const text = String(rawText || "").trim();
