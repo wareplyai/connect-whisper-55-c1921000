@@ -660,79 +660,6 @@ const Landing = () => {
       </section>
 
       {/* CODE DEMO */}
-      <section id="features" className="container py-20">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
-            {t("code.title.1")} <span className="text-gradient">{t("code.title.2")}</span>
-          </h2>
-          <p className="mt-4 text-muted-foreground">{t("code.subtitle")}</p>
-        </div>
-        <div className="mx-auto max-w-3xl rounded-xl border border-border bg-card overflow-hidden">
-          <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="bg-card-elevated rounded-none w-full justify-start p-0 h-auto border-b border-border">
-              {Object.keys(codeSamples).map((k) => (
-                <TabsTrigger
-                  key={k}
-                  value={k}
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-5 py-3"
-                >
-                  {k}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {Object.entries(codeSamples).map(([k, v]) => (
-              <TabsContent key={k} value={k} className="m-0">
-                <pre className="p-6 text-sm overflow-x-auto bg-[#0d0d0d] text-zinc-100"><code>{v}</code></pre>
-              </TabsContent>
-            ))}
-          </Tabs>
-        </div>
-
-        {/* Language logos */}
-        <div className="mx-auto mt-10 flex max-w-3xl flex-nowrap items-center justify-center gap-2 overflow-x-auto py-[6px] my-0 px-0 md:gap-[14px]">
-          {[
-            { name: "JavaScript", icon: "javascript/javascript-original.svg" },
-            { name: "C++", icon: "cplusplus/cplusplus-original.svg" },
-            { name: "TypeScript", icon: "typescript/typescript-original.svg" },
-            { name: "Python", icon: "python/python-original.svg" },
-            { name: "Kotlin", icon: "kotlin/kotlin-original.svg" },
-            { name: "Java", icon: "java/java-original.svg" },
-            { name: "PHP", icon: "php/php-original.svg" },
-            { name: "C#", icon: "csharp/csharp-original.svg" },
-            { name: "Ruby", icon: "ruby/ruby-original.svg" },
-            { name: "Go", icon: "go/go-original-wordmark.svg" },
-            { name: "Lua", icon: "lua/lua-original.svg" },
-            { name: "Swift", icon: "swift/swift-original.svg" },
-          ].map((l) => (
-            <div
-              key={l.name}
-              title={l.name}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-card-elevated/60 border border-border transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]"
-            >
-              <img
-                src={`https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${l.icon}`}
-                alt={l.name}
-                className="h-5 w-5"
-                loading="lazy"
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* CTA */}
-        <div className="mt-10 flex justify-center">
-          <Button
-            asChild
-            size="lg"
-            className="h-12 px-8 bg-gradient-to-r from-primary to-[hsl(142_70%_42%)] text-primary-foreground font-semibold shadow-[0_0_25px_hsl(var(--primary)/0.45)] hover:opacity-95"
-          >
-            <Link to="/register">
-              {t("nav.getStarted")} <ArrowRight className="ml-1 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-      </section>
-
       {/* HOW IT WORKS */}
       <section id="how" className="container py-24">
         <div className="text-center mb-16">
@@ -1262,6 +1189,79 @@ const Landing = () => {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section id="features" className="container py-20">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
+            {t("code.title.1")} <span className="text-gradient">{t("code.title.2")}</span>
+          </h2>
+          <p className="mt-4 text-muted-foreground">{t("code.subtitle")}</p>
+        </div>
+        <div className="mx-auto max-w-3xl rounded-xl border border-border bg-card overflow-hidden">
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList className="bg-card-elevated rounded-none w-full justify-start p-0 h-auto border-b border-border">
+              {Object.keys(codeSamples).map((k) => (
+                <TabsTrigger
+                  key={k}
+                  value={k}
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-5 py-3"
+                >
+                  {k}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {Object.entries(codeSamples).map(([k, v]) => (
+              <TabsContent key={k} value={k} className="m-0">
+                <pre className="p-6 text-sm overflow-x-auto bg-[#0d0d0d] text-zinc-100"><code>{v}</code></pre>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </div>
+
+        {/* Language logos */}
+        <div className="mx-auto mt-10 flex max-w-3xl flex-nowrap items-center justify-center gap-2 overflow-x-auto py-[6px] my-0 px-0 md:gap-[14px]">
+          {[
+            { name: "JavaScript", icon: "javascript/javascript-original.svg" },
+            { name: "C++", icon: "cplusplus/cplusplus-original.svg" },
+            { name: "TypeScript", icon: "typescript/typescript-original.svg" },
+            { name: "Python", icon: "python/python-original.svg" },
+            { name: "Kotlin", icon: "kotlin/kotlin-original.svg" },
+            { name: "Java", icon: "java/java-original.svg" },
+            { name: "PHP", icon: "php/php-original.svg" },
+            { name: "C#", icon: "csharp/csharp-original.svg" },
+            { name: "Ruby", icon: "ruby/ruby-original.svg" },
+            { name: "Go", icon: "go/go-original-wordmark.svg" },
+            { name: "Lua", icon: "lua/lua-original.svg" },
+            { name: "Swift", icon: "swift/swift-original.svg" },
+          ].map((l) => (
+            <div
+              key={l.name}
+              title={l.name}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-card-elevated/60 border border-border transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)]"
+            >
+              <img
+                src={`https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${l.icon}`}
+                alt={l.name}
+                className="h-5 w-5"
+                loading="lazy"
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div className="mt-10 flex justify-center">
+          <Button
+            asChild
+            size="lg"
+            className="h-12 px-8 bg-gradient-to-r from-primary to-[hsl(142_70%_42%)] text-primary-foreground font-semibold shadow-[0_0_25px_hsl(var(--primary)/0.45)] hover:opacity-95"
+          >
+            <Link to="/register">
+              {t("nav.getStarted")} <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
         </div>
       </section>
 
