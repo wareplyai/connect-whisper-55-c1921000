@@ -71,10 +71,10 @@ export default function Revenue() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="p-4 bg-card border-border"><p className="text-xs text-muted-foreground">Total Revenue</p><p className="text-2xl font-semibold text-primary">${total.toFixed(2)}</p></Card>
-        <Card className="p-4 bg-card border-border"><p className="text-xs text-muted-foreground">This Month</p><p className="text-2xl font-semibold">${thisRev.toFixed(2)}</p></Card>
-        <Card className="p-4 bg-card border-border"><p className="text-xs text-muted-foreground">Last Month</p><p className="text-2xl font-semibold">${lastRev.toFixed(2)}</p></Card>
-        <Card className="p-4 bg-card border-border"><p className="text-xs text-muted-foreground">MRR</p><p className="text-2xl font-semibold">${mrr.toFixed(2)}</p></Card>
+        <Card className="p-4 bg-card border-border"><p className="text-xs text-muted-foreground">Total Revenue</p><p className="text-2xl font-semibold text-primary">৳{Math.round(total).toLocaleString()}</p></Card>
+        <Card className="p-4 bg-card border-border"><p className="text-xs text-muted-foreground">This Month</p><p className="text-2xl font-semibold">৳{Math.round(thisRev).toLocaleString()}</p></Card>
+        <Card className="p-4 bg-card border-border"><p className="text-xs text-muted-foreground">Last Month</p><p className="text-2xl font-semibold">৳{Math.round(lastRev).toLocaleString()}</p></Card>
+        <Card className="p-4 bg-card border-border"><p className="text-xs text-muted-foreground">MRR</p><p className="text-2xl font-semibold">৳{Math.round(mrr).toLocaleString()}</p></Card>
       </div>
 
       <Card className="p-5 bg-card border-border">
@@ -87,7 +87,7 @@ export default function Revenue() {
               <TableRow key={r.plan}>
                 <TableCell className="capitalize font-medium">{r.plan}</TableCell>
                 <TableCell>{r.count}</TableCell>
-                <TableCell>${r.amount.toFixed(2)}</TableCell>
+                <TableCell>৳{Math.round(r.amount).toLocaleString()}</TableCell>
                 <TableCell>{r.pct}%</TableCell>
               </TableRow>
             ))}
@@ -134,7 +134,7 @@ export default function Revenue() {
                   <TableCell>{u?.full_name || "—"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{u?.email}</TableCell>
                   <TableCell className="capitalize">{r.plan}</TableCell>
-                  <TableCell>${Number(r.amount).toFixed(2)} {r.currency}</TableCell>
+                  <TableCell>৳{Math.round(Number(r.amount)).toLocaleString()}</TableCell>
                   <TableCell><span className="text-xs px-2 py-0.5 rounded bg-primary/15 text-primary">{r.payment_status}</span></TableCell>
                   <TableCell className="text-xs">{r.payment_method || "—"}</TableCell>
                 </TableRow>

@@ -109,7 +109,7 @@ export default function HAPayments() {
         <div className="text-muted-foreground">{r.profile?.email}</div>
       </td>
       <td className="px-3 py-2 text-xs capitalize">{r.plan}</td>
-      <td className="px-3 py-2 text-xs">${r.amount}</td>
+      <td className="px-3 py-2 text-xs">৳{Number(r.amount).toLocaleString()}</td>
       <td className="px-3 py-2 text-xs capitalize">{r.payment_method}</td>
       <td className="px-3 py-2 text-xs font-mono">{r.transaction_id}</td>
       <td className="px-3 py-2 text-xs">{r.sender_number}</td>
@@ -141,7 +141,7 @@ export default function HAPayments() {
       <div className="grid grid-cols-3 gap-4">
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">Total Revenue</p>
-          <p className="text-2xl font-bold mt-1">${totalRevenue.toFixed(2)}</p>
+          <p className="text-2xl font-bold mt-1">৳{Math.round(totalRevenue).toLocaleString()}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">Pending</p>
