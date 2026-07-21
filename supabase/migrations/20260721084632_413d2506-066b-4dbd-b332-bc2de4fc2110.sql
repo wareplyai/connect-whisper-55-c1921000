@@ -1,0 +1,1 @@
+UPDATE public.plan_pricing SET display_name = 'Incomplete', description = 'Incomplete plan — limited access', cta_label = 'Incomplete' WHERE plan_name = 'trial';
