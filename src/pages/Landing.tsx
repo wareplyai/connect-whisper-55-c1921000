@@ -938,7 +938,7 @@ const Landing = () => {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-            {plans.filter(p => p.plan_name !== "trial").map((p) => {
+            {plans.map((p) => {
               const yearlyTotal = priceYearly(p);
               const price = yearly ? yearlyTotal / 12 : priceMonthly(p);
               const isFree = price === 0;
