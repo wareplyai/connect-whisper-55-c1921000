@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { friendlyError } from "@/lib/friendlyError";
 import { debounce } from "lodash";
 
-function ExpandableTextarea({ label, value, onChange, rows, placeholder }: { label: string; value: string; onChange: (v: string) => void; rows: number; placeholder?: string }) {
+function ExpandableTextarea({ label, value, onChange, onManualChange, rows, placeholder }: { label: string; value: string; onChange: (v: string) => void; onManualChange?: () => void; rows: number; placeholder?: string }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
   return (
