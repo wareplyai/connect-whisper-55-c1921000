@@ -228,9 +228,24 @@ const AIAgent = () => {
       <header className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">AI Agent Settings</h1>
-          <p className="text-muted-foreground">Configure how your AI interacts with customers.</p>
+          <p className="text-muted-foreground flex items-center gap-2">
+            Configure how your AI interacts with customers.
+            {isAutosaving ? (
+              <span className="flex items-center text-xs text-primary animate-pulse">
+                <Loader2 className="h-3 w-3 animate-spin mr-1" /> Saving...
+              </span>
+            ) : isDirty ? (
+              <span className="flex items-center text-xs text-amber-500">
+                <CloudOff className="h-3 w-3 mr-1" /> Unsaved changes
+              </span>
+            ) : lastSaved ? (
+              <span className="flex items-center text-xs text-emerald-500">
+                <Cloud className="h-3 w-3 mr-1" /> All changes saved at {lastSaved.toLocaleTimeString()}
+              </span>
+            ) : null}
+          </p>
         </div>
-        <Button onClick={saveBusiness} disabled={savingBiz}>
+        <Button onClick={() => saveBusiness(true)} disabled={savingBiz}>
           {savingBiz ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />}
           Save Changes
         </Button>
