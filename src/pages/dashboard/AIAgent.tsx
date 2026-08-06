@@ -148,36 +148,58 @@ const AIAgent = () => {
     })();
   }, [user]);
 
-  const saveBusiness = async () => {
+  const saveBusiness = async (isManual = true) => {
     if (!user) return;
+    
+    // Validations (only block manual save with toast, autosave just skips)
     const errors: string[] = [];
-    if (business.text_reply_prompt.length < 20) errors.push("Text prompt is too short.");
-    if (business.image_analysis_prompt.length < 20) errors.push("Image prompt is too short.");
-    if (business.voice_analysis_prompt.length < 20) errors.push("Voice prompt is too short.");
+    if (businessRef.current.text_reply_prompt.length < 20) errors.push("Text prompt is too short.");
+    if (businessRef.current.image_analysis_prompt.length < 20) errors.push("Image prompt is too short.");
+    if (businessRef.current.voice_analysis_prompt.length < 20) errors.push("Voice prompt is too short.");
     
     if (errors.length > 0) {
-      errors.forEach(err => toast.error(err));
+      if (isManual) errors.forEach(err => toast.error(err));
       return;
     }
 
-    setSavingBiz(true);
+    if (isManual) setSavingBiz(true);
+    else setIsAutosaving(true);
+
     const { error } = await supabase.from("business_profiles").upsert({
       user_id: user.id,
-      ...business,
+      ...businessRef.current,
     } as any, { onConflict: "user_id" });
 
     if (!error) {
       // Record history
       await Promise.all([
-        supabase.from("business_profile_prompt_history").insert({ user_id: user.id, business_profile_id: (business as any).id, prompt_type: 'text_reply', content: business.text_reply_prompt }),
-        supabase.from("business_profile_prompt_history").insert({ user_id: user.id, business_profile_id: (business as any).id, prompt_type: 'image_analysis', content: business.image_analysis_prompt }),
-        supabase.from("business_profile_prompt_history").insert({ user_id: user.id, business_profile_id: (business as any).id, prompt_type: 'voice_analysis', content: business.voice_analysis_prompt }),
+        supabase.from("business_profile_prompt_history").insert({ user_id: user.id, business_profile_id: (businessRef.current as any).id, prompt_type: 'text_reply', content: businessRef.current.text_reply_prompt }),
+        supabase.from("business_profile_prompt_history").insert({ user_id: user.id, business_profile_id: (businessRef.current as any).id, prompt_type: 'image_analysis', content: businessRef.current.image_analysis_prompt }),
+        supabase.from("business_profile_prompt_history").insert({ user_id: user.id, business_profile_id: (businessRef.current as any).id, prompt_type: 'voice_analysis', content: businessRef.current.voice_analysis_prompt }),
       ]);
-      toast.success("Business profile and prompt history saved");
+      
+      if (isManual) toast.success("Business profile and prompt history saved");
+      setLastSaved(new Date());
+      setIsDirty(false);
     } else {
-      toast.error(friendlyError(error));
+      if (isManual) toast.error(friendlyError(error));
     }
-    setSavingBiz(false);
+    
+    if (isManual) setSavingBiz(false);
+    else setIsAutosaving(false);
+  };
+
+  const debouncedAutosave = useCallback(
+    debounce(() => {
+      saveBusiness(false);
+    }, 2000),
+    [user]
+  );
+
+  const handleBusinessChange = (updates: Partial<typeof business>) => {
+    setBusiness(prev => ({ ...prev, ...updates }));
+    setIsDirty(true);
+    debouncedAutosave();
   };
 
   const fetchHistory = async (type: string) => {
