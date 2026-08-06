@@ -270,7 +270,7 @@ const AIAgent = () => {
                   <Label className="text-base font-semibold">{item.label} Prompt</Label>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setBusiness({ ...business, [item.id]: (defaultBusiness as any)[item.id] })}>
+                  <Button variant="ghost" size="sm" onClick={() => handleBusinessChange({ [item.id]: (defaultBusiness as any)[item.id] })}>
                     <RefreshCw className="h-3 w-3 mr-1" /> Default
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => fetchHistory(item.id.replace('_prompt', ''))}>
