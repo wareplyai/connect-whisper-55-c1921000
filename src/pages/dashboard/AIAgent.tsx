@@ -459,7 +459,14 @@ const AIAgent = () => {
     const { error } = await supabase
       .from("business_profiles")
       .upsert(
-        { user_id: user.id, ...business, system_prompt: business.system_prompt ?? "" } as any,
+        { 
+          user_id: user.id, 
+          ...business, 
+          system_prompt: business.system_prompt ?? "",
+          text_reply_prompt: business.text_reply_prompt ?? "",
+          image_analysis_prompt: business.image_analysis_prompt ?? "",
+          voice_analysis_prompt: business.voice_analysis_prompt ?? ""
+        } as any,
         { onConflict: "user_id" }
       );
 
