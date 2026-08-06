@@ -224,7 +224,7 @@ const AIAgent = () => {
   if (loading) return <div className="p-8 text-center"><Loader2 className="animate-spin h-8 w-8 mx-auto" /></div>;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-8">
+    <div className="p-6 max-w-5xl mx-auto space-y-8" onMouseMove={() => isDirty && !isAutosaving && debouncedAutosave()}>
       <header className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">AI Agent Settings</h1>
