@@ -114,6 +114,17 @@ const AIAgent = () => {
   const [historyType, setHistoryType] = useState<string>("");
   const [showPreview, setShowPreview] = useState(false);
   const [previewText, setPreviewText] = useState("");
+  
+  // Autosave states
+  const [isDirty, setIsDirty] = useState(false);
+  const [isAutosaving, setIsAutosaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const businessRef = useRef(business);
+
+  // Keep ref in sync for the debounced function
+  useEffect(() => {
+    businessRef.current = business;
+  }, [business]);
 
   useEffect(() => {
     if (!user) return;
