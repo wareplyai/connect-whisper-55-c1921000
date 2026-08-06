@@ -916,7 +916,7 @@ const AIAgent = () => {
             <h3 className="font-semibold text-lg">AI Agent Section - System Prompts</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            example ar jonno ami akta picture tumake dialm emon babe image analysis system prompt box ar bitore tumi instructions add kore deo pore jeno user admin o change kore save korte pare
+            Add an example Image analysis system prompt template with clear placeholders so users can understand exactly what to change before saving.
           </p>
 
           <div className="grid gap-6">
