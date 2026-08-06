@@ -470,11 +470,16 @@ const AIAgent = () => {
         { onConflict: "user_id" }
       );
 
-    // Step 3: force-write system_prompt explicitly to guarantee the new value is persisted
+    // Step 3: force-write system prompts explicitly to guarantee the new values are persisted
     if (!error) {
       await supabase
         .from("business_profiles")
-        .update({ system_prompt: business.system_prompt ?? "" } as any)
+        .update({ 
+          system_prompt: business.system_prompt ?? "",
+          text_reply_prompt: business.text_reply_prompt ?? "",
+          image_analysis_prompt: business.image_analysis_prompt ?? "",
+          voice_analysis_prompt: business.voice_analysis_prompt ?? ""
+        } as any)
         .eq("user_id", user.id);
     }
 
