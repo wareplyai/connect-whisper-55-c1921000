@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Sparkles, KeyRound, CheckCircle2, Upload, FileText, Globe, MessagesSquare, Lock, Trash2, Plus, Bot, Loader2, Smartphone, Power, Maximize2 } from "lucide-react";
+import { Sparkles, KeyRound, CheckCircle2, Upload, FileText, Globe, MessagesSquare, Lock, Trash2, Plus, Bot, Loader2, Smartphone, Power, Maximize2, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 
@@ -910,13 +910,24 @@ const AIAgent = () => {
             <h3 className="font-semibold text-lg">AI Agent Section - System Prompts</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            bro default babe ei box prompt golote instructions add koro
+            Add a reset button so I can restore each prompt box to its default instructions.Save the instructions entered in each prompt box to Supabase so they persist after refresh.Load the default instructions in each prompt box from Supabase when the AIAgent page opens.
           </p>
 
           <div className="grid gap-6">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Text Reply System Prompt</Label>
+                <div className="flex items-center gap-2">
+                  <Label className="text-base font-semibold">Text Reply System Prompt</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                    onClick={() => setBusiness({ ...business, text_reply_prompt: defaultBusiness.text_reply_prompt })}
+                    title="Reset to default"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </div>
                 <Bot className="h-4 w-4 text-muted-foreground" />
               </div>
               <p className="text-xs text-muted-foreground">কাস্টমারকে টেক্সট মেসেজ রিপ্লাই দেওয়ার জন্য এই প্রম্পট কাজ করবে।</p>
@@ -930,7 +941,18 @@ const AIAgent = () => {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Image Analysis System Prompt</Label>
+                <div className="flex items-center gap-2">
+                  <Label className="text-base font-semibold">Image Analysis System Prompt</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                    onClick={() => setBusiness({ ...business, image_analysis_prompt: defaultBusiness.image_analysis_prompt })}
+                    title="Reset to default"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </div>
                 <Upload className="h-4 w-4 text-muted-foreground" />
               </div>
               <p className="text-xs text-muted-foreground">কাস্টমার কোনো ছবি পাঠালে সেটি এনালাইসিস করে উত্তর দেওয়ার জন্য এই প্রম্পট ব্যবহার হবে।</p>
@@ -944,7 +966,18 @@ const AIAgent = () => {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Voice Analysis System Prompt</Label>
+                <div className="flex items-center gap-2">
+                  <Label className="text-base font-semibold">Voice Analysis System Prompt</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                    onClick={() => setBusiness({ ...business, voice_analysis_prompt: defaultBusiness.voice_analysis_prompt })}
+                    title="Reset to default"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </div>
                 <Smartphone className="h-4 w-4 text-muted-foreground" />
               </div>
               <p className="text-xs text-muted-foreground">কাস্টমার ভয়েস মেসেজ পাঠালে তা প্রসেস করার নিয়মাবলী এখানে থাকবে।</p>
