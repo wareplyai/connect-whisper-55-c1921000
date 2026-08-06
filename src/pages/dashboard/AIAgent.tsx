@@ -206,6 +206,18 @@ const defaultBusiness = {
   contact: "",
   website: "",
   system_prompt: "",
+  text_reply_prompt: `TEXT REPLY INSTRUCTIONS
+- কাস্টমারকে টেক্সট মেসেজে সব প্রশ্নের উত্তর দিন।
+- শুধুমাত্র বিজনেস ইনফো এবং প্রোডাক্ট ক্যাটালগ থেকে সঠিক তথ্য দিন।
+- প্রাইজ বা দাম জিজ্ঞেস করলে ক্যাটালগ থেকে সঠিক দাম দেখে বলবেন।`,
+  image_analysis_prompt: `IMAGE ANALYSIS INSTRUCTIONS
+- কাস্টমার যদি কোনো প্রোডাক্টের ছবি পাঠায়, তবে তা ক্যাটালগের সাথে মিলিয়ে দেখুন।
+- যদি ছবি কোনো ড্রেস বা প্রোডাক্ট হয়, সেটির কালার এবং ডিজাইন লক্ষ্য করুন।
+- ছবির প্রোডাক্ট সম্পর্কে বিস্তারিত তথ্য (দাম, সাইজ) ক্যাটালগ থেকে দিন।`,
+  voice_analysis_prompt: `VOICE ANALYSIS INSTRUCTIONS
+- কাস্টমার ভয়েস মেসেজে যা বলছে তা মনোযোগ দিয়ে শুনে উত্তর দিন।
+- ভয়েস মেসেজে কোনো অর্ডার থাকলে তা নোট করুন।
+- কাস্টমারের ভয়েস মেসেজের ভাষা (বাংলা/ইংরেজি) অনুযায়ী রিপ্লাই দিন।`,
   ai_enabled: false,
   connected_session_ids: [] as string[],
   ai_show_typing: true,
@@ -305,6 +317,9 @@ const AIAgent = () => {
           contact: biz.contact ?? "",
           website: biz.website ?? "",
           system_prompt: biz.system_prompt ?? "",
+          text_reply_prompt: (biz as any).text_reply_prompt ?? "",
+          image_analysis_prompt: (biz as any).image_analysis_prompt ?? "",
+          voice_analysis_prompt: (biz as any).voice_analysis_prompt ?? "",
           ai_enabled: (biz as any).ai_enabled ?? false,
           connected_session_ids: ((biz as any).connected_session_ids ?? []) as string[],
           ai_show_typing: (biz as any).ai_show_typing ?? true,
@@ -453,15 +468,27 @@ const AIAgent = () => {
     const { error } = await supabase
       .from("business_profiles")
       .upsert(
-        { user_id: user.id, ...business, system_prompt: business.system_prompt ?? "" } as any,
+        { 
+          user_id: user.id, 
+          ...business, 
+          system_prompt: business.system_prompt ?? "",
+          text_reply_prompt: business.text_reply_prompt ?? "",
+          image_analysis_prompt: business.image_analysis_prompt ?? "",
+          voice_analysis_prompt: business.voice_analysis_prompt ?? ""
+        } as any,
         { onConflict: "user_id" }
       );
 
-    // Step 3: force-write system_prompt explicitly to guarantee the new value is persisted
+    // Step 3: force-write system prompts explicitly to guarantee the new values are persisted
     if (!error) {
       await supabase
         .from("business_profiles")
-        .update({ system_prompt: business.system_prompt ?? "" } as any)
+        .update({ 
+          system_prompt: business.system_prompt ?? "",
+          text_reply_prompt: business.text_reply_prompt ?? "",
+          image_analysis_prompt: business.image_analysis_prompt ?? "",
+          voice_analysis_prompt: business.voice_analysis_prompt ?? ""
+        } as any)
         .eq("user_id", user.id);
     }
 
@@ -799,7 +826,7 @@ const AIAgent = () => {
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <Label className="text-sm font-medium">Instructions for this Chatbot</Label>
+                  <Label className="text-sm font-medium">Global AI Instructions (System Prompt-এর শুরুতে যুক্ত হবে)</Label>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -877,12 +904,59 @@ const AIAgent = () => {
         </div>
 
 
-        {business.system_prompt && (
-          <div className="space-y-2">
-            <Label>System Prompt (editable)</Label>
-            <ExpandableTextarea label="System Prompt" rows={10} value={business.system_prompt} onChange={(v) => setBusiness({ ...business, system_prompt: v })} />
+        <div className="space-y-6 pt-4 border-t border-border">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold text-lg">AI Agent Section - System Prompts</h3>
           </div>
-        )}
+          <p className="text-sm text-muted-foreground mb-4">
+            এখানে AI agent-এর text reply, image analysis এবং voice analysis-এর জন্য আলাদা আলাদা system prompt সেট করতে পারেন।
+          </p>
+
+          <div className="grid gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Text Reply System Prompt</Label>
+                <Bot className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="text-xs text-muted-foreground">কাস্টমারকে টেক্সট মেসেজ রিপ্লাই দেওয়ার জন্য এই প্রম্পট কাজ করবে।</p>
+              <ExpandableTextarea 
+                label="Text Reply System Prompt" 
+                rows={6} 
+                value={business.text_reply_prompt || ""} 
+                onChange={(v) => setBusiness({ ...business, text_reply_prompt: v })} 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Image Analysis System Prompt</Label>
+                <Upload className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="text-xs text-muted-foreground">কাস্টমার কোনো ছবি পাঠালে সেটি এনালাইসিস করে উত্তর দেওয়ার জন্য এই প্রম্পট ব্যবহার হবে।</p>
+              <ExpandableTextarea 
+                label="Image Analysis System Prompt" 
+                rows={6} 
+                value={business.image_analysis_prompt || ""} 
+                onChange={(v) => setBusiness({ ...business, image_analysis_prompt: v })} 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Voice Analysis System Prompt</Label>
+                <Smartphone className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="text-xs text-muted-foreground">কাস্টমার ভয়েস মেসেজ পাঠালে তা প্রসেস করার নিয়মাবলী এখানে থাকবে।</p>
+              <ExpandableTextarea 
+                label="Voice Analysis System Prompt" 
+                rows={6} 
+                value={business.voice_analysis_prompt || ""} 
+                onChange={(v) => setBusiness({ ...business, voice_analysis_prompt: v })} 
+              />
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* KNOWLEDGE BASE */}
