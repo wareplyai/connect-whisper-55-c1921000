@@ -910,7 +910,7 @@ const AIAgent = () => {
             <h3 className="font-semibold text-lg">AI Agent Section - System Prompts</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Save the default instructions entered in each prompt box to Supabase so they persist after refresh.
+            bro default babe ei box prompt golote instructions add koro
           </p>
 
           <div className="grid gap-6">
