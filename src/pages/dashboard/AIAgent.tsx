@@ -910,7 +910,7 @@ const AIAgent = () => {
             <h3 className="font-semibold text-lg">AI Agent Section - System Prompts</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            ei prompt box tumi default bave instrucion add kore deo pore jeno mai chnag ekorte pari ok baki sob kiso thiki takbe kono extra change hobe na
+            prompt box ar modde default babe kiso instruction add kore den
           </p>
 
           <div className="grid gap-6">
