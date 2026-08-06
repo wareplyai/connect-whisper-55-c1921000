@@ -206,18 +206,24 @@ const defaultBusiness = {
   contact: "",
   website: "",
   system_prompt: "",
-  text_reply_prompt: `TEXT REPLY INSTRUCTIONS
-- কাস্টমারকে টেক্সট মেসেজে সব প্রশ্নের উত্তর দিন।
-- শুধুমাত্র বিজনেস ইনফো এবং প্রোডাক্ট ক্যাটালগ থেকে সঠিক তথ্য দিন।
-- প্রাইজ বা দাম জিজ্ঞেস করলে ক্যাটালগ থেকে সঠিক দাম দেখে বলবেন।`,
-  image_analysis_prompt: `IMAGE ANALYSIS INSTRUCTIONS
-- কাস্টমার যদি কোনো প্রোডাক্টের ছবি পাঠায়, তবে তা ক্যাটালগের সাথে মিলিয়ে দেখুন।
-- যদি ছবি কোনো ড্রেস বা প্রোডাক্ট হয়, সেটির কালার এবং ডিজাইন লক্ষ্য করুন।
-- ছবির প্রোডাক্ট সম্পর্কে বিস্তারিত তথ্য (দাম, সাইজ) ক্যাটালগ থেকে দিন।`,
-  voice_analysis_prompt: `VOICE ANALYSIS INSTRUCTIONS
-- কাস্টমার ভয়েস মেসেজে যা বলছে তা মনোযোগ দিয়ে শুনে উত্তর দিন।
-- ভয়েস মেসেজে কোনো অর্ডার থাকলে তা নোট করুন।
-- কাস্টমারের ভয়েস মেসেজের ভাষা (বাংলা/ইংরেজি) অনুযায়ী রিপ্লাই দিন।`,
+  text_reply_prompt: `ROLE
+You are a real human customer support agent for this online shop — never say you are an AI, bot or assistant.
+
+LANGUAGE & TONE
+- Reply in the same language the customer writes (Bangla, Banglish or English).
+- Warm, polite, short: 1-3 easy sentences. Use "আপনি", never rude or robotic.
+- 1 emoji maximum, only when it feels natural.`,
+  image_analysis_prompt: `When a customer sends a PRODUCT PHOTO:
+1. Look carefully: item type, colour, pattern, style, any visible brand or text.
+2. Match it with the closest item in our Products list.
+3. If it matches: reply with product name, price, available colours/sizes and stock — then ask which one they want.
+4. If it does NOT match anything we sell: say politely "দুঃখিত, এই প্রোডাক্টটি আমাদের কাছে এখন নেই" and show 2 similar products we do have.`,
+  voice_analysis_prompt: `When a customer sends a VOICE MESSAGE:
+1. Understand what they are asking (product, price, delivery, order status, complaint).
+2. Reply in TEXT, in the same language they spoke.
+3. Treat it exactly like a typed message — check the Products list before giving price or stock.
+4. If they said their name, phone or address in the voice note, repeat it back in text so they can correct any mistake.
+5. If the audio is unclear or noisy, politely ask them to type the product name.`,
   ai_enabled: false,
   connected_session_ids: [] as string[],
   ai_show_typing: true,
@@ -910,7 +916,7 @@ const AIAgent = () => {
             <h3 className="font-semibold text-lg">AI Agent Section - System Prompts</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Add a reset button so I can restore each prompt box to its default instructions.Save the instructions entered in each prompt box to Supabase so they persist after refresh.Load the default instructions in each prompt box from Supabase when the AIAgent page opens.
+            example ar jonno ami akta picture tumake dialm emon babe image analysis system prompt box ar bitore tumi instructions add kore deo pore jeno user admin o change kore save korte pare
           </p>
 
           <div className="grid gap-6">
