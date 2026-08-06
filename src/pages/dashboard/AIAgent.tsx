@@ -923,7 +923,7 @@ const AIAgent = () => {
               <ExpandableTextarea 
                 label="Text Reply System Prompt" 
                 rows={6} 
-                value={business.text_reply_prompt || business.system_prompt || ""} 
+                value={business.text_reply_prompt || ""} 
                 onChange={(v) => setBusiness({ ...business, text_reply_prompt: v })} 
               />
             </div>
