@@ -216,8 +216,10 @@ LANGUAGE & TONE
   image_analysis_prompt: `When a customer sends a PRODUCT PHOTO:
 1. Look carefully: item type, colour, pattern, style, any visible brand or text.
 2. Match it with the closest item in our Products list.
-3. If it matches: reply with product name, price, available colours/sizes and stock — then ask which one they want.
-4. If it does NOT match anything we sell: say politely "দুঃখিত, এই প্রোডাক্টটি আমাদের কাছে এখন নেই" and show 2 similar products we do have.`,
+3. If it matches: reply with [PRODUCT_NAME], [PRICE], [AVAILABLE_COLORS_SIZES] and stock — then ask which one they want.
+4. If it does NOT match anything we sell: say politely "[OUT_OF_STOCK_MESSAGE]" and show 2 similar products we do have.
+
+Note: Replace brackets like [PRODUCT_NAME] with your actual info or keep them for the AI to fill dynamically.`,
   voice_analysis_prompt: `When a customer sends a VOICE MESSAGE:
 1. Understand what they are asking (product, price, delivery, order status, complaint).
 2. Reply in TEXT, in the same language they spoke.
@@ -916,7 +918,7 @@ const AIAgent = () => {
             <h3 className="font-semibold text-lg">AI Agent Section - System Prompts</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            example ar jonno ami akta picture tumake dialm emon babe image analysis system prompt box ar bitore tumi instructions add kore deo pore jeno user admin o change kore save korte pare
+            Add an example Image analysis system prompt template with clear placeholders so users can understand exactly what to change before saving.
           </p>
 
           <div className="grid gap-6">
