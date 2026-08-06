@@ -306,7 +306,7 @@ const AIAgent = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString()}</span>
                   <Button variant="outline" size="sm" onClick={() => {
-                    setBusiness({ ...business, [`${historyType}_prompt`]: h.content });
+                    handleBusinessChange({ [`${historyType}_prompt`]: h.content });
                     setShowHistory(false);
                     toast.success("Prompt restored");
                   }}>Restore</Button>
