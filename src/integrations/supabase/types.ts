@@ -677,6 +677,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          image_analysis_prompt: string | null
           instructions: string | null
           location: string | null
           max_tokens: number
@@ -685,8 +686,10 @@ export type Database = {
           name: string | null
           system_prompt: string | null
           temperature: number
+          text_reply_prompt: string | null
           updated_at: string
           user_id: string
+          voice_analysis_prompt: string | null
           website: string | null
           working_hours: string | null
         }
@@ -703,6 +706,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          image_analysis_prompt?: string | null
           instructions?: string | null
           location?: string | null
           max_tokens?: number
@@ -711,8 +715,10 @@ export type Database = {
           name?: string | null
           system_prompt?: string | null
           temperature?: number
+          text_reply_prompt?: string | null
           updated_at?: string
           user_id: string
+          voice_analysis_prompt?: string | null
           website?: string | null
           working_hours?: string | null
         }
@@ -729,6 +735,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          image_analysis_prompt?: string | null
           instructions?: string | null
           location?: string | null
           max_tokens?: number
@@ -737,8 +744,10 @@ export type Database = {
           name?: string | null
           system_prompt?: string | null
           temperature?: number
+          text_reply_prompt?: string | null
           updated_at?: string
           user_id?: string
+          voice_analysis_prompt?: string | null
           website?: string | null
           working_hours?: string | null
         }
