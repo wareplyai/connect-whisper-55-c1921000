@@ -286,7 +286,7 @@ const AIAgent = () => {
                 label={item.label}
                 rows={5}
                 value={(business as any)[item.id]}
-                onChange={(v) => setBusiness({ ...business, [item.id]: v })}
+                onChange={(v) => handleBusinessChange({ [item.id]: v })}
               />
               {(business as any)[item.id].length < 20 && (
                 <p className="text-xs text-destructive">Prompt is too short (min 20 characters).</p>
