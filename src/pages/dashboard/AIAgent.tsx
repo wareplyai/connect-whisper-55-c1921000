@@ -916,7 +916,7 @@ const AIAgent = () => {
             <h3 className="font-semibold text-lg">AI Agent Section - System Prompts</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Add a reset button so I can restore each prompt box to its default instructions.Save the instructions entered in each prompt box to Supabase so they persist after refresh.Load the default instructions in each prompt box from Supabase when the AIAgent page opens.
+            example ar jonno ami akta picture tumake dialm emon babe image analysis system prompt box ar bitore tumi instructions add kore deo pore jeno user admin o change kore save korte pare
           </p>
 
           <div className="grid gap-6">
