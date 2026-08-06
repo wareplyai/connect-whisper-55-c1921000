@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Sparkles, KeyRound, CheckCircle2, Upload, FileText, Globe, MessagesSquare, Lock, Trash2, Plus, Bot, Loader2, Smartphone, Power, Maximize2, History, Eye, RefreshCw, Save, CloudOff, Cloud } from "lucide-react";
+import { Sparkles, KeyRound, CheckCircle2, Upload, FileText, Globe, MessagesSquare, Lock, Trash2, Plus, Bot, Loader2, Smartphone, Power, Maximize2, History, Eye, RefreshCw, Save } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "react-router-dom";
@@ -16,15 +16,14 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { friendlyError } from "@/lib/friendlyError";
-import { debounce } from "lodash";
 
-function ExpandableTextarea({ label, value, onChange, onManualChange, rows, placeholder }: { label: string; value: string; onChange: (v: string) => void; onManualChange?: () => void; rows: number; placeholder?: string }) {
+function ExpandableTextarea({ label, value, onChange, rows, placeholder }: { label: string; value: string; onChange: (v: string) => void; rows: number; placeholder?: string }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
   return (
     <>
       <div className="relative">
-        <Textarea rows={rows} placeholder={placeholder} value={value} onChange={(e) => { onManualChange?.(); onChange(e.target.value); }} className="pr-10" />
+        <Textarea rows={rows} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} className="pr-10" />
         <button
           type="button"
           onClick={() => { setDraft(value); setOpen(true); }}
@@ -40,7 +39,7 @@ function ExpandableTextarea({ label, value, onChange, onManualChange, rows, plac
           <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="min-h-[60vh] font-mono text-sm" placeholder={placeholder} />
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={() => { onManualChange?.(); onChange(draft); setOpen(false); }} className="bg-primary text-primary-foreground hover:bg-primary-hover">Save</Button>
+            <Button onClick={() => { onChange(draft); setOpen(false); }} className="bg-primary text-primary-foreground hover:bg-primary-hover">Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -114,17 +113,6 @@ const AIAgent = () => {
   const [historyType, setHistoryType] = useState<string>("");
   const [showPreview, setShowPreview] = useState(false);
   const [previewText, setPreviewText] = useState("");
-  
-  // Autosave states
-  const [isDirty, setIsDirty] = useState(false);
-  const [isAutosaving, setIsAutosaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const businessRef = useRef(business);
-
-  // Keep ref in sync for the debounced function
-  useEffect(() => {
-    businessRef.current = business;
-  }, [business]);
 
   useEffect(() => {
     if (!user) return;
@@ -148,58 +136,36 @@ const AIAgent = () => {
     })();
   }, [user]);
 
-  const saveBusiness = async (isManual = true) => {
+  const saveBusiness = async () => {
     if (!user) return;
-    
-    // Validations (only block manual save with toast, autosave just skips)
     const errors: string[] = [];
-    if (businessRef.current.text_reply_prompt.length < 20) errors.push("Text prompt is too short.");
-    if (businessRef.current.image_analysis_prompt.length < 20) errors.push("Image prompt is too short.");
-    if (businessRef.current.voice_analysis_prompt.length < 20) errors.push("Voice prompt is too short.");
+    if (business.text_reply_prompt.length < 20) errors.push("Text prompt is too short.");
+    if (business.image_analysis_prompt.length < 20) errors.push("Image prompt is too short.");
+    if (business.voice_analysis_prompt.length < 20) errors.push("Voice prompt is too short.");
     
     if (errors.length > 0) {
-      if (isManual) errors.forEach(err => toast.error(err));
+      errors.forEach(err => toast.error(err));
       return;
     }
 
-    if (isManual) setSavingBiz(true);
-    else setIsAutosaving(true);
-
+    setSavingBiz(true);
     const { error } = await supabase.from("business_profiles").upsert({
       user_id: user.id,
-      ...businessRef.current,
+      ...business,
     } as any, { onConflict: "user_id" });
 
     if (!error) {
       // Record history
       await Promise.all([
-        supabase.from("business_profile_prompt_history").insert({ user_id: user.id, business_profile_id: (businessRef.current as any).id, prompt_type: 'text_reply', content: businessRef.current.text_reply_prompt }),
-        supabase.from("business_profile_prompt_history").insert({ user_id: user.id, business_profile_id: (businessRef.current as any).id, prompt_type: 'image_analysis', content: businessRef.current.image_analysis_prompt }),
-        supabase.from("business_profile_prompt_history").insert({ user_id: user.id, business_profile_id: (businessRef.current as any).id, prompt_type: 'voice_analysis', content: businessRef.current.voice_analysis_prompt }),
+        supabase.from("business_profile_prompt_history").insert({ user_id: user.id, business_profile_id: (business as any).id, prompt_type: 'text_reply', content: business.text_reply_prompt }),
+        supabase.from("business_profile_prompt_history").insert({ user_id: user.id, business_profile_id: (business as any).id, prompt_type: 'image_analysis', content: business.image_analysis_prompt }),
+        supabase.from("business_profile_prompt_history").insert({ user_id: user.id, business_profile_id: (business as any).id, prompt_type: 'voice_analysis', content: business.voice_analysis_prompt }),
       ]);
-      
-      if (isManual) toast.success("Business profile and prompt history saved");
-      setLastSaved(new Date());
-      setIsDirty(false);
+      toast.success("Business profile and prompt history saved");
     } else {
-      if (isManual) toast.error(friendlyError(error));
+      toast.error(friendlyError(error));
     }
-    
-    if (isManual) setSavingBiz(false);
-    else setIsAutosaving(false);
-  };
-
-  const debouncedAutosave = useCallback(
-    debounce(() => {
-      saveBusiness(false);
-    }, 2000),
-    [user]
-  );
-
-  const handleBusinessChange = (updates: Partial<typeof business>) => {
-    setBusiness(prev => ({ ...prev, ...updates }));
-    setIsDirty(true);
-    debouncedAutosave();
+    setSavingBiz(false);
   };
 
   const fetchHistory = async (type: string) => {
@@ -224,28 +190,13 @@ const AIAgent = () => {
   if (loading) return <div className="p-8 text-center"><Loader2 className="animate-spin h-8 w-8 mx-auto" /></div>;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-8" onMouseMove={() => isDirty && !isAutosaving && debouncedAutosave()}>
+    <div className="p-6 max-w-5xl mx-auto space-y-8">
       <header className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">AI Agent Settings</h1>
-          <p className="text-muted-foreground flex items-center gap-2">
-            Configure how your AI interacts with customers.
-            {isAutosaving ? (
-              <span className="flex items-center text-xs text-primary animate-pulse">
-                <Loader2 className="h-3 w-3 animate-spin mr-1" /> Saving...
-              </span>
-            ) : isDirty ? (
-              <span className="flex items-center text-xs text-amber-500">
-                <CloudOff className="h-3 w-3 mr-1" /> Unsaved changes
-              </span>
-            ) : lastSaved ? (
-              <span className="flex items-center text-xs text-emerald-500">
-                <Cloud className="h-3 w-3 mr-1" /> All changes saved at {lastSaved.toLocaleTimeString()}
-              </span>
-            ) : null}
-          </p>
+          <p className="text-muted-foreground">Configure how your AI interacts with customers.</p>
         </div>
-        <Button onClick={() => saveBusiness(true)} disabled={savingBiz}>
+        <Button onClick={saveBusiness} disabled={savingBiz}>
           {savingBiz ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />}
           Save Changes
         </Button>
@@ -270,7 +221,7 @@ const AIAgent = () => {
                   <Label className="text-base font-semibold">{item.label} Prompt</Label>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleBusinessChange({ [item.id]: (defaultBusiness as any)[item.id] })}>
+                  <Button variant="ghost" size="sm" onClick={() => setBusiness({ ...business, [item.id]: (defaultBusiness as any)[item.id] })}>
                     <RefreshCw className="h-3 w-3 mr-1" /> Default
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => fetchHistory(item.id.replace('_prompt', ''))}>
@@ -286,8 +237,7 @@ const AIAgent = () => {
                 label={item.label}
                 rows={5}
                 value={(business as any)[item.id]}
-                onManualChange={() => setIsDirty(true)}
-                onChange={(v) => handleBusinessChange({ [item.id]: v })}
+                onChange={(v) => setBusiness({ ...business, [item.id]: v })}
               />
               {(business as any)[item.id].length < 20 && (
                 <p className="text-xs text-destructive">Prompt is too short (min 20 characters).</p>
@@ -307,7 +257,7 @@ const AIAgent = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString()}</span>
                   <Button variant="outline" size="sm" onClick={() => {
-                    handleBusinessChange({ [`${historyType}_prompt`]: h.content });
+                    setBusiness({ ...business, [`${historyType}_prompt`]: h.content });
                     setShowHistory(false);
                     toast.success("Prompt restored");
                   }}>Restore</Button>
