@@ -286,6 +286,7 @@ const AIAgent = () => {
                 label={item.label}
                 rows={5}
                 value={(business as any)[item.id]}
+                onManualChange={() => setIsDirty(true)}
                 onChange={(v) => handleBusinessChange({ [item.id]: v })}
               />
               {(business as any)[item.id].length < 20 && (
