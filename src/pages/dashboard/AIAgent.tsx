@@ -40,7 +40,7 @@ function ExpandableTextarea({ label, value, onChange, onManualChange, rows, plac
           <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="min-h-[60vh] font-mono text-sm" placeholder={placeholder} />
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={() => { onChange(draft); setOpen(false); }} className="bg-primary text-primary-foreground hover:bg-primary-hover">Save</Button>
+            <Button onClick={() => { onManualChange?.(); onChange(draft); setOpen(false); }} className="bg-primary text-primary-foreground hover:bg-primary-hover">Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
