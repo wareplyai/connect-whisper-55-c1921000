@@ -826,7 +826,7 @@ const AIAgent = () => {
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <Label className="text-sm font-medium">Instructions for this Chatbot</Label>
+                  <Label className="text-sm font-medium">Global AI Instructions (System Prompt-এর শুরুতে যুক্ত হবে)</Label>
                   <Button
                     variant="ghost"
                     size="sm"
