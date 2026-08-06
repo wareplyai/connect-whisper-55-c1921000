@@ -206,9 +206,18 @@ const defaultBusiness = {
   contact: "",
   website: "",
   system_prompt: "",
-  text_reply_prompt: "",
-  image_analysis_prompt: "",
-  voice_analysis_prompt: "",
+  text_reply_prompt: `TEXT REPLY INSTRUCTIONS
+- কাস্টমারকে টেক্সট মেসেজে সব প্রশ্নের উত্তর দিন।
+- শুধুমাত্র বিজনেস ইনফো এবং প্রোডাক্ট ক্যাটালগ থেকে সঠিক তথ্য দিন।
+- প্রাইজ বা দাম জিজ্ঞেস করলে ক্যাটালগ থেকে সঠিক দাম দেখে বলবেন।`,
+  image_analysis_prompt: `IMAGE ANALYSIS INSTRUCTIONS
+- কাস্টমার যদি কোনো প্রোডাক্টের ছবি পাঠায়, তবে তা ক্যাটালগের সাথে মিলিয়ে দেখুন।
+- যদি ছবি কোনো ড্রেস বা প্রোডাক্ট হয়, সেটির কালার এবং ডিজাইন লক্ষ্য করুন।
+- ছবির প্রোডাক্ট সম্পর্কে বিস্তারিত তথ্য (দাম, সাইজ) ক্যাটালগ থেকে দিন।`,
+  voice_analysis_prompt: `VOICE ANALYSIS INSTRUCTIONS
+- কাস্টমার ভয়েস মেসেজে যা বলছে তা মনোযোগ দিয়ে শুনে উত্তর দিন।
+- ভয়েস মেসেজে কোনো অর্ডার থাকলে তা নোট করুন।
+- কাস্টমারের ভয়েস মেসেজের ভাষা (বাংলা/ইংরেজি) অনুযায়ী রিপ্লাই দিন।`,
   ai_enabled: false,
   connected_session_ids: [] as string[],
   ai_show_typing: true,
