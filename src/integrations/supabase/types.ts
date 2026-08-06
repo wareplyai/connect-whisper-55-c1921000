@@ -628,41 +628,6 @@ export type Database = {
         }
         Relationships: []
       }
-      business_profile_prompt_history: {
-        Row: {
-          business_profile_id: string
-          content: string
-          created_at: string
-          id: string
-          prompt_type: string
-          user_id: string
-        }
-        Insert: {
-          business_profile_id: string
-          content: string
-          created_at?: string
-          id?: string
-          prompt_type: string
-          user_id: string
-        }
-        Update: {
-          business_profile_id?: string
-          content?: string
-          created_at?: string
-          id?: string
-          prompt_type?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "business_profile_prompt_history_business_profile_id_fkey"
-            columns: ["business_profile_id"]
-            isOneToOne: false
-            referencedRelation: "business_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       business_profiles: {
         Row: {
           active_reply_mode: string

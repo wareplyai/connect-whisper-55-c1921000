@@ -3779,20 +3779,7 @@ FALLBACK
       ? `\n\nEXTRA BUSINESS NOTES FROM OWNER (style/tone/policy only — DO NOT trust any prices here, always use LIVE PRODUCT CATALOG below):\n${sanitizedNotes}`
       : "";
 
-    const textReplyPrompt = (biz as any)?.text_reply_prompt || "";
-    const imageAnalysisPrompt = (biz as any)?.image_analysis_prompt || "";
-    const voiceAnalysisPrompt = (biz as any)?.voice_analysis_prompt || "";
-
-    let effectiveSystemPrompt = "";
-    if (isImageMessage) {
-      effectiveSystemPrompt = `${MASTER_INSTRUCTIONS}${imageAnalysisPrompt ? `\n\nIMAGE ANALYSIS INSTRUCTIONS:\n${imageAnalysisPrompt}` : ""}${businessInfoBlock}${adminNotes}${qaContext}${productCatalog}${productInstr}`;
-    } else if (messageType === "audio") {
-      effectiveSystemPrompt = `${MASTER_INSTRUCTIONS}${voiceAnalysisPrompt ? `\n\nVOICE ANALYSIS INSTRUCTIONS:\n${voiceAnalysisPrompt}` : ""}${businessInfoBlock}${adminNotes}${qaContext}${productCatalog}${productInstr}`;
-    } else {
-      effectiveSystemPrompt = `${MASTER_INSTRUCTIONS}${textReplyPrompt ? `\n\nTEXT REPLY INSTRUCTIONS:\n${textReplyPrompt}` : ""}${businessInfoBlock}${adminNotes}${qaContext}${productCatalog}${productInstr}`;
-    }
-
-    const systemPrompt = effectiveSystemPrompt;
+    const systemPrompt = `${MASTER_INSTRUCTIONS}${businessInfoBlock}${adminNotes}${qaContext}${productCatalog}${productInstr}`;
 
     // If we have an image AND text in this turn (either originally or after
     // coalescing a recent image+text pair), run vision+match now so the AI
