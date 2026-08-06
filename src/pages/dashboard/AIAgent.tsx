@@ -24,7 +24,7 @@ function ExpandableTextarea({ label, value, onChange, onManualChange, rows, plac
   return (
     <>
       <div className="relative">
-        <Textarea rows={rows} placeholder={placeholder} value={value} onChange={(e) => { setIsDirty(true); onChange(e.target.value); }} className="pr-10" />
+        <Textarea rows={rows} placeholder={placeholder} value={value} onChange={(e) => { onManualChange?.(); onChange(e.target.value); }} className="pr-10" />
         <button
           type="button"
           onClick={() => { setDraft(value); setOpen(true); }}
