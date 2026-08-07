@@ -918,7 +918,7 @@ const AIAgent = () => {
             <h3 className="font-semibold text-lg">AI Agent Section - System Prompts</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            ai agent section bitore save busines profile click korle all prompt sob kiso save hocce na keno bro please fixed it jeno all prompt sob kiso automatic save hoy and box show o korbe ok bro please
+            bro whatsapp connection hocce na and sms server teke keno qr code astase na akon ki korbo
           </p>
 
           <div className="grid gap-6">
