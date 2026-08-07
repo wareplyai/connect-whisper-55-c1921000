@@ -142,6 +142,13 @@ export const backendApi = {
 
   listSessions: () =>
     request<Array<{ id: string; status?: string; phone?: string }>>("/api/sessions"),
+  
+  healthCheck: () =>
+    request<{ status: string; version?: string }>("/health").catch(() => 
+      request<{ status: string }>("/api/health")
+    ).catch(() => 
+      request<{ status: string }>("/")
+    ),
 };
 
 export const BACKEND_URL = BASE_URL;
