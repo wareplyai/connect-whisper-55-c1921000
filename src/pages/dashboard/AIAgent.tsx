@@ -918,7 +918,7 @@ const AIAgent = () => {
             <h3 className="font-semibold text-lg">AI Agent Section - System Prompts</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            bro   whatsapp connection krar somoy session connectiong hocce na and qr code generation hocce  n apleaes ,k
+            bro problem hocce  whatsapp qr code generated korte and show hote partase na and ata connection hoye takte pacce na
           </p>
 
           <div className="grid gap-6">
