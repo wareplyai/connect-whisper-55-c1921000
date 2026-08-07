@@ -84,7 +84,13 @@ const Sessions = () => {
     if (!confirm("Delete this session?")) return;
     await backendApi.logout(id).catch(() => {});
     const { error } = await supabase.from("sessions").delete().eq("id", id);
-    if (error) toast.error(friendlyError(error)); else { toast.success("Session deleted"); load(); }
+    if (error) toast.error(friendlyError(error)); else { 
+      toast.success("Session deleted successfully", {
+        description: "The WhatsApp session has been removed from your account.",
+        icon: <Trash2 className="h-4 w-4 text-destructive" />,
+      });
+      load(); 
+    }
   };
 
   const visible = sessions.filter(

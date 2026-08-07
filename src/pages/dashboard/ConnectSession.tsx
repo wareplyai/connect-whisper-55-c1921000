@@ -233,7 +233,10 @@ const ConnectSession = () => {
     try {
       await backendApi.logout(id).catch(() => {});
       await supabase.from("sessions").delete().eq("id", id);
-      toast.success("Session deleted");
+      toast.success("Session deleted", {
+        description: "This session has been permanently removed.",
+        icon: <Trash2 className="h-4 w-4 text-destructive" />,
+      });
       nav("/dashboard/sessions");
     } catch (e: any) {
       toast.error(e.message || "Failed");
