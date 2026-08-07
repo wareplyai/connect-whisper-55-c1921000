@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Sparkles, KeyRound, CheckCircle2, Upload, FileText, Globe, MessagesSquare, Lock, Trash2, Plus, Bot, Loader2, Smartphone, Power, Maximize2, RotateCcw } from "lucide-react";
+import { Sparkles, KeyRound, CheckCircle2, Upload, FileText, Globe, MessagesSquare, Lock, Trash2, Plus, Bot, Loader2, Smartphone, Power, Maximize2, RotateCcw, Activity, ShieldCheck, ShieldAlert, Wifi, WifiOff } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 
@@ -46,6 +46,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { friendlyError } from "@/lib/friendlyError";
+import { backendApi } from "@/lib/backend";
 
 type Platform = "openai" | "gemini" | "deepseek" | "unknown";
 
@@ -288,6 +289,7 @@ const AIAgent = () => {
   const [fixed, setFixed] = useState<FixedQA[]>([]);
   const [genProgress, setGenProgress] = useState(0);
   const [genLoading, setGenLoading] = useState(false);
+  const [healthStatus, setHealthStatus] = useState<"loading" | "online" | "offline">("loading");
 
   const updateLocal = <K extends keyof typeof defaultLocal>(k: K, v: (typeof defaultLocal)[K]) =>
     setLocal((p) => ({ ...p, [k]: v }));
@@ -302,6 +304,21 @@ const AIAgent = () => {
   useEffect(() => {
     try { localStorage.setItem(LS_KEY, JSON.stringify(local)); } catch {}
   }, [local]);
+
+  // Health Check
+  useEffect(() => {
+    const check = async () => {
+      try {
+        await backendApi.healthCheck();
+        setHealthStatus("online");
+      } catch (e) {
+        setHealthStatus("offline");
+      }
+    };
+    check();
+    const timer = setInterval(check, 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Load DB state
   useEffect(() => {
@@ -865,7 +882,17 @@ const AIAgent = () => {
 
       {/* BUSINESS INFO (Supabase wired) */}
       <section className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h2 className="font-semibold">Business Information</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold">Business Information</h2>
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border ${
+            healthStatus === 'online' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
+            healthStatus === 'offline' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 
+            'bg-muted text-muted-foreground border-border'
+          }`}>
+            {healthStatus === 'online' ? <Wifi className="h-3 w-3" /> : healthStatus === 'offline' ? <WifiOff className="h-3 w-3" /> : <Activity className="h-3 w-3 animate-pulse" />}
+            Backend: {healthStatus === 'online' ? 'Online' : healthStatus === 'offline' ? 'Offline' : 'Checking...'}
+          </div>
+        </div>
         <div className="grid md:grid-cols-2 gap-3">
           <div><Label>Business Name</Label><Input value={business.name} onChange={(e) => setBusiness({ ...business, name: e.target.value })} /></div>
           <div>
@@ -918,7 +945,7 @@ const AIAgent = () => {
             <h3 className="font-semibold text-lg">AI Agent Section - System Prompts</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            bro qr code generate kore bro kono babe ei server ar shate connection korte pacci na please check
+            Add a backend health check and show a clear connection status indicator on the AI Agent page.
           </p>
 
           <div className="grid gap-6">
