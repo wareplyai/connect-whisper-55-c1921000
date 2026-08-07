@@ -302,7 +302,10 @@ const SessionDetail = () => {
     try {
       await backendApi.logout(s.id);
       await supabase.from("sessions").update({ status: "disconnected" }).eq("id", s.id);
-      toast.success("Session disconnected successfully");
+      toast.success("Disconnected", {
+        description: "WhatsApp session has been disconnected.",
+        icon: <LinkIcon2 className="h-4 w-4 text-yellow-500" />,
+      });
       loadSession();
     } catch (err: any) {
       toast.error(`Disconnect failed: ${friendlyError(err)}`);
@@ -337,7 +340,10 @@ const SessionDetail = () => {
     if (!s) return;
     await backendApi.logout(s.id).catch(() => {});
     await supabase.from("sessions").delete().eq("id", s.id);
-    toast.success("Session deleted");
+    toast.success("Session Deleted", {
+      description: "The session was removed successfully.",
+      icon: <Trash2 className="h-4 w-4 text-destructive" />,
+    });
     nav("/dashboard/sessions");
   };
 
