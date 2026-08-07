@@ -945,7 +945,7 @@ const AIAgent = () => {
             <h3 className="font-semibold text-lg">AI Agent Section - System Prompts</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            bro qr code generate kore bro kono babe ei server ar shate connection korte pacci na please check
+            Add a backend health check and show a clear connection status indicator on the AI Agent page.
           </p>
 
           <div className="grid gap-6">
