@@ -2703,6 +2703,8 @@ Deno.serve(async (req) => {
       (body as any).from_number,
       (body as any).fromNumber,
       (body as any).from,
+      (body as any).target_jid,
+      (body as any).targetJid,
       !/@lid/i.test(String(rawKey.remoteJid || "")) ? rawKey.remoteJid : "",
       resolveCustomerNumber(resolveBody, session.phone_number),
     );
