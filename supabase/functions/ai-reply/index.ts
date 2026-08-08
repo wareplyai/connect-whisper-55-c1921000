@@ -4117,7 +4117,7 @@ FALLBACK
     let extraRealImages: string[] = [];
     try {
       const askText = `${messageText || ""} ${imageCaption || ""}`.toLowerCase();
-      const imageWanted = /(\bছবি\b|\bছবিটা\b|\bছবিটি\b|\bছবিগুলো\b|\bছবিগুল\b|\bছবি\s*দাও\b|\bছবি\s*দেন\b|\bphoto\b|\bpic\b|\bpicture\b|\bimage\b|\bsnap\b|\bdekha[ow]\b|\bdekhao\b|\bdekhaben\b|\bdao\b|\bden\b|\bdeo\b|\bdeben\b|\bshow\b|\bsend\b.*\b(photo|pic|picture|image)\b|\b(photo|pic|picture|image)\b.*\b(send|pathao|patha[ow]|den|dao)\b)/i.test(askText);
+      const imageWanted = /(\bছবি\b|\bছবিটা\b|\bছবিটি\b|\bছবিগুলো\b|\bছবিগুল\b|\bছবি\s*দাও\b|\bছবি\s*দেন\b|\bphoto\b|\bpic\b|\bpicture\b|\bimage\b|\bsnap\b|\bdekha[ow]\b|\bdekhao\b|\bdekhaben\b|\bdao\b|\bden\b|\bdeo\b|\bdeben\b|\bshow\b|\bsend\b.*\b(photo|pic|picture|image)\b|\b(photo|pic|picture|image)\b.*\b(send|pathao|patha[ow]|den|dao)\b|\bpatha\b|\bpathan\b)/i.test(askText);
 
       if (imageWanted && (catalogRows || []).length) {
         const norm = (s: string) => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();

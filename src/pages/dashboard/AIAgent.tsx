@@ -945,7 +945,7 @@ const AIAgent = () => {
             <h3 className="font-semibold text-lg">AI Agent Section - System Prompts</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Add a backend health check and show a clear connection status indicator on the AI Agent page.
+            bro ai agent keno customer ke image send korte pacce na and bro valo kore reply dite pacce na please fixed it
           </p>
 
           <div className="grid gap-6">
