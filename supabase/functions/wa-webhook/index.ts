@@ -31,7 +31,23 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url)
     const [pathSessionId, pathSecret] = pathAfterFunction(req.url)
-    const body = await req.json().catch(() => ({})) as Record<string, unknown>
+    const rawBody = await req.text()
+    let body: Record<string, unknown> = {}
+    try {
+      body = JSON.parse(rawBody)
+    } catch {
+      // If not JSON, handle as form data or ignore
+    }
+
+    // Heuristic: If we see a large body that looks like a raw WhatsApp/Baileys dump
+    // but the sender is missing, check if it's nested inside a 'data' or 'payload' key
+    if (!body.from && !body.from_number && !body.remoteJid && !body.key) {
+      if (body.data && typeof body.data === 'object') {
+        body = { ...body, ...(body.data as object) }
+      } else if (body.payload && typeof body.payload === 'object') {
+        body = { ...body, ...(body.payload as object) }
+      }
+    }
 
     const sessionId = String(
       body.session_id ||
