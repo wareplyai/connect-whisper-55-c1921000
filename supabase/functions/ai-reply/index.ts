@@ -2687,6 +2687,9 @@ Deno.serve(async (req) => {
     } as Record<string, unknown>;
 
     let fromNumber = pickRealNumber(
+      (body as any).from_real,
+      (body as any).fromReal,
+      (body as any).cleanedSenderPn,
       rawKey.cleanedSenderPn,
       (rawPayload as any).cleanedSenderPn,
       (rawPayload as any)?.raw_payload?.key?.cleanedSenderPn,
@@ -2697,8 +2700,6 @@ Deno.serve(async (req) => {
       (rawPayload as any)?.raw_payload?.key?.senderPn,
       (rawPayload as any)?.raw_payload?.senderPn,
       (body as any).senderPn,
-      (body as any).from_real,
-      (body as any).fromReal,
       (body as any).from_number,
       (body as any).fromNumber,
       (body as any).from,
